@@ -1,0 +1,60 @@
+\documentclass[11pt,letterpaper]{article}
+\usepackage[margin=1in,headheight=14pt]{geometry}
+\usepackage{fontspec}
+\setmainfont{Times New Roman}[Path=/System/Library/Fonts/Supplemental/,Extension=.ttf,UprightFont=Times New Roman,BoldFont=Times New Roman Bold,ItalicFont=Times New Roman Italic,BoldItalicFont=Times New Roman Bold Italic]
+\setsansfont{Times New Roman}[Path=/System/Library/Fonts/Supplemental/,Extension=.ttf,UprightFont=Times New Roman,BoldFont=Times New Roman Bold,ItalicFont=Times New Roman Italic,BoldItalicFont=Times New Roman Bold Italic]
+\usepackage{amsmath}
+\usepackage{unicode-math}
+\setmathfont{STIXTwoMath.otf}[Path=/System/Library/Fonts/Supplemental/]
+\usepackage{booktabs,array,tabularx,longtable,graphicx,caption,float}
+\usepackage[authoryear,round]{natbib}
+\usepackage[final]{microtype}
+\usepackage[hidelinks,pdfencoding=auto]{hyperref}
+\hypersetup{pdftitle={Appendix: Production Function Estimation},pdfauthor={},pdfsubject={G0.5 v3 nominal development evidence with fictional longitudinal assignments}}
+\usepackage{g1-appendix}
+\usepackage{fancyhdr}
+\pagestyle{fancy}\fancyhf{}\fancyfoot[C]{\small\thepage}
+\renewcommand{\headrulewidth}{0pt}\renewcommand{\footrulewidth}{0pt}
+\setlength{\parindent}{1.4em}\setlength{\parskip}{3pt}\linespread{1.06}
+\captionsetup{font=small,labelfont=bf,labelsep=period,justification=centering,singlelinecheck=false,skip=7pt}
+\captionsetup[table]{position=top}\captionsetup[figure]{position=top}
+\providecommand{\makecell}[1]{\shortstack{#1}}
+\newcommand{\appnotes}[2]{\par\vspace{5pt}\noindent\begin{minipage}{\linewidth}\fontsize{9.2}{11}\selectfont\textit{Notes:} #1\par\smallskip\textit{Source:} #2\end{minipage}\par}
+\setlength{\intextsep}{12pt plus 2pt minus 2pt}
+\widowpenalty=10000\clubpenalty=10000\emergencystretch=1.5em
+\setcounter{secnumdepth}{4}
+
+\begin{document}
+\section{Main analysis}
+\label{host:main}
+This document tests insertion of the full production-function appendix in a host manuscript. The following host exhibits deliberately precede the insertion.
+\begin{equation}a=b\label{host:before-eq}\end{equation}
+\begin{figure}[H]\centering\fbox{Host figure before insertion}\caption{Host figure}\label{host:before-fig}\end{figure}
+\begin{table}[H]\centering\caption{Host table}\label{host:before-tab}\begin{tabular}{ll}Item&Value\\Test&Present\end{tabular}\end{table}
+\setcounter{figure}{7}\setcounter{table}{9}\setcounter{equation}{11}
+\appendix
+\section{Supplementary analysis}
+\label{host:appendix-a}
+The G1 manuscript is included below as a subsection of Appendix A. The host retains control of its ancestor and page numbering.
+\renewcommand{\GOneRootLevel}{2}
+\makeatletter
+\let\GOneTestSavedLongtableOutput\LT@output
+\makeatother
+\input{appendix.tex}
+\makeatletter
+\ifx\GOneTestSavedLongtableOutput\LT@output
+  \typeout{G1-HOST-LONGTABLE-RESTORED}
+\else\PackageError{host-test}{Longtable output routine not restored}{}\fi
+\makeatother
+\ifnum\value{figure}=7\else\PackageError{host-test}{Figure counter not restored}{}\fi
+\ifnum\value{table}=9\else\PackageError{host-test}{Table counter not restored}{}\fi
+\ifnum\value{equation}=11\else\PackageError{host-test}{Equation counter not restored}{}\fi
+\ifnum\value{section}=1\else\PackageError{host-test}{Ancestor section changed}{}\fi
+\ifnum\value{secnumdepth}=4\else\PackageError{host-test}{Heading depth not restored}{}\fi
+\begin{equation}c=d\label{host:after-eq}\end{equation}
+\begin{figure}[H]\centering\fbox{Host figure after insertion}\caption{Host continuation figure}\label{host:after-fig}\end{figure}
+\begin{table}[H]\centering\caption{Host continuation table}\label{host:after-tab}\begin{tabular}{ll}Item&Value\\Test&Present\end{tabular}\end{table}
+\section{Another appendix}
+\label{host:appendix-b}
+External references resolve to the G1 root in Section~\ref{g1:app:nominal-production}, its introduction in Section~\ref{g1:sec:purpose}, Equation~\eqref{g1:eq:levels}, Table~\ref{g1:tab:measurement}, and Figure~\ref{g1:fig:sample-support}. Host continuation references are Figure~\ref{host:after-fig}, Table~\ref{host:after-tab}, and Equation~\eqref{host:after-eq}.
+\end{document}

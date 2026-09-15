@@ -1,0 +1,272 @@
+#!/usr/bin/env python3
+"""Write acceptance, quality review and README from matching completed evidence."""
+from pathlib import Path
+from datetime import datetime, timezone
+import hashlib
+import json
+import pandas as pd
+
+HERE = Path(__file__).resolve().parent
+ROOT = HERE.parents[1]
+METHODS = {'op': 'Olley–Pakes', 'lp': 'Levinsohn–Petrin', 'acf': 'Ackerberg–Caves–Frazer', 'wrdg': 'Wooldridge'}
+SAMPLES = ('own', 'common')
+
+
+def read(path):
+    return json.loads(path.read_text())
+
+
+def sha(path):
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def years(values):
+    return ', '.join(str(int(v)) for v in sorted(set(values))) or 'None'
+
+
+def table(headers, rows):
+    return '| ' + ' | '.join(headers) + ' |\n| ' + ' | '.join(['---'] * len(headers)) + ' |\n' + '\n'.join('| ' + ' | '.join(str(v) for v in row) + ' |' for row in rows)
+
+
+def summarize(fits, boot, pairs, profiles):
+    primary = fits[fits.variant.eq('primary')]
+    good = primary[primary.status.eq('fit_success')]
+    coverage = profiles[profiles.sector.eq('ALL') & profiles.fit_scope.eq('all') & profiles.measure.eq('raw') & profiles.source_year.gt(0)]
+    model_rows, stability = [], []
+    for method in METHODS:
+        for sample in SAMPLES:
+            all_cells = primary[primary.method.eq(method) & primary.sample_id.eq(sample)]
+            cells = good[good.method.eq(method) & good.sample_id.eq(sample)]
+            b = boot[boot.method.eq(method) & boot.sample_id.eq(sample)]
+            annual = coverage[coverage.method.eq(method) & coverage.sample_id.eq(sample)]
+            assert int(annual.N_predicted.sum()) == int(cells.N_domain.sum())
+            assert int(annual.N_in_fit.sum()) == int(cells.N_dynamic.sum())
+            model_rows.append({'method': method, 'sample': sample, 'primary_models': len(cells),
+                'successful_sectors': sorted(cells.sector.tolist()),
+                'skipped_primary_models': int(all_cells.status.eq('skipped_support').sum()),
+                'failed_primary_models': int(all_cells.status.eq('fit_failed').sum()),
+                'dynamic_rows': int(cells.N_dynamic.sum()), 'prediction_rows': int(cells.N_domain.sum()),
+                'dynamic_years': sorted(int(y) for y in annual.loc[annual.N_in_fit.gt(0), 'source_year']),
+                'prediction_years': sorted(int(y) for y in annual.loc[annual.N_predicted.gt(0), 'source_year']),
+                'bootstrap_interval_models': int(b.interval_admitted.eq(1).sum()),
+                'bootstrap_withheld_models': int(b.interval_admitted.ne(1).sum())})
+            variants = fits[fits.method.eq(method) & fits.sample_id.eq(sample) & fits.variant.isin(['low_l', 'high_l']) & fits.status.eq('fit_success')]
+            matched = variants.merge(cells[['sector', 'beta_L', 'beta_K']], on='sector', suffixes=('', '_primary'), validate='many_to_one')
+            if len(matched):
+                stability.append([METHODS[method], sample, len(matched), f'{(matched.beta_L - matched.beta_L_primary).abs().max():.4f}', f'{(matched.beta_K - matched.beta_K_primary).abs().max():.4f}'])
+    intersections = {}
+    for sample in SAMPLES:
+        p = pairs[pairs.sector.eq('ALL') & pairs.sample_id.eq(sample) & pairs.comparison_scope.eq('four_method')]
+        assert len(p) == 6 and p.N_compared.nunique() == 1
+        intersections[sample] = int(p.N_compared.iloc[0])
+    return {'primary_models': len(good), 'successful_all_variant_models': int(fits.status.eq('fit_success').sum()),
+        'successful_sensitivity_models': int((fits.variant.ne('primary') & fits.status.eq('fit_success')).sum()),
+        'obligation_cells': len(fits), 'attempted_cells': int(fits.attempted.eq(1).sum()),
+        'failed_cells': int(fits.status.eq('fit_failed').sum()), 'skipped_cells': int(fits.status.eq('skipped_support').sum()),
+        'bootstrap_requested_total': int(boot.requested.sum()), 'bootstrap_successful_total': int(boot.successful.sum()),
+        'bootstrap_failed_calls': int(boot.rc.ne(0).sum()),
+        'bootstrap_failed_retained_draws': int((boot.loc[boot.rc.eq(0), 'requested'] - boot.loc[boot.rc.eq(0), 'successful']).sum()),
+        'bootstrap_interval_models': int(boot.interval_admitted.eq(1).sum()),
+        'bootstrap_withheld_models': int(boot.interval_admitted.ne(1).sum()),
+        'method_sample_results': model_rows, 'four_method_shared_dynamic_rows': intersections,
+        'annual_coverage': coverage[['method', 'sample_id', 'source_year', 'N_source', 'N_domain', 'N_predicted', 'N_in_fit', 'N_outside_fit']].to_dict('records'),
+        'stability_rows': stability}
+
+
+def main():
+    spec_path = HERE / 'nominal-specification.json'
+    spec = read(spec_path)
+    run = read(HERE / 'release/run-manifest.json')
+    source = read(HERE / 'release/qa/numeric-validation.json')
+    nominal = read(HERE / 'release/qa/nominal-validation.json')
+    master = read(HERE / 'release/qa/full-master-validation.json')
+    panel = read(HERE / 'release/qa/panel_adapter_gate.json')
+    assert run['stata_exit_code'] == 0 and all(x['status'] == 'PASS' for x in [source, nominal, master])
+    assert nominal['complete_required_evidence'] and nominal['specification_sha256'] == sha(spec_path)
+    assert run['input']['input_sha256'] == spec['input_manifest_sha256']
+    assert panel['status'] == 'PASS_SYNTHETIC_DEVELOPMENT_PANEL' and panel['rows'] == master['rows']
+    current_comment_path = HERE / 'qa/luna-all-years-comment-review.json'
+    current_comment = read(current_comment_path)
+    assert current_comment['status'] == 'PASS'
+    assert current_comment['runtime']['model'] == 'gpt-5.6-luna' and current_comment['runtime']['reasoning_effort'] == 'max'
+    assert current_comment['specification_id'] == spec['specification_id']
+    assert current_comment['reviewed_source_hashes'], 'Current comment review must identify the files actually reviewed'
+    for name, digest in current_comment['reviewed_source_hashes'].items():
+        assert sha(ROOT / name) == digest, f'Comment review is stale: {name}'
+    historical_comments = [{'path': str(p.relative_to(HERE)), 'sha256': sha(p), 'status': read(p)['status'], 'scope': 'Historical source version only'} for p in sorted((HERE / 'qa').glob('luna-*-comment-review.json')) if p != current_comment_path]
+    deep = read(HERE / 'deep-release/qa/deep-validation.json')
+    deep_manifest = read(HERE / 'deep-release/run-manifest.json')
+    final_deep = read(HERE / 'qa/deep-final-execution.json')
+    assert deep['status'] == 'PASS' and final_deep['status'] == 'PASS' and final_deep['validation']['status'] == 'PASS'
+    for receipt in [deep, deep_manifest, final_deep]:
+        assert Path(receipt['base_run']).name == run['run_id'], 'Diagnostic receipt belongs to a different base run'
+    assert deep_manifest['validation_sha256'] == final_deep['validation']['sha256'] == sha(HERE / 'deep-release/qa/deep-validation.json')
+    assert deep_manifest['input_manifest_sha256'] == spec['input_manifest_sha256']
+    assert deep['contract_sha256'] == sha(HERE / 'deep-diagnostics-contract.json')
+    pdf = HERE / 'publication/G1-Appendix.pdf'
+    bindings = read(HERE / 'qa/publication-bindings-validation.json')
+    visual = read(HERE / 'qa/publication-final-review.json')
+    assert bindings['status'] == 'PASS' and visual['status'] == 'PASS'
+    assert bindings['pdf_sha256'] == visual['pdf_sha256'] == sha(pdf)
+    publication_sources = read(HERE / 'publication/provenance/publication-sources.json')
+    assert publication_sources['specification']['sha256'] == sha(spec_path)
+    for item in publication_sources['aggregate_sources'].values():
+        path = Path(item['path'])
+        assert sha(path if path.is_absolute() else ROOT / path) == item['sha256'], f'Stale publication source: {path}'
+    counts = bindings['counts']
+    dag = read(HERE / 'registries/contracts-manifest.json')
+    nominal_lineage = read(HERE / 'registries/nominal-execution-evidence.json')
+    assert nominal_lineage['run_id'] == run['run_id'] and nominal_lineage['source_continuity_status'] == 'PASS'
+    assert dag['deep_final_execution_verified'] is True
+    out = HERE / 'release/outputs'
+    csv = lambda name: pd.read_csv(out / name, dtype={'sector': str})
+    fits, boot, pairs = [csv(name) for name in ['nominal_coefficients.csv', 'nominal_bootstrap_summary.csv', 'nominal_pairwise_comparisons.csv']]
+    profiles = pd.read_csv(HERE / 'deep-release/outputs/deep_prediction_profiles.csv', dtype={'sector': str})
+    assert fits.specification_id.eq(spec['specification_id']).all()
+    summary = summarize(fits, boot, pairs, profiles)
+    assert summary['primary_models'] == run['successful_primary_models'] == nominal['successful_primary_cells']
+    assert summary['attempted_cells'] == run['model_fits_attempted']
+    model_table = table(['Method', 'Sample', 'Primary sectors', 'Dynamic rows', 'Predicted rows', 'Admitted intervals'], [[METHODS[r['method']], r['sample'], r['primary_models'], f"{r['dynamic_rows']:,}", f"{r['prediction_rows']:,}", r['bootstrap_interval_models']] for r in summary['method_sample_results']])
+    calendar_table = table(['Method', 'Sample', 'Dynamic estimation years', 'Prediction years'], [[METHODS[r['method']], r['sample'], years(r['dynamic_years']), years(r['prediction_years'])] for r in summary['method_sample_results']])
+    status_table = table(['Method', 'Sample', 'Primary success', 'Support skip', 'Fit failure', 'Withheld intervals'], [[METHODS[r['method']], r['sample'], r['primary_models'], r['skipped_primary_models'], r['failed_primary_models'], r['bootstrap_withheld_models']] for r in summary['method_sample_results']])
+    remaining = ['Accepted real measurement, units, concept-specific deflation and technology mapping', 'Scientifically accepted investment and selection definitions for real-input Olley–Pakes estimation', 'Four-method common-sample estimates under the accepted real-input specification', 'Same-version G2 admission where the original request requires it', 'Required 999-draw real-primary inference; the current nominal analysis is exploratory', 'Explicit verified local actual input and real company linkage, followed by the required rerun']
+    result_intro = f"Run `{run['run_id']}` produced {summary['primary_models']} primary models, {summary['successful_sensitivity_models']} successful sensitivity fits and {summary['bootstrap_successful_total']:,} successful bootstrap draws out of {summary['bootstrap_requested_total']:,} requested."
+    convention = f"We assume reported capital stocks are year-end stocks in every supplied source year. Beginning capital uses the exact previous calendar year's value. We preserve the absent 2016 file, original source amounts and documentary flags. Positive reported additions provide a separate assumed investment candidate for Olley–Pakes; the stock assumption does not create missing additions. Potential production years are {years(spec['production_years'])}; potential dynamic endpoints are {years(spec['dynamic_years'])}. The calendar table reports actual successful-fit coverage."
+    normalization = "We pool supported transitions within sector and retain constant slopes and control laws across years, with no new year effects. Each primary fit predicts every valid observation in its declared domain and separately flags membership in dynamic estimation. These predictions are not annual coefficient estimates. We subtract each fit's mean native residual across its pooled dynamic sample and keep that constant in every prediction year. Exponentiation gives geometric mean one across the pooled fit sample; annual distributions need not have mean zero or geometric mean one. Nominal prices, unit conventions and changing composition remain part of the interpretation."
+    count_note = f"Each row describes one method and one sample. Counts overlap across methods and samples and must not be added to count distinct companies. The four-method shared dynamic intersection contains {summary['four_method_shared_dynamic_rows']['own']:,} observations using own-sample estimates and {summary['four_method_shared_dynamic_rows']['common']:,} using common-sample estimates."
+    evidence_links = "[Acceptance](acceptance.json), [quality review](quality-review.md), [run manifest](release/run-manifest.json), [nominal validation](release/qa/nominal-validation.json), [master preservation](release/qa/full-master-validation.json), [diagnostic validation](deep-release/qa/deep-validation.json), [publication bindings](qa/publication-bindings-validation.json), and [final page review](qa/publication-final-review.json)."
+    acceptance = {'created_utc': datetime.now(timezone.utc).isoformat(), 'run_id': run['run_id'], 'input_version': run['input']['g05_version'], 'input_manifest_sha256': spec['input_manifest_sha256'], 'specification_id': spec['specification_id'], 'issue': 9, 'issue_status': 'OPEN_REAL_PRIMARY_SPECIFICATION_NOT_ACCEPTED', 'authorized_development_status': 'COMPLETED_ASSUMED_CAPITAL_ALL_YEARS_CALCULATION_AND_PUBLICATION',
+        'development_result_readiness': {'status': 'COMPLETED_WITH_EXPLICIT_SUPPORT_AND_INFERENCE_LIMITS', 'source_observations': master['rows'], 'fictional_companies': panel['firms'], 'source_years': spec['history_years'], 'production_years': spec['production_years'], 'potential_dynamic_years': spec['dynamic_years'], 'bootstrap_draws_per_model': spec['bootstrap_draws'], 'bootstrap_success_minimum': spec['bootstrap_success_minimum'], 'real_input_primary_accepted': False, **{k: v for k, v in summary.items() if k != 'stability_rows'}},
+        'capital_and_investment_assumptions': {'capital': spec['capital'], 'investment': spec['op_proxy'], 'timing': spec['capital_timing'], 'normalization': spec['normalization'], 'original_documentary_flags_preserved': True},
+        'comment_review': {'current': {'path': str(current_comment_path.relative_to(HERE)), 'sha256': sha(current_comment_path), 'status': 'PASS', 'runtime': current_comment['runtime']}, 'historical': historical_comments},
+        'actual_finalisation': {'status': 'NOT_RUN_NOT_ADMITTED', 'fictional_ids_transfer_to_actual': False}, 'full_master_attachment': master,
+        'numeric_validation': {'primary_gate_audit': source['status'], 'nominal_independent_validation': nominal['status'], 'full_master_preservation': master['status'], 'deep_diagnostics': deep['status']},
+        'publication': {'pdf': 'publication/G1-Appendix.pdf', 'pdf_sha256': sha(pdf), 'pages': visual['pages'], 'native_tables': counts['numbered_tables_in_pdf'], 'vector_figures': counts['numbered_figures_in_pdf'], 'numbered_equations': counts['numbered_equations_in_pdf'], 'standard': 'WRITING-PREFERENCES-SEE-HERE.md', 'standard_sha256': sha(ROOT / 'WRITING-PREFERENCES-SEE-HERE.md'), 'numeric_bindings': bindings['status'], 'final_visual_review_status': visual['status'], 'routed_diagnostic_execution': final_deep['status'], 'continuous_latex_body': 'publication/appendix.tex', 'standalone_wrapper': 'publication/main.tex', 'font': 'Actual Times New Roman; STIX Two Math for mathematics'},
+        'remaining_real_primary_requirements': remaining, 'delivery_scope': 'This receipt certifies local calculation and publication evidence. GitHub and Telegram delivery have separate receipts.', 'publication_boundary': 'Screened aggregate CSV, charts, LaTeX/PDF, code, logs and receipts only. Record-level derivatives remain external.'}
+    quality = f'''# G1 quality review
+
+**The authorized all-years calculation and appendix are complete under the stated stock and investment assumptions.** We distinguish this nominal development analysis from the unaccepted real-input specification in issue 9. {result_intro}
+
+## Results and calendar coverage
+
+{model_table}
+
+{count_note}
+
+{calendar_table}
+
+{convention}
+
+{normalization}
+
+## Unsupported and failed obligations
+
+The ledger retains all {summary['obligation_cells']:,} declared sector/method/sample/variant obligations: {summary['attempted_cells']:,} attempts, {summary['successful_all_variant_models']:,} successful fits, {summary['failed_cells']:,} failed fits and {summary['skipped_cells']:,} support skips. A successful sensitivity does not replace a failed primary model.
+
+{status_table}
+
+## Conditional uncertainty and numerical sensitivity
+
+We retain {summary['bootstrap_failed_retained_draws']:,} failed draws within completed bootstrap calls and report {summary['bootstrap_failed_calls']} failed bootstrap calls separately. Of {summary['primary_models']} primary models, {summary['bootstrap_interval_models']} admit percentile intervals and {summary['bootstrap_withheld_models']} withhold them under the fixed minimum of {spec['bootstrap_success_minimum']} successful draws out of {spec['bootstrap_draws']}.
+
+The resampling unit is the complete supplied history of a fictional company within its technology cell, including selection-risk intervals. Each draw reconstructs exact-calendar lags and reruns the method. This uncertainty conditions on frozen fictional links and the nominal measurement convention, excludes uncertainty in constructing the links, and does not meet the separate 999-draw real-primary requirement.
+
+The table reports the largest absolute coefficient difference between a fixed primary fit and successful low-labor or high-labor starting-value alternatives, matching method, sample and sector. These are numerical sensitivity measures, not hypothesis tests. The fixed primary remains in place regardless of which start has the lowest objective. The quadratic specification is a separate sensitivity and is excluded from this starting-value comparison.
+
+{table(['Method', 'Sample', 'Alternative fits compared', 'Maximum labor difference', 'Maximum capital difference'], summary['stability_rows'])}
+
+The Wooldridge implementation shares its proxy-function coefficients between the current and lagged equations. The appendix explains the maintained random-walk-plus-drift restriction. Its quadratic sensitivity changes those two proxy bases; the other declared branches retain their separate cubic productivity transitions. Convergence does not establish a unique global optimum, precise inference or correct economic timing.
+
+## Numerical and publication evidence
+
+| Check | Current evidence | Scope |
+|---|---|---|
+| Full master preservation | {master['source_cells_compared_exactly']:,} exact cells across {master['rows']:,} rows and {master['source_columns']:,} original columns | Preserves the declared input and order; does not authenticate actual company identity. |
+| Independent nominal arithmetic | {nominal['check_count']:,} checks; {nominal['status']} | Timing, domains, masks, residuals, aggregates and bootstrap arithmetic; Stata performs estimation. |
+| Expanded diagnostics | {deep['aggregate_cells_compared']:,} aggregate cells checked; {deep['status']} | Same new base run and fixed coefficients; source availability, sample losses, annual distributions, tails, pairs and worked calculations. |
+| Analytical lineage | {dag['node_count']} nodes and {dag['edge_count']} edges | Original exhibit obligations and explicit dependencies retained. |
+| Current source comments | New all-years Luna/max review is PASS | Current source hashes checked; {len(historical_comments)} earlier receipts retain historical scope. |
+| Compiled publication | {visual['pages']} pages, {counts['numbered_tables_in_pdf']} native tables, {counts['numbered_figures_in_pdf']} vector figures and {counts['numbered_equations_in_pdf']} equations | Counts come from the reviewed PDF; page count is descriptive, not an acceptance threshold. |
+| Publication bindings | {counts['source_operands']:,} source operands and {counts['figure_annotations']:,} chart annotations | Exact operands, formats, source hashes and compiled-file identity reconcile. |
+
+The appendix follows [the owner's writing standard](../../WRITING-PREFERENCES-SEE-HERE.md) and the actual G0 reference: connected active academic prose, explained terms and symbols, construction before each exhibit and interpretation afterward, descriptive headings, actual Times New Roman, native mathematics, numeric chart labels, visible legends, distinct Notes and Source, and host-derived references. The binding audit and final page review identify the same PDF. Numerical checks do not substitute for reading the science and inspecting the pages.
+
+## Remaining real-input requirements
+
+{chr(10).join('- ' + item + '.' for item in remaining)}
+
+These requirements do not undo the completed owner-authorized development calculation. Actual finalisation has not run. Approximate-real nonland preparation and price references remain separately scoped preparation; no approximate-real estimate is claimed. Record-level intermediates and the full derivative remain external. Private GitHub publication and Telegram delivery have separate completion evidence.
+
+{evidence_links}
+'''
+    readme = f'''# G1 — production-function estimates on G0.5 v3
+
+**The all-years assumed-capital development analysis is complete. These nominal results use fictional company links and are not final empirical findings.**
+
+{result_intro} The [continuous publication appendix](publication/G1-Appendix.pdf), [LaTeX body](publication/appendix.tex), [standalone wrapper](publication/main.tex), [Indonesian report](report.md) and [HTML report](report.html) describe the same result set. The reviewed PDF has {counts['numbered_tables_in_pdf']} native tables, {counts['numbered_figures_in_pdf']} vector figures and {counts['numbered_equations_in_pdf']} numbered equations across {visual['pages']} pages.
+
+{model_table}
+
+{count_note} The ledger retains {summary['skipped_cells']} support skips and {summary['failed_cells']} failed fits; {summary['bootstrap_withheld_models']} primary models withhold intervals under the fixed bootstrap success threshold.
+
+## Measurement and calendar coverage
+
+The input contains {master['rows']:,} observations and {panel['firms']:,} accepted fictional development companies across {years(spec['history_years'])}. These IDs do not recover real company identities.
+
+{convention}
+
+{calendar_table}
+
+{normalization}
+
+The [nominal specification](nominal-specification.json) and [diagnostic contract](deep-diagnostics-contract.json) define this calculation. Completion does not accept the separate real-input primary specification in issue 9. That requires real company links, accepted definitions and deflators, technology mapping, the specified real-primary inference and an explicitly selected actual-data rerun.
+
+## Evidence and outputs
+
+- {evidence_links}
+- [Coefficients and rejected obligations](release/outputs/nominal_coefficients.csv), [bootstrap summaries](release/outputs/nominal_bootstrap_summary.csv), [retained draws](release/outputs/bootstrap_draws/), [comparisons](release/outputs/nominal_pairwise_comparisons.csv), and [annual attachment](release/outputs/nominal_master_attachment.csv).
+- [Diagnostic outputs](deep-release/outputs/), [diagnostic run manifest](deep-release/run-manifest.json), and [stage interpretation](stata/deep/README.md).
+- [Full analytical DAG](dag/G1-full.svg), [readable DAG](dag/G1.svg), [edges](dag/registries/edges.csv), [exhibit obligations](registries/exhibits.csv), and [method contracts](registries/method-contracts.md).
+- [Publication operands](publication/provenance/) and [current Luna/max comments](qa/luna-all-years-comment-review.json). Earlier review receipts retain their original scope.
+
+The appendix applies [the owner's writing standard](../../WRITING-PREFERENCES-SEE-HERE.md) and the actual G0 reference: active academic English, definitions before abbreviations, method depth, coefficient tables with standard errors, annual distributions, worked calculations, native LaTeX mathematics, actual Times New Roman, vector charts, direct numeric labels, visible legends, and distinct Notes and Source. The [scoped LaTeX package](publication/g1-appendix.sty) provides portable references and host-derived numbering. Earlier v1 material remains in [history/v1](history/v1/README.md).
+
+## Reproduce
+
+Use a new external run ID and one Stata worker. From the repository root, with the declared Python dependencies, Stata SE 17, XeLaTeX and actual Times New Roman installed:
+
+```sh
+OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 python3 work-items/G1/run.py --run-id a-new-run-id --publish
+```
+
+Before the diagnostic run, preserve the previous diagnostic contract with its external run and register `base_run` in `deep-diagnostics-contract.json` as the exact new base directory name. Keep its scientific definitions unchanged. The independent validator rejects a run whose name differs from this explicit source binding. Freeze the corrected contract and code before execution.
+
+```sh
+stata-se -b do work-items/G1/stata/G1.do /absolute/repository /absolute/new-diagnostics-run diagnostics /absolute/base-run
+python3 work-items/G1/validate_deep.py --base /absolute/base-run --run /absolute/new-diagnostics-run
+```
+
+After diagnostic validation, retain the former release with its external run. Copy only the CSVs enumerated in `deep-diagnostics-contract.json`, matching manifests, validation receipts and quiet execution log into `deep-release`. Keep record-level intermediates external. Then rebuild the publication:
+
+```sh
+python3 work-items/G1/build_contracts.py
+python3 work-items/G1/build_report.py
+python3 work-items/G1/publication/plot_deep_figures.py --base work-items/G1/release --deep work-items/G1/deep-release
+python3 work-items/G1/publication/build_appendix.py --results work-items/G1/release
+sh work-items/G1/publication/build.sh
+python3 work-items/G1/validate_publication_bindings.py
+python3 harness/manage.py validate
+```
+
+Inspect the compiled pages and regenerate exact-file visual and source-review receipts before running `python3 work-items/G1/build_closeout.py`. The builder checks matching base-run, diagnostic, specification, current Luna/max review and PDF identities before generating this README, acceptance and quality review. Compilation alone does not establish numerical or visual acceptance.
+
+Record-level files, including `analysis/G1_main_with_tfp.dta`, remain in `<checkout>-g1-runs/<run-id>/`. The derivative preserves all original adapter fields and attaches distinct `dev_nominal_*` predictions and flags. The shared adapter checks the pinned G0.5 package. The [four-method fixture](stata/methods/README.md) tests algorithms separately and is never an input. [Measurement modes](stata/methods/MEASUREMENT-MODES.md) preserve the distinction from actual finalisation.
+'''
+    (HERE / 'acceptance.json').write_text(json.dumps(acceptance, indent=2) + '\n')
+    (HERE / 'quality-review.md').write_text(quality)
+    (HERE / 'README.md').write_text(readme)
+    print(f"Accepted local assumed-capital development release {run['run_id']}; real-primary issue 9 remains open")
+
+
+if __name__ == '__main__':
+    main()

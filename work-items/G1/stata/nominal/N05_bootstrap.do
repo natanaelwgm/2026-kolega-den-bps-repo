@@ -1,0 +1,62 @@
+* WFDOC: Menjalankan 99 draw full-process cluster bootstrap untuk setiap primary fit_success; cluster ialah psid perusahaan sintetis.
+* WFDOC: Interval/covariance bersifat nominal-development eksploratif, bersyarat pada linkage fiktif; bukan inferensi final atau 999 draw.
+* Full-process company-history bootstrap of each successful predeclared sector-pooled primary cell.
+* WFDOC: All retained calendar years and event-only risk intervals travel with each sampled fictional company; gaps remain gaps.
+* All draws and return codes are retained; inference remains exploratory development.
+use "$G1_RUN/nominal/fit_results.dta", clear
+* WFDOC: Sensitivitas tidak di-bootstrap; hanya primary fit_success membentuk cell resampling.
+* WFDOC: Hanya primary fit_success yang membentuk cell resampling; variant sensitivitas dan primary yang gagal tidak dapat ditutup oleh bootstrap cell lain.
+keep if variant=="primary" & status=="fit_success"
+local cells=_N
+tempname boot
+postfile `boot' str2 sector str8 method str8 sample_id int rc double requested double successful double covariance_denominator double beta_L double beta_K double var_L double var_K double cov_LK double se_L double se_K double se_RTS double ci_L_lo double ci_L_hi double ci_K_lo double ci_K_hi byte interval_admitted using "$G1_RUN/nominal/bootstrap_summary.dta", replace
+if `cells'>0 {
+    forvalues cell=1/`cells' {
+        local sector=sector[`cell']
+        local method=method[`cell']
+        local sample=sample_id[`cell']
+        foreach v in y l k proxy {
+            local center_`v'=center_`v'[`cell']
+        }
+        local domain `method'
+        if "`sample'"=="common" local domain common
+        local proxy i
+        if "`method'"!="op" local proxy m
+        preserve
+        use "$G1_RUN/nominal/N03_frozen.dta", clear
+        keep if nom_sector=="`sector'"
+* WFDOC: y/l/k/proxy dipusatkan pada median N04 yang beku; transformasi tidak mendeflasi angka nominal.
+        gen double by=nom_y-`center_y'
+        gen double bl=nom_l-`center_l'
+        gen double bk=nom_k-`center_k'
+        gen double bp=nom_`proxy'-`center_proxy'
+        local selection
+        if "`method'"=="op" local selection "risk(nom_risk) exit(nom_disappearance) selectionverified(1) selectionmode(synthetic_disappearance)"
+* WFDOC: START/END mencatat cell dan rc; resampling ulang seluruh panel/selection per klaster serta lag/fit/logit OP.
+        display "G1_N05 BOOTSTRAP START | sector=`sector' method=`method' sample=`sample' draws=99"
+* WFDOC: Opsi method, proxy, eligibility, kalender dan seed mengulang kontrak point fit pada setiap full-process draw; bootstrap ini eksploratif dan tetap bersyarat pada linkage fiktif.
+        capture noisily g1_bootstrap, id(psid) time(source_year) method(`method') output(by) labor(bl) capital(bk) proxy(bp) eligible(nom_domain_`domain') panelverified(1) inputsverified(1) measurementmode(nominal_development) syntheticpanel(1) panelstatus(psid_status) `selection' poly(3) start(ols) draws(99) seed(9132026) saving("$G1_RUN/nominal/bootstrap_`sector'_`method'_`sample'")
+        local rc=_rc
+* WFDOC: Covariance memakai draw sukses dengan penyebut B−1; percentile 2,5/97,5% hanya bila sedikitnya 95/99 sukses.
+        if `rc'==0 {
+            tempname V
+            matrix `V'=r(covariance)
+            local admitted=r(successful)>=95
+            local lo_l=cond(`admitted',r(ci_labor_lo),.)
+            local hi_l=cond(`admitted',r(ci_labor_hi),.)
+            local lo_k=cond(`admitted',r(ci_capital_lo),.)
+            local hi_k=cond(`admitted',r(ci_capital_hi),.)
+            post `boot' ("`sector'") ("`method'") ("`sample'") (0) (r(requested)) (r(successful)) (r(covariance_denominator)) (r(point_labor)) (r(point_capital)) (`V'[1,1]) (`V'[2,2]) (`V'[1,2]) (sqrt(`V'[1,1])) (sqrt(`V'[2,2])) (sqrt(`V'[1,1]+`V'[2,2]+2*`V'[1,2])) (`lo_l') (`hi_l') (`lo_k') (`hi_k') (`admitted')
+            * WFDOC: File draw hanya dipromosikan ke outputs setelah panggilan selesai dengan rc=0; ringkasan tetap mencatat rc dan jumlah sukses bila cell gagal.
+            copy "$G1_RUN/nominal/bootstrap_`sector'_`method'_`sample'.csv" "$G1_RUN/outputs/bootstrap_draws/nominal_`sector'_`method'_`sample'.csv", replace
+        }
+        else post `boot' ("`sector'") ("`method'") ("`sample'") (`rc') (99) (0) (.) (.) (.) (.) (.) (.) (.) (.) (.) (.) (.) (.) (.) (0)
+        display "G1_N05 BOOTSTRAP END | sector=`sector' method=`method' sample=`sample' rc=`rc'"
+        restore
+    }
+}
+postclose `boot'
+use "$G1_RUN/nominal/bootstrap_summary.dta", clear
+gen str100 data_label="G0.5 DEVELOPMENT - nominal VA; conditional on fictional linkage; exploratory99 draws"
+gen str70 interval_status=cond(interval_admitted,"ADMITTED_EXPLORATORY_95_OF_99_SUCCESSES","NOT_ADMITTED_INSUFFICIENT_SUCCESS")
+export delimited using "$G1_RUN/outputs/nominal_bootstrap_summary.csv", replace

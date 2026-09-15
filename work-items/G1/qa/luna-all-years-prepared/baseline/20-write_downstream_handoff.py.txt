@@ -1,0 +1,120 @@
+#!/usr/bin/env python3
+"""Publish a local, immutable-file handoff only from an independently validated run."""
+import argparse
+from datetime import datetime, timezone
+import hashlib
+import json
+from pathlib import Path
+import subprocess
+import pandas as pd
+
+HERE = Path(__file__).resolve().parent
+ROOT = HERE.parents[1]
+
+
+def sha(path):
+    h = hashlib.sha256()
+    with path.open('rb') as stream:
+        for block in iter(lambda: stream.read(1024 * 1024), b''):
+            h.update(block)
+    return h.hexdigest()
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--run', type=Path, required=True)
+    parser.add_argument('--output', type=Path, required=True)
+    args = parser.parse_args()
+    run = args.run.resolve()
+    manifest = json.loads((run / 'run-manifest.json').read_text())
+    spec = json.loads((HERE / 'nominal-specification.json').read_text())
+    assert spec['specification_id'] == 'G05v3_nominal_assumedK_2010_2022'
+    assert manifest['input']['input_sha256'] == spec['input_manifest_sha256']
+    assert manifest['input']['g05_version'] == 'g05-external-excel-panel-v3'
+    validations = {}
+    for name in ['numeric-validation.json', 'nominal-validation.json', 'full-master-validation.json']:
+        path = run / 'qa' / name
+        receipt = json.loads(path.read_text())
+        assert receipt['status'] == 'PASS', name
+        validations[name] = {'path': str(path), 'sha256': sha(path), 'receipt': receipt}
+    # WFDOC: Setiap hash output harus cocok dengan receipt selesai; file run yang masih berubah tidak boleh ditandai siap.
+    for item in manifest['output_files']:
+        assert sha(run / item['path']) == item['sha256'], item['path']
+    inventory = json.loads((run / 'qa/intermediate_inventory.json').read_text())
+    expected_private = {item['path']: item['sha256'] for item in inventory}
+    master = run / 'analysis/G1_main_with_tfp.dta'
+    files = {}
+    for name, relative in {
+        'joined_master': 'analysis/G1_main_with_tfp.dta',
+        'selected_joined_input': 'nominal/N06_selected_attached.dta',
+        'long_predictions_all_variants': 'nominal/N04_predictions.dta',
+        'original_full_adapter_input': 'full_input.dta',
+        'coefficients': 'outputs/nominal_coefficients.csv',
+        'annual_coverage': 'outputs/nominal_master_attachment.csv',
+        'bootstrap_summary': 'outputs/nominal_bootstrap_summary.csv',
+        'run_manifest': 'run-manifest.json',
+    }.items():
+        path = run / relative
+        files[name] = {'path': str(path), 'sha256': sha(path), 'bytes': path.stat().st_size}
+        if path.suffix == '.dta':
+            assert files[name]['sha256'] == expected_private[relative], relative
+    # WFDOC: Baca kunci dan flag saja; downstream berbagi master yang sama, bukan menyalin 4.396 kolom per tugas.
+    flags = ['dev_nominal_spec', 'dev_nominal_reference_scope', 'dev_nominal_measurement_mode']
+    data = pd.read_stata(master, columns=['obs_id', 'psid', 'source_year', *flags], convert_categoricals=False)
+    assert len(data) == 33049 and data.psid.nunique() == 10395
+    assert not data.duplicated(['obs_id', 'source_year']).any()
+    assert not data.duplicated(['psid', 'source_year']).any()
+    assert data.dev_nominal_spec.eq(spec['specification_id']).all()
+    assert data.dev_nominal_reference_scope.eq('pooled_dynamic').all()
+    assert data.dev_nominal_measurement_mode.eq('nominal_development').all()
+    methods = {}
+    for method in ['op', 'lp', 'acf', 'wrdg']:
+        methods[method] = {
+            'raw_log_residual': 'dev_nominal_tfp_' + method,
+            'centered_log_residual': 'dev_nominal_c_' + method,
+            'prediction_available': 'dev_nominal_pred_' + method,
+            'used_in_dynamic_estimation': 'dev_nominal_in_fit_' + method,
+            'positive_input_domain': 'dev_nominal_domain_' + method,
+            'calendar_dynamic_eligible': 'dev_nominal_eligible_' + method,
+            'common_raw_log_residual': 'dev_nominal_common_tfp_' + method,
+            'common_centered_log_residual': 'dev_nominal_common_c_' + method,
+            'common_prediction_available': 'dev_nominal_common_pred_' + method,
+            'common_used_in_dynamic_estimation': 'dev_nominal_common_in_fit_' + method,
+        }
+    fits = pd.read_csv(run / 'outputs/nominal_coefficients.csv')
+    primary = fits[fits.variant.eq('primary') & fits.status.eq('fit_success')]
+    coverage = primary.groupby(['method', 'sample_id']).agg(sectors=('sector', 'nunique'), fit_records=('N', 'sum')).reset_index()
+    handoff = {
+        'status': 'READY', 'producer_validated': True,
+        'coordinator_acceptance_required': True,
+        'updated_at': datetime.now(timezone.utc).isoformat(),
+        'owner_task': '01a09c54-6513-7183-aa7e-e682a6a0147c',
+        'project_root': str(ROOT), 'run_id': manifest['run_id'], 'run_root': str(run),
+        'input_version': manifest['input']['g05_version'],
+        'input_manifest_sha256': manifest['input']['input_sha256'],
+        'specification_id': spec['specification_id'], 'specification': spec,
+        'rows': len(data), 'original_source_columns': 4396, 'fictional_firms': 10395,
+        'observation_key': ['obs_id', 'source_year'], 'panel_key': ['psid', 'source_year'],
+        'source_years': sorted(data.source_year.astype(int).unique().tolist()),
+        'files': files, 'methods': methods,
+        'annual_coverage': pd.read_csv(run / 'outputs/nominal_master_attachment.csv').to_dict('records'),
+        'primary_fit_coverage': coverage.to_dict('records'), 'validation': validations,
+        'git_commit': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip(),
+        'git_branch': subprocess.check_output(['git', 'branch', '--show-current'], cwd=ROOT, text=True).strip(),
+        'pull_request': 'https://github.com/natanaelwgm/deasy-imed-si-research-2026/pull/28',
+        'executed_code_hashes': manifest['code'],
+        'use_policy': 'Read-only shared master; select required columns. Preserve all source rows. Never overwrite these files or use old2012-only release. Coordinator alone unlocks downstream estimation.',
+        'interpretation': 'Nominal value-added residuals conditional on assumed year-end capital and fixed fictional links. No real TFP, actual firm identity, causal interpretation or national-population inference claimed.',
+        'publication_status': 'Analytical handoff complete; final appendix, remote publication and Telegram tracked separately.',
+    }
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    payload = json.dumps(handoff, indent=2, allow_nan=False) + '\n'
+    immutable = run / 'downstream-handoff.json'
+    assert not immutable.exists(), 'Keep handoff immutable; use a separately versioned handoff for changes'
+    immutable.write_text(payload)
+    args.output.write_text(payload)
+    print(json.dumps({'status': 'READY', 'run': str(run), 'master_sha256': files['joined_master']['sha256']}))
+
+
+if __name__ == '__main__':
+    main()

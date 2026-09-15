@@ -1,0 +1,53 @@
+#!/usr/bin/env python3
+"""Compare every original master cell after Stata attachment in bounded chunks."""
+# WFDOC: Validasi master membaca 512 baris per potongan agar seluruh 4.396 kolom dapat dibandingkan dengan pemakaian memori terbatas.
+from pathlib import Path
+import json
+import sys
+import pandas as pd
+
+
+def main(run):
+    # WFDOC: Attachment dibandingkan dalam urutan asli; setiap potongan harus identik, tanpa duplikasi psid-tahun atau baris tambahan.
+    original = pd.read_stata(run / "full_input.dta", chunksize=512, convert_categoricals=False)
+    attached = pd.read_stata(run / "analysis/G1_main_with_tfp.dta", chunksize=512, convert_categoricals=False)
+    rows = cells = 0
+    columns = None
+    source_keys = set()
+    observation_keys = set()
+    for a in original:
+        b = next(attached)
+        if columns is None:
+            columns = list(a.columns)
+        assert len(a) == len(b)
+        pd.testing.assert_frame_equal(a, b[columns], check_dtype=False, check_exact=True)
+        assert not b.duplicated(["psid", "source_year"]).any()
+        chunk_keys = set(b[["psid", "source_year"]].itertuples(index=False, name=None))
+        assert source_keys.isdisjoint(chunk_keys), "Duplicate firm-year keys across chunks"
+        source_keys.update(chunk_keys)
+        chunk_observations = set(b[["obs_id", "source_year"]].itertuples(index=False, name=None))
+        assert len(chunk_observations) == len(b), "Duplicate observation keys within a chunk"
+        assert observation_keys.isdisjoint(chunk_observations), "Duplicate observation keys across chunks"
+        observation_keys.update(chunk_observations)
+        rows += len(a)
+        cells += a.size
+    try:
+        next(attached)
+    except StopIteration:
+        pass
+    else:
+        raise AssertionError("Attachment added unexpected source rows")
+    # WFDOC: Gerbang akhir mengunci cakupan 33.049 baris dan 4.396 kolom serta menghitung sel yang dibandingkan.
+    assert rows == 33049 and len(columns) == 4396
+    result = {"status": "PASS", "rows": rows, "source_columns": len(columns),
+              "source_cells_compared_exactly": cells, "chunk_rows": 512,
+              "original_order_preserved": True,
+              "firm_year_keys_globally_unique": len(source_keys) == rows,
+              "observation_year_keys_globally_unique": len(observation_keys) == rows,
+              "scope": "Exact values of every field from the shared-adapter full input, including its declared development analysis_contract"}
+    (run / "qa/full-master-validation.json").write_text(json.dumps(result, indent=2) + "\n")
+    print(json.dumps(result))
+
+
+if __name__ == "__main__":
+    main(Path(sys.argv[1]).resolve())

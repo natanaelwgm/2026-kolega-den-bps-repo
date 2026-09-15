@@ -1,0 +1,71 @@
+{
+  "node_id": "G1_INPUT_CANONICAL",
+  "branch": "primary_real_prerequisite_audit",
+  "source_plan_node_preserved": {
+    "id": "G1_INPUT_CANONICAL",
+    "state": "Physical accepted canonical G0 dataset with original values, companions and source states",
+    "grain": "source record × year",
+    "keys": [
+      "source_year",
+      "source_row"
+    ],
+    "required_fields": [
+      "source_year",
+      "source_row",
+      "canonical_values",
+      "verified_values",
+      "verification_states",
+      "source_presence",
+      "schema_version"
+    ],
+    "units": "Per-variable canonical dictionary; nominal and real fields remain distinct",
+    "folder": "dag/nodes/G1/G1_INPUT_CANONICAL",
+    "planning_status": "external_input_not_materialized_by_plan",
+    "input_receipt": "Require actual current wave release receipt plus this row-specific eligibility and field contracts.",
+    "numerical_binding": "wave_input_contract.master_path or a declared derivative"
+  },
+  "effective_state": "Physical accepted canonical G0 dataset with original values, companions and source states",
+  "material_state_status": "development_input_and_synthetic_panel_accepted",
+  "diagnostic_status": "See hash-bound run evidence; not inferred from this contract",
+  "grain": "frozen observation",
+  "keys": [
+    "obs_id"
+  ],
+  "input_nodes": [],
+  "producing_edge": null,
+  "audit_output_contract": {
+    "paths_relative_to_private_run": [],
+    "role": "Source input contract",
+    "publication": "Only screened aggregate outputs copied to release/outputs. Private run root is recorded in run-manifest.json; .dta intermediates are outside the repository.",
+    "existence_and_execution": "Declared artifact names; actual existence/hash/status comes only from the run manifest."
+  },
+  "required_fields": [
+    "source_year",
+    "obs_id",
+    "canonical_values",
+    "verified_values",
+    "verification_states",
+    "source_presence",
+    "schema_version"
+  ],
+  "units": {
+    "source_monetary_candidates": "reported source units; measurement/unit admission remains unresolved, with no unverified conversion",
+    "required_real_monetary_inputs": "constant-price Rp000 only after accepted source unit, deflator base and concept mapping",
+    "labor": "canonical worker-count candidate; source definition/unit admission required",
+    "time": "actual calendar year",
+    "counts": "frozen source observations; no population weights",
+    "eligibility": "Boolean plus distinct unknown states"
+  },
+  "calendar": "2010–2015, 2017–2022; 2016 absent",
+  "denominator": "All 33,049 frozen G0.5 observations; year cells use their complete observed source-year count. No survey weights or population expansion.",
+  "missingness": "Keep source absence, unknown definition/unit, parse failure, observed zero/negative and valid positive states distinct. Unsupported statistical values stay missing, never zero.",
+  "row_reconciliation": "Observation diagnostics preserve 33,049 unique obs_id. Method expansion checks 33,049 × declared method/sample combinations separately. Any filtering records marginal and sequential losses. Aggregates reconcile to their explicit fixed denominators.",
+  "input_output_contract": "A validated numerical state and a typed unsupported receipt are distinct output types. A receipt cannot be consumed as the numerical state required by another estimator edge.",
+  "current_decision": "Freeze this source as a distinct declared input; metadata availability does not waive substantive method gates.",
+  "blocked_dependencies": {},
+  "numerical_output_privacy": "Record-level intermediate/output datasets remain local/private; only appropriate aggregate diagnostic tables and receipts are published.",
+  "plan": "releases/2026-09-13-data-foundation/stata-preparation/row-plans/G1.json",
+  "plan_sha256": "dd88cfa94af5f212a7b0a4b70f99fea1c0201f950cd19333357739b96b5da1ca",
+  "input_manifest": "data/g0-5-development/manifest.json",
+  "input_manifest_sha256": "060b0ee0a2158a9c94b0e7e68fcfba719eda37561422855471a99da6810ba260"
+}

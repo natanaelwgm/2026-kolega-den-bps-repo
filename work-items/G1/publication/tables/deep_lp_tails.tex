@@ -1,0 +1,28 @@
+\begin{table}[H]
+\centering
+\caption{LP pooled residual tail counts by sector}
+\GOneLabel{tab:deep-lp-tails}
+\begingroup\fontsize{9.2}{11.2}\selectfont
+\setlength{\tabcolsep}{4.3pt}\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{lrrrrrrr}
+\toprule
+Code & $N$ & \makecell{Below\\IQR fence} & \makecell{Above\\IQR fence} & $|\widetilde r|>2$ & $|\widetilde r|>3$ & $I<0.5$ & $I>2$ \\
+\midrule
+10 & 1,814 & 8 & 51 & 281 & 94 & 573 & 475 \\
+12 & 299 & 0 & 1 & 117 & 49 & 148 & 113 \\
+13 & 616 & 1 & 4 & 118 & 36 & 240 & 200 \\
+14 & 459 & 4 & 8 & 45 & 14 & 138 & 117 \\
+15 & 124 & 0 & 2 & 10 & 2 & 32 & 33 \\
+16 & 199 & 0 & 0 & 15 & 1 & 69 & 55 \\
+20 & 159 & 1 & 0 & 28 & 8 & 56 & 47 \\
+22 & 285 & 0 & 2 & 39 & 8 & 90 & 92 \\
+23 & 475 & 1 & 23 & 57 & 30 & 191 & 116 \\
+25 & 160 & 0 & 0 & 18 & 2 & 49 & 54 \\
+31 & 341 & 0 & 1 & 10 & 1 & 95 & 91 \\
+32 & 110 & 0 & 1 & 5 & 1 & 32 & 23 \\
+ALL & 5,041 & 18 & 101 & 743 & 246 & 1,713 & 1,416 \\
+\bottomrule
+\end{tabular}
+\endgroup
+\appnotes{The interquartile range is P75 minus P25. The fences are P25 minus 1.5 IQR and P75 plus 1.5 IQR, with strict inequalities for tail counts. The pooled ALL row has its own fences, whose counts need not equal the sum of sector counts. Absolute-log and index thresholds are fixed across sectors. Each row uses all pooled dynamic observations in its named group. Flags can overlap; we retain flagged observations.}{G0.5 v3 modified manufacturing records with fictional company links; authors' calculations.}
+\end{table}

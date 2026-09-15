@@ -1,0 +1,9 @@
+# G1 revision02 first-half PDF review
+
+Status: **PASS**. Reviewed every page 1–78 of the 161-page revision02 PDF (13 six-page contact sheets), with full-page closeups of pages 1, 7, 26, 28, 48, 49, 54, 62 and 64. PDF SHA-256: `7671e560ce3bb79be8f9753267c5781c5f5a0e8f64e28a28ccdb44d8db2129ef`. The JSON companion records every reviewed render hash.
+
+The two defects in the first-PDF review are closed. On page 7, Figure A1 now separates the repeated LP, ACF and Wooldridge count labels. The former two-row paired-table tail finishes on page 48; its notes and interpretation share page 49 with Figure A9. Calendar years read “2011” in the LP and OP worked prose, and sensitivity interpretations begin with a capital letter. The LP primary-outcome table also avoids its former sparse continuation. No new material clipping, label collision, Notes/Source overflow or nearly empty interpretation-only page was found in the assigned range.
+
+The final first-reader check retains the actual G0 paragraph comparison recorded in the earlier review. G1 starts with the concrete value-created/workers/capital operation, then defines the residual and explains fictional links and nominal amounts before equations. It distinguishes broader own-method coverage from the narrow shared comparison, explains each method’s purpose before naming it, defines data/timing before estimation, and explains whole-history resampling before coefficient tables. The paired and annual exhibits keep their sample and normalization definitions beside the evidence. This is a documented review against those criteria, not journal certification.
+
+Coverage beyond page 78, numerical binding, host portability, private PR synchronization and actual Telegram delivery have separate receipts. The historical first-PDF review remains `REVIEWED_LAYOUT_FIXES_REQUIRED` for its own immutable hash; this PASS applies only to revision02.

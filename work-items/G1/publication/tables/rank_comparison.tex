@@ -1,0 +1,27 @@
+\begin{table}[H]
+\centering
+\caption{Residual agreement on shared estimation records}
+\GOneLabel{tab:rank-comparison}
+\begingroup\fontsize{9.2}{11.2}\selectfont
+\setlength{\tabcolsep}{4.3pt}\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{llrrrr}
+\toprule
+Sample & Methods & \makecell{Pairwise\\records} & \makecell{Four-method\\records} & \makecell{Pearson\\correlation} & \makecell{Spearman\\correlation} \\
+\midrule
+Own & OP--LP & 128 & 128 & 0.970 & 0.966 \\
+Own & OP--ACF & 128 & 128 & 0.962 & 0.949 \\
+Own & OP--Wooldridge & 128 & 128 & 0.977 & 0.974 \\
+Own & LP--ACF & 5,041 & 128 & 0.841 & 0.845 \\
+Own & LP--Wooldridge & 5,041 & 128 & 0.996 & 0.997 \\
+Own & ACF--Wooldridge & 5,041 & 128 & 0.860 & 0.866 \\
+Common & OP--LP & 128 & 128 & 0.985 & 0.982 \\
+Common & OP--ACF & 128 & 128 & 0.956 & 0.941 \\
+Common & OP--Wooldridge & 128 & 128 & 0.988 & 0.985 \\
+Common & LP--ACF & 128 & 128 & 0.901 & 0.876 \\
+Common & LP--Wooldridge & 128 & 128 & 1.000 & 1.000 \\
+Common & ACF--Wooldridge & 128 & 128 & 0.908 & 0.883 \\
+\bottomrule
+\end{tabular}
+\endgroup
+\appnotes{We match primary dynamic-fit predictions to the same original company-year record. Each row compares the pair's shared observations within the named estimation specification. Own and common rows can use different coefficient vectors as well as different records. Pearson and Spearman correlations use centered logs, with average ranks for ties. The four-method count describes the intersection of all four fitted prediction sets, which need not equal a pairwise intersection. A dash means the correlation is unavailable.}{G0.5 v3 modified manufacturing records with fictional company links; authors' calculations.}
+\end{table}

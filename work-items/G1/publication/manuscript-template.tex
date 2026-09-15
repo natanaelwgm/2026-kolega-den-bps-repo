@@ -1,0 +1,201 @@
+% Continuous portable body; load g1-appendix.sty in the host.
+\GOneBegin
+\GOneSection{Production Function Estimation}
+\GOneLabel{app:nominal-production}
+
+\GOneSubsection{Introduction}
+\GOneLabel{sec:purpose}
+@@opening_answer@@
+
+We take the supplied value-added field as the production measure. Value added represents the value created through production after allowing for purchased inputs; here we retain the reported amount rather than reconstructing it from other reported totals. We call the part left after accounting for labor and capital the \emph{production residual}. A larger residual means more reported value added relative to the input contributions assigned by the estimated equation. Prices, measurement error and temporary production shocks can also enter that remainder, so it does not isolate physical productivity.
+
+We use a modified copy of the supplied annual manufacturing records, called G0.5. Its values have been altered for development, and its company identifiers link records across years through fictional assignments within each province and sector. These assignments allow us to run calculations that require consecutive observations; they do not establish actual company histories. We retain the reported monetary amounts without adjusting them to common prices. Differences in prices and reporting units can therefore affect the results alongside differences in production. We use these records to examine how the calculations behave, rather than to draw empirical conclusions about the productivity of actual manufacturers.
+
+Estimating the input contributions requires more than comparing larger and smaller manufacturers. A company may hire more workers or buy more materials when it expects favorable production conditions that we cannot observe. The observed relation between inputs and production then reflects both the input contribution and the conditions that prompted the company to use them. The four methods we examine address this problem through assumptions about input choices and their timing:
+\begin{itemize}
+\item Materials purchases can reveal production conditions known to the company, including when it makes no new capital investment. The \textbf{Levinsohn--Petrin (LP)} method uses materials to represent that information when estimating the input contributions.
+\item Investment can also convey this information, while differences in the chances of continuing to operate can affect which companies we observe. The \textbf{Olley--Pakes (OP)} method addresses both issues. It requires usable investment observations and information about continuation.
+\item Separating labor's contribution from the information conveyed by materials requires additional care about when the company chooses its inputs. The \textbf{Ackerberg--Caves--Frazer (ACF)} method postpones that separation to a later estimation step, using explicit timing assumptions.
+\item A system of equations can link current and previous observations to estimate the input contributions together. We use a \textbf{Wooldridge} formulation and specify its version because those equations and their assumptions determine how to read the estimates.
+\end{itemize}
+
+@@intro_results@@
+
+\GOneSubsubsection{Guide to the appendix}
+\GOneLabel{sec:roadmap}
+\begin{itemize}
+\item \textbf{We define what the residual measures.} Section~\GOneRef{sec:meaning} explains how we account for workers and capital, why we use logarithms, and how we express a record's residual relative to its sector average. These steps determine what a high or low reported value means.
+\item \textbf{We establish which records supply the calculation.} Section~\GOneRef{sec:data} identifies the source variables, years and missing values. The production observations cover @@production_years@@; the preceding calendar year supplies capital at the start of each year under our year-end-stock assumption. We distinguish the records used in estimation from the broader set for which we can calculate a residual.
+\item \textbf{We develop each estimation method.} Section~\GOneRef{sec:methods} explains the common assumptions about input choices. Sections~\GOneRef{sec:lp}, \GOneRef{sec:op}, \GOneRef{sec:acf} and~\GOneRef{sec:wrdg} then present each method's data requirements and equations, followed by the available estimates, uncertainty, distributions and comparisons over time.
+\item \textbf{We compare results on the same records.} Section~\GOneRef{sec:coefficients} brings the input coefficients and their uncertainty together. Sections~\GOneRef{sec:distributions} and~\GOneRef{sec:agreement} compare residual distributions and rankings, distinguishing each method's sample from the shared observations used for direct comparison.
+\item \textbf{We assess how the estimation choices affect the findings.} Section~\GOneRef{sec:sensitivity} changes the starting values used by the numerical search and the flexibility of the fitted relationships. Section~\GOneRef{sec:synthesis} draws together the findings and their implications for interpreting the residuals.
+\end{itemize}
+
+\GOneSubsection{Production residuals}
+\GOneLabel{sec:meaning}
+\GOneSubsubsection{Input elasticities}
+\GOneLabel{sec:elasticities}
+We begin by specifying how the measured inputs enter the production equation. Let $i$ identify a company and $t$ its calendar year. In the present data, $i$ refers to the fictional company assignment. Write $Y_{it}$ for reported value added, $L_{it}$ for the number of workers and $K_{it}$ for capital available at the beginning of that year. We assume that these quantities enter the following relation:
+\begin{equation}
+Y_{it}=A_{it}L_{it}^{\beta_L}K_{it}^{\beta_K}\exp(\varepsilon_{it}),
+\GOneLabel{eq:levels}
+\end{equation}
+The factor $A_{it}$ represents production conditions beyond the two measured inputs. The term $\exp(\varepsilon_{it})$ allows a temporary discrepancy; $\exp$ denotes the exponential function. The parameters $\beta_L$ and $\beta_K$ determine how strongly value added responds to labor and capital. They are \emph{input elasticities}: a small proportional increase in an input changes value added by that proportion multiplied by its elasticity, holding the other terms constant. We estimate these parameters from the records. The multiplicative form in Equation~\GOneEqref{eq:levels} is an assumption we impose, rather than a relationship established by the source files.
+
+Value added per worker provides a simpler comparison, but it leaves differences in capital use mixed with differences in production performance. Equation~\GOneEqref{eq:levels} lets us account for labor and capital separately. Its usefulness depends on how well we estimate their contributions, given that companies can choose inputs in response to production conditions we do not observe.
+
+We work with natural logarithms, written $\ln$, so that multiplying input quantities becomes adding their contributions. This also puts proportional differences on a common scale: the difference between two logged values equals the log of their ratio. Lower-case letters denote the logged quantities:
+\begin{equation}
+y_{it}=\beta_Ll_{it}+\beta_Kk_{it}+a_{it}+\varepsilon_{it},\qquad
+(y,l,k,a)=(\ln Y,\ln L,\ln K,\ln A).
+\GOneLabel{eq:logs-first-principles}
+\end{equation}
+Each term now represents a separate contribution to logged value added. We can take logs only of positive quantities. We therefore count zeros, negative values and unavailable observations separately in the data section and exclude them where the calculation requires a log.
+
+\GOneSubsubsection{Uncentered residual}
+\GOneLabel{sec:native}
+After estimating the labor and capital coefficients, we multiply each coefficient by its corresponding logged input and subtract both contributions from logged value added. The hat on a coefficient denotes an estimate. We allow the estimates to differ by method $m$ and sector $s$:
+\begin{equation}
+\widehat r_{it}^{(m)}=y_{it}-\widehat\beta_{L,s}^{(m)}l_{it}-\widehat\beta_{K,s}^{(m)}k_{it}.
+\GOneLabel{eq:native-definition}
+\end{equation}
+This is the \emph{uncentered residual}: we have not yet subtracted a reference average. Under Equation~\GOneEqref{eq:logs-first-principles}, it contains both $a_{it}$ and the temporary discrepancy $\varepsilon_{it}$, as well as any constant that we have not subtracted. Because we use monetary observations at reported prices, the residual can also reflect prices and reporting differences.
+
+A comparison of two records clarifies the interpretation. If they have identical measured labor and capital and use the same fitted coefficient vector, their residual difference equals the difference in logged value added. If their inputs differ, the residual difference subtracts the model-assigned input contributions first. Thus a higher residual means higher reported value added \emph{relative to those contributions}. It does not by itself explain why the difference arose.
+
+The units affect the residual's numerical level. To see why, suppose we multiply value added, labor and capital by constants that change their units: $Y^*=c_YY$, $L^*=c_LL$ and $K^*=c_KK$. Keeping the same estimated coefficients gives
+\begin{equation}
+\widehat r^*_{it}=\widehat r_{it}+\ln c_Y-\widehat\beta_L\ln c_L-\widehat\beta_K\ln c_K.
+\GOneLabel{eq:unit-rescaling}
+\end{equation}
+A uniform scale change shifts the whole residual series. It need not change the ranking within the same sector, but it makes an unqualified comparison of raw residual levels misleading. Firm-specific price or unit differences are more serious: they need not reduce to a constant shift and can change the ordering itself.
+
+\GOneSubsubsection{Centering}
+\GOneLabel{sec:centered}
+We use the records in each sector's consecutive-year estimation stage, pooled over all supported years, as the reference. These records require eligible information in the immediately preceding year; the data and method sections give the full selection rules. Let $\mathcal D_s^{(m)}$ contain the company-year observations in this sample for method $m$, and let $N_s^{(m)}$ be their number. Define
+\begin{equation}
+\overline r_s^{(m)}=\frac{1}{N_s^{(m)}}\sum_{(j,\tau)\in\mathcal D_s^{(m)}}\widehat r_{j\tau}^{(m)},\qquad
+\widetilde r_{it}^{(m)}=\widehat r_{it}^{(m)}-\overline r_s^{(m)}.
+\GOneLabel{eq:centered-definition}
+\end{equation}
+The mean centered residual is zero over this pooled reference sample within each sector and method. Centering removes the arbitrary common shift in Equation~\GOneEqref{eq:unit-rescaling} when the scaling constants apply uniformly within the reference group. It does not remove differing prices, product mix, reporting errors or model misspecification. A common zero mean also need not imply equal medians, equal tails or agreement about individual records.
+
+We subtract this same reference mean in every prediction year. We do not recenter each year separately: doing so would remove the annual mean differences we want to describe. Annual means can therefore differ from zero, including in years that contribute to the pooled fit. Their differences describe changing reported outcomes and inputs evaluated under one sector equation, together with changes in the records present. They are neither separate annual coefficient estimates nor estimates of real productivity growth.
+
+\GOneSubsubsection{Relative index}
+\GOneLabel{sec:exponentiation}
+We can also express the centered log residual as a positive index:
+\begin{equation}
+I_{it}^{(m)}=\exp\!\left(\widetilde r_{it}^{(m)}\right).
+\GOneLabel{eq:relative-index}
+\end{equation}
+Exponentiation reverses the log transformation. An index above one means that the record's uncentered residual exceeds its sector's reference mean for that method; an index below one means it falls below. Within the same sector and method, the ratio of two indices equals the ratio of their exponentiated uncentered residuals: both use the same reference mean. For example, an index ratio of two means a twofold difference in that model-defined component. It does not imply twice the physical productivity, value added or value added per worker.
+
+An average calculated after taking logs differs from an ordinary average of the index values. Taking the exponential of the average log index gives its geometric mean, which is one in the reference sample because the average centered residual is zero. The arithmetic mean, calculated by adding the index values and dividing by their number, need not be one. Large positive residuals become especially large index values after exponentiation. We consequently report raw logs, centered logs and the positive index separately, with the transformation and denominator stated for each exhibit. These definitions establish what the subsequent distributions measure; we next explain which source observations permit the calculation.
+
+\GOneSubsection{Data and sample construction}
+\GOneLabel{sec:data}
+We now identify which source observations provide the quantities in Section~\GOneRef{sec:meaning}. G0.5 contains @@source_records@@ records from twelve supplied annual files. We use its modified values and fictional company links as described in the introduction. Each record retains its source year. A shared variable name helps us locate a field across files, but does not establish that the files use the same units or definition.
+
+We use monetary amounts at reported prices, referred to as \emph{nominal} values. Converting them to values at common prices would require suitable price adjustments, or deflators, for value added, capital and materials. The available documentation does not establish a consistent set of those adjustments and source units. We therefore retain each reported scale and treat these fields as provisional measures. Table~\GOneRef{tab:measurement} identifies the quantity and transformation assigned to each variable.
+\GOneInput{tables/measurement.tex}
+We treat each year's positive reported capital total as its year-end stock. This maintained assumption extends the calculation beyond the years with explicit stock documentation; it does not provide new evidence that the source definitions agree. Beginning capital for production in year $t$ is the reported stock in calendar year $t-1$, linked through the same fictional company assignment. Reported additions separately supply the assumed investment measure for OP. We do not reconstruct investment by subtracting successive stocks, because that difference can also reflect disposals, depreciation, valuation and reporting changes.
+
+The source years are @@history_years@@. Beginning capital permits production observations in @@production_years@@, while the stage requiring eligible production in two consecutive years can use endpoints in @@dynamic_years@@. The unavailable 2016 file supplies neither a stock nor a production observation. In particular, a 2017 production record lacks beginning capital, whereas a 2018 record can use the 2017 stock. A dynamic pair ending in 2018 still lacks an eligible 2017 predecessor. These calendar consequences follow from the timing rule rather than a decision to compress the gap.
+
+We assume a consistent positive unit scale for each variable within a sector over the retained years. This does not correct a reporting-unit error affecting a particular company or year. We pool all supported calendar pairs within each sector with constant production slopes and constant proxy and transition functions, without additional year effects. Pooling therefore draws information from several years by imposing a common relationship across them. Inflation, source changes and changing composition can affect that relationship and the annual residual comparisons.
+
+We estimate each manufacturing group separately, using the two-digit industry codes supplied in the records. This allows the input coefficients to differ across industries. We refer to these groups as sectors; the common digits do not by themselves verify a common classification across editions.
+
+The methods use current and previous observations in different steps. An initial regression can use records with all required positive inputs. A later step relates current production to the same fictional company's preceding year and requires a consecutive pair, which we call a \emph{transition}. We call these the first-stage and dynamic-stage samples, respectively. One company can contribute several transitions; a count of transitions is therefore not a count of distinct companies. The method sections specify the exact calculations, including Wooldridge's system of equations.
+
+We set minimum sample sizes before estimation: @@minfirst@@ observations for the first stage, @@mindyn@@ eligible transitions and @@minfirm@@ distinct fictional companies in the dynamic stage. OP also estimates continuation. For that calculation, a \emph{risk interval} is a pair of calendar years for which we can use the earlier record to determine whether the same fictional assignment appears again. We require @@minrisk@@ usable risk intervals, including @@minexit@@ disappearances and @@mincontinue@@ continuations. These outcomes describe the generated links, not verified company closures. Table~\GOneRef{tab:support} shows how many observations remain under each set of requirements.
+\GOneInput{tables/support.tex}
+@@support_results@@
+
+Figure~\GOneRef{fig:sample-support} compares these sample sizes. Each method's own sample requires the observations needed by that method. Requiring observations suitable for all four methods imposes additional restrictions; Table~\GOneRef{tab:support} reports that smaller common sample separately.
+@@supportfig@@
+A method's own sample uses its required inputs; the common sample requires inputs suitable for all four methods before applying the same calendar rule. We report accepted and rejected estimation cells under both definitions. Shared input eligibility alone does not guarantee that every estimator passes its numerical and selection requirements.
+
+@@deep_data@@
+
+@@method_chapters@@
+
+\GOneSubsection{Coefficient estimates and uncertainty}
+\GOneLabel{sec:coefficients}
+The method sections report separate estimates for each sector. We now bring together @@primary@@ primary own-sample estimates and @@common_primary@@ primary common-sample estimates to compare the contributions assigned to labor and capital. For each model, we also repeat the estimation on samples formed by drawing complete fictional company histories with replacement within the sector. Drawing whole histories keeps each sampled company's consecutive observations together. This bootstrap calculation shows how the estimated coefficients vary when the composition of the sample changes under the same fictional links and measurement assumptions.
+
+Each model requests @@draws@@ resamples. The own-sample estimates return @@drawtotal@@ successful resamples, and the common-sample estimates return @@common_drawtotal@@. The tables retain the successful count for each model. We summarize the resulting estimates with a standard error, calculated from their spread, and an exploratory percentile interval that spans the middle 95\% of their distribution. We report an interval only when at least @@minsuccess@@ resamples succeed. Table~\GOneRef{tab:coefficients} places the coefficient estimates beside these intervals; the method-specific tables also report the standard errors. Resampling the available histories does not capture uncertainty about whether the fictional links match actual companies, nor does it correct the reported monetary values to common prices.
+\GOneInput{tables/coefficients.tex}
+@@coefficient_results@@
+
+The coefficient sum measures the model's response when both inputs rise proportionally. A physical returns-to-scale interpretation requires comparable production quantities, which these nominal measures do not establish.
+
+Figure~\GOneRef{fig:coefficients} shows the own-sample estimates and full admitted intervals from resampled histories. The table also gives the separate common-sample estimates.
+@@coefffig@@
+We read the coefficient positions together with the interval widths. A large difference between methods and an imprecise estimate answer different questions: the first concerns the equation assigned to the records, while the second concerns variation across resampled histories. The residual distributions show how these estimated equations translate into differences between observations.
+
+\GOneSubsection{Residual distributions}
+\GOneLabel{sec:distributions}
+We apply each method's sector coefficients to the corresponding logged value added, workers and beginning capital. We subtract the method-sector mean over all of its pooled dynamic estimation records, following Section~\GOneRef{sec:meaning}:
+\begin{equation}
+\widehat r_{it}^{(m)}=y_{it}-\widehat\beta_{L,s}^{(m)}l_{it}-\widehat\beta_{K,s}^{(m)}k_{it},\qquad
+\widetilde r_{it}^{(m)}=\widehat r_{it}^{(m)}-\frac{1}{N_s^{(m)}}\sum_{(j,\tau)\in\mathcal D_s^{(m)}}\widehat r_{j\tau}^{(m)}.
+\GOneLabel{eq:residual}
+\end{equation}
+The summation includes all fitted company-year records in that sector and method, using $\tau$ to distinguish their years from the prediction year $t$. Table~\GOneRef{tab:distribution} reports the spread and selected percentiles for the own and common estimation samples. A percentile marks the value below which the corresponding share of observations falls; the median is the 50th percentile. Separate own samples can differ in their records, so differences in their pooled distributions can reflect both estimation and composition.
+\GOneInput{tables/distribution.tex}
+@@distribution_results@@
+
+Figure~\GOneRef{fig:distribution} groups the residuals into equal-width intervals and plots the share of observations in each interval. These histograms show where the records concentrate and how far the less frequent values extend. We retain all occupied intervals, including the tails.
+@@distfig@@
+Subtracting each sector's average gives the methods a common zero mean, but leaves their medians, spread and tails free to differ. The histograms and percentiles therefore describe differences that centering does not remove. Similar distribution shapes still need not place individual records in the same order, which we examine next.
+
+@@common_distribution@@
+
+\GOneSubsection{Comparison across estimators}
+\GOneLabel{sec:agreement}
+We match each method's residual to the same source observation before comparing methods. We use two measures of agreement. Pearson correlation describes how closely the residual values vary together in a straight-line relationship. Spearman correlation applies that comparison to ranks, asking whether the methods place the same observations high or low. A Pearson correlation of one means that the residual values lie on an increasing straight line; it does not mean that the values are equal. A Spearman correlation of one means that the rankings agree. Zero indicates no linear association between the values, or between their ranks in the Spearman calculation; a negative correlation indicates an opposite association.
+
+We calculate both correlations after subtracting the sector-specific means. Table~\GOneRef{tab:rank-comparison} reports the six possible method pairs under both the own and common input-sample specifications. Its sample columns distinguish records with predictions from both methods in a pair from records with predictions from all four methods.
+\GOneInput{tables/rank_comparison.tex}
+@@pair_results@@
+
+Figure~\GOneRef{fig:rank-comparison} repeats the rank comparisons separately within each sector. This shows whether agreement in the pooled sample also holds among records in the same industry group.
+@@rankfig@@
+Each comparison now fixes both the records and their sector. Differences across the plotted correlations indicate that agreement between methods can vary across industry groups. The pooled coefficient consequently cannot describe every sector's agreement by itself.
+
+We also examine whether agreement differs between low- and high-ranked observations. For each method pair, we order records by the first method's residual rank and divide those ranks into groups. Figure~\GOneRef{fig:rank-scatter} plots the paired averages within each group. We omit a group if it contains fewer than five records.
+@@scatterfig@@
+Each plotted point summarizes several records. The grouping helps show broad differences along the ranking, but hides differences within each group; omitted small groups also remain outside the figure. The full-sample correlations in Table~\GOneRef{tab:rank-comparison} include those observations. We therefore use the grouped plots to describe where agreement changes, alongside the correlations calculated from all shared records.
+
+\GOneSubsection{Specification sensitivity}
+\GOneLabel{sec:sensitivity}
+The estimates can change even when we keep the observations fixed. A numerical search begins from specified coefficient values, and a nonlinear search may end at different solutions when it starts elsewhere. The flexibility of the functions used to represent unobserved production conditions is a separate estimation choice. We examine both by repeating each sector--method calculation with two fixed alternative starting values and with a quadratic, rather than cubic, proxy approximation. The latter removes the third-degree terms from the proxy function described in Section~\GOneRef{sec:common-basis}.
+
+Across the own and common input samples, the primary and alternative specifications produce @@allfits@@ sets of point estimates. Within each paired comparison we hold the sample fixed. Table~\GOneRef{tab:sensitivity} summarizes the largest absolute changes across sectors for the own-sample estimates. Separate columns distinguish changing where the search starts from changing the proxy approximation.
+\GOneInput{tables/sensitivity.tex}
+@@sensitivity_results@@
+
+Figure~\GOneRef{fig:sensitivity} identifies which sector--method estimates account for the changes in the labor coefficient. We display the alternatives alongside the primary estimate, including alternatives with less conventional signs or magnitudes.
+@@sensfig@@
+We retain the primary specifications selected before examining these alternatives. Reaching a numerical stopping rule establishes neither a unique optimum nor the validity of the economic assumptions. The alternative coefficients show how much the assigned input contributions depend on the particular search and approximation choices we examine.
+
+\GOneSubsection{Conclusion}
+\GOneLabel{sec:synthesis}
+@@conclusion_results@@
+
+These findings describe calculations using modified monetary records and fictional company histories. The all-years stock assumption makes it possible to account for beginning capital wherever the immediately preceding stock exists. It does not authenticate the meaning or scale of every year's capital field. Pooling the years further assumes stable sector coefficients and control relationships; we preserve the missing calendar year and use a single pooled reference when comparing annual residuals.
+
+Interpreting the remainder as productivity of actual manufacturers requires verified company links, comparable production and input measures at common prices, and defensible assumptions about input choices and continuation. The calculations here show what follows under the stated assumptions and where uncertainty or sample requirements limit the comparison.
+
+\begin{thebibliography}{9}
+\bibitem[Ackerberg, Caves, and Frazer(2015)]{acf} Ackerberg, Daniel A., Kevin Caves, and Garth Frazer. 2015. ``Identification Properties of Recent Production Function Estimators.'' \textit{Econometrica} 83(6): 2411--2451. \href{https://doi.org/10.3982/ECTA13408}{doi:10.3982/ECTA13408}.
+\bibitem[Levinsohn and Petrin(2003)]{lp} Levinsohn, James, and Amil Petrin. 2003. ``Estimating Production Functions Using Inputs to Control for Unobservables.'' \textit{Review of Economic Studies} 70(2): 317--341. \href{https://www.nber.org/papers/w7819}{Working-paper and published-version record}.
+\bibitem[Olley and Pakes(1996)]{op} Olley, G. Steven, and Ariel Pakes. 1996. ``The Dynamics of Productivity in the Telecommunications Equipment Industry.'' \textit{Econometrica} 64(6): 1263--1297. \href{https://www.nber.org/papers/w3977}{Working-paper and published-version record}.
+\bibitem[Rovigatti and Mollisi(2018)]{prodest} Rovigatti, Gabriele, and Vincenzo Mollisi. 2018. ``Theory and Practice of Total-Factor Productivity Estimation: The Control Function Approach Using Stata.'' \textit{Stata Journal} 18(3): 618--662. \href{https://www.stata-journal.com/article.html?article=st0537}{Article and implementation record}.
+\bibitem[Wooldridge(2009)]{wooldridge} Wooldridge, Jeffrey M. 2009. ``On Estimating Firm-Level Production Functions Using Proxy Variables to Control for Unobservables.'' \textit{Economics Letters} 104(3): 112--114. \href{https://doi.org/10.1016/j.econlet.2009.04.026}{doi:10.1016/j.econlet.2009.04.026}.
+\bibitem[Wooldridge(2009b)]{wooldridgelecture} Wooldridge, Jeffrey M. 2009b. ``New Developments in Econometrics: Lecture 4, Linear Panel Data Models II.'' Cemmap/UCL course materials, June. \href{https://www.cemmap.ac.uk/wp-content/legacy/resources/imbens_wooldridge/slides_4.pdf}{Author lecture; shared-vector special case, printed pp.~21--22}.
+\end{thebibliography}
+
+\GOneEnd

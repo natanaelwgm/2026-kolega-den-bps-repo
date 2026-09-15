@@ -1,0 +1,19 @@
+\begin{table}[H]
+\centering
+\caption{ACF: variable definitions}
+\GOneLabel{tab:deep-acf-mapping}
+\begingroup\fontsize{9.2}{11.2}\selectfont
+\setlength{\tabcolsep}{4.3pt}\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{l>{\raggedright\arraybackslash}p{4.6cm}>{\raggedright\arraybackslash}p{7.0cm}}
+\toprule
+Log variable & Source field(s) & Construction and condition \\
+\midrule
+$y$ & value\_added\_nominal & $y_t=\ln(\mathrm{value\ added}_t)$; positive reported nominal amount \\
+$l$ & workers & $l_t=\ln(\mathrm{workers}_t)$; positive reported worker count \\
+$k$ & capital\_stock\_nominal & $k_t=\ln(K^{\mathrm{December}}_{t-1})$; positive stock from the exact prior year, assuming year-end timing \\
+$m$ & val\_rtlvcu & $m_t=\ln(\mathrm{materials}_t)$; positive reported raw/supporting materials \\
+\bottomrule
+\end{tabular}
+\endgroup
+\appnotes{We retain reported monetary scales and worker counts. We assume that the reported capital stock is a year-end stock and reported additions measure investment in every available year. The separate documentary flags retain their original meaning; they do not verify these assumptions for every year and no longer exclude a positive amount under this specification. Investment uses reported additions, not the difference between successive stocks. The source fields do not authenticate the fictional company links.}{G0.5 v3 modified manufacturing records with fictional company links; authors' calculations.}
+\end{table}

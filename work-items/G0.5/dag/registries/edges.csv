@@ -1,0 +1,17 @@
+edge_id,input,output,process,changes_numbers
+G05_E01,G05_S00,G05_S01,harness/g05/build_development.py,yes; coherent per-record levels and logs
+G05_E02,G05_S01,G05_S02,harness/g05/attach_ids.py,no measurement changes; append identifier fields
+G05_E03,G05_S08,G05_S03,harness/data_source.py; verify_package.py; register_work_item.py,"no; validation, input selection and publication metadata"
+G05_E04,G05_X00,G05_S04,prepare_external_identity.py::read_excel; audit_excel_panel_fields.py,development identity/representation only; no source measurements overwritten
+G05_E05,G05_S04,G05_S05,panel_generator.py::normalise; weights,development identity/representation only; no source measurements overwritten
+G05_E06,G05_S05,G05_S06,panel_generator.py::generate annual clustering,development identity/representation only; no source measurements overwritten
+G05_E07,G05_S06,G05_S07,panel_generator.py::choose_pairs; generate,development identity/representation only; no source measurements overwritten
+G05_E08,G05_S11,G05_S08,build_panel_package.py,development identity/representation only; no source measurements overwritten
+G05_E09,G05_S00,G05_S09,inspect existing G0 identity if available,identity or verification only; G0 unchanged
+G05_E10,G05_X00,G05_S09,bind source observation universe,identity or verification only; G0 unchanged
+G05_E11,G05_S09,G05_S10,reuse eligible existing continuity and pseudonymize,identity or verification only; G0 unchanged
+G05_E12,G05_S07,G05_S10,freeze generated external identity,identity or verification only; G0 unchanged
+G05_E13,G05_S10,G05_S11,port prepared identity,identity or verification only; G0 unchanged
+G05_E14,G05_S00,G05_S11,verify source lineage and nine original features,identity or verification only; G0 unchanged
+G05_E15,G05_S02,G05_S11,translate to frozen G0.5 observation IDs,identity or verification only; G0 unchanged
+G05_E16,G05_S02,G05_S08,preserve disturbed measurement payload,identity or verification only; G0 unchanged

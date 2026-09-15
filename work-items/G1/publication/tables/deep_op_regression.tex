@@ -1,0 +1,34 @@
+\begin{table}[H]
+\centering
+\caption{OP: own-sample production estimates}
+\GOneLabel{tab:deep-op-regression}
+\begingroup\fontsize{9.2}{11.2}\selectfont
+\setlength{\tabcolsep}{4.3pt}\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{p{4.1cm}*{1}{>{\centering\arraybackslash}p{1.85cm}}}
+\toprule
+Dependent variable: log value added & 10 \\
+\midrule
+Labor $\widehat\beta_L$ & 0.8942 \\
+(Bootstrap SE) & (0.0613) \\
+95\% percentile interval & \makecell{[0.7604,\\1.0057]} \\
+Capital $\widehat\beta_K$ & 0.0908 \\
+(Bootstrap SE) & (0.1084) \\
+95\% percentile interval & \makecell{[-0.0735,\\0.3350]} \\
+Coefficient sum $\widehat\beta_L+\widehat\beta_K$ & 0.9851 \\
+(Bootstrap SE) & (0.1059) \\
+Consecutive-year observations & 128 \\
+Fictional firms in fit & 102 \\
+Records with eligible inputs & 683 \\
+First fitted endpoint & 2012 \\
+Last fitted endpoint & 2022 \\
+Distinct fitted years & 7 \\
+Proxy polynomial degree & 3 \\
+Initial labor coefficient & 1.1155 \\
+Initial capital coefficient & 0.2799 \\
+Objective value & 1.639e+02 \\
+Successful bootstrap draws & 99 \\
+\bottomrule
+\end{tabular}
+\endgroup
+\appnotes{Each column pools eligible calendar observations in one sector with one coefficient vector and no added year effects. The own sample requires this method's inputs; the common sample separately requires all four methods' inputs before exact lagging. Parentheses show whole-history bootstrap standard errors; the coefficient-sum error includes labor-capital covariance. Brackets show admitted 95 percent percentile intervals. A dash denotes unavailable inference. The first and last years bound the observed endpoints but do not fill intervening calendar gaps; the distinct-year count records actual coverage. Primary polynomial and starting rules are fixed before results.}{G0.5 v3 modified manufacturing records with fictional company links; authors' calculations.}
+\end{table}

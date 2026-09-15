@@ -1,0 +1,34 @@
+\begin{table}[H]
+\centering
+\caption{LP: own-sample production estimates}
+\GOneLabel{tab:deep-lp-regression}
+\begingroup\fontsize{9.2}{11.2}\selectfont
+\setlength{\tabcolsep}{4.3pt}\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{p{4.1cm}*{5}{>{\centering\arraybackslash}p{1.85cm}}}
+\toprule
+Dependent variable: log value added & 10 & 12 & 13 & 14 & 15 \\
+\midrule
+Labor $\widehat\beta_L$ & 0.5465 & 0.1842 & 0.3737 & 0.5911 & 0.5842 \\
+(Bootstrap SE) & (0.0257) & (0.0743) & (0.0435) & (0.0641) & (0.0634) \\
+95\% percentile interval & \makecell{[0.4891,\\0.6057]} & \makecell{[0.0391,\\0.3369]} & \makecell{[0.2911,\\0.4557]} & \makecell{[0.4536,\\0.7380]} & \makecell{[0.4474,\\0.7100]} \\
+Capital $\widehat\beta_K$ & 0.0867 & 0.0435 & 0.0276 & -0.0033 & 0.0555 \\
+(Bootstrap SE) & (0.0104) & (0.0429) & (0.0166) & (0.0207) & (0.0499) \\
+95\% percentile interval & \makecell{[0.0669,\\0.1113]} & \makecell{[-0.0270,\\0.1455]} & \makecell{[-0.0069,\\0.0692]} & \makecell{[-0.0455,\\0.0422]} & \makecell{[-0.0236,\\0.1621]} \\
+Coefficient sum $\widehat\beta_L+\widehat\beta_K$ & 0.6332 & 0.2278 & 0.4013 & 0.5878 & 0.6397 \\
+(Bootstrap SE) & (0.0277) & (0.0834) & (0.0452) & (0.0649) & (0.0824) \\
+Consecutive-year observations & 1,814 & 299 & 616 & 459 & 124 \\
+Fictional firms in fit & 603 & 95 & 250 & 204 & 65 \\
+Records with eligible inputs & 3,434 & 489 & 1,228 & 1,002 & 303 \\
+First fitted endpoint & 2012 & 2012 & 2012 & 2012 & 2012 \\
+Last fitted endpoint & 2022 & 2022 & 2022 & 2022 & 2022 \\
+Distinct fitted years & 8 & 8 & 8 & 8 & 8 \\
+Proxy polynomial degree & 3 & 3 & 3 & 3 & 3 \\
+Initial labor coefficient & 1.1018 & 1.3628 & 1.0156 & 1.0877 & 1.0486 \\
+Initial capital coefficient & 0.3272 & 0.2410 & 0.2397 & 0.1311 & 0.1427 \\
+Objective value & 1.545e+03 & 4.415e+02 & 4.364e+02 & 3.257e+02 & 9.461e+01 \\
+Successful bootstrap draws & 99 & 99 & 99 & 99 & 99 \\
+\bottomrule
+\end{tabular}
+\endgroup
+\appnotes{Each column pools eligible calendar observations in one sector with one coefficient vector and no added year effects. The own sample requires this method's inputs; the common sample separately requires all four methods' inputs before exact lagging. Parentheses show whole-history bootstrap standard errors; the coefficient-sum error includes labor-capital covariance. Brackets show admitted 95 percent percentile intervals. A dash denotes unavailable inference. The first and last years bound the observed endpoints but do not fill intervening calendar gaps; the distinct-year count records actual coverage. Primary polynomial and starting rules are fixed before results.}{G0.5 v3 modified manufacturing records with fictional company links; authors' calculations.}
+\end{table}

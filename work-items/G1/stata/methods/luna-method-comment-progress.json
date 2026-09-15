@@ -1,0 +1,61 @@
+{
+  "task": "G1 methods source commentary, stage 1",
+  "runtime": "gpt-5.6-luna, reasoning max",
+  "started_utc": "2026-09-13T12:47:39Z",
+  "started_local": "2026-09-13T19:47:39+07:00",
+  "events": [
+    {
+      "at_utc": "2026-09-13T12:52:40Z",
+      "at_local": "2026-09-13T19:52:40+07:00",
+      "status": "reviewed",
+      "detail": "Read repository instructions, G05 analysis standard section 3, G1 methods README/METHOD-CONTRACT/METHOD-AUDIT, pinned G1 row-plan contract, frozen source hashes, and adapter overlay guard."
+    },
+    {
+      "at_utc": "2026-09-13T12:52:40Z",
+      "at_local": "2026-09-13T19:52:40+07:00",
+      "status": "scope_revised",
+      "detail": "Parent instructed this pass to defer g1_fit.ado while a separate nominal measurement-mode code change is made. Stage 1 covers the other nine frozen sources; g1_fit.ado remains untouched pending a refreshed baseline."
+    },
+    {
+      "at_utc": "2026-09-13T13:04:07Z",
+      "at_local": "2026-09-13T20:04:07+07:00",
+      "status": "scope_resumed",
+      "detail": "Owner explicitly resumed the full comment pass after method-agent changes were frozen. Updated snapshot and manifest include g1_fit.ado and tests/measurement_mode.do; all 11 sources are in scope."
+    },
+    {
+      "at_utc": "2026-09-13T13:16:46Z",
+      "at_local": "2026-09-13T20:16:46+07:00",
+      "status": "complete",
+      "detail": "Inserted 130 standalone WFDOC comment lines across 11 sources. All sources strip byte-for-byte to their frozen baselines; Python AST, overlay guard (5 cases), and two stable adapter rebuilds pass. No Stata run and no G0.5 numerical result claimed."
+    }
+  ],
+  "frozen_snapshot": "/Users/natanaelmassie/Downloads/deasy-g1-issue9-20260913-g1-runs/luna-method-before-v3",
+  "scope": {
+    "included": [
+      "build_adapter.py",
+      "g1_bootstrap.ado",
+      "g1_fit.ado",
+      "g1_prodest_point.ado",
+      "load.do",
+      "tests/algorithm.do",
+      "tests/bootstrap.do",
+      "tests/guards.do",
+      "tests/validate_arithmetic.py",
+      "tests/validate_overlay.py",
+      "tests/measurement_mode.do"
+    ],
+    "deferred": [],
+    "history": [
+      {
+        "at_utc": "2026-09-13T12:52:40Z",
+        "detail": "First staging pass deferred g1_fit.ado during a separate measurement-mode change. The owner later resumed the task with a refreshed 11-file freeze, so this deferral is superseded."
+      }
+    ]
+  },
+  "status": "complete",
+  "frozen_manifest": "/Users/natanaelmassie/Downloads/deasy-g1-issue9-20260913/work-items/G1/qa/luna-method-before.json",
+  "completed_utc": "2026-09-13T13:16:46Z",
+  "completed_local": "2026-09-13T20:16:46+07:00",
+  "coverage_receipt": "/Users/natanaelmassie/Downloads/deasy-g1-issue9-20260913/work-items/G1/stata/methods/luna-comment-coverage.json",
+  "review_receipt": "/Users/natanaelmassie/Downloads/deasy-g1-issue9-20260913/work-items/G1/qa/luna-method-comment-review.json"
+}

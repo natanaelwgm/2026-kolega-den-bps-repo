@@ -1,0 +1,49 @@
+{
+  "created_utc": "2026-09-13T06:44:38.705297+00:00",
+  "status": "PASS_BOUNDED_DATASET_ONLY_ADAPTER_REVIEW",
+  "files": [
+    {
+      "path": "accept_master.py",
+      "sha256": "c3d5e1826fc6ba9a367e64aba5d4ecd128731b2cddd7cab9063dcafc2df8852b",
+      "bytes": 3141
+    },
+    {
+      "path": "build_package.py",
+      "sha256": "c2545f93fef025c8d93ff6860109a4df548d3c46faac71ad173492f77a8ebd10",
+      "bytes": 8590
+    },
+    {
+      "path": "stage_release.py",
+      "sha256": "253a9c7bd14fcdd612fc155bb7728c442e340093bf7d67ae5c692613e6f4f095",
+      "bytes": 5661
+    },
+    {
+      "path": "assemble_handoff.py",
+      "sha256": "1f13be6652c0f9f5eb92713659ac3d6fb19d1849314b26a3dca19084f8380d9f",
+      "bytes": 3122
+    },
+    {
+      "path": "load_data.py",
+      "sha256": "e8a13b3bda21161e1c8980893ff3cc7db944bab57bd86adc8a7251dfed990d8f",
+      "bytes": 1193
+    },
+    {
+      "path": "PLAN.md",
+      "sha256": "7310a73a20b0d7795a02fd9230c8ae6136448f3b917bd9aba797c682fbdd9e2a",
+      "bytes": 2593
+    }
+  ],
+  "actual_chain_review_sha256": "8ce332d65daf6a63cf1f9264a71703c40801f3bea191b58a6561a38df4b2c7a3",
+  "checks": [
+    "Only V085 requires schema_status passed; producer stages retain truthful not_required_for_this_stage.",
+    "All stage IDs and latest/attempt receipt bytes matched; resumed attempts need not share a directory.",
+    "Final F085/F090A/V085 current implementation and ordered exited-process times match.",
+    "V085 complete artifact equals wave master, including schema and bytes.",
+    "F085 outputs, F090A parents and all 12 wave hashes agree; master plus waves current bytes independently hash-checked.",
+    "Package builder pins wave manifest and V085 receipt to frozen acceptance.",
+    "DATA_PREPARATION_ONLY explicitly leaves all reports, all 44 modules, source admission and full G0 completion false.",
+    "Five Python files parse; no Stata, package construction or company-value decoding performed by reviewer."
+  ],
+  "remaining_blockers": [],
+  "actual_package_build_and_roundtrip": "Pending root execution; this review is not a package build PASS."
+}

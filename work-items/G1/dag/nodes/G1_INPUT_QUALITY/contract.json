@@ -1,0 +1,69 @@
+{
+  "node_id": "G1_INPUT_QUALITY",
+  "branch": "primary_real_prerequisite_audit",
+  "source_plan_node_preserved": {
+    "id": "G1_INPUT_QUALITY",
+    "state": "Physical G2 record-level eligibility masks",
+    "grain": "source record × year × eligibility contract",
+    "keys": [
+      "source_year",
+      "source_row",
+      "eligibility_id"
+    ],
+    "required_fields": [
+      "source_year",
+      "source_row",
+      "eligibility_id",
+      "eligible",
+      "reason",
+      "rule_version"
+    ],
+    "units": "Boolean and reason codes",
+    "folder": "dag/nodes/G1/G1_INPUT_QUALITY",
+    "planning_status": "external_input_not_materialized_by_plan",
+    "input_receipt": "G2 mask hash and validated input contract"
+  },
+  "effective_state": "Physical G2 record-level eligibility masks",
+  "material_state_status": "primary_real_state_unadmitted_development_branch_separate",
+  "diagnostic_status": "See hash-bound run evidence; not inferred from this contract",
+  "grain": "frozen observation × eligibility contract",
+  "keys": [
+    "obs_id",
+    "eligibility_id"
+  ],
+  "input_nodes": [],
+  "producing_edge": null,
+  "audit_output_contract": {
+    "paths_relative_to_private_run": [],
+    "role": "Source input contract",
+    "publication": "Only screened aggregate outputs copied to release/outputs. Private run root is recorded in run-manifest.json; .dta intermediates are outside the repository.",
+    "existence_and_execution": "Declared artifact names; actual existence/hash/status comes only from the run manifest."
+  },
+  "required_fields": [
+    "source_year",
+    "obs_id",
+    "eligibility_id",
+    "eligible",
+    "reason",
+    "rule_version"
+  ],
+  "units": {
+    "contracts": "definitions / source hashes / acceptance statuses",
+    "counts": "named registry entries or checks; not plant counts",
+    "eligibility": "Boolean and explicit unknown states"
+  },
+  "calendar": "2010–2015, 2017–2022; 2016 absent",
+  "denominator": "Every named registry item, source object, or required check, including unavailable and failed entries; metadata counts are not plant counts.",
+  "missingness": "Keep source absence, unknown definition/unit, parse failure, observed zero/negative and valid positive states distinct. Unsupported statistical values stay missing, never zero.",
+  "row_reconciliation": "Observation diagnostics preserve 33,049 unique obs_id. Method expansion checks 33,049 × declared method/sample combinations separately. Any filtering records marginal and sequential losses. Aggregates reconcile to their explicit fixed denominators.",
+  "input_output_contract": "A validated numerical state and a typed unsupported receipt are distinct output types. A receipt cannot be consumed as the numerical state required by another estimator edge.",
+  "current_decision": "Freeze this source as a distinct declared input; metadata availability does not waive substantive method gates.",
+  "blocked_dependencies": {
+    "quality": "G2 eligibility masks bound to this exact G0.5 input version, with semantic/unit/domain reasons; G1 local screens are not all of G2."
+  },
+  "numerical_output_privacy": "Record-level intermediate/output datasets remain local/private; only appropriate aggregate diagnostic tables and receipts are published.",
+  "plan": "releases/2026-09-13-data-foundation/stata-preparation/row-plans/G1.json",
+  "plan_sha256": "dd88cfa94af5f212a7b0a4b70f99fea1c0201f950cd19333357739b96b5da1ca",
+  "input_manifest": "data/g0-5-development/manifest.json",
+  "input_manifest_sha256": "060b0ee0a2158a9c94b0e7e68fcfba719eda37561422855471a99da6810ba260"
+}

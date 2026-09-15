@@ -1,0 +1,29 @@
+{
+  "status": "RECORDED_BEFORE_COMMENT_INSERTION",
+  "source_revision": "N06_outputs.do post-freeze revision",
+  "source_path": "/Users/natanaelmassie/Downloads/deasy-g1-issue9-20260913/work-items/G1/stata/nominal/N06_outputs.do",
+  "external_snapshot_path": "/Users/natanaelmassie/Downloads/deasy-g1-issue9-20260913-g1-runs/luna-pipeline-before-v3/work-items/G1/stata/nominal/N06_outputs.do",
+  "manifest_path": "/Users/natanaelmassie/Downloads/deasy-g1-issue9-20260913/work-items/G1/qa/luna-pipeline-before.json",
+  "recorded_at_utc": "2026-09-13T13:24:10Z",
+  "old_sha256": "f046279e79f3b745de6e2d441c1e8209ffdc82bafe107ad85e8920ae7f5bfc2f",
+  "new_sha256": "b6584d81e1d4c78d81e2815a13abb2ecb929ac0b9e5dac90a5286516e655c3d4",
+  "changes": [
+    {
+      "old_line": "local sectors \"ALL `sectors'\"",
+      "new_line": "local sectors ALL `sectors'",
+      "reason": "Preserve levelsof-returned quoted sector members while adding ALL as a separate group."
+    },
+    {
+      "old_line": "gen str100 dev_nominal_normalization=\"Raw nominal log VA minus fitted slopes times native log inputs; centered by sector-method fitted2012 mean\"",
+      "new_line": "gen str160 dev_nominal_normalization=\"Raw nominal log VA minus fitted slopes times native log inputs; centered by sector-method fitted2012 mean\"",
+      "reason": "Increase only metadata string storage width so the complete normalization description is retained; no numeric calculation changes."
+    }
+  ],
+  "verification": {
+    "only_two_authorized_line_changes": true,
+    "all_other_N06_bytes_identical": true,
+    "other_26_pipeline_snapshots_unchanged": true,
+    "preserves_existing_baseline_WFDOC_lines": true,
+    "final_native_Stata_verification_pending_root": true
+  }
+}

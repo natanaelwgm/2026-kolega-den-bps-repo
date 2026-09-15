@@ -1,0 +1,507 @@
+{
+  "samples": [
+    {
+      "path": "code/annual/merge_mapped_2017.do",
+      "header_comments": 4,
+      "block_notes": 382,
+      "first_notes": [
+        "* Tujuan: Gabungkan hasil pemetaan kolom tahun 2017 ke baris data mentah memakai source_year dan source_row; wf_merge_guard memeriksa tahun, kunci unik, dan pasangan baris sebelum merge. // WFDOC-INJECTED",
+        "* Input: data/intermediate/raw_wave_2017.dta; dag/data/word_data/G0/variable_year/N_G0_amdal_raw_2017.dta; dan 232 masukan lain // WFDOC-INJECTED",
+        "* Output: data/intermediate/mapped_wave_2017.dta // WFDOC-INJECTED",
+        "* Jika perintah atau syarat berhenti dengan error, hasil belum selesai; cek pesan error dan baris terakhir di log. // WFDOC-INJECTED",
+        "* Muat wave tahunan utama; source_year dan source_row mengenali satu baris di wave, bukan firmID. // WFDOC-INJECTED",
+        "* Sebelum merge, periksa bahwa kedua berkas berada pada tahun yang diminta, kunci tahun/baris unik, kolom tujuan belum ada, dan setiap baris punya pasangan. // WFDOC-INJECTED"
+      ],
+      "sha256": "e32df17ee55322887b7bf3bc2003d12ea1f16a2f09c74f80d016e75269a5b788"
+    },
+    {
+      "path": "code/annual/merge_working_2017.do",
+      "header_comments": 4,
+      "block_notes": 11,
+      "first_notes": [
+        "* Tujuan: Tambahkan nilai kerja tahun 2017 ke gelombang terverifikasi memakai source_year dan source_row; guard memastikan pasangan baris cocok sebelum berkas tahunan disimpan. // WFDOC-INJECTED",
+        "* Input: data/intermediate/verified_wave_2017.dta; dag/data/word_data/G0/analysis_tunnel/N_G0_tunnel_export_any_binary_2017.dta; dan 8 masukan lain // WFDOC-INJECTED",
+        "* Output: dag/data/word_data/G0/analysis_tunnel/wave_2017.dta // WFDOC-INJECTED",
+        "* Jika perintah atau syarat berhenti dengan error, hasil belum selesai; cek pesan error dan baris terakhir di log. // WFDOC-INJECTED",
+        "* Muat wave tahunan utama; source_year dan source_row mengenali satu baris di wave, bukan firmID. // WFDOC-INJECTED",
+        "* Sebelum merge, periksa bahwa kedua berkas berada pada tahun yang diminta, kunci tahun/baris unik, kolom tujuan belum ada, dan setiap baris punya pasangan. // WFDOC-INJECTED"
+      ],
+      "sha256": "e3597881fc4203f1e597311e0c713c5280289a58a868a585b43ae55a358276bd"
+    },
+    {
+      "path": "code/annual/raw_2022.do",
+      "header_comments": 4,
+      "block_notes": 1,
+      "first_notes": [
+        "* Tujuan: Ambil data sumber tahun 2022, cek tahun dan keunikan baris, lalu simpan salinan tahunan berkolom raw_*. // WFDOC-INJECTED",
+        "* Input: /Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-rebuild/dag/data/staged/sample_mfg2022_raw.dta // WFDOC-INJECTED",
+        "* Output: data/intermediate/raw_wave_2022.dta // WFDOC-INJECTED",
+        "* Jika perintah atau syarat berhenti dengan error, hasil belum selesai; cek pesan error dan baris terakhir di log. // WFDOC-INJECTED",
+        "* Muat berkas sumber untuk satu tahun; barisnya lalu diberi kunci tahun dan nomor baris. // WFDOC-INJECTED"
+      ],
+      "sha256": "38ffffd3d9bb20402c6daa104a29b30ef7ad346af4d3f62f343b145a0e747692"
+    },
+    {
+      "path": "code/leaves/mapped/workers_2017.do",
+      "header_comments": 4,
+      "block_notes": 4,
+      "first_notes": [
+        "* Tujuan: Untuk 2017, ubah raw_ltlnou17 menjadi workers; vs_workers mencatat 3 untuk nilai kosong/penanda yang dibiarkan kosong; 5 untuk teks yang tidak dapat dibaca sebagai angka; 2 untuk angka negatif, 1 untuk nol, dan 0 untuk angka lain yang terbaca. // WFDOC-INJECTED",
+        "* Input: data/intermediate/raw_wave_2017.dta // WFDOC-INJECTED",
+        "* Output: dag/data/word_data/G0/variable_year/N_G0_workers_2017.dta // WFDOC-INJECTED",
+        "* Jika perintah atau syarat berhenti dengan error, hasil belum selesai; cek pesan error dan baris terakhir di log. // WFDOC-INJECTED",
+        "* Muat kolom sumber untuk workers tahun 2017; baris tetap memakai source_year dan source_row. // WFDOC-INJECTED",
+        "* Pastikan setiap baris milik tahun 2017; pemeriksaan isid berikutnya menolak kunci source_year/source_row yang berulang. // WFDOC-INJECTED"
+      ],
+      "sha256": "1923e61bfe2560bb860d06e8c7cf4343aee19dd512c504046610db540e35b815"
+    },
+    {
+      "path": "code/leaves/working/rd_activity_flag_2017.do",
+      "header_comments": 4,
+      "block_notes": 4,
+      "first_notes": [
+        "* Tujuan: Untuk 2017, lengkapi rd_activity_flag dari rd_indicator_raw hanya saat nilainya kosong dan syarat kode terpenuhi; v_rd_activity_flag menyimpan salinan nilai awal; vs_rd_activity_flag menandai pengisian sesuai aturan yang ada. // WFDOC-INJECTED",
+        "* Input: data/intermediate/verified_wave_2017.dta // WFDOC-INJECTED",
+        "* Output: dag/data/word_data/G0/analysis_tunnel/N_G0_tunnel_rd_activity_flag_2017.dta // WFDOC-INJECTED",
+        "* Jika perintah atau syarat berhenti dengan error, hasil belum selesai; cek pesan error dan baris terakhir di log. // WFDOC-INJECTED",
+        "* Muat kolom sumber untuk rd_activity_flag tahun 2017; baris tetap memakai source_year dan source_row. // WFDOC-INJECTED",
+        "* Pastikan setiap baris milik tahun 2017; pemeriksaan isid berikutnya menolak kunci source_year/source_row yang berulang. // WFDOC-INJECTED"
+      ],
+      "sha256": "b8fc70df8c2328ec48e3e295c5ff31d1e1f97802bb2b504d3109cdbda4531014"
+    },
+    {
+      "path": "code/merge_guard.do",
+      "header_comments": 4,
+      "block_notes": 4,
+      "first_notes": [
+        "* Tujuan: Sebelum merge, periksa tahun yang diharapkan, keunikan kunci source_year/source_row, kolom tujuan, dan jumlah pasangan baris; kegagalan membuat merge berhenti. // WFDOC-INJECTED",
+        "* Input: `using' // WFDOC-INJECTED",
+        "* Output: Hasil atau perubahan data yang disebut oleh perintah di file ini. // WFDOC-INJECTED",
+        "* Jika perintah atau syarat berhenti dengan error, hasil belum selesai; cek pesan error dan baris terakhir di log. // WFDOC-INJECTED",
+        "* Definisikan pemeriksa sebelum merge: memastikan tahun sesuai, kunci tahun/baris unik, tidak ada kolom tujuan lama, dan semua baris punya pasangan. // WFDOC-INJECTED",
+        "* Definisikan perintah bantu wf_merge_guard; isi blok berjalan saat perintah ini dipanggil. // WFDOC-INJECTED"
+      ],
+      "sha256": "9b42004c920e9369c9f2490fbd9b68f8b72375c9c8e54b937719a473d01556f3"
+    },
+    {
+      "path": "code/stages/F085_publish_waves.do",
+      "header_comments": 4,
+      "block_notes": 27,
+      "first_notes": [
+        "* Tujuan: Bagi data koreksi C140 menjadi 12 file tahunan; tiap file hanya berisi satu source_year, memeriksa source_year/source_row, lalu disimpan. // WFDOC-INJECTED",
+        "* Input: corrections/data/C140.dta // WFDOC-INJECTED",
+        "* Output: data/waves/wave_2010.dta; data/waves/wave_2011.dta; dan 10 masukan lain // WFDOC-INJECTED",
+        "* Jika perintah atau syarat berhenti dengan error, hasil belum selesai; cek pesan error dan baris terakhir di log. // WFDOC-INJECTED",
+        "* Jalankan tahap/berkas anak /Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-wave-foundation-v2/code/init.do; tahap ini bergantung pada hasilnya sebelum melanjutkan. // WFDOC-INJECTED",
+        "* Jalankan tahap/berkas anak rd2017/lib/wave_rd17_classes.do; tahap ini bergantung pada hasilnya sebelum melanjutkan. // WFDOC-INJECTED"
+      ],
+      "sha256": "4bf44b8f52c76a11be6a5588a02244fdc04d1e6387f764af96cc4bb6c95e239a"
+    },
+    {
+      "path": "code/stages/F090_append_ready.do",
+      "header_comments": 4,
+      "block_notes": 14,
+      "first_notes": [
+        "* Tujuan: Satukan 12 file tahunan menjadi data utama G0_analysis_ready; kode memeriksa kunci unik, 33.049 baris, dan 4.593 kolom sebelum menyimpan. // WFDOC-INJECTED",
+        "* Input: data/waves/wave_2010.dta; data/waves/wave_2011.dta; dan 10 masukan lain // WFDOC-INJECTED",
+        "* Output: data/analysis/G0_analysis_ready.dta // WFDOC-INJECTED",
+        "* Jika perintah atau syarat berhenti dengan error, hasil belum selesai; cek pesan error dan baris terakhir di log. // WFDOC-INJECTED",
+        "* Jalankan tahap/berkas anak /Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-wave-foundation-v2/code/init.do; tahap ini bergantung pada hasilnya sebelum melanjutkan. // WFDOC-INJECTED",
+        "* Mulai dari wave 2010 lalu append 11 wave lainnya; di akhir, cek kunci unik, jumlah baris/kolom, dan simpan data utama. // WFDOC-INJECTED"
+      ],
+      "sha256": "22cb752434ed3906ab6c60069793ed08ce02b521ff3f96b1383a7e4ca52ee3a0"
+    },
+    {
+      "path": "code/validation/compare_reports.do",
+      "header_comments": 4,
+      "block_notes": 49,
+      "first_notes": [
+        "* Tujuan: Bandingkan tabel laporan saat ini dengan hasil G0-rebuild; untuk tabel pekerja, cocokkan baris dengan kunci source_year dan ratio yang unik. // WFDOC-INJECTED",
+        "* Input: corrections/reports/*.dta dan tabel pembanding pada work/G0-rebuild/corrections/reports. // WFDOC-INJECTED",
+        "* Output: penanda WF_REPORT_VALUES_30_EXACT hanya setelah seluruh tabel lolos perbandingan; nilai laporan tidak dihitung ulang atau disimpan ulang. // WFDOC-INJECTED",
+        "* Pada tabel pekerja, sort hanya mengurutkan baris untuk pencocokan; pasangan kunci ganda menghentikan validasi. // WFDOC-INJECTED",
+        "* Bandingkan semua kolom dengan pembanding; satu nilai berbeda sudah cukup untuk menggagalkan pemeriksaan. // WFDOC-INJECTED",
+        "* Bandingkan semua kolom dengan pembanding; satu nilai berbeda sudah cukup untuk menggagalkan pemeriksaan. // WFDOC-INJECTED"
+      ],
+      "sha256": "1fa083b8334b60214ebbea37a2329a1dd08d8650395d740a83f6527b234e4e4b"
+    },
+    {
+      "path": "dag/edges/word_rows/G0/analysis_tunnel/innovation_flag_2017.do",
+      "header_comments": 4,
+      "block_notes": 4,
+      "first_notes": [
+        "* Tujuan: Untuk 2017, lengkapi innovation_flag dari innovation_raw hanya saat nilainya kosong dan syarat kode terpenuhi; v_innovation_flag menyimpan salinan nilai awal; vs_innovation_flag menandai pengisian sesuai aturan yang ada. // WFDOC-INJECTED",
+        "* Input: Kolom yang dimuat launcher code/leaves/working/innovation_flag_2017.do dari data/intermediate/verified_wave_2017.dta // WFDOC-INJECTED",
+        "* Output: dag/data/word_data/G0/analysis_tunnel/N_G0_tunnel_innovation_flag_2017.dta // WFDOC-INJECTED",
+        "* Jika perintah atau syarat berhenti dengan error, hasil belum selesai; cek pesan error dan baris terakhir di log. // WFDOC-INJECTED",
+        "* Mulai innovation_flag sebagai nilai kosong; vs_innovation_flag dimulai menurut kode yang tertulis. Baris berikut menerapkan aturan sumber tahun 2017. // WFDOC-INJECTED",
+        "* Lengkapi innovation_flag hanya saat nilai utama kosong dan syarat sumber di baris ini terpenuhi; vs_innovation_flag menandai isian baru. // WFDOC-INJECTED"
+      ],
+      "sha256": "2240655b011b76e2971ca1d1056f559961dc0a251ae74df181d0178dd68872ff"
+    },
+    {
+      "path": "dag/edges/word_rows/G0/variable_year/workers_2017.do",
+      "header_comments": 4,
+      "block_notes": 4,
+      "first_notes": [
+        "* Tujuan: Untuk 2017, ubah raw_ltlnou17 menjadi workers; vs_workers mencatat 3 untuk nilai kosong/penanda yang dibiarkan kosong; 5 untuk teks yang tidak dapat dibaca sebagai angka; 2 untuk angka negatif, 1 untuk nol, dan 0 untuk angka lain yang terbaca. // WFDOC-INJECTED",
+        "* Input: Kolom yang dimuat launcher code/leaves/mapped/workers_2017.do dari data/intermediate/raw_wave_2017.dta // WFDOC-INJECTED",
+        "* Output: dag/data/word_data/G0/variable_year/N_G0_workers_2017.dta // WFDOC-INJECTED",
+        "* Jika perintah atau syarat berhenti dengan error, hasil belum selesai; cek pesan error dan baris terakhir di log. // WFDOC-INJECTED",
+        "* Mulai workers sebagai nilai kosong; vs_workers mulai dari kode 3. Baris berikut menerapkan aturan sumber tahun 2017. // WFDOC-INJECTED",
+        "* Baca raw_ltlnou17 setelah spasi luar dan koma dihapus; teks kemudian diubah menjadi angka untuk workers. // WFDOC-INJECTED"
+      ],
+      "sha256": "54695b84e6aaa461dd06a0c0f0b6efd893b40efba4932b662785344a53c92bf1"
+    },
+    {
+      "path": "rd2017/rows/G0/RD2017/RD17-020.do",
+      "header_comments": 4,
+      "block_notes": 3,
+      "first_notes": [
+        "* Tujuan: Ambil baris 2017 untuk proyeksi R&D: rd_indicator_raw menyimpan kode jawaban pertanyaan (1/2), bukan uang; val_costrd adalah kolom biaya yang terpisah. // WFDOC-INJECTED",
+        "* Input: data/analysis/G0_analysis_ready.dta // WFDOC-INJECTED",
+        "* Output: rd2017/states/wave_2017_projection.dta; rd2017/states/wave_2017_projection.csv // WFDOC-INJECTED",
+        "* Jika perintah atau syarat berhenti dengan error, hasil belum selesai; cek pesan error dan baris terakhir di log. // WFDOC-INJECTED",
+        "* Muat jawaban pertanyaan R&D dan nilai biaya sebagai kolom terpisah; rd_indicator_raw berisi kode jawaban, bukan uang. // WFDOC-INJECTED",
+        "* Batasi proyeksi ini pada baris tahun 2017. // WFDOC-INJECTED"
+      ],
+      "sha256": "66bb4eb9ed84e858d27629491fb4c9241669f14a8e0b4d67c8f3bd6b67430d3d"
+    },
+    {
+      "path": "rd2017/rows/G0/RD2017/RD17-030.do",
+      "header_comments": 4,
+      "block_notes": 1,
+      "first_notes": [
+        "* Tujuan: Bentuk dan ekspor keputusan kelas R&D 2017 dari proyeksi wave yang sudah disiapkan. // WFDOC-INJECTED",
+        "* Input: rd2017/states/wave_2017_projection.dta // WFDOC-INJECTED",
+        "* Output: rd2017/states/canonical_decisions_2017.dta; rd2017/states/canonical_decisions_2017.csv // WFDOC-INJECTED",
+        "* Jika perintah atau syarat berhenti dengan error, hasil belum selesai; cek pesan error dan baris terakhir di log. // WFDOC-INJECTED",
+        "* Ekspor tabel R&D dengan nama dasar dan spesifikasi yang tertulis di opsi perintah ini. // WFDOC-INJECTED"
+      ],
+      "sha256": "f369197ce9bf59c7cfed776afe0a54ff0a742e19bc732c661eb7ffbda04e1a78"
+    },
+    {
+      "path": "rd2017/validation/compare_current_wave.do",
+      "header_comments": 4,
+      "block_notes": 22,
+      "first_notes": [
+        "* Tujuan: Cocokkan klasifikasi token R&D per baris tahun 2017 dan tiga tabel ringkas dengan keluaran kandidat saat ini serta arsip historis. Laporan hanya membuktikan kesamaan keluaran; measurement_admitted tetap 0. // WFDOC-INJECTED",
+        "* Input: $RD17_MASTER: source_year, source_row, raw_rnd17, raw_costrd17, rd17_own_token_class, rd17_external_token_class; outputs/candidate_2017.dta serta arsip $RD17_HISTORY/outputs: candidate_2017, group_counts, joint_counts, candidate_ratios // WFDOC-INJECTED",
+        "* Output: validation/equivalence.dta; validation/equivalence.csv // WFDOC-INJECTED",
+        "* Jika perintah atau syarat berhenti dengan error, hasil belum selesai; cek pesan error dan baris terakhir di log. // WFDOC-INJECTED",
+        "* Muat kunci baris, dua kolom mentah, dan dua klasifikasi token yang sudah ada dari master; source_year/source_row menunjuk baris, bukan firmID. // WFDOC-INJECTED",
+        "* Sisakan wave 2017 karena pemeriksaan ini khusus untuk tahun itu. // WFDOC-INJECTED"
+      ],
+      "sha256": "cea7c7df57192ad833c48a97a82f73c003459d6c8566d3ebab4900fbaefb9825"
+    },
+    {
+      "path": "rows/G0/corrections/C061_energy_cost_subtotal.do",
+      "header_comments": 4,
+      "block_notes": 8,
+      "first_notes": [
+        "* Tujuan: Jumlahkan komponen biaya bahan bakar dan listrik yang status sumbernya 0/1 serta nilainya tidak negatif; simpan banyak komponen yang tersedia dan apakah lengkap. // WFDOC-INJECTED",
+        "* Input: corrections/data/C010.dta // WFDOC-INJECTED",
+        "* Output: corrections/data/C061.dta // WFDOC-INJECTED",
+        "* Jika perintah atau syarat berhenti dengan error, hasil belum selesai; cek pesan error dan baris terakhir di log. // WFDOC-INJECTED",
+        "* Jumlahkan hanya biaya bahan bakar dan listrik yang status sumbernya 0/1 serta nilainya tidak negatif; hitung berapa dari tiga komponen yang tersedia. // WFDOC-INJECTED",
+        "* Ulangi blok untuk v: fuel_total_reported_rp000, elec_pln_rp000, elec_nonpln_rp000. // WFDOC-INJECTED"
+      ],
+      "sha256": "a6e9453fedee402359a35ce864f86d7c116c39cbc6a88ceb170ce119055222fa"
+    },
+    {
+      "path": "rows/G0/corrections/C160_publication_summaries.do",
+      "header_comments": 4,
+      "block_notes": 2,
+      "first_notes": [
+        "* Tujuan: Bentuk statistik ringkas per tahun dan variabel—jumlah baris, terisi/kosong, nol, negatif, rerata, simpangan baku, rentang, dan persentil—bersama status rilisnya. // WFDOC-INJECTED",
+        "* Input: data/analysis/G0_analysis_ready.dta // WFDOC-INJECTED",
+        "* Output: corrections/reports/core_descriptive_statistics.dta; corrections/data/C160.dta // WFDOC-INJECTED",
+        "* Jika perintah atau syarat berhenti dengan error, hasil belum selesai; cek pesan error dan baris terakhir di log. // WFDOC-INJECTED",
+        "* Buat ringkasan per tahun/variabel: jumlah baris, nilai terisi/kosong, nol, negatif, rerata, simpangan baku, rentang, dan persentil; status rilis tetap menyertai angka. // WFDOC-INJECTED",
+        "* Tutup log, simpan hasil koreksi bernama ID di baris ini, lalu catat jumlah baris/kolom. // WFDOC-INJECTED"
+      ],
+      "sha256": "a5171294e76635f9425a524f6b56f025218e8c8d3b271f89d67740e7615e8d3d"
+    },
+    {
+      "path": "rows/G0/corrections/C170_flag_rates.do",
+      "header_comments": 4,
+      "block_notes": 17,
+      "first_notes": [
+        "* Tujuan: Hitung ya, tidak, dan unknown per tahun; bagian positif memakai penyebut ya+tidak, sedangkan bagian unknown memakai semua baris. // WFDOC-INJECTED",
+        "* Input: data/analysis/G0_analysis_ready.dta // WFDOC-INJECTED",
+        "* Output: corrections/reports/flag_rates.dta; corrections/data/C170.dta // WFDOC-INJECTED",
+        "* Jika perintah atau syarat berhenti dengan error, hasil belum selesai; cek pesan error dan baris terakhir di log. // WFDOC-INJECTED",
+        "* Hitung jumlah ya, tidak, dan tidak diketahui; persentase memakai penyebut jawaban ya+tidak, bukan seluruh baris. // WFDOC-INJECTED",
+        "* Ulangi blok untuk setiap y yang tercantum di daftar pada baris ini. // WFDOC-INJECTED"
+      ],
+      "sha256": "62c2f1879fbbe00373bd91721d694c6ec40e300c2bbeaa33041c95a46eb03bc2"
+    },
+    {
+      "path": "rows/G0/corrections/CQ001_quantity_sign.do",
+      "header_comments": 4,
+      "block_notes": 2,
+      "first_notes": [
+        "* Tujuan: Untuk fuel_diesel_ltr, teruskan status sumber dan tetapkan apakah pemeriksaan berlaku per tahun; nilai negatif dicatat terpisah dari nilai kosong. // WFDOC-INJECTED",
+        "* Input: corrections/data/C010.dta // WFDOC-INJECTED",
+        "* Output: corrections/data/CQ001.dta // WFDOC-INJECTED",
+        "* Jika perintah atau syarat berhenti dengan error, hasil belum selesai; cek pesan error dan baris terakhir di log. // WFDOC-INJECTED",
+        "* Pastikan keluaran tetap memuat 33.049 baris; kalau tidak, proses berhenti sebelum tabel disimpan. // WFDOC-INJECTED",
+        "* Tutup log, simpan hasil koreksi bernama ID di baris ini, lalu catat jumlah baris/kolom. // WFDOC-INJECTED"
+      ],
+      "sha256": "b4b698832daa2a9319b84d3d05dc70c213520029c6e598427b87b3ef87858030"
+    },
+    {
+      "path": "rows/G0/corrections/CR001_per_worker.do",
+      "header_comments": 4,
+      "block_notes": 55,
+      "first_notes": [
+        "* Tujuan: Hitung r_labor_productivity_nominal sebagai va_signed_nominal per pekerja (dibagi workers) untuk tahun yang memiliki baris perintah; syaratnya pembilang boleh negatif atau nol, tetapi jumlah pekerja harus positif. Nilai di luar syarat tetap kosong. Daftar aturan hanya mengizinkan angka ini ditampilkan sebagai kandidat lama; perhitungan belum memastikan arti atau satuannya. // WFDOC-INJECTED",
+        "* Input: corrections/data/C030.dta; corrections/data/C010.dta // WFDOC-INJECTED",
+        "* Output: corrections/data/CR001.dta // WFDOC-INJECTED",
+        "* Jika perintah atau syarat berhenti dengan error, hasil belum selesai; cek pesan error dan baris terakhir di log. // WFDOC-INJECTED",
+        "* Ambil source_year, source_row, value_added_nominal, dan kolom lain yang disebut di baris ini dari corrections/data/C030.dta; pasangan tahun dan nomor baris mengenali satu baris, bukan firmID. // WFDOC-INJECTED",
+        "* Pasangkan baris pada kunci tahun dan nomor baris; `1:1` menolak kunci ganda dan `assert(match)` menghentikan proses jika pasangan baris tidak lengkap. Kunci ini bukan firmID. // WFDOC-INJECTED"
+      ],
+      "sha256": "053ed9851310bb227120b31743e885716f663f368fc191ea2bbc307e84bd8566"
+    },
+    {
+      "path": "rows/G0/corrections/CR005_per_worker.do",
+      "header_comments": 4,
+      "block_notes": 37,
+      "first_notes": [
+        "* Tujuan: Hitung r_rd_cost_per_worker_nominal sebagai rd_cost_nominal per pekerja (dibagi workers) untuk tahun yang memiliki baris perintah; syaratnya pembilang harus nol atau lebih dan jumlah pekerja harus positif. Nilai di luar syarat tetap kosong. Daftar aturan hanya mengizinkan angka ini ditampilkan sebagai kandidat lama; perhitungan belum memastikan arti atau satuannya. Tahun 2010, 2011, 2012, 2013, 2014, 2015 tidak punya baris hitung; r_rd_cost_per_worker_nominal tetap kosong dan file memberi status 9: 2010, 2011, 2012, 2013, 2014, 2015. // WFDOC-INJECTED",
+        "* Input: corrections/data/C010.dta // WFDOC-INJECTED",
+        "* Output: corrections/data/CR005.dta // WFDOC-INJECTED",
+        "* Jika perintah atau syarat berhenti dengan error, hasil belum selesai; cek pesan error dan baris terakhir di log. // WFDOC-INJECTED",
+        "* Ambil source_year, source_row, rd_cost_nominal, dan kolom lain yang disebut di baris ini dari corrections/data/C010.dta; pasangan tahun dan nomor baris mengenali satu baris, bukan firmID. // WFDOC-INJECTED",
+        "* Pasangkan baris pada kunci tahun dan nomor baris; `1:1` menolak kunci ganda dan `assert(match)` menghentikan proses jika pasangan baris tidak lengkap. Kunci ini bukan firmID. // WFDOC-INJECTED"
+      ],
+      "sha256": "3dbb16bf93da9c913ebbd81eb380775a9b51760445e3bae933613d949e759836"
+    },
+    {
+      "path": "rows/G0/corrections/CR026_per_worker.do",
+      "header_comments": 4,
+      "block_notes": 19,
+      "first_notes": [
+        "* Tujuan: Tidak membuat nilai per pekerja dari val_costrd: daftar aturan menyebut sumber ini kategori, bukan besaran yang boleh diturunkan. r_pw_val_costrd tetap kosong di Stata (missing) dan file memberi kode status r_pw_val_costrd_state=8; jangan baca nilai kosong sebagai nol. // WFDOC-INJECTED",
+        "* Input: corrections/data/C010.dta // WFDOC-INJECTED",
+        "* Output: corrections/data/CR026.dta // WFDOC-INJECTED",
+        "* Jika perintah atau syarat berhenti dengan error, hasil belum selesai; cek pesan error dan baris terakhir di log. // WFDOC-INJECTED",
+        "* Ambil source_year, source_row, val_costrd, dan kolom lain yang disebut di baris ini dari corrections/data/C010.dta; pasangan tahun dan nomor baris mengenali satu baris, bukan firmID. // WFDOC-INJECTED",
+        "* Pasangkan baris pada kunci tahun dan nomor baris; `1:1` menolak kunci ganda dan `assert(match)` menghentikan proses jika pasangan baris tidak lengkap. Kunci ini bukan firmID. // WFDOC-INJECTED"
+      ],
+      "sha256": "43f5cca3f86bab7676f2dcef8f7e2ae3396a30bb962ed5118a47e51d1e685764"
+    },
+    {
+      "path": "rows/G0/corrections/CR027_per_worker.do",
+      "header_comments": 4,
+      "block_notes": 19,
+      "first_notes": [
+        "* Tujuan: Tidak membuat nilai per pekerja dari val_cottcu: Daftar aturan menandai val_cottcu ambigu; arti atau satuannya belum diterima. r_pw_val_cottcu tetap kosong di Stata (missing) dan file menetapkan kode status r_pw_val_cottcu_state=9 untuk tiap tahun. Nilai kosong bukan angka nol. // WFDOC-INJECTED",
+        "* Input: corrections/data/C010.dta // WFDOC-INJECTED",
+        "* Output: corrections/data/CR027.dta // WFDOC-INJECTED",
+        "* Jika perintah atau syarat berhenti dengan error, hasil belum selesai; cek pesan error dan baris terakhir di log. // WFDOC-INJECTED",
+        "* Ambil source_year, source_row, val_cottcu, dan kolom lain yang disebut di baris ini dari corrections/data/C010.dta; pasangan tahun dan nomor baris mengenali satu baris, bukan firmID. // WFDOC-INJECTED",
+        "* Pasangkan baris pada kunci tahun dan nomor baris; `1:1` menolak kunci ganda dan `assert(match)` menghentikan proses jika pasangan baris tidak lengkap. Kunci ini bukan firmID. // WFDOC-INJECTED"
+      ],
+      "sha256": "6c6823d1eec5cf6a49fd89489b88993014a183f45375c0bff8618aafef59ac7e"
+    },
+    {
+      "path": "rows/G0/corrections/CR160_log.do",
+      "header_comments": 4,
+      "block_notes": 42,
+      "first_notes": [
+        "* Tujuan: Hitung r_ln_output_nominal = ln(gross_output_nominal) hanya untuk input positif dan terisi pada tahun yang memiliki baris perintah; input nol, negatif, atau kosong tidak menghasilkan angka. Daftar aturan hanya mengizinkan angka ini ditampilkan sebagai kandidat lama; perhitungan belum memastikan arti atau satuannya. // WFDOC-INJECTED",
+        "* Input: corrections/data/C010.dta // WFDOC-INJECTED",
+        "* Output: corrections/data/CR160.dta // WFDOC-INJECTED",
+        "* Jika perintah atau syarat berhenti dengan error, hasil belum selesai; cek pesan error dan baris terakhir di log. // WFDOC-INJECTED",
+        "* Ambil source_year, source_row, gross_output_nominal, dan kolom lain yang disebut di baris ini dari corrections/data/C010.dta; pasangan tahun dan nomor baris mengenali satu baris, bukan firmID. // WFDOC-INJECTED",
+        "* Mulai r_ln_output_nominal sebagai missing; hanya rumus dan syarat tahun di bawah yang dapat mengisinya. // WFDOC-INJECTED"
+      ],
+      "sha256": "61e026afbb065cf0a990cb459beae7da2f408cad87c557b910a68e6b84fcd07b"
+    },
+    {
+      "path": "rows/G0/corrections/CR169_log.do",
+      "header_comments": 4,
+      "block_notes": 30,
+      "first_notes": [
+        "* Tujuan: Hitung r_ln_rd_cost_nominal = ln(rd_cost_nominal) hanya untuk input positif dan terisi pada tahun yang memiliki baris perintah; input nol, negatif, atau kosong tidak menghasilkan angka. Daftar aturan hanya mengizinkan angka ini ditampilkan sebagai kandidat lama; perhitungan belum memastikan arti atau satuannya. Tahun 2010, 2011, 2012, 2013, 2014, 2015 tidak punya baris hitung; r_ln_rd_cost_nominal tetap kosong dan file memberi status 9: 2010, 2011, 2012, 2013, 2014, 2015. // WFDOC-INJECTED",
+        "* Input: corrections/data/C010.dta // WFDOC-INJECTED",
+        "* Output: corrections/data/CR169.dta // WFDOC-INJECTED",
+        "* Jika perintah atau syarat berhenti dengan error, hasil belum selesai; cek pesan error dan baris terakhir di log. // WFDOC-INJECTED",
+        "* Ambil source_year, source_row, rd_cost_nominal, dan kolom lain yang disebut di baris ini dari corrections/data/C010.dta; pasangan tahun dan nomor baris mengenali satu baris, bukan firmID. // WFDOC-INJECTED",
+        "* Mulai r_ln_rd_cost_nominal sebagai missing; hanya rumus dan syarat tahun di bawah yang dapat mengisinya. // WFDOC-INJECTED"
+      ],
+      "sha256": "1e7f27c7404bb972027834878b01762f1669850409a67fc84c501de7cf25a357"
+    },
+    {
+      "path": "rows/G0/corrections/CT005_recompute_total.do",
+      "header_comments": 4,
+      "block_notes": 5,
+      "first_notes": [
+        "* Tujuan: Hitung emisi cakupan 2 sebagai kWh listrik yang dibeli dikali faktor jaringan; kedua komponen harus ada dan tidak negatif. // WFDOC-INJECTED",
+        "* Input: corrections/data/C010.dta; corrections/data/CT002.dta // WFDOC-INJECTED",
+        "* Output: corrections/data/CT005.dta // WFDOC-INJECTED",
+        "* Jika perintah atau syarat berhenti dengan error, hasil belum selesai; cek pesan error dan baris terakhir di log. // WFDOC-INJECTED",
+        "* Pasangkan hasil per baris dengan kunci tahun dan nomor baris; `1:1` memeriksa kunci tunggal dan `assert(match)` menghentikan proses bila pasangan tidak lengkap. // WFDOC-INJECTED",
+        "* Ambil komponen ini hanya bila nilainya ada dan tidak negatif; hitungan komponen menentukan apakah total dapat disimpan. // WFDOC-INJECTED"
+      ],
+      "sha256": "03ec074f4f9cafa400412226f17c12ff1df4edbffb994d225bfd49308cdfebf9"
+    },
+    {
+      "path": "rows/G0/corrections/_utils.do",
+      "header_comments": 4,
+      "block_notes": 18,
+      "first_notes": [
+        "* Tujuan: Jalankan koreksi yang tertulis di berkas ini; setiap perubahan dibatasi oleh kondisi pada barisnya. // WFDOC-INJECTED",
+        "* Input: `input'; `output' // WFDOC-INJECTED",
+        "* Output: Hasil atau perubahan data yang disebut oleh perintah di file ini. // WFDOC-INJECTED",
+        "* Jika perintah atau syarat berhenti dengan error, hasil belum selesai; cek pesan error dan baris terakhir di log. // WFDOC-INJECTED",
+        "* Isi blok hanya dijalankan bila c(maxvar) kurang dari 10000. // WFDOC-INJECTED",
+        "* Definisikan pembuka log anak koreksi; id menentukan nama berkas log agar langkah berikut bisa dilacak. // WFDOC-INJECTED"
+      ],
+      "sha256": "5ca4bad12d64b8adc30f922fb615f53f0a75f7086842c0d0915cb666d41d6cef"
+    },
+    {
+      "path": "rows/G0/publication/G0_X08_worker_denominator_domains.do",
+      "header_comments": 4,
+      "block_notes": 165,
+      "first_notes": [
+        "* Tujuan: Hitung pekerja positif, nol, negatif, dan missing per tahun agar pembagi yang layak dapat dibedakan dari yang tidak layak. // WFDOC-INJECTED",
+        "* Input: data/analysis/G0_analysis_ready.dta // WFDOC-INJECTED",
+        "* Output: corrections/reports/__worker_ratio_domains.dta; corrections/reports/worker_denominator_domains.dta // WFDOC-INJECTED",
+        "* Jika perintah atau syarat berhenti dengan error, hasil belum selesai; cek pesan error dan baris terakhir di log. // WFDOC-INJECTED",
+        "* Hitung masing-masing pekerja positif, nol, negatif, atau missing; hanya nilai positif terisi yang dapat menjadi pembagi. // WFDOC-INJECTED",
+        "* Hitung masing-masing pekerja positif, nol, negatif, atau missing; hanya nilai positif terisi yang dapat menjadi pembagi. // WFDOC-INJECTED"
+      ],
+      "sha256": "4f275627a17c5cbfbf4af9948471ab376421930d0b76dc1670d0a23b078bbbcc"
+    },
+    {
+      "path": "rows/G0/publication/G0_X12_export_definition_states.do",
+      "header_comments": 4,
+      "block_notes": 17,
+      "first_notes": [
+        "* Tujuan: Pisahkan jawaban ya, tidak, dan unknown untuk beberapa definisi ekspor; persentase memakai penyebut ya+tidak, dan definisi langsung tetap terpisah dari definisi any. // WFDOC-INJECTED",
+        "* Input: data/analysis/G0_analysis_ready.dta // WFDOC-INJECTED",
+        "* Output: corrections/reports/__binary.dta; corrections/reports/export_definition_states.dta // WFDOC-INJECTED",
+        "* Jika perintah atau syarat berhenti dengan error, hasil belum selesai; cek pesan error dan baris terakhir di log. // WFDOC-INJECTED",
+        "* Siapkan tabel ringkasan; perintah post di bawah menambahkan hitungan atau hasil per kelompok. // WFDOC-INJECTED",
+        "* Ulangi blok untuk setiap y yang tercantum di daftar pada baris ini. // WFDOC-INJECTED"
+      ],
+      "sha256": "411e3a0eeca6fdb4e2ec6fae55e5650c49335c0e5ac8e3864a5f0644983de52e"
+    },
+    {
+      "path": "rows/G0/publication/G0_X13_rd_definition_states.do",
+      "header_comments": 4,
+      "block_notes": 13,
+      "first_notes": [
+        "* Tujuan: Pisahkan status jawaban R&D dari statistik uang; kode pertanyaan bukan biaya, dan kategori COSTRD tidak diperlakukan sebagai jumlah uang. // WFDOC-INJECTED",
+        "* Input: data/analysis/G0_analysis_ready.dta; corrections/reports/__binary.dta; dan 1 masukan lain // WFDOC-INJECTED",
+        "* Output: corrections/reports/__binary.dta; corrections/reports/__rd_amount.dta; dan 1 masukan lain // WFDOC-INJECTED",
+        "* Jika perintah atau syarat berhenti dengan error, hasil belum selesai; cek pesan error dan baris terakhir di log. // WFDOC-INJECTED",
+        "* Siapkan tabel ringkasan; perintah post di bawah menambahkan hitungan atau hasil per kelompok. // WFDOC-INJECTED",
+        "* Ulangi blok untuk setiap y yang tercantum di daftar pada baris ini. // WFDOC-INJECTED"
+      ],
+      "sha256": "f6500d4b8133e6f300c3006b70cb382a6eec9993b066ca485f68bcc195078a59"
+    },
+    {
+      "path": "rows/G0/publication/G0_X18_nominal_real_gate.do",
+      "header_comments": 4,
+      "block_notes": 10,
+      "first_notes": [
+        "* Tujuan: Periksa bahwa belum ada deflator diterapkan dan nilai riil masih kosong; laporkan jumlah nominal, yang layak harga, dan nilai riil per tahun. // WFDOC-INJECTED",
+        "* Input: data/analysis/G0_analysis_ready.dta // WFDOC-INJECTED",
+        "* Output: corrections/reports/__real_gates.dta; corrections/reports/nominal_real_gate.dta // WFDOC-INJECTED",
+        "* Jika perintah atau syarat berhenti dengan error, hasil belum selesai; cek pesan error dan baris terakhir di log. // WFDOC-INJECTED",
+        "* Pastikan nilai riil tetap kosong dan flag deflator nol; laporan ini memeriksa gerbang, bukan mengubah nominal menjadi riil. // WFDOC-INJECTED",
+        "* Siapkan tabel ringkasan; perintah post di bawah menambahkan hitungan atau hasil per kelompok. // WFDOC-INJECTED"
+      ],
+      "sha256": "cb9705822c541e396ae8d7cc53adbd56946299f92a2b614fa94dd7e076b27955"
+    },
+    {
+      "path": "code/leaves/mapped/waste_solid_flag_2022.do",
+      "header_comments": 4,
+      "block_notes": 6,
+      "first_notes": [
+        "* Tujuan: Jalankan pemetaan waste_solid_flag untuk wave 2022 dari kolom sumber raw_sowste22 dan raw_inspli22; aturan pemetaan berada di do-file anak. // WFDOC-INJECTED",
+        "* Input: raw_wave_2022.dta, termasuk source_year/source_row dan dua kolom raw yang disebut di atas. // WFDOC-INJECTED",
+        "* Output: kolom waste_solid_flag tahun 2022 dan ringkasan hitungan observed/zeros/invalid/source_absent. // WFDOC-INJECTED",
+        "* Jika tahun, kunci baris, atau do-file anak gagal, wave ini belum selesai. // WFDOC-INJECTED",
+        "* Muat hanya kunci baris dan kolom raw raw_sowste22/raw_inspli22 yang dipakai untuk pemetaan 2022. // WFDOC-INJECTED",
+        "* Pastikan semua baris pada berkas ini milik tahun 2022. // WFDOC-INJECTED"
+      ],
+      "sha256": "1b0c1c9d9a7bcaf5f223747ac7673a2c3fac3a2d5ce8f7e8d06675578d5ed130"
+    },
+    {
+      "path": "code/leaves/mapped/waste_liquid_flag_2022.do",
+      "header_comments": 4,
+      "block_notes": 6,
+      "first_notes": [
+        "* Tujuan: Jalankan pemetaan waste_liquid_flag untuk wave 2022 dari kolom sumber raw_liwste22 dan raw_inspli22; aturan pemetaan berada di do-file anak. // WFDOC-INJECTED",
+        "* Input: raw_wave_2022.dta, termasuk source_year/source_row dan dua kolom raw yang disebut di atas. // WFDOC-INJECTED",
+        "* Output: kolom waste_liquid_flag tahun 2022 dan ringkasan hitungan observed/zeros/invalid/source_absent. // WFDOC-INJECTED",
+        "* Jika tahun, kunci baris, atau do-file anak gagal, wave ini belum selesai. // WFDOC-INJECTED",
+        "* Muat hanya kunci baris dan kolom raw raw_liwste22/raw_inspli22 yang dipakai untuk pemetaan 2022. // WFDOC-INJECTED",
+        "* Pastikan semua baris pada berkas ini milik tahun 2022. // WFDOC-INJECTED"
+      ],
+      "sha256": "a631f77d9aeb44f26b2468971a3267b33a4897ddee2b25b30a774e83a43c0ea4"
+    },
+    {
+      "path": "code/leaves/mapped/waste_hazardous_flag_2022.do",
+      "header_comments": 4,
+      "block_notes": 6,
+      "first_notes": [
+        "* Tujuan: Jalankan pemetaan waste_hazardous_flag untuk wave 2022 dari kolom sumber raw_b3wste22 dan raw_inspli22; aturan pemetaan berada di do-file anak. // WFDOC-INJECTED",
+        "* Input: raw_wave_2022.dta, termasuk source_year/source_row dan dua kolom raw yang disebut di atas. // WFDOC-INJECTED",
+        "* Output: kolom waste_hazardous_flag tahun 2022 dan ringkasan hitungan observed/zeros/invalid/source_absent. // WFDOC-INJECTED",
+        "* Jika tahun, kunci baris, atau do-file anak gagal, wave ini belum selesai. // WFDOC-INJECTED",
+        "* Muat hanya kunci baris dan kolom raw raw_b3wste22/raw_inspli22 yang dipakai untuk pemetaan 2022. // WFDOC-INJECTED",
+        "* Pastikan semua baris pada berkas ini milik tahun 2022. // WFDOC-INJECTED"
+      ],
+      "sha256": "36be58ce0525ad1776d9638050038d2d89ea4376530ab38a86e55d933fa09dd8"
+    },
+    {
+      "path": "code/leaves/working/innovation_flag_2017.do",
+      "header_comments": 4,
+      "block_notes": 14,
+      "first_notes": [
+        "* Tujuan: Tambahkan empat flag inovasi untuk wave 2017 dari hasil tunnel, setelah mengosongkan salinan lama dengan nama sama. // WFDOC-INJECTED",
+        "* Input: verified_wave_2017.dta serta empat tabel tunnel product/process/marketing/organization yang dipasangkan per source_year/source_row. // WFDOC-INJECTED",
+        "* Output: wave 2017 dengan empat flag dan status masing-masing, plus ringkasan teramati/verified-only/provisional. // WFDOC-INJECTED",
+        "* Jika satu pasangan kunci tidak ditemukan, merge berhenti dan wave belum siap. // WFDOC-INJECTED",
+        "* Muat wave terverifikasi tahun 2017; nilai ini menjadi master yang menerima empat flag inovasi dari do-file tunnel. // WFDOC-INJECTED",
+        "* Pastikan semua baris milik tahun 2017. // WFDOC-INJECTED"
+      ],
+      "sha256": "e074a09427f2f5222d061b96ab371b5f57917d1f9c1a1280d4fbd086f4f8923b"
+    },
+    {
+      "path": "code/leaves/working/innovation_flag_2018.do",
+      "header_comments": 4,
+      "block_notes": 14,
+      "first_notes": [
+        "* Tujuan: Tambahkan empat flag inovasi untuk wave 2018 dari hasil tunnel, setelah mengosongkan salinan lama dengan nama sama. // WFDOC-INJECTED",
+        "* Input: verified_wave_2018.dta serta empat tabel tunnel product/process/marketing/organization yang dipasangkan per source_year/source_row. // WFDOC-INJECTED",
+        "* Output: wave 2018 dengan empat flag dan status masing-masing, plus ringkasan teramati/verified-only/provisional. // WFDOC-INJECTED",
+        "* Jika satu pasangan kunci tidak ditemukan, merge berhenti dan wave belum siap. // WFDOC-INJECTED",
+        "* Muat wave terverifikasi tahun 2018; nilai ini menjadi master yang menerima empat flag inovasi dari do-file tunnel. // WFDOC-INJECTED",
+        "* Pastikan semua baris milik tahun 2018. // WFDOC-INJECTED"
+      ],
+      "sha256": "024c8935660216d05d4998b8ff3f4b50cde6e60d09b2271d1bf0d80346fdb08b"
+    },
+    {
+      "path": "code/stages/F030_resume_tail.do",
+      "header_comments": 0,
+      "block_notes": 8,
+      "first_notes": [
+        "* Siapkan lingkungan Stata yang sama dengan tahap wave lainnya. // WFDOC-INJECTED",
+        "* Lanjutkan variabel waste solid 2022 yang belum dibuat pada proses sebelumnya. // WFDOC-INJECTED",
+        "* Lanjutkan variabel waste liquid 2022 yang belum dibuat pada proses sebelumnya. // WFDOC-INJECTED",
+        "* Lanjutkan variabel waste hazardous 2022 yang belum dibuat pada proses sebelumnya. // WFDOC-INJECTED",
+        "* Lanjutkan konversi bahan bakar gas alam ke MMBtu untuk 2022. // WFDOC-INJECTED",
+        "* Lanjutkan variabel kuantitas biomassa 2022. // WFDOC-INJECTED"
+      ],
+      "sha256": "c82952beb13a7de10b9bd8f60f65471d5c1119b6ed91186ef3c4e109679f100a"
+    }
+  ],
+  "count": 36
+}

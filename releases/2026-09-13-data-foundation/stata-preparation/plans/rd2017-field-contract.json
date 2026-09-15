@@ -1,0 +1,372 @@
+{
+  "status": "IMPLEMENTATION_READY_MASTER_BOUNDARY",
+  "scope": "2017 conditional categorical R&D; annual ready-wave companions, no new measurement admission",
+  "ready_wave_columns": 4593,
+  "unchanged_historical_projection_columns": 4591,
+  "key": [
+    "source_year",
+    "source_row"
+  ],
+  "expected_rows_2017": 3357,
+  "actual_source_fields": [
+    {
+      "raw": "raw_rnd17",
+      "raw_storage": "str1",
+      "canonical": "rd_indicator_raw",
+      "canonical_storage": "double",
+      "status": "vs_rd_indicator_raw",
+      "status_storage": "byte",
+      "companion": "rd17_own_token_class"
+    },
+    {
+      "raw": "raw_costrd17",
+      "raw_storage": "str1",
+      "canonical": "val_costrd",
+      "canonical_storage": "double",
+      "status": "vs_val_costrd",
+      "status_storage": "byte",
+      "companion": "rd17_external_token_class"
+    }
+  ],
+  "companions": {
+    "storage": "str6",
+    "domain_2017": [
+      "1",
+      "2",
+      "blank",
+      "other",
+      "absent"
+    ],
+    "missing_other_years": "",
+    "other_years": [
+      2010,
+      2011,
+      2012,
+      2013,
+      2014,
+      2015,
+      2018,
+      2019,
+      2020,
+      2021,
+      2022
+    ],
+    "actual_absent_source_field": "Fail annual schema gate; absent class is covered by constructed fixture only"
+  },
+  "parser": {
+    "source": {
+      "path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-RD2017-phase-B-execution/lib/shared.do",
+      "sha256": "1a7104e11238dd29ec74415c75b8b8c9507529e32c50e5307c4ae4901677268f",
+      "bytes": 58698
+    },
+    "program": "rd17_candidate",
+    "stage": "tokens",
+    "source_lines": "6–20",
+    "steps": [
+      "Preserve each source string width using clonevar, then ustrtrim the clone.",
+      "Initialize str6 class to other.",
+      "Assign literal 1 or 2 only when the entire trimmed token is exactly 1 or 2.",
+      "Assign blank only when the trimmed token is empty.",
+      "Assign absent last only when the declared source-present flag is zero."
+    ],
+    "annual_execution_location": "Upstream canonical-wave companion process only; no raw parsing in downstream R&D decision code",
+    "no_numeric_token_coercion": true
+  },
+  "canonical_consistency": [
+    "For class 1 require canonical==1 and vs==0.",
+    "For class 2 require canonical==2 and vs==0.",
+    "For strict blank require missing(canonical) and vs in {3,5}; inherited canonical strtrim treats TAB as parse failure while strict ustrtrim treats TAB as blank. Preserve existing canonical statuses.",
+    "For other retain the invalid literal category regardless of a parseable canonical number; do not infer blank from vs==3.",
+    "For absent constructed cases require missing(canonical) and vs==4; actual missing source column fails.",
+    "Require declared status domain; do not silently accept new status codes."
+  ],
+  "fixtures": [
+    {
+      "source": {
+        "path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-RD2017-phase-B-execution/inputs/shared-25case-truth-table.csv",
+        "sha256": "7ced630e59d1a2ca048eda067d3f634695f1c90755dfb1fe3d1603dd770f430f",
+        "bytes": 736
+      },
+      "plan_copy": {
+        "path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-wave-foundation-v2/plans/rd2017-fixtures/shared-25case-truth-table.csv",
+        "sha256": "7ced630e59d1a2ca048eda067d3f634695f1c90755dfb1fe3d1603dd770f430f",
+        "bytes": 736
+      },
+      "scope": "Constructed cases only; unchanged expected results"
+    },
+    {
+      "source": {
+        "path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-RD2017-phase-B-execution/inputs/truth25-literal-inputs.csv",
+        "sha256": "8a0e9b85e73189c0d473954c92735b6b870cb43cd1df313b3fd55d74f8d9a5fd",
+        "bytes": 1587
+      },
+      "plan_copy": {
+        "path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-wave-foundation-v2/plans/rd2017-fixtures/truth25-literal-inputs.csv",
+        "sha256": "8a0e9b85e73189c0d473954c92735b6b870cb43cd1df313b3fd55d74f8d9a5fd",
+        "bytes": 1587
+      },
+      "scope": "Constructed cases only; unchanged expected results"
+    },
+    {
+      "source": {
+        "path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-RD2017-phase-B-execution/inputs/literal-parser-fixtures.csv",
+        "sha256": "fe4ff0229096b1ddda0850626775d1ddf3f61bea1e53046b920838797cba997b",
+        "bytes": 1532
+      },
+      "plan_copy": {
+        "path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-wave-foundation-v2/plans/rd2017-fixtures/literal-parser-fixtures.csv",
+        "sha256": "fe4ff0229096b1ddda0850626775d1ddf3f61bea1e53046b920838797cba997b",
+        "bytes": 1532
+      },
+      "scope": "Constructed cases only; unchanged expected results"
+    },
+    {
+      "source": {
+        "path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-RD2017-phase-B-execution/inputs/ratio-fixtures.csv",
+        "sha256": "b049c04cd1d3d0c97ed4248676b865d4b4f7aa9cade7e41b2bf9337b782006aa",
+        "bytes": 1246
+      },
+      "plan_copy": {
+        "path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-wave-foundation-v2/plans/rd2017-fixtures/ratio-fixtures.csv",
+        "sha256": "b049c04cd1d3d0c97ed4248676b865d4b4f7aa9cade7e41b2bf9337b782006aa",
+        "bytes": 1246
+      },
+      "scope": "Constructed cases only; unchanged expected results"
+    }
+  ],
+  "truth25_expected": [
+    {
+      "parent_token_class": "1",
+      "child_token_class": "1",
+      "rd_universe_candidate": "1",
+      "rd_answer_state_candidate": "4",
+      "rd_external_candidate": "",
+      "outside_answer_candidate": "1",
+      "measurement_admitted": "False"
+    },
+    {
+      "parent_token_class": "1",
+      "child_token_class": "2",
+      "rd_universe_candidate": "1",
+      "rd_answer_state_candidate": "4",
+      "rd_external_candidate": "",
+      "outside_answer_candidate": "1",
+      "measurement_admitted": "False"
+    },
+    {
+      "parent_token_class": "1",
+      "child_token_class": "blank",
+      "rd_universe_candidate": "1",
+      "rd_answer_state_candidate": "4",
+      "rd_external_candidate": "",
+      "outside_answer_candidate": "0",
+      "measurement_admitted": "False"
+    },
+    {
+      "parent_token_class": "1",
+      "child_token_class": "other",
+      "rd_universe_candidate": "1",
+      "rd_answer_state_candidate": "4",
+      "rd_external_candidate": "",
+      "outside_answer_candidate": "1",
+      "measurement_admitted": "False"
+    },
+    {
+      "parent_token_class": "1",
+      "child_token_class": "absent",
+      "rd_universe_candidate": "1",
+      "rd_answer_state_candidate": "4",
+      "rd_external_candidate": "",
+      "outside_answer_candidate": "0",
+      "measurement_admitted": "False"
+    },
+    {
+      "parent_token_class": "2",
+      "child_token_class": "1",
+      "rd_universe_candidate": "0",
+      "rd_answer_state_candidate": "0",
+      "rd_external_candidate": "1",
+      "outside_answer_candidate": "0",
+      "measurement_admitted": "False"
+    },
+    {
+      "parent_token_class": "2",
+      "child_token_class": "2",
+      "rd_universe_candidate": "0",
+      "rd_answer_state_candidate": "1",
+      "rd_external_candidate": "0",
+      "outside_answer_candidate": "0",
+      "measurement_admitted": "False"
+    },
+    {
+      "parent_token_class": "2",
+      "child_token_class": "blank",
+      "rd_universe_candidate": "0",
+      "rd_answer_state_candidate": "2",
+      "rd_external_candidate": "",
+      "outside_answer_candidate": "0",
+      "measurement_admitted": "False"
+    },
+    {
+      "parent_token_class": "2",
+      "child_token_class": "other",
+      "rd_universe_candidate": "0",
+      "rd_answer_state_candidate": "3",
+      "rd_external_candidate": "",
+      "outside_answer_candidate": "0",
+      "measurement_admitted": "False"
+    },
+    {
+      "parent_token_class": "2",
+      "child_token_class": "absent",
+      "rd_universe_candidate": "0",
+      "rd_answer_state_candidate": "6",
+      "rd_external_candidate": "",
+      "outside_answer_candidate": "0",
+      "measurement_admitted": "False"
+    },
+    {
+      "parent_token_class": "blank",
+      "child_token_class": "1",
+      "rd_universe_candidate": "2",
+      "rd_answer_state_candidate": "5",
+      "rd_external_candidate": "",
+      "outside_answer_candidate": "0",
+      "measurement_admitted": "False"
+    },
+    {
+      "parent_token_class": "blank",
+      "child_token_class": "2",
+      "rd_universe_candidate": "2",
+      "rd_answer_state_candidate": "5",
+      "rd_external_candidate": "",
+      "outside_answer_candidate": "0",
+      "measurement_admitted": "False"
+    },
+    {
+      "parent_token_class": "blank",
+      "child_token_class": "blank",
+      "rd_universe_candidate": "2",
+      "rd_answer_state_candidate": "5",
+      "rd_external_candidate": "",
+      "outside_answer_candidate": "0",
+      "measurement_admitted": "False"
+    },
+    {
+      "parent_token_class": "blank",
+      "child_token_class": "other",
+      "rd_universe_candidate": "2",
+      "rd_answer_state_candidate": "5",
+      "rd_external_candidate": "",
+      "outside_answer_candidate": "0",
+      "measurement_admitted": "False"
+    },
+    {
+      "parent_token_class": "blank",
+      "child_token_class": "absent",
+      "rd_universe_candidate": "2",
+      "rd_answer_state_candidate": "5",
+      "rd_external_candidate": "",
+      "outside_answer_candidate": "0",
+      "measurement_admitted": "False"
+    },
+    {
+      "parent_token_class": "other",
+      "child_token_class": "1",
+      "rd_universe_candidate": "2",
+      "rd_answer_state_candidate": "5",
+      "rd_external_candidate": "",
+      "outside_answer_candidate": "0",
+      "measurement_admitted": "False"
+    },
+    {
+      "parent_token_class": "other",
+      "child_token_class": "2",
+      "rd_universe_candidate": "2",
+      "rd_answer_state_candidate": "5",
+      "rd_external_candidate": "",
+      "outside_answer_candidate": "0",
+      "measurement_admitted": "False"
+    },
+    {
+      "parent_token_class": "other",
+      "child_token_class": "blank",
+      "rd_universe_candidate": "2",
+      "rd_answer_state_candidate": "5",
+      "rd_external_candidate": "",
+      "outside_answer_candidate": "0",
+      "measurement_admitted": "False"
+    },
+    {
+      "parent_token_class": "other",
+      "child_token_class": "other",
+      "rd_universe_candidate": "2",
+      "rd_answer_state_candidate": "5",
+      "rd_external_candidate": "",
+      "outside_answer_candidate": "0",
+      "measurement_admitted": "False"
+    },
+    {
+      "parent_token_class": "other",
+      "child_token_class": "absent",
+      "rd_universe_candidate": "2",
+      "rd_answer_state_candidate": "5",
+      "rd_external_candidate": "",
+      "outside_answer_candidate": "0",
+      "measurement_admitted": "False"
+    },
+    {
+      "parent_token_class": "absent",
+      "child_token_class": "1",
+      "rd_universe_candidate": "3",
+      "rd_answer_state_candidate": "5",
+      "rd_external_candidate": "",
+      "outside_answer_candidate": "0",
+      "measurement_admitted": "False"
+    },
+    {
+      "parent_token_class": "absent",
+      "child_token_class": "2",
+      "rd_universe_candidate": "3",
+      "rd_answer_state_candidate": "5",
+      "rd_external_candidate": "",
+      "outside_answer_candidate": "0",
+      "measurement_admitted": "False"
+    },
+    {
+      "parent_token_class": "absent",
+      "child_token_class": "blank",
+      "rd_universe_candidate": "3",
+      "rd_answer_state_candidate": "5",
+      "rd_external_candidate": "",
+      "outside_answer_candidate": "0",
+      "measurement_admitted": "False"
+    },
+    {
+      "parent_token_class": "absent",
+      "child_token_class": "other",
+      "rd_universe_candidate": "3",
+      "rd_answer_state_candidate": "5",
+      "rd_external_candidate": "",
+      "outside_answer_candidate": "0",
+      "measurement_admitted": "False"
+    },
+    {
+      "parent_token_class": "absent",
+      "child_token_class": "absent",
+      "rd_universe_candidate": "3",
+      "rd_answer_state_candidate": "5",
+      "rd_external_candidate": "",
+      "outside_answer_candidate": "0",
+      "measurement_admitted": "False"
+    }
+  ],
+  "admission": {
+    "measurement_admitted": false,
+    "primary_release": false,
+    "G0_complete": false
+  },
+  "consolidated_master": "data/analysis/G0_analysis_ready.dta",
+  "master_expected_rows": 33049,
+  "analysis_filter": "source_year == 2017"
+}

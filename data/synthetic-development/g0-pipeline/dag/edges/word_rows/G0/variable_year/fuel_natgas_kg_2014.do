@@ -1,0 +1,22 @@
+* SYNTHETIC EXECUTION COPY; see contracts/reuse-manifest.csv for source hash.
+* N_G0_fuel_natgas_kg_2014: annual staged raw state -> fuel_natgas_kg at source_year/source_row.
+* Evidence: Existing G0 source map; semantic verification not implied by a parsed value.
+log using "$VYL/N_G0_fuel_natgas_kg_2014.log", text replace name(vycell)
+generate double fuel_natgas_kg=.
+generate byte vs_fuel_natgas_kg=4
+quietly count if !missing(fuel_natgas_kg)
+local obs=r(N)
+quietly count if fuel_natgas_kg==0
+local zeros=r(N)
+quietly count if inlist(vs_fuel_natgas_kg,5,6,8)
+local bad=r(N)
+quietly count if vs_fuel_natgas_kg==4
+local absent=r(N)
+post cell (2014) ("fuel_natgas_kg") (_N) (`obs') (`zeros') (`bad') (`absent')
+preserve
+keep source_year source_row fuel_natgas_kg vs_fuel_natgas_kg
+isid source_year source_row
+save "$VYD/N_G0_fuel_natgas_kg_2014.dta", replace
+restore
+display "VARIABLE_YEAR_PASS N_G0_fuel_natgas_kg_2014"
+log close vycell

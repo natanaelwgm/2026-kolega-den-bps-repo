@@ -1,0 +1,18 @@
+\begin{table}[H]
+\centering
+\caption{Wooldridge: pooled residual and index quantiles}
+\GOneLabel{tab:deep-wrdg-quantiles}
+\begingroup\fontsize{9.2}{11.2}\selectfont
+\setlength{\tabcolsep}{4.3pt}\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{lrrrrrrr}
+\toprule
+Scale & Min & P1 & P25 & Median & P75 & P99 & Max \\
+\midrule
+Uncentered log & 6.328 & 8.279 & 10.618 & 11.512 & 12.661 & 16.290 & 20.468 \\
+Centered log & -5.310 & -3.022 & -0.953 & -0.122 & 0.802 & 4.056 & 7.857 \\
+Relative index & 4.942e-03 & 4.870e-02 & 3.856e-01 & 8.853e-01 & 2.231e+00 & 5.776e+01 & 2.585e+03 \\
+\bottomrule
+\end{tabular}
+\endgroup
+\appnotes{All rows use this method's own pooled dynamic estimation sample. We center original-log residuals within sector and method, then exponentiate with multiplier one. We compute empirical percentiles separately on each scale. If the percentile averages adjacent observations, exponentiating that average need not equal the index percentile. Log rows use three decimals; index rows use scientific notation with three decimals to preserve tiny positive tails. All finite tails remain in the calculation.}{G0.5 v3 modified manufacturing records with fictional company links; authors' calculations.}
+\end{table}

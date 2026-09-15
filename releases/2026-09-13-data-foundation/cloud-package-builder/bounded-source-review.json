@@ -1,0 +1,50 @@
+{
+  "status": "REQUIRES_BOUNDED_RECEIPT_AND_METADATA_INTEGRITY_FIXES",
+  "scope": "Read-only code/metadata review. No company data read, no package run, no privacy architecture expansion.",
+  "reviewed_files": [
+    {
+      "path": "build_package.py",
+      "sha256": "dba43585213897fb3d64a7e8d76417ef53e81d05075eca653533d930429f39b8"
+    },
+    {
+      "path": "load_data.py",
+      "sha256": "c4275e62e9619a028ded0b3792da89f60e9ea34393ad97f5fad0b0cd82bbc2c1"
+    },
+    {
+      "path": "PLAN.md",
+      "sha256": "cc628c33f3b24c68673658b3c82cf07f30540fd7e6cbf13d5f7a8ac3273053b9"
+    },
+    {
+      "path": "privacy-field-proposal.json",
+      "sha256": "8b306876a06ef22042a95251fcea39848a1a0b8900deff9dde45899ac4f70a02"
+    }
+  ],
+  "findings": [
+    {
+      "id": "CLOUD-01",
+      "priority": "required",
+      "file": "build_package.py",
+      "problem": "Final receipt and wave manifest are independently accepted; no exact latest.output_hashes master binding, no metadata snapshot or after-run identity check.",
+      "fix": "Bind master relative path/hash to exact final receipt output list and current V085/wave producer metadata; snapshot receipt and wave manifest bytes/hash before reading, then require unchanged metadata and master after packaging. Reject duplicate/conflicting master entries or missing final success marker.",
+      "reason": "Prevent a stale or unrelated passed receipt from authorizing old master bytes."
+    },
+    {
+      "id": "CLOUD-02",
+      "priority": "required for stated checked metadata package",
+      "file": "build_package.py and load_data.py",
+      "problem": "Manifest pins only Parquet pieces. Loader does not verify dictionary, value labels, missing-letter sidecar or exclusion metadata, although those files carry retained Stata meanings and privacy provenance.",
+      "fix": "Add exact hashes/bytes for dictionary.csv, value-labels.json, stata-missing-codes.json, excluded-columns.json and loader code; loader verifies those required metadata files before returning data. Keep metadata checksum list separate from manifest itself to avoid a self-hash.",
+      "reason": "A numerically valid table with altered missing codes or labels is not the claimed exact checked package."
+    }
+  ],
+  "not_findings": [
+    "Parquet storage chunks are properly concatenated before analysis; no annual/raw bypass is present.",
+    "Economic numeric values are not intentionally rounded/noised. The only numeric columns intentionally denied are source/linkage keys, as explicitly listed.",
+    "Extended Stata missing-letter information is kept in a sidecar and README accurately explains loader returns numeric nulls; restoration into Stata is not claimed.",
+    "Direct-field suppression explicitly does not claim anonymity; remaining geography/industry/economic combinations are disclosed."
+  ],
+  "deferred_until_actual_run": [
+    "Actual schema interface fields storage/label/display_format/value_label must match certified producer schema.",
+    "Real master row/column checks, retained exact values, all parts, sidecar code locations and fresh loader run remain execution gates."
+  ]
+}

@@ -1,0 +1,38 @@
+* WFDOC: Owner-authorized nominal development extension: use every supplied source year, 2010–2015 and 2017–2022.
+* WFDOC: Assume each positive reported capital stock describes December of its source year; preserve upstream documentary flags unchanged.
+* WFDOC: Reported positive capital additions are a separate declared investment candidate; never derive investment from differences in stocks.
+use "$G1_RUN/S01_input.dta", clear
+assert inrange(source_year,2010,2022) & source_year!=2016
+assert psid_status=="synthetic_development"
+isid psid source_year
+xtset psid source_year, delta(1)
+* Exact-calendar lag: no beginning stock for 2010 or 2017 and no bridging the absent 2016 file.
+gen double nom_k_begin=L.capital_stock_nominal
+gen byte nom_k_documented=L.capital_stock_verified==1
+gen byte nom_i_documented=capital_additions_verified==1
+* Concept flags record the owner-authorized interpretation, independently of whether the amount is observed.
+* WFDOC: *_documented hanya merekam flag dokumenter dari sumber; *_concept dan *_assumed menerapkan konvensi hitung yang disahkan owner tanpa mengubah nilai input atau menyatakan verifikasi aktual.
+gen byte nom_k_concept=!missing(L.source_year)
+gen byte nom_i_concept=1
+gen byte nom_k_assumed=nom_k_concept
+gen byte nom_i_assumed=nom_i_concept
+* WFDOC: Setiap ln hanya dibentuk untuk nilai finite yang positif; nol, negatif dan missing tetap terlihat sebagai tidak layak sehingga tidak menjadi angka pengganti.
+gen double nom_y=ln(value_added_nominal) if value_added_nominal>0 & !missing(value_added_nominal)
+gen double nom_l=ln(workers) if workers>0 & !missing(workers)
+gen double nom_k=ln(nom_k_begin) if nom_k_begin>0 & !missing(nom_k_begin)
+gen double nom_i=ln(capital_additions_nominal) if capital_additions_nominal>0 & !missing(capital_additions_nominal)
+gen double nom_m=ln(val_rtlvcu) if val_rtlvcu>0 & !missing(val_rtlvcu)
+gen str2 nom_sector=substr(industry_code,1,2)
+gen byte nom_sector_num=real(nom_sector)
+* WFDOC: Production hanya mencakup tahun produksi yang dideklarasikan, kode industri tepat lima digit numerik, dan sektor dua digit 10–33; sesudahnya tiap metode memakai proxy domainnya sendiri.
+gen byte nom_production=(inrange(source_year,2011,2015) | inrange(source_year,2018,2022)) & ustrregexm(industry_code,"^[0-9]{5}$") & inrange(nom_sector_num,10,33)
+gen byte nom_domain_op=nom_production & !missing(nom_y,nom_l,nom_k,nom_i)
+gen byte nom_domain_lp=nom_production & !missing(nom_y,nom_l,nom_k,nom_m)
+gen byte nom_domain_acf=nom_domain_lp
+gen byte nom_domain_wrdg=nom_domain_lp
+gen byte nom_domain_common=nom_domain_op & nom_domain_lp
+assert missing(nom_k_begin) & missing(nom_k) if inlist(source_year,2010,2017)
+* WFDOC: Dua string asumsi disimpan bersama output agar caveat stok modal dan kandidat investasi terbaca downstream; metadata ini tidak memulihkan bukti supplier atau deflator.
+gen str64 nom_capital_assumption="Reported source-year stock treated as December stock; unverified"
+gen str80 nom_investment_assumption="Reported additions treated as investment candidate; no stock differencing"
+save "$G1_RUN/nominal/N01_source.dta", replace

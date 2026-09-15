@@ -1,0 +1,55 @@
+{
+  "node_id": "G1_N03",
+  "branch": "nominal_development_compatibility",
+  "material_state_status": "implemented_aggregate_receipt_present_validation_separate",
+  "state": "Own and common support",
+  "inputs": [
+    "nominal/N02_source_and_risk.dta"
+  ],
+  "input_nodes": [
+    "G1_N02"
+  ],
+  "outputs_relative_to_external_run": [
+    "nominal/N03_frozen.dta",
+    "nominal/support.dta"
+  ],
+  "aggregate_outputs_relative_to_external_run": [
+    "outputs/nominal_sample_support.csv"
+  ],
+  "available_aggregate_receipts": [
+    "outputs/nominal_sample_support.csv"
+  ],
+  "available_private_artifacts": [],
+  "grain": "Original records plus typed risk intervals; support table by sector × method × own/common sample",
+  "keys": [
+    "sector",
+    "method",
+    "sample_id"
+  ],
+  "denominator": "Count source rows, pre-lag positive production domain, exact current×lag dynamic intersection, and lag-covariate selection intervals separately. Dynamic endpoints2012–2015 and2019–2022, subject to observed positive input support",
+  "units": {
+    "levels": "reported monetary candidate units; no verified conversion or deflation",
+    "logs_and_residuals": "natural-log points; nominal structural residual contains price/measurement/transitory components",
+    "coefficients": "dimensionless elasticities",
+    "counts": "source observations, derivative risk intervals, distinct synthetic firms and draws explicitly distinguished"
+  },
+  "calendar": "Source2010–2015/2017–2022; production2011–2015/2018–2022; dynamic2012–2015/2019–2022; actual delta1",
+  "decision": "Freeze method-specific and four-method common pre-lag domains. Wrapper applies exact annual intersection once. Do not pool sectors or relax first-stage100/dynamic50/firms50/selection100/exits10/continuers10 thresholds.",
+  "missingness": "Missing/zero/negative remain distinct; no imputation; unsupported statistical results remain missing and every skipped/failed obligation is retained",
+  "source_code": "work-items/G1/stata/nominal/N03_samples.do",
+  "source_code_sha256": "97a77447b31b6ec369e1c47c9e029960a91e771034c39b1370e02839d86b269e",
+  "executed_source_sha256": "6d509fd0eef9f4a4a2d2685b0a9c60fefe3ab5dc676e27f887a080ac88340a8a",
+  "executed_source_or_proven_comment_only": true,
+  "specification_path": "work-items/G1/nominal-specification.json",
+  "specification_sha256": "b7d44ee476be421e158868783f6f31f1408d7f3b028230fecbc600083cebf8b5",
+  "aggregate_receipt_sha256": {
+    "outputs/nominal_sample_support.csv": "e3b02a64a3bfae63f18e76362e18b94a04b652288b7ff41e6fc0b3d2281eeade"
+  },
+  "execution_evidence_root": "/Users/natanaelmassie/Downloads/deasy-g1-issue9-20260913/work-items/G1/release",
+  "primary_real_admission": false,
+  "panel_mode": "official synthetic_development; real linkage not required or claimed",
+  "plan": "releases/2026-09-13-data-foundation/stata-preparation/row-plans/G1.json",
+  "plan_sha256": "dd88cfa94af5f212a7b0a4b70f99fea1c0201f950cd19333357739b96b5da1ca",
+  "input_manifest": "data/g0-5-development/manifest.json",
+  "input_manifest_sha256": "060b0ee0a2158a9c94b0e7e68fcfba719eda37561422855471a99da6810ba260"
+}

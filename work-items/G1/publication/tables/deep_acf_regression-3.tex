@@ -1,0 +1,34 @@
+\begin{table}[H]
+\centering
+\caption{ACF: own-sample production estimates}
+\GOneLabel{tab:deep-acf-regression-3}
+\begingroup\fontsize{9.2}{11.2}\selectfont
+\setlength{\tabcolsep}{4.3pt}\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{p{4.1cm}*{2}{>{\centering\arraybackslash}p{1.85cm}}}
+\toprule
+Dependent variable: log value added & 31 & 32 \\
+\midrule
+Labor $\widehat\beta_L$ & 1.2184 & 0.9675 \\
+(Bootstrap SE) & (0.0477) & (3.6276) \\
+95\% percentile interval & \makecell{[1.1157,\\1.3244]} & \makecell{[0.7891,\\1.2420]} \\
+Capital $\widehat\beta_K$ & 0.0260 & 0.1075 \\
+(Bootstrap SE) & (0.0195) & (0.1294) \\
+95\% percentile interval & \makecell{[-0.0120,\\0.0620]} & \makecell{[0.0265,\\0.2063]} \\
+Coefficient sum $\widehat\beta_L+\widehat\beta_K$ & 1.2445 & 1.0750 \\
+(Bootstrap SE) & (0.0445) & (3.7514) \\
+Consecutive-year observations & 341 & 110 \\
+Fictional firms in fit & 125 & 54 \\
+Records with eligible inputs & 663 & 267 \\
+First fitted endpoint & 2012 & 2012 \\
+Last fitted endpoint & 2022 & 2022 \\
+Distinct fitted years & 8 & 8 \\
+Proxy polynomial degree & 3 & 3 \\
+Initial labor coefficient & 1.1640 & 0.8851 \\
+Initial capital coefficient & 0.0906 & 0.2052 \\
+Objective value & 2.744e-03 & 3.181e-03 \\
+Successful bootstrap draws & 99 & 99 \\
+\bottomrule
+\end{tabular}
+\endgroup
+\appnotes{Each column pools eligible calendar observations in one sector with one coefficient vector and no added year effects. The own sample requires this method's inputs; the common sample separately requires all four methods' inputs before exact lagging. Parentheses show whole-history bootstrap standard errors; the coefficient-sum error includes labor-capital covariance. Brackets show admitted 95 percent percentile intervals. A dash denotes unavailable inference. The first and last years bound the observed endpoints but do not fill intervening calendar gaps; the distinct-year count records actual coverage. Primary polynomial and starting rules are fixed before results.}{G0.5 v3 modified manufacturing records with fictional company links; authors' calculations.}
+\end{table}

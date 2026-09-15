@@ -1,0 +1,2890 @@
+{
+  "schema_version": 1,
+  "row_id": "G2",
+  "title": "Quality of capital, each energy source, R&D, exports/imports, export value and FDI",
+  "family": "data",
+  "status": "planning_only",
+  "row_complete": false,
+  "source": {
+    "task_json": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/requests/data/02-quality-checks/task.json",
+    "docx_sha256": "027fbf675aa8001a50060561781930440ee4d9697cc790ba593452fe528edd92",
+    "locator": "word/document.xml table 1, row 5",
+    "number": "2",
+    "pic": "",
+    "completion_cell": "",
+    "request": "Ngecek seberapa bagus data untuk variable2 penting, seperti:\nCapital\nEnergi (masing2 sumber energi untuk scope 1 dan scope 2)\nRnD\nEkspor dan impor \nExport value (pprxp x output) \nFDI \n",
+    "strategy": "",
+    "notes": ""
+  },
+  "question": "Which observations can safely answer each research question?",
+  "dependencies": [
+    {
+      "id": "C_MAIN",
+      "required_for": "required source/method branch defined by exact row and graph",
+      "availability": "latest_actual_source_located_not_full_G0_DoD",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/dag/data/word_data/G0/G0_analysis_ready_ACTUAL_LOCAL.dta",
+      "gate": "Exact source hash 6fc70746e1e6a1257552d29f19885c3bf113b64c5bed7671ca8a23f5168e6a6c; G0 full acceptance before dependent execution. Every company-data operand in analysis must be the single published consolidated master or a declared derivative whose entire company-data ancestry ends at that consolidated master. Direct annual-wave reads are prohibited in analysis; only the master builder may append annual waves. Raw/staged/legacy/cached final company files cannot be numerical analysis parents. A required field missing from the wave is an upstream preparation failure; never repair it by opening an external company file inside this row. Comparison-only validators may read older data but may not feed construction or estimates. External reference and metadata inputs retain explicit non-company roles.",
+      "numerical_binding": "wave_input_contract.master_path or a declared derivative"
+    },
+    {
+      "id": "C_CODEBOOK",
+      "required_for": "required source/method branch defined by exact row and graph",
+      "availability": "partly_verified",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv",
+      "gate": "Each annual field has exact definition/unit/code evidence or an explicit provisional/unknown state."
+    },
+    {
+      "id": "G0",
+      "required_for": "required: accepted stable canonical input",
+      "availability": "planned_not_accepted",
+      "evidence": "work/plans/rows/G0.json",
+      "gate": "G0 DoD and input hash acceptance; never substitute synthetic/history output Every company-data operand in analysis must be the single published consolidated master or a declared derivative whose entire company-data ancestry ends at that consolidated master. Direct annual-wave reads are prohibited in analysis; only the master builder may append annual waves. Raw/staged/legacy/cached final company files cannot be numerical analysis parents. A required field missing from the wave is an upstream preparation failure; never repair it by opening an external company file inside this row. Comparison-only validators may read older data but may not feed construction or estimates. External reference and metadata inputs retain explicit non-company roles.",
+      "numerical_binding": "wave_input_contract.master_path or a declared derivative"
+    }
+  ],
+  "decisions": [
+    {
+      "id": "G2_D01",
+      "question": "Pin G0 and all source semantics",
+      "selected_rule": "Refresh latest 3824 source; older 3496 and fictional 3837 receipts do not count.",
+      "rationale": "Read current actual input and annual mappings; freeze source/rule hashes; do not depend on G1.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G2_D02",
+      "question": "Inventory every requested quality variable and source universe",
+      "selected_rule": "Include structural absences, retired aliases and conditional question populations.",
+      "rationale": "Expand capital, fuel-by-fuel, PLN/non-PLN, R&D, trade/FDI and export value into variable-year registry.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G2_D03",
+      "question": "Assign mutually exclusive missingness/domain states",
+      "selected_rule": "Exactly one primary state per field/record; overlapping issue flags are separate.",
+      "rationale": "Classify observed positive, zero, negative, ordinary missing, source absent, parse failure, masked, explicit unknown, out of domain, unverified code, not asked, retired alias.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G2_D04",
+      "question": "Compute original/domain/flagged distributions",
+      "selected_rule": "Flagged and domain accepted may overlap for tail diagnostics; disclose overlap; no undeclared dropping.",
+      "rationale": "Use frozen within-year rules; preserve original values, valid domain and flagged tails separately with exact inclusion flags.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G2_D05",
+      "question": "Validate capital stock definition and components",
+      "selected_rule": "Zero stock is not replaced; later definition provisional; no additions-as-stock.",
+      "rationale": "Match stock total to observed components only when concepts/units complete; separate positive-stock support from accounting identity support.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G2_D06",
+      "question": "Validate capital additions and missing 2015 source",
+      "selected_rule": "No back-solving additions from end year stock.",
+      "rationale": "Reconcile additions/acquisition components separately from stock; maintain 2015 unknown field source.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G2_D07",
+      "question": "Check every fuel quantity/cost pair",
+      "selected_rule": "Twenty mapped pairs/aliases from recent synthetic audit are a code inventory, not actual counts; inspect current actual source.",
+      "rationale": "Distinguish zero quantity positive cost, missing quantity positive cost, negative units and valid positive pair; annual unit conversion fixed upstream.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G2_D08",
+      "question": "Check purchased electricity and generation universe",
+      "selected_rule": "No missing component as zero or own generation double count.",
+      "rationale": "Separate PLN/non PLN costs/quantities, self generation, available components and annual semantic verification.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G2_D09",
+      "question": "Reconcile partial/complete energy and carbon factors",
+      "selected_rule": "No row with incomplete nine fuel data is complete Scope 1; later grid carry sensitivity only.",
+      "rationale": "Inspect fuel/CO2 subtotals, component counts, unitgap and grid carry flags separately; gate complete claims.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G2_D10",
+      "question": "Separate R&D expense, activity and external funding",
+      "selected_rule": "Zero R&Dexpense not automatic no activity; source conditional missing notno.",
+      "rationale": "Validate IRDVCU as money, COSTRD as external funding category, annual code pairs and wording.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G2_D11",
+      "question": "Validate share, any-export and direct-export meanings",
+      "selected_rule": "Onehistorical 2014 out-of-range percent must be checked on current source; no 2022 directno→anyno.",
+      "rationale": "Check numeric percent domain, working and verified binary, conflicts and 2022 concept; unknown retained.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G2_D12",
+      "question": "Derive export value on a verified denominator",
+      "selected_rule": "No raw percentage×output; absent direct export value comparison explicit.",
+      "rationale": "Calculate percentage / 100×OUTPUT only source years with defensible denominator; compare YPRVCU production only as alternative diagnostic.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G2_D13",
+      "question": "Validate imported-material values and share denominator",
+      "selected_rule": "Unobserved amount is unknown, not nonimporter; all inputs not material total without definition.",
+      "rationale": "Inspect nonnegative values and materials/all-input distinctions; classify import use from valid nonnegative amounts.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G2_D14",
+      "question": "Validate foreign ownership and thresholds",
+      "selected_rule": "Never collapse unknown into domestic; exact 10% boundary included in FDI 10.",
+      "rationale": "Check 0–100 domain; derive any foreign and>=10%separately; retain foreign share missing.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G2_D15",
+      "question": "Build eligibility masks without future information",
+      "selected_rule": "G2 has no future treatment/outcome screen and does not depend on TFP.",
+      "rationale": "Combine only contemporaneous required input masks; leave joint trade/ownership unknown if any required state unknown.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G2_D16",
+      "question": "Diagnose annual discontinuities and source revisions",
+      "selected_rule": "A large jump is not automatically error or economic change.",
+      "rationale": "Compare coverage/distributions to questionnaire/code/unit changes with true calendar gaps; plot breaks as diagnostics.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G2_D17",
+      "question": "Reconcile masks and deliver row-specific QA contract",
+      "selected_rule": "Keep authoritative quality eligibility long on source_year/source_row/eligibility_id and retain the exception ledger. Publish the source-hashed long artifact through the row QA acceptance manifest without modifying G0. Any optional wide mask attachment must first reshape under unique eligibility-specific aliases, assert one source row, and then merge 1:1 on provenance. Independently recompute state/accounting/threshold cases; the acceptance receipt never replaces numeric mask rows.",
+      "rationale": "Save quality eligibility 1:1 on the provenance key without modifying G0; recompute state/accounting/threshold cases independently; reader report explains usability.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "G2_INPUT_SEMANTICS",
+      "state": "Accepted G0 variable-year dictionary, source units and codebooks",
+      "grain": "variable × year",
+      "keys": [
+        "variable_id",
+        "source_year"
+      ],
+      "required_fields": [
+        "variable_id",
+        "source_year",
+        "source_field",
+        "source_unit",
+        "canonical_unit",
+        "universe",
+        "evidence_id",
+        "status"
+      ],
+      "units": "Definition metadata",
+      "folder": "dag/nodes/G2/G2_INPUT_SEMANTICS",
+      "planning_status": "external_input_not_materialized_by_plan",
+      "input_receipt": "G0 dictionary/rule hashes and exact source locators"
+    },
+    {
+      "id": "G2_INPUT_CANONICAL",
+      "state": "Physical accepted canonical G0 dataset with original values, companions and source states",
+      "grain": "source record × year",
+      "keys": [
+        "source_year",
+        "source_row"
+      ],
+      "required_fields": [
+        "source_year",
+        "source_row",
+        "canonical_values",
+        "verified_values",
+        "verification_states",
+        "source_presence",
+        "schema_version"
+      ],
+      "units": "Per-variable canonical dictionary; nominal and real fields remain distinct",
+      "folder": "dag/nodes/G2/G2_INPUT_CANONICAL",
+      "planning_status": "external_input_not_materialized_by_plan",
+      "input_receipt": "Require actual current wave release receipt plus this row-specific eligibility and field contracts.",
+      "numerical_binding": "wave_input_contract.master_path or a declared derivative"
+    },
+    {
+      "id": "G2_S00",
+      "state": "Frozen input manifest and available source bytes; not generated by this plan",
+      "grain": "input version manifest",
+      "keys": [
+        "source_path",
+        "sha256"
+      ],
+      "required_fields": [
+        "source_path",
+        "sha256",
+        "source_year",
+        "format",
+        "availability",
+        "privacy",
+        "definition_evidence"
+      ],
+      "units": {
+        "source_year": "calendar year",
+        "bytes": "bytes"
+      },
+      "folder": "dag/nodes/G2/G2_S00",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G2_S01",
+      "state": "Pin G0 and all source semantics — planned output state, not materialized",
+      "grain": "variable × year",
+      "keys": [
+        "variable_id",
+        "source_year"
+      ],
+      "required_fields": [
+        "variable_id",
+        "source_year",
+        "source_hash",
+        "variable",
+        "year",
+        "rule_version",
+        "source_evidence"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G2/G2_S01",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G2_S02",
+      "state": "Inventory every requested quality variable and source universe — planned output state, not materialized",
+      "grain": "variable × year",
+      "keys": [
+        "variable_id",
+        "source_year"
+      ],
+      "required_fields": [
+        "variable_id",
+        "source_year",
+        "variable",
+        "year",
+        "required_unit",
+        "question_universe",
+        "source_presence"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G2/G2_S02",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G2_S03",
+      "state": "Assign mutually exclusive missingness/domain states — planned output state, not materialized",
+      "grain": "source record × year × quality variable",
+      "keys": [
+        "source_year",
+        "source_row",
+        "variable_id"
+      ],
+      "required_fields": [
+        "source_year",
+        "source_row",
+        "variable_id",
+        "variable",
+        "state",
+        "raw_value",
+        "working_value"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G2/G2_S03",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G2_S04",
+      "state": "Compute original/domain/flagged distributions — planned output state, not materialized",
+      "grain": "variable × year × eligibility sample",
+      "keys": [
+        "variable_id",
+        "source_year",
+        "sample_id"
+      ],
+      "required_fields": [
+        "variable_id",
+        "source_year",
+        "sample_id",
+        "year",
+        "variable",
+        "N",
+        "mean",
+        "sd",
+        "p1",
+        "p5",
+        "p25",
+        "p50",
+        "p75",
+        "p95",
+        "p99",
+        "min",
+        "max"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G2/G2_S04",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G2_S05",
+      "state": "Validate capital stock definition and components — planned output state, not materialized",
+      "grain": "source record × year",
+      "keys": [
+        "source_year",
+        "source_row"
+      ],
+      "required_fields": [
+        "source_year",
+        "source_row",
+        "stock_total",
+        "stock_components",
+        "component_N",
+        "gap",
+        "identity_eligible"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G2/G2_S05",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G2_S06",
+      "state": "Validate capital additions and missing 2015 source — planned output state, not materialized",
+      "grain": "source record × year",
+      "keys": [
+        "source_year",
+        "source_row"
+      ],
+      "required_fields": [
+        "source_year",
+        "source_row",
+        "additions_total",
+        "components",
+        "year",
+        "source_status",
+        "gap"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G2/G2_S06",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G2_S07",
+      "state": "Check every fuel quantity/cost pair — planned output state, not materialized",
+      "grain": "source record × year × fuel",
+      "keys": [
+        "source_year",
+        "source_row",
+        "fuel"
+      ],
+      "required_fields": [
+        "source_year",
+        "source_row",
+        "fuel",
+        "quantity",
+        "cost",
+        "unit",
+        "pair_state",
+        "unit_price"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G2/G2_S07",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G2_S08",
+      "state": "Check purchased electricity and generation universe — planned output state, not materialized",
+      "grain": "source record × year × electricity origin",
+      "keys": [
+        "source_year",
+        "source_row",
+        "electricity_source"
+      ],
+      "required_fields": [
+        "source_year",
+        "source_row",
+        "electricity_source",
+        "quantity",
+        "cost",
+        "component_available",
+        "generation_state"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G2/G2_S08",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G2_S09",
+      "state": "Reconcile partial/complete energy and carbon factors — planned output state, not materialized",
+      "grain": "source record × year × coverage mask × factor scenario",
+      "keys": [
+        "source_year",
+        "source_row",
+        "coverage_mask",
+        "factor_scenario"
+      ],
+      "required_fields": [
+        "source_year",
+        "source_row",
+        "coverage_mask",
+        "factor_scenario",
+        "component_N",
+        "energy_partial",
+        "energy_complete",
+        "co2",
+        "factor_status"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G2/G2_S09",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G2_S10",
+      "state": "Separate R&D expense, activity and external funding — planned output state, not materialized",
+      "grain": "source record × year",
+      "keys": [
+        "source_year",
+        "source_row"
+      ],
+      "required_fields": [
+        "source_year",
+        "source_row",
+        "rd_expense",
+        "rd_activity",
+        "rd_external_funding",
+        "source_state",
+        "verification"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G2/G2_S10",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G2_S11",
+      "state": "Validate share, any-export and direct-export meanings — planned output state, not materialized",
+      "grain": "source record × year",
+      "keys": [
+        "source_year",
+        "source_row"
+      ],
+      "required_fields": [
+        "source_year",
+        "source_row",
+        "export_share",
+        "export_any",
+        "export_direct",
+        "v_export",
+        "conflict",
+        "unknown"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G2/G2_S11",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G2_S12",
+      "state": "Derive export value on a verified denominator — planned output state, not materialized",
+      "grain": "source record × year",
+      "keys": [
+        "source_year",
+        "source_row"
+      ],
+      "required_fields": [
+        "source_year",
+        "source_row",
+        "share",
+        "output",
+        "export_value",
+        "denominator_definition",
+        "comparison_status"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G2/G2_S12",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G2_S13",
+      "state": "Validate imported-material values and share denominator — planned output state, not materialized",
+      "grain": "source record × year",
+      "keys": [
+        "source_year",
+        "source_row"
+      ],
+      "required_fields": [
+        "source_year",
+        "source_row",
+        "import_value",
+        "material_total",
+        "all_inputs",
+        "import_flag",
+        "share_definition"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G2/G2_S13",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G2_S14",
+      "state": "Validate foreign ownership and thresholds — planned output state, not materialized",
+      "grain": "source record × year",
+      "keys": [
+        "source_year",
+        "source_row"
+      ],
+      "required_fields": [
+        "source_year",
+        "source_row",
+        "foreign_share",
+        "any_foreign",
+        "fdi10",
+        "boundary_case",
+        "unknown"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G2/G2_S14",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G2_S15",
+      "state": "Build eligibility masks without future information — planned output state, not materialized",
+      "grain": "source record × year × eligibility contract",
+      "keys": [
+        "source_year",
+        "source_row",
+        "eligibility_id"
+      ],
+      "required_fields": [
+        "source_year",
+        "source_row",
+        "eligibility_id",
+        "required_masks",
+        "eligible",
+        "exclusion_reason",
+        "unknown_reason"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G2/G2_S15",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G2_S16",
+      "state": "Diagnose annual discontinuities and source revisions — planned output state, not materialized",
+      "grain": "variable × year",
+      "keys": [
+        "variable_id",
+        "source_year"
+      ],
+      "required_fields": [
+        "variable_id",
+        "source_year",
+        "variable",
+        "year",
+        "definition_change",
+        "coverage_change",
+        "distribution_change"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G2/G2_S16",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G2_S17",
+      "state": "Reconcile masks and deliver row-specific QA contract — planned output state, not materialized",
+      "grain": "row × quality acceptance check",
+      "keys": [
+        "dependent_row_id",
+        "check_id"
+      ],
+      "required_fields": [
+        "dependent_row_id",
+        "check_id",
+        "quality_masks",
+        "exception_ledger",
+        "source_hash",
+        "validation",
+        "acceptance"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G2/G2_S17",
+      "planning_status": "planning_only"
+    }
+  ],
+  "edges": [
+    {
+      "id": "G2_E01",
+      "title": "Pin G0 and all source semantics",
+      "input_nodes": [
+        "G2_S00",
+        "G2_INPUT_CANONICAL",
+        "G2_INPUT_SEMANTICS"
+      ],
+      "output_nodes": [
+        "G2_S01"
+      ],
+      "depends_on": [],
+      "do_file": "rows/G2/edges/G2_E01.do",
+      "action": "Read current actual input and annual mappings; freeze source/rule hashes; do not depend on G1.",
+      "decision_ids": [
+        "G2_D01"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G2_E02",
+      "title": "Inventory every requested quality variable and source universe",
+      "input_nodes": [
+        "G2_S01"
+      ],
+      "output_nodes": [
+        "G2_S02"
+      ],
+      "depends_on": [
+        "G2_E01"
+      ],
+      "do_file": "rows/G2/edges/G2_E02.do",
+      "action": "Expand capital, fuel-by-fuel, PLN/non-PLN, R&D, trade/FDI and export value into variable-year registry.",
+      "decision_ids": [
+        "G2_D02"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G2_E03",
+      "title": "Assign mutually exclusive missingness/domain states",
+      "input_nodes": [
+        "G2_S02",
+        "G2_INPUT_CANONICAL",
+        "G2_INPUT_SEMANTICS"
+      ],
+      "output_nodes": [
+        "G2_S03"
+      ],
+      "depends_on": [
+        "G2_E02"
+      ],
+      "do_file": "rows/G2/edges/G2_E03.do",
+      "action": "Classify observed positive, zero, negative, ordinary missing, source absent, parse failure, masked, explicit unknown, out of domain, unverified code, not asked, retired alias.",
+      "decision_ids": [
+        "G2_D03"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G2_E04",
+      "title": "Compute original/domain/flagged distributions",
+      "input_nodes": [
+        "G2_S03"
+      ],
+      "output_nodes": [
+        "G2_S04"
+      ],
+      "depends_on": [
+        "G2_E03"
+      ],
+      "do_file": "rows/G2/edges/G2_E04.do",
+      "action": "Use frozen within-year rules; preserve original values, valid domain and flagged tails separately with exact inclusion flags.",
+      "decision_ids": [
+        "G2_D04"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G2_E05",
+      "title": "Validate capital stock definition and components",
+      "input_nodes": [
+        "G2_S03",
+        "G2_INPUT_CANONICAL",
+        "G2_INPUT_SEMANTICS"
+      ],
+      "output_nodes": [
+        "G2_S05"
+      ],
+      "depends_on": [
+        "G2_E03"
+      ],
+      "do_file": "rows/G2/edges/G2_E05.do",
+      "action": "Match stock total to observed components only when concepts/units complete; separate positive-stock support from accounting identity support.",
+      "decision_ids": [
+        "G2_D05"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G2_E06",
+      "title": "Validate capital additions and missing 2015 source",
+      "input_nodes": [
+        "G2_S03",
+        "G2_INPUT_CANONICAL",
+        "G2_INPUT_SEMANTICS"
+      ],
+      "output_nodes": [
+        "G2_S06"
+      ],
+      "depends_on": [
+        "G2_E03"
+      ],
+      "do_file": "rows/G2/edges/G2_E06.do",
+      "action": "Reconcile additions/acquisition components separately from stock; maintain 2015 unknown field source.",
+      "decision_ids": [
+        "G2_D06"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G2_E07",
+      "title": "Check every fuel quantity/cost pair",
+      "input_nodes": [
+        "G2_S03",
+        "G2_INPUT_CANONICAL",
+        "G2_INPUT_SEMANTICS"
+      ],
+      "output_nodes": [
+        "G2_S07"
+      ],
+      "depends_on": [
+        "G2_E03"
+      ],
+      "do_file": "rows/G2/edges/G2_E07.do",
+      "action": "Distinguish zero quantity positive cost, missing quantity positive cost, negative units and valid positive pair; annual unit conversion fixed upstream.",
+      "decision_ids": [
+        "G2_D07"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G2_E08",
+      "title": "Check purchased electricity and generation universe",
+      "input_nodes": [
+        "G2_S03",
+        "G2_INPUT_CANONICAL",
+        "G2_INPUT_SEMANTICS"
+      ],
+      "output_nodes": [
+        "G2_S08"
+      ],
+      "depends_on": [
+        "G2_E03"
+      ],
+      "do_file": "rows/G2/edges/G2_E08.do",
+      "action": "Separate PLN/non PLN costs/quantities, self generation, available components and annual semantic verification.",
+      "decision_ids": [
+        "G2_D08"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G2_E09",
+      "title": "Reconcile partial/complete energy and carbon factors",
+      "input_nodes": [
+        "G2_S07",
+        "G2_S08",
+        "G2_INPUT_CANONICAL",
+        "G2_INPUT_SEMANTICS"
+      ],
+      "output_nodes": [
+        "G2_S09"
+      ],
+      "depends_on": [
+        "G2_E07",
+        "G2_E08"
+      ],
+      "do_file": "rows/G2/edges/G2_E09.do",
+      "action": "Inspect fuel/CO2 subtotals, component counts, unitgap and grid carry flags separately; gate complete claims.",
+      "decision_ids": [
+        "G2_D09"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G2_E10",
+      "title": "Separate R&D expense, activity and external funding",
+      "input_nodes": [
+        "G2_S03",
+        "G2_INPUT_CANONICAL",
+        "G2_INPUT_SEMANTICS"
+      ],
+      "output_nodes": [
+        "G2_S10"
+      ],
+      "depends_on": [
+        "G2_E03"
+      ],
+      "do_file": "rows/G2/edges/G2_E10.do",
+      "action": "Validate IRDVCU as money, COSTRD as external funding category, annual code pairs and wording.",
+      "decision_ids": [
+        "G2_D10"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G2_E11",
+      "title": "Validate share, any-export and direct-export meanings",
+      "input_nodes": [
+        "G2_S03",
+        "G2_INPUT_CANONICAL",
+        "G2_INPUT_SEMANTICS"
+      ],
+      "output_nodes": [
+        "G2_S11"
+      ],
+      "depends_on": [
+        "G2_E03"
+      ],
+      "do_file": "rows/G2/edges/G2_E11.do",
+      "action": "Check numeric percent domain, working and verified binary, conflicts and 2022 concept; unknown retained.",
+      "decision_ids": [
+        "G2_D11"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G2_E12",
+      "title": "Derive export value on a verified denominator",
+      "input_nodes": [
+        "G2_S11",
+        "G2_INPUT_CANONICAL",
+        "G2_INPUT_SEMANTICS"
+      ],
+      "output_nodes": [
+        "G2_S12"
+      ],
+      "depends_on": [
+        "G2_E11"
+      ],
+      "do_file": "rows/G2/edges/G2_E12.do",
+      "action": "Calculate percentage / 100×OUTPUT only source years with defensible denominator; compare YPRVCU production only as alternative diagnostic.",
+      "decision_ids": [
+        "G2_D12"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G2_E13",
+      "title": "Validate imported-material values and share denominator",
+      "input_nodes": [
+        "G2_S03",
+        "G2_INPUT_CANONICAL",
+        "G2_INPUT_SEMANTICS"
+      ],
+      "output_nodes": [
+        "G2_S13"
+      ],
+      "depends_on": [
+        "G2_E03"
+      ],
+      "do_file": "rows/G2/edges/G2_E13.do",
+      "action": "Inspect nonnegative values and materials/all-input distinctions; classify import use from valid nonnegative amounts.",
+      "decision_ids": [
+        "G2_D13"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G2_E14",
+      "title": "Validate foreign ownership and thresholds",
+      "input_nodes": [
+        "G2_S03",
+        "G2_INPUT_CANONICAL",
+        "G2_INPUT_SEMANTICS"
+      ],
+      "output_nodes": [
+        "G2_S14"
+      ],
+      "depends_on": [
+        "G2_E03"
+      ],
+      "do_file": "rows/G2/edges/G2_E14.do",
+      "action": "Check 0–100 domain; derive any foreign and>=10%separately; retain foreign share missing.",
+      "decision_ids": [
+        "G2_D14"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G2_E15",
+      "title": "Build eligibility masks without future information",
+      "input_nodes": [
+        "G2_S05",
+        "G2_S06",
+        "G2_S09",
+        "G2_S10",
+        "G2_S12",
+        "G2_S13",
+        "G2_S14"
+      ],
+      "output_nodes": [
+        "G2_S15"
+      ],
+      "depends_on": [
+        "G2_E05",
+        "G2_E06",
+        "G2_E09",
+        "G2_E10",
+        "G2_E12",
+        "G2_E13",
+        "G2_E14"
+      ],
+      "do_file": "rows/G2/edges/G2_E15.do",
+      "action": "Combine only contemporaneous required input masks; leave joint trade/ownership unknown if any required state unknown.",
+      "decision_ids": [
+        "G2_D15"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G2_E16",
+      "title": "Diagnose annual discontinuities and source revisions",
+      "input_nodes": [
+        "G2_S04",
+        "G2_S15"
+      ],
+      "output_nodes": [
+        "G2_S16"
+      ],
+      "depends_on": [
+        "G2_E04",
+        "G2_E15"
+      ],
+      "do_file": "rows/G2/edges/G2_E16.do",
+      "action": "Compare coverage/distributions to questionnaire/code/unit changes with true calendar gaps; plot breaks as diagnostics.",
+      "decision_ids": [
+        "G2_D16"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G2_E17",
+      "title": "Reconcile masks and deliver row-specific QA contract",
+      "input_nodes": [
+        "G2_S15",
+        "G2_S16",
+        "G2_S01",
+        "G2_S02",
+        "G2_S03",
+        "G2_S04",
+        "G2_S05",
+        "G2_S06",
+        "G2_S07",
+        "G2_S08",
+        "G2_S09",
+        "G2_S10",
+        "G2_S11",
+        "G2_S12",
+        "G2_S13",
+        "G2_S14"
+      ],
+      "output_nodes": [
+        "G2_S17"
+      ],
+      "depends_on": [
+        "G2_E15",
+        "G2_E16",
+        "G2_E01",
+        "G2_E02",
+        "G2_E03",
+        "G2_E04",
+        "G2_E05",
+        "G2_E06",
+        "G2_E07",
+        "G2_E08",
+        "G2_E09",
+        "G2_E10",
+        "G2_E11",
+        "G2_E12",
+        "G2_E13",
+        "G2_E14"
+      ],
+      "do_file": "rows/G2/edges/G2_E17.do",
+      "action": "Keep authoritative quality eligibility long on source_year/source_row/eligibility_id and retain the exception ledger. Publish the source-hashed long artifact through the row QA acceptance manifest without modifying G0. Any optional wide mask attachment must first reshape under unique eligibility-specific aliases, assert one source row, and then merge 1:1 on provenance. Independently recompute state/accounting/threshold cases; the acceptance receipt never replaces numeric mask rows.",
+      "decision_ids": [
+        "G2_D17"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    }
+  ],
+  "primary_do": "rows/G2/G2.do",
+  "execution_order": [
+    "G2_E01",
+    "G2_E02",
+    "G2_E03",
+    "G2_E04",
+    "G2_E05",
+    "G2_E06",
+    "G2_E07",
+    "G2_E08",
+    "G2_E09",
+    "G2_E10",
+    "G2_E11",
+    "G2_E12",
+    "G2_E13",
+    "G2_E14",
+    "G2_E15",
+    "G2_E16",
+    "G2_E17"
+  ],
+  "entrypoint_contract": {
+    "inputs": [
+      "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/dag/data/word_data/G0/G0_analysis_ready_ACTUAL_LOCAL.dta",
+      "frozen all 44-row plan registry",
+      "G2 input/source/variable contracts"
+    ],
+    "outputs": [
+      "outputs/G2/tables/",
+      "outputs/G2/figures/",
+      "outputs/G2/G2.tex",
+      "outputs/G2/G2.pdf",
+      "outputs/G2/acceptance.json"
+    ],
+    "logs": [
+      "dag/logs/G2/primary.log",
+      "dag/logs/G2/edge_id.log"
+    ],
+    "restart": "Resume only from a passed immutable node whose input/code/decision hashes still match. Keep failed attempts. Primary returns nonzero on a mandatory unfulfilled gate; diagnostic output never passes the row.",
+    "offline_dependencies": [
+      "Stata17+ with compatible maxvar",
+      "local input manifest",
+      "frozen local source dictionaries/concordances",
+      "vendored documented estimator ado only when needed",
+      "Python for validation/custom charts/LaTeX rendering only",
+      "XeLaTeX and local fonts; no network required by offline bundle"
+    ],
+    "estimated_cost_basis": "No timing promised from file names. Inventory rows/columns and RAM/free disk before launch; start one bounded validation path; one Stata worker unless manager coordinates resource-safe parallel work. Package-relative row entry point is primary interface; optional master never forces blocked rows."
+  },
+  "exhibits": [
+    {
+      "id": "G2-X01",
+      "kind": "chart",
+      "priority": "core",
+      "title": "Source states for every requested variable",
+      "question": "Source states for every requested variable?",
+      "source_nodes": [
+        "G2_S03"
+      ],
+      "fields": [
+        "source_year",
+        "category",
+        "N_category",
+        "N_denominator",
+        "share_percent",
+        "status"
+      ],
+      "formula_or_specification": "Partition each variable-year into observed valid, observed domain-invalid, structural absence, inapplicable, missing response, parse failure and unresolved semantics; counts must sum to source N.",
+      "units": "records and percent",
+      "sample_and_denominator": "Every canonical record in each variable-year, without dropping unknown states.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "An empty cell can have several causes; separating them prevents missing answers from becoming artificial zeros.",
+      "limits": "Unweighted observed sample only; no population or causal claim.",
+      "prerequisites": "G0 actual DoD accepted and exact current-source QA run; individual source-semantic blocks remain named.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G2/exhibits/G2-X01.pdf",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "An empty cell can have several causes; separating them prevents missing answers from becoming artificial zeros.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G2-X02",
+      "kind": "table",
+      "priority": "core",
+      "title": "Exact current source and rule versions",
+      "question": "Exact current source and rule versions?",
+      "source_nodes": [
+        "G2_S01"
+      ],
+      "fields": [
+        "cell_id",
+        "source_year",
+        "N_source",
+        "N_eligible",
+        "result",
+        "unit",
+        "status"
+      ],
+      "formula_or_specification": "List input hash, annual rule hash, field locator and verification status for every quality variable.",
+      "units": "definition or acceptance status; no economic magnitude",
+      "sample_and_denominator": "Every named item in the frozen source/method/check registry, including unavailable items.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "The same variable name can mean different things in different years, so the evidence is attached to the annual rule.",
+      "limits": "Unweighted observed sample only; no population or causal claim.",
+      "prerequisites": "G0 actual DoD accepted and exact current-source QA run; individual source-semantic blocks remain named.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G2/exhibits/G2-X02.tex",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "The same variable name can mean different things in different years, so the evidence is attached to the annual rule.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G2-X03",
+      "kind": "chart",
+      "priority": "core",
+      "title": "Capital-stock coverage and zero shares",
+      "question": "Capital-stock coverage and zero shares?",
+      "source_nodes": [
+        "G2_S05"
+      ],
+      "fields": [
+        "source_year",
+        "category",
+        "N_category",
+        "N_denominator",
+        "share_percent",
+        "status"
+      ],
+      "formula_or_specification": "Count known positive, observed zero, invalid negative and missing capital stock; show each count/source N.",
+      "units": "records and percent",
+      "sample_and_denominator": "All records by year; zero share among known valid stock records is also reported with its separate denominator.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "A recorded zero is not treated as a missing stock, and a missing stock is not evidence that the factory owns no capital.",
+      "limits": "Unweighted observed sample only; no population or causal claim.",
+      "prerequisites": "G0 actual DoD accepted and exact current-source QA run; individual source-semantic blocks remain named.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G2/exhibits/G2-X03.pdf",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "A recorded zero is not treated as a missing stock, and a missing stock is not evidence that the factory owns no capital.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G2-X04",
+      "kind": "chart",
+      "priority": "core",
+      "title": "Stock-total versus component reconciliation",
+      "question": "Stock-total versus component reconciliation?",
+      "source_nodes": [
+        "G2_S05"
+      ],
+      "fields": [
+        "source_year",
+        "variable_id",
+        "grouping_id",
+        "group_value",
+        "N_source",
+        "N_eligible",
+        "mean",
+        "sd",
+        "min",
+        "p1",
+        "p5",
+        "p25",
+        "p50",
+        "p75",
+        "p95",
+        "p99",
+        "max",
+        "status"
+      ],
+      "formula_or_specification": "For stock_total-sum(all required stock components): N, mean=sum(x)/N, sample SD=sqrt(sum((x-mean)^2)/(N-1)), min, P1/P5/P25/P50/P75/P95/P99, max; retain zero/negative/missing counts.",
+      "units": "nominal Rp000",
+      "sample_and_denominator": "Only records with comparable total and every required stock component observed; show excluded N.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "A reconciliation gap identifies a definition or entry problem to investigate; partial component sums cannot validate a reported total.",
+      "limits": "Unweighted observed sample only; no population or causal claim.",
+      "prerequisites": "G0 actual DoD accepted and exact current-source QA run; individual source-semantic blocks remain named.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G2/exhibits/G2-X04.pdf",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "A reconciliation gap identifies a definition or entry problem to investigate; partial component sums cannot validate a reported total.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G2-X05",
+      "kind": "chart",
+      "priority": "core",
+      "title": "Capital additions and the 2015 gap",
+      "question": "Capital additions and the 2015 gap?",
+      "source_nodes": [
+        "G2_S06"
+      ],
+      "fields": [
+        "source_year",
+        "category",
+        "N_category",
+        "N_denominator",
+        "share_percent",
+        "status"
+      ],
+      "formula_or_specification": "Count valid observed capital additions by year; report missing 2015 source as unavailable, not all-zero additions.",
+      "units": "records and percent",
+      "sample_and_denominator": "All annual source records, with additions questionnaire coverage distinguished from response coverage.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "Investment is a flow during the year. An unavailable source cannot tell us whether factories invested.",
+      "limits": "Unweighted observed sample only; no population or causal claim.",
+      "prerequisites": "G0 actual DoD accepted and exact current-source QA run; individual source-semantic blocks remain named.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G2/exhibits/G2-X05.pdf",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "Investment is a flow during the year. An unavailable source cannot tell us whether factories invested.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G2-X06",
+      "kind": "table",
+      "priority": "core",
+      "title": "Capital definition and eligibility distinctions",
+      "question": "Capital definition and eligibility distinctions?",
+      "source_nodes": [
+        "G2_S06"
+      ],
+      "fields": [
+        "cell_id",
+        "source_year",
+        "N_source",
+        "N_eligible",
+        "result",
+        "unit",
+        "status"
+      ],
+      "formula_or_specification": "Show separate stock, gross acquisition, disposal and net-addition definitions, their units and admissible signs.",
+      "units": "definition or acceptance status; no economic magnitude",
+      "sample_and_denominator": "Every named item in the frozen source/method/check registry, including unavailable items.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "The value of assets already owned and the value bought this year answer different questions.",
+      "limits": "Unweighted observed sample only; no population or causal claim.",
+      "prerequisites": "G0 actual DoD accepted and exact current-source QA run; individual source-semantic blocks remain named.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G2/exhibits/G2-X06.tex",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "The value of assets already owned and the value bought this year answer different questions.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G2-X07",
+      "kind": "chart",
+      "priority": "diagnostic",
+      "title": "Fuel quantities versus cost availability",
+      "question": "Fuel quantities versus cost availability?",
+      "source_nodes": [
+        "G2_S07"
+      ],
+      "fields": [
+        "source_year",
+        "category",
+        "N_category",
+        "N_denominator",
+        "share_percent",
+        "status"
+      ],
+      "formula_or_specification": "For each fuel classify quantity/cost pair as both known, quantity only, cost only, both absent, invalid or unresolved unit.",
+      "units": "records and percent",
+      "sample_and_denominator": "All source records within each fuel-year questionnaire universe, including unknown response states.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "A fuel bill without a quantity cannot establish physical energy consumption.",
+      "limits": "Unweighted observed sample only; no population or causal claim.",
+      "prerequisites": "G0 actual DoD accepted and exact current-source QA run; individual source-semantic blocks remain named.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G2/exhibits/G2-X07.pdf",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "A fuel bill without a quantity cannot establish physical energy consumption.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G2-X08",
+      "kind": "chart",
+      "priority": "diagnostic",
+      "title": "Fuel unit-price distributions and flagged tails",
+      "question": "Fuel unit-price distributions and flagged tails?",
+      "source_nodes": [
+        "G2_S07"
+      ],
+      "fields": [
+        "source_year",
+        "variable_id",
+        "grouping_id",
+        "group_value",
+        "N_source",
+        "N_eligible",
+        "mean",
+        "sd",
+        "min",
+        "p1",
+        "p5",
+        "p25",
+        "p50",
+        "p75",
+        "p95",
+        "p99",
+        "max",
+        "status"
+      ],
+      "formula_or_specification": "For unit_price=cost_Rp000/quantity_in_verified_native_unit: N, mean=sum(x)/N, sample SD=sqrt(sum((x-mean)^2)/(N-1)), min, P1/P5/P25/P50/P75/P95/P99, max; retain zero/negative/missing counts.",
+      "units": "Rp000 per litre, kilogram, tonne or other named fuel unit; never mixed across fuels",
+      "sample_and_denominator": "Quantity>0 and valid nonnegative cost with verified common fuel units; separate observed cost zero and unknown units.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "Extreme unit prices may reveal quantity-unit or monetary-scale problems; they are flagged, not silently deleted.",
+      "limits": "Unweighted observed sample only; no population or causal claim.",
+      "prerequisites": "G0 actual DoD accepted and exact current-source QA run; individual source-semantic blocks remain named.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G2/exhibits/G2-X08.pdf",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "Extreme unit prices may reveal quantity-unit or monetary-scale problems; they are flagged, not silently deleted.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G2-X09",
+      "kind": "table",
+      "priority": "diagnostic",
+      "title": "Fuel-specific units and retired aliases",
+      "question": "Fuel-specific units and retired aliases?",
+      "source_nodes": [
+        "G2_S07"
+      ],
+      "fields": [
+        "cell_id",
+        "source_year",
+        "N_source",
+        "N_eligible",
+        "result",
+        "unit",
+        "status"
+      ],
+      "formula_or_specification": "For each fuel-year list raw quantity name, canonical name, native unit, conversion factor and retired alias.",
+      "units": "definition or acceptance status; no economic magnitude",
+      "sample_and_denominator": "Every named item in the frozen source/method/check registry, including unavailable items.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "The conversion is checked before quantities from different years are compared.",
+      "limits": "Unweighted observed sample only; no population or causal claim.",
+      "prerequisites": "G0 actual DoD accepted and exact current-source QA run; individual source-semantic blocks remain named.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G2/exhibits/G2-X09.tex",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "The conversion is checked before quantities from different years are compared.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G2-X10",
+      "kind": "chart",
+      "priority": "diagnostic",
+      "title": "Purchased electricity component coverage",
+      "question": "Purchased electricity component coverage?",
+      "source_nodes": [
+        "G2_S08"
+      ],
+      "fields": [
+        "source_year",
+        "category",
+        "N_category",
+        "N_denominator",
+        "share_percent",
+        "status"
+      ],
+      "formula_or_specification": "Purchased electricity component states: PLN known, non-PLN known, both known, partial and absent.",
+      "units": "records and percent",
+      "sample_and_denominator": "All annual source records; complete purchased-electricity denominator requires every relevant purchased component.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "Knowing one supplier does not necessarily reveal the factory’s full electricity purchases.",
+      "limits": "Unweighted observed sample only; no population or causal claim.",
+      "prerequisites": "G0 actual DoD accepted and exact current-source QA run; individual source-semantic blocks remain named.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G2/exhibits/G2-X10.pdf",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "Knowing one supplier does not necessarily reveal the factory’s full electricity purchases.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G2-X11",
+      "kind": "table",
+      "priority": "diagnostic",
+      "title": "Own-generation double-count guard",
+      "question": "Own-generation double-count guard?",
+      "source_nodes": [
+        "G2_S08"
+      ],
+      "fields": [
+        "cell_id",
+        "source_year",
+        "N_source",
+        "N_eligible",
+        "result",
+        "unit",
+        "status"
+      ],
+      "formula_or_specification": "Separate purchased, generated, own-used and sold kWh. Total end-use must not add generator fuel energy and generated electricity as two independent final uses.",
+      "units": "definition or acceptance status; no economic magnitude",
+      "sample_and_denominator": "Every named item in the frozen source/method/check registry, including unavailable items.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "Generating electricity changes the accounting boundary; the same energy should not be counted twice.",
+      "limits": "Unweighted observed sample only; no population or causal claim.",
+      "prerequisites": "G0 actual DoD accepted and exact current-source QA run; individual source-semantic blocks remain named.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G2/exhibits/G2-X11.tex",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "Generating electricity changes the accounting boundary; the same energy should not be counted twice.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G2-X12",
+      "kind": "chart",
+      "priority": "diagnostic",
+      "title": "Partial versus complete energy support",
+      "question": "Partial versus complete energy support?",
+      "source_nodes": [
+        "G2_S09"
+      ],
+      "fields": [
+        "source_year",
+        "category",
+        "N_category",
+        "N_denominator",
+        "share_percent",
+        "status"
+      ],
+      "formula_or_specification": "Count complete energy, observed subtotal only, no usable component and unresolved-unit states by fixed component mask.",
+      "units": "records and percent",
+      "sample_and_denominator": "All source records; completeness means every required component has a verified value or documented structural zero.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "An observed subtotal tells us what is measured, not how much energy is missing.",
+      "limits": "Unweighted observed sample only; no population or causal claim.",
+      "prerequisites": "G0 actual DoD accepted and exact current-source QA run; individual source-semantic blocks remain named.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G2/exhibits/G2-X12.pdf",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "An observed subtotal tells us what is measured, not how much energy is missing.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G2-X13",
+      "kind": "chart",
+      "priority": "diagnostic",
+      "title": "Grid-factor carry and unresolved units",
+      "question": "Grid-factor carry and unresolved units?",
+      "source_nodes": [
+        "G2_S09"
+      ],
+      "fields": [
+        "source_year",
+        "category",
+        "N_category",
+        "N_denominator",
+        "share_percent",
+        "status"
+      ],
+      "formula_or_specification": "Count records affected by each factor source/version, carry assumption and unresolved physical unit.",
+      "units": "records and percent",
+      "sample_and_denominator": "All records potentially requiring each fuel/grid conversion; unknown quantities remain separate.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "A smooth emissions series can come from a carried assumption rather than newly observed annual evidence.",
+      "limits": "Unweighted observed sample only; no population or causal claim.",
+      "prerequisites": "G0 actual DoD accepted and exact current-source QA run; individual source-semantic blocks remain named.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G2/exhibits/G2-X13.pdf",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "A smooth emissions series can come from a carried assumption rather than newly observed annual evidence.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G2-X14",
+      "kind": "chart",
+      "priority": "diagnostic",
+      "title": "R&D money versus participation coverage",
+      "question": "R&D money versus participation coverage?",
+      "source_nodes": [
+        "G2_S10"
+      ],
+      "fields": [
+        "source_year",
+        "variable_id",
+        "grouping_id",
+        "group_value",
+        "N_source",
+        "N_eligible",
+        "mean",
+        "sd",
+        "min",
+        "p1",
+        "p5",
+        "p25",
+        "p50",
+        "p75",
+        "p95",
+        "p99",
+        "max",
+        "status"
+      ],
+      "formula_or_specification": "For rd_expense_nominal, with activity and external-funding rates in separate panels: N, mean=sum(x)/N, sample SD=sqrt(sum((x-mean)^2)/(N-1)), min, P1/P5/P25/P50/P75/P95/P99, max; retain zero/negative/missing counts.",
+      "units": "nominal Rp000 for expense; percent for binary rates",
+      "sample_and_denominator": "Expense distributions use valid expense responses; each binary rate uses its own verified yes/no universe and reports unknown N.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "Spending on research, doing research and receiving outside research funding are three different concepts.",
+      "limits": "Unweighted observed sample only; no population or causal claim.",
+      "prerequisites": "G0 actual DoD accepted and exact current-source QA run; individual source-semantic blocks remain named.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G2/exhibits/G2-X14.pdf",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "Spending on research, doing research and receiving outside research funding are three different concepts.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G2-X15",
+      "kind": "table",
+      "priority": "diagnostic",
+      "title": "R&D annual question and code meanings",
+      "question": "R&D annual question and code meanings?",
+      "source_nodes": [
+        "G2_S10"
+      ],
+      "fields": [
+        "cell_id",
+        "source_year",
+        "N_source",
+        "N_eligible",
+        "result",
+        "unit",
+        "status"
+      ],
+      "formula_or_specification": "List each annual R&D question and code mapping; IRDVCU is an amount, COSTRD a funding code only where the original questionnaire proves it.",
+      "units": "definition or acceptance status; no economic magnitude",
+      "sample_and_denominator": "Every named item in the frozen source/method/check registry, including unavailable items.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "A numeric code is not a spending amount merely because it is stored as a number.",
+      "limits": "Unweighted observed sample only; no population or causal claim.",
+      "prerequisites": "G0 actual DoD accepted and exact current-source QA run; individual source-semantic blocks remain named.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G2/exhibits/G2-X15.tex",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "A numeric code is not a spending amount merely because it is stored as a number.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G2-X16",
+      "kind": "chart",
+      "priority": "diagnostic",
+      "title": "Export yes/no/unknown and verification",
+      "question": "Export yes/no/unknown and verification?",
+      "source_nodes": [
+        "G2_S11"
+      ],
+      "fields": [
+        "source_year",
+        "category",
+        "N_category",
+        "N_denominator",
+        "share_percent",
+        "status"
+      ],
+      "formula_or_specification": "Export status yes/no/unknown; known-response rate=100*yes/(yes+no); also show unknown/source N.",
+      "units": "records and percent",
+      "sample_and_denominator": "Verified any-export universe by year; working/provisional mappings appear separately.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "The export rate describes known answers; the unknown share shows what it leaves out.",
+      "limits": "Unweighted observed sample only; no population or causal claim.",
+      "prerequisites": "G0 actual DoD accepted and exact current-source QA run; individual source-semantic blocks remain named.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G2/exhibits/G2-X16.pdf",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "The export rate describes known answers; the unknown share shows what it leaves out.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G2-X17",
+      "kind": "table",
+      "priority": "diagnostic",
+      "title": "2022 direct versus any export",
+      "question": "2022 direct versus any export?",
+      "source_nodes": [
+        "G2_S11"
+      ],
+      "fields": [
+        "source_year",
+        "category",
+        "N_category",
+        "N_denominator",
+        "share_percent",
+        "status"
+      ],
+      "formula_or_specification": "Cross-tabulate verified any-export and direct-export status, retaining unknown values as explicit cells.",
+      "units": "records and percent",
+      "sample_and_denominator": "2022 records with the actual questionnaire definitions; no substitution of direct export for any export.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "A factory may export through an intermediary, so direct exporting and any exporting need not match.",
+      "limits": "Unweighted observed sample only; no population or causal claim.",
+      "prerequisites": "G0 actual DoD accepted and exact current-source QA run; individual source-semantic blocks remain named.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G2/exhibits/G2-X17.tex",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "A factory may export through an intermediary, so direct exporting and any exporting need not match.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G2-X18",
+      "kind": "chart",
+      "priority": "diagnostic",
+      "title": "Export-share validity and implied value",
+      "question": "Export-share validity and implied value?",
+      "source_nodes": [
+        "G2_S12"
+      ],
+      "fields": [
+        "source_year",
+        "variable_id",
+        "grouping_id",
+        "group_value",
+        "N_source",
+        "N_eligible",
+        "mean",
+        "sd",
+        "min",
+        "p1",
+        "p5",
+        "p25",
+        "p50",
+        "p75",
+        "p95",
+        "p99",
+        "max",
+        "status"
+      ],
+      "formula_or_specification": "For export_value=verified_export_share_fraction*verified_matching_output_base: N, mean=sum(x)/N, sample SD=sqrt(sum((x-mean)^2)/(N-1)), min, P1/P5/P25/P50/P75/P95/P99, max; retain zero/negative/missing counts.",
+      "units": "nominal Rp000; export share separately in percent",
+      "sample_and_denominator": "Share in [0,1] after documented source scaling and valid matching denominator; invalid shares and denominator mismatches are excluded with reasons.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "The implied value is only valid if the share refers to exactly the amount being multiplied.",
+      "limits": "Unweighted observed sample only; no population or causal claim.",
+      "prerequisites": "G0 actual DoD accepted and exact current-source QA run; individual source-semantic blocks remain named.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G2/exhibits/G2-X18.pdf",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "The implied value is only valid if the share refers to exactly the amount being multiplied.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G2-X19",
+      "kind": "table",
+      "priority": "diagnostic",
+      "title": "Output versus production denominator diagnostics",
+      "question": "Output versus production denominator diagnostics?",
+      "source_nodes": [
+        "G2_S12"
+      ],
+      "fields": [
+        "source_year",
+        "variable_id",
+        "grouping_id",
+        "group_value",
+        "N_source",
+        "N_eligible",
+        "mean",
+        "sd",
+        "min",
+        "p1",
+        "p5",
+        "p25",
+        "p50",
+        "p75",
+        "p95",
+        "p99",
+        "max",
+        "status"
+      ],
+      "formula_or_specification": "For output_nominal-production_nominal and their relative gap where both refer to documented comparable flows: N, mean=sum(x)/N, sample SD=sqrt(sum((x-mean)^2)/(N-1)), min, P1/P5/P25/P50/P75/P95/P99, max; retain zero/negative/missing counts.",
+      "units": "nominal Rp000 and percent in separate panels",
+      "sample_and_denominator": "Matched same-record values with verified definitions; no percentage gap when its base is zero.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "A difference in wording can explain a numeric discrepancy; the larger amount is not automatically the right export denominator.",
+      "limits": "Unweighted observed sample only; no population or causal claim.",
+      "prerequisites": "G0 actual DoD accepted and exact current-source QA run; individual source-semantic blocks remain named.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G2/exhibits/G2-X19.tex",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "A difference in wording can explain a numeric discrepancy; the larger amount is not automatically the right export denominator.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G2-X20",
+      "kind": "chart",
+      "priority": "diagnostic",
+      "title": "Imported materials: value, zero and unknown",
+      "question": "Imported materials: value, zero and unknown?",
+      "source_nodes": [
+        "G2_S13"
+      ],
+      "fields": [
+        "source_year",
+        "category",
+        "N_category",
+        "N_denominator",
+        "share_percent",
+        "status"
+      ],
+      "formula_or_specification": "Imported-material status from verified value: positive, observed zero, invalid and unknown; imported share=imported_materials/materials_total only for a proven total.",
+      "units": "records and percent",
+      "sample_and_denominator": "All records for status; positive known total materials for the share; do not substitute all intermediate costs.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "Using imported materials and the imported share of materials are different summaries.",
+      "limits": "Unweighted observed sample only; no population or causal claim.",
+      "prerequisites": "G0 actual DoD accepted and exact current-source QA run; individual source-semantic blocks remain named.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G2/exhibits/G2-X20.pdf",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "Using imported materials and the imported share of materials are different summaries.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G2-X21",
+      "kind": "chart",
+      "priority": "diagnostic",
+      "title": "Foreign ownership shares and 10% boundary",
+      "question": "Foreign ownership shares and 10% boundary?",
+      "source_nodes": [
+        "G2_S14"
+      ],
+      "fields": [
+        "source_year",
+        "category",
+        "N_category",
+        "N_denominator",
+        "share_percent",
+        "status"
+      ],
+      "formula_or_specification": "Show foreign ownership [0,100], exact 0 and 10 boundaries, any_foreign=(share>0), FDI10=(share>=10); unknown remains unknown.",
+      "units": "records and percent",
+      "sample_and_denominator": "All records by year, and each rate’s verified known-share denominator.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "The two indicators answer whether there is any foreign ownership and whether it reaches the stated 10% threshold.",
+      "limits": "Unweighted observed sample only; no population or causal claim.",
+      "prerequisites": "G0 actual DoD accepted and exact current-source QA run; individual source-semantic blocks remain named.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G2/exhibits/G2-X21.pdf",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "The two indicators answer whether there is any foreign ownership and whether it reaches the stated 10% threshold.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G2-X22",
+      "kind": "chart",
+      "priority": "diagnostic",
+      "title": "Combined eligibility losses by requirement",
+      "question": "Combined eligibility losses by requirement?",
+      "source_nodes": [
+        "G2_S15"
+      ],
+      "fields": [
+        "source_year",
+        "category",
+        "N_category",
+        "N_denominator",
+        "share_percent",
+        "status"
+      ],
+      "formula_or_specification": "Report marginal failures for each requirement and sequential attrition in the frozen requirement order; final joint mask is their intersection.",
+      "units": "records and percent",
+      "sample_and_denominator": "All source candidates for each named downstream eligibility contract.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "The largest marginal problem need not remove the most additional observations after earlier requirements have already been applied.",
+      "limits": "Unweighted observed sample only; no population or causal claim.",
+      "prerequisites": "G0 actual DoD accepted and exact current-source QA run; individual source-semantic blocks remain named.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G2/exhibits/G2-X22.pdf",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "The largest marginal problem need not remove the most additional observations after earlier requirements have already been applied.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G2-X23",
+      "kind": "chart",
+      "priority": "diagnostic",
+      "title": "Discontinuities aligned to source revisions",
+      "question": "Discontinuities aligned to source revisions?",
+      "source_nodes": [
+        "G2_S16"
+      ],
+      "fields": [
+        "cell_id",
+        "source_year",
+        "N_source",
+        "N_eligible",
+        "result",
+        "unit",
+        "status"
+      ],
+      "formula_or_specification": "For each variable compare adjacent supplied-year N, verified share, median and P99; align documented definition changes and use actual calendar gap length.",
+      "units": "records, percentage points and variable-specific units in separate panels",
+      "sample_and_denominator": "Same-concept annual cells only; do not call 2015–2017 a one-year change.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "A discontinuity is a prompt to check the survey definition and coverage before telling an economic story.",
+      "limits": "Unweighted observed sample only; no population or causal claim.",
+      "prerequisites": "G0 actual DoD accepted and exact current-source QA run; individual source-semantic blocks remain named.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G2/exhibits/G2-X23.pdf",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "A discontinuity is a prompt to check the survey definition and coverage before telling an economic story.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G2-X24",
+      "kind": "table",
+      "priority": "diagnostic",
+      "title": "Exception dispositions and exact row acceptance",
+      "question": "Exception dispositions and exact row acceptance?",
+      "source_nodes": [
+        "G2_S17"
+      ],
+      "fields": [
+        "cell_id",
+        "source_year",
+        "N_source",
+        "N_eligible",
+        "result",
+        "unit",
+        "status"
+      ],
+      "formula_or_specification": "Every flagged issue receives source evidence, affected variables/years, downstream gate and fixed/unresolved disposition; required failures keep G2 incomplete.",
+      "units": "definition or acceptance status; no economic magnitude",
+      "sample_and_denominator": "Every named item in the frozen source/method/check registry, including unavailable items.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "The quality report states what each problem prevents, rather than hiding problems inside a generic data-cleaning note.",
+      "limits": "Unweighted observed sample only; no population or causal claim.",
+      "prerequisites": "G0 actual DoD accepted and exact current-source QA run; individual source-semantic blocks remain named.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G2/exhibits/G2-X24.tex",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "The quality report states what each problem prevents, rather than hiding problems inside a generic data-cleaning note.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    }
+  ],
+  "latex_outline": [
+    {
+      "h1": "What are we trying to learn?",
+      "lead_question": "Start with the actual question and the data we can observe.",
+      "h2": [
+        {
+          "title": "Source states for every requested variable",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Source states for every requested variable?",
+              "exhibit_ids": [
+                "G2-X01"
+              ],
+              "formula": "Partition each variable-year into observed valid, observed domain-invalid, structural absence, inapplicable, missing response, parse failure and unresolved semantics; counts must sum to source N.",
+              "reader_explanation": "An empty cell can have several causes; separating them prevents missing answers from becoming artificial zeros."
+            }
+          ]
+        },
+        {
+          "title": "Exact current source and rule versions",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Exact current source and rule versions?",
+              "exhibit_ids": [
+                "G2-X02"
+              ],
+              "formula": "List input hash, annual rule hash, field locator and verification status for every quality variable.",
+              "reader_explanation": "The same variable name can mean different things in different years, so the evidence is attached to the annual rule."
+            }
+          ]
+        },
+        {
+          "title": "Capital-stock coverage and zero shares",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Capital-stock coverage and zero shares?",
+              "exhibit_ids": [
+                "G2-X03"
+              ],
+              "formula": "Count known positive, observed zero, invalid negative and missing capital stock; show each count/source N.",
+              "reader_explanation": "A recorded zero is not treated as a missing stock, and a missing stock is not evidence that the factory owns no capital."
+            }
+          ]
+        },
+        {
+          "title": "Stock-total versus component reconciliation",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Stock-total versus component reconciliation?",
+              "exhibit_ids": [
+                "G2-X04"
+              ],
+              "formula": "For stock_total-sum(all required stock components): N, mean=sum(x)/N, sample SD=sqrt(sum((x-mean)^2)/(N-1)), min, P1/P5/P25/P50/P75/P95/P99, max; retain zero/negative/missing counts.",
+              "reader_explanation": "A reconciliation gap identifies a definition or entry problem to investigate; partial component sums cannot validate a reported total."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "h1": "What can the data support?",
+      "lead_question": "Show coverage, definitions and denominators before comparisons.",
+      "h2": [
+        {
+          "title": "Capital additions and the 2015 gap",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Capital additions and the 2015 gap?",
+              "exhibit_ids": [
+                "G2-X05"
+              ],
+              "formula": "Count valid observed capital additions by year; report missing 2015 source as unavailable, not all-zero additions.",
+              "reader_explanation": "Investment is a flow during the year. An unavailable source cannot tell us whether factories invested."
+            }
+          ]
+        },
+        {
+          "title": "Capital definition and eligibility distinctions",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Capital definition and eligibility distinctions?",
+              "exhibit_ids": [
+                "G2-X06"
+              ],
+              "formula": "Show separate stock, gross acquisition, disposal and net-addition definitions, their units and admissible signs.",
+              "reader_explanation": "The value of assets already owned and the value bought this year answer different questions."
+            }
+          ]
+        },
+        {
+          "title": "Fuel quantities versus cost availability",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Fuel quantities versus cost availability?",
+              "exhibit_ids": [
+                "G2-X07"
+              ],
+              "formula": "For each fuel classify quantity/cost pair as both known, quantity only, cost only, both absent, invalid or unresolved unit.",
+              "reader_explanation": "A fuel bill without a quantity cannot establish physical energy consumption."
+            }
+          ]
+        },
+        {
+          "title": "Fuel unit-price distributions and flagged tails",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Fuel unit-price distributions and flagged tails?",
+              "exhibit_ids": [
+                "G2-X08"
+              ],
+              "formula": "For unit_price=cost_Rp000/quantity_in_verified_native_unit: N, mean=sum(x)/N, sample SD=sqrt(sum((x-mean)^2)/(N-1)), min, P1/P5/P25/P50/P75/P95/P99, max; retain zero/negative/missing counts.",
+              "reader_explanation": "Extreme unit prices may reveal quantity-unit or monetary-scale problems; they are flagged, not silently deleted."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "h1": "What do the main results mean?",
+      "lead_question": "Explain the results in plain language after valid execution.",
+      "h2": [
+        {
+          "title": "Fuel-specific units and retired aliases",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Fuel-specific units and retired aliases?",
+              "exhibit_ids": [
+                "G2-X09"
+              ],
+              "formula": "For each fuel-year list raw quantity name, canonical name, native unit, conversion factor and retired alias.",
+              "reader_explanation": "The conversion is checked before quantities from different years are compared."
+            }
+          ]
+        },
+        {
+          "title": "Purchased electricity component coverage",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Purchased electricity component coverage?",
+              "exhibit_ids": [
+                "G2-X10"
+              ],
+              "formula": "Purchased electricity component states: PLN known, non-PLN known, both known, partial and absent.",
+              "reader_explanation": "Knowing one supplier does not necessarily reveal the factory’s full electricity purchases."
+            }
+          ]
+        },
+        {
+          "title": "Own-generation double-count guard",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Own-generation double-count guard?",
+              "exhibit_ids": [
+                "G2-X11"
+              ],
+              "formula": "Separate purchased, generated, own-used and sold kWh. Total end-use must not add generator fuel energy and generated electricity as two independent final uses.",
+              "reader_explanation": "Generating electricity changes the accounting boundary; the same energy should not be counted twice."
+            }
+          ]
+        },
+        {
+          "title": "Partial versus complete energy support",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Partial versus complete energy support?",
+              "exhibit_ids": [
+                "G2-X12"
+              ],
+              "formula": "Count complete energy, observed subtotal only, no usable component and unresolved-unit states by fixed component mask.",
+              "reader_explanation": "An observed subtotal tells us what is measured, not how much energy is missing."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "h1": "What changes under alternative choices?",
+      "lead_question": "Separate legitimate sensitivity from primary definition.",
+      "h2": [
+        {
+          "title": "Grid-factor carry and unresolved units",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Grid-factor carry and unresolved units?",
+              "exhibit_ids": [
+                "G2-X13"
+              ],
+              "formula": "Count records affected by each factor source/version, carry assumption and unresolved physical unit.",
+              "reader_explanation": "A smooth emissions series can come from a carried assumption rather than newly observed annual evidence."
+            }
+          ]
+        },
+        {
+          "title": "R&D money versus participation coverage",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "R&D money versus participation coverage?",
+              "exhibit_ids": [
+                "G2-X14"
+              ],
+              "formula": "For rd_expense_nominal, with activity and external-funding rates in separate panels: N, mean=sum(x)/N, sample SD=sqrt(sum((x-mean)^2)/(N-1)), min, P1/P5/P25/P50/P75/P95/P99, max; retain zero/negative/missing counts.",
+              "reader_explanation": "Spending on research, doing research and receiving outside research funding are three different concepts."
+            }
+          ]
+        },
+        {
+          "title": "R&D annual question and code meanings",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "R&D annual question and code meanings?",
+              "exhibit_ids": [
+                "G2-X15"
+              ],
+              "formula": "List each annual R&D question and code mapping; IRDVCU is an amount, COSTRD a funding code only where the original questionnaire proves it.",
+              "reader_explanation": "A numeric code is not a spending amount merely because it is stored as a number."
+            }
+          ]
+        },
+        {
+          "title": "Export yes/no/unknown and verification",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Export yes/no/unknown and verification?",
+              "exhibit_ids": [
+                "G2-X16"
+              ],
+              "formula": "Export status yes/no/unknown; known-response rate=100*yes/(yes+no); also show unknown/source N.",
+              "reader_explanation": "The export rate describes known answers; the unknown share shows what it leaves out."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "h1": "What remains unavailable or uncertain?",
+      "lead_question": "Keep unsupported source branches and interpretation limits visible.",
+      "h2": [
+        {
+          "title": "2022 direct versus any export",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "2022 direct versus any export?",
+              "exhibit_ids": [
+                "G2-X17"
+              ],
+              "formula": "Cross-tabulate verified any-export and direct-export status, retaining unknown values as explicit cells.",
+              "reader_explanation": "A factory may export through an intermediary, so direct exporting and any exporting need not match."
+            }
+          ]
+        },
+        {
+          "title": "Export-share validity and implied value",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Export-share validity and implied value?",
+              "exhibit_ids": [
+                "G2-X18"
+              ],
+              "formula": "For export_value=verified_export_share_fraction*verified_matching_output_base: N, mean=sum(x)/N, sample SD=sqrt(sum((x-mean)^2)/(N-1)), min, P1/P5/P25/P50/P75/P95/P99, max; retain zero/negative/missing counts.",
+              "reader_explanation": "The implied value is only valid if the share refers to exactly the amount being multiplied."
+            }
+          ]
+        },
+        {
+          "title": "Output versus production denominator diagnostics",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Output versus production denominator diagnostics?",
+              "exhibit_ids": [
+                "G2-X19"
+              ],
+              "formula": "For output_nominal-production_nominal and their relative gap where both refer to documented comparable flows: N, mean=sum(x)/N, sample SD=sqrt(sum((x-mean)^2)/(N-1)), min, P1/P5/P25/P50/P75/P95/P99, max; retain zero/negative/missing counts.",
+              "reader_explanation": "A difference in wording can explain a numeric discrepancy; the larger amount is not automatically the right export denominator."
+            }
+          ]
+        },
+        {
+          "title": "Imported materials: value, zero and unknown",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Imported materials: value, zero and unknown?",
+              "exhibit_ids": [
+                "G2-X20"
+              ],
+              "formula": "Imported-material status from verified value: positive, observed zero, invalid and unknown; imported share=imported_materials/materials_total only for a proven total.",
+              "reader_explanation": "Using imported materials and the imported share of materials are different summaries."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "h1": "Can another colleague reproduce and accept this row?",
+      "lead_question": "End with audit able source-to-result path and exact completion checks.",
+      "h2": [
+        {
+          "title": "Foreign ownership shares and 10% boundary",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Foreign ownership shares and 10% boundary?",
+              "exhibit_ids": [
+                "G2-X21"
+              ],
+              "formula": "Show foreign ownership [0,100], exact 0 and 10 boundaries, any_foreign=(share>0), FDI10=(share>=10); unknown remains unknown.",
+              "reader_explanation": "The two indicators answer whether there is any foreign ownership and whether it reaches the stated 10% threshold."
+            }
+          ]
+        },
+        {
+          "title": "Combined eligibility losses by requirement",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Combined eligibility losses by requirement?",
+              "exhibit_ids": [
+                "G2-X22"
+              ],
+              "formula": "Report marginal failures for each requirement and sequential attrition in the frozen requirement order; final joint mask is their intersection.",
+              "reader_explanation": "The largest marginal problem need not remove the most additional observations after earlier requirements have already been applied."
+            }
+          ]
+        },
+        {
+          "title": "Discontinuities aligned to source revisions",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Discontinuities aligned to source revisions?",
+              "exhibit_ids": [
+                "G2-X23"
+              ],
+              "formula": "For each variable compare adjacent supplied-year N, verified share, median and P99; align documented definition changes and use actual calendar gap length.",
+              "reader_explanation": "A discontinuity is a prompt to check the survey definition and coverage before telling an economic story."
+            }
+          ]
+        },
+        {
+          "title": "Exception dispositions and exact row acceptance",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Exception dispositions and exact row acceptance?",
+              "exhibit_ids": [
+                "G2-X24"
+              ],
+              "formula": "Every flagged issue receives source evidence, affected variables/years, downstream gate and fixed/unresolved disposition; required failures keep G2 incomplete.",
+              "reader_explanation": "The quality report states what each problem prevents, rather than hiding problems inside a generic data-cleaning note."
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "definition_of_done": {
+    "repository_minimum_checks": [
+      "For every variable/year, counts by all mutually exclusive missingness states sum to the source denominator.",
+      "Report original, accepted and flagged distributions with units; count negative, zero, upper-tail and exact-boundary cases.",
+      "Recompute selected accounting identities, share boundaries and export-value conversion from components.",
+      "Check quality masks do not use future treatment/outcome information and unknown joint statuses cannot become domestic/nontrading.",
+      "Link every exception class to source field/year, rule version, affected count and disposition; no undocumented deletion.",
+      "Refresh against the exact current G0 hash; newly corrected units/recodes and all eligibility decisions reconcile to that version."
+    ],
+    "operational_checks": [
+      {
+        "id": "G2-Q01",
+        "criterion": "All state partitions and masks reconcile",
+        "evidence_artifact": "G2/state_reconciliation.csv",
+        "pass_rule": "For every variable/year, states sum to N; all flagged exceptions trace; joint unknown never default zero.",
+        "blocking": true
+      },
+      {
+        "id": "G2-Q02",
+        "criterion": "Export value and capital/energy identities independently checked",
+        "evidence_artifact": "G2/formula_controls.csv",
+        "pass_rule": "Exactly defined source concepts/units; missing components unavailable; no unsupported denominator or stock substitution.",
+        "blocking": true
+      },
+      {
+        "id": "G2-PLAN-GATE",
+        "criterion": "Global upfront planning freeze",
+        "evidence_artifact": "work/plans/FREEZE.json",
+        "pass_rule": "All 44 plans pass root validation and root records the freeze; no analytical execution before freeze.",
+        "blocking": true
+      },
+      {
+        "id": "G2-SOURCE-TEXT",
+        "criterion": "Original request versus manager additions clearly separated",
+        "evidence_artifact": "outputs/G2/source_to_exhibit.csv",
+        "pass_rule": "Exact source.request/strategy/notes/number/PIC/completion unchanged; repository minimum checks labelled repository-authored, not DOC X quotation.",
+        "blocking": true
+      },
+      {
+        "id": "G2-OFFLINE",
+        "criterion": "Independent row entrypoint with nested modules",
+        "evidence_artifact": "outputs/G2/offline_replication.json",
+        "pass_rule": "Runrows/G2/G2.do from clean configured local environment without master; same full precision numeric results; all local dependencies documented.",
+        "blocking": true
+      },
+      {
+        "id": "G2-READER",
+        "criterion": "Every required report section has meaning and formula",
+        "evidence_artifact": "outputs/G2/reader_review.md",
+        "pass_rule": "Every H 1/H 2/H 3 sectionstatesquestion, intuition, equation and symbols, visual/table, plain meaning and limit; reviewer can explain without code.",
+        "blocking": true
+      },
+      {
+        "id": "G2-WAVE-BOUNDARY",
+        "criterion": "All company analysis descends from the single published consolidated master.",
+        "evidence_artifact": "analysis-input-lineage.json",
+        "pass_rule": "Every company-data operand in analysis must be the single published consolidated master or a declared derivative whose entire company-data ancestry ends at that consolidated master. Direct annual-wave reads are prohibited in analysis; only the master builder may append annual waves. Raw/staged/legacy/cached final company files cannot be numerical analysis parents. A required field missing from the wave is an upstream preparation failure; never repair it by opening an external company file inside this row. Comparison-only validators may read older data but may not feed construction or estimates. External reference and metadata inputs retain explicit non-company roles.",
+        "blocking": true
+      },
+      {
+        "id": "G2-READABLE-EXECUTION",
+        "criterion": "Readable non-executable comments and verified live progress at every nesting level.",
+        "evidence_artifact": "code-comments-and-progress-review.json",
+        "pass_rule": "Meet code_readability_and_progress_contract without changing the statistical results or control flow.",
+        "blocking": true
+      }
+    ],
+    "reader_gate": "An intelligent lay reader can state the question, what was counted/compared, each equation symbol, finding and limit without consulting code. Each section follows intuition → formula with every symbol → visual/table → plain meaning → boundary.",
+    "visual_gate": "Use custom vector charts from saved full-precision Stata aggregates, professional restrained publication typography, direct labels, meaningful color, clear units, visible missing 2016 gap, robust legends and notes. No default Stata graph in final delivery. Inspect every PDF page at reading size for overlap/clipping and all captions/axis labels. Distribution intervals are never labelled confidence intervals.",
+    "numerical_gate": "Independently recompute control counts/formulas against frozen aggregates/source receipts, exact categorical reconciliations, finite domains, and displayed rounding. Every chart/table value has a source table key/hash. No analytic calculations in for matting Python.",
+    "source_scope_gate": "The exact DOCX row and every repository minimum check must be satisfied on the declared actual data scope. Source absence remains a blocker where necessary; a readable PDF, synthetic passing run or existing column does not waive real-panel/WPI/source requirements."
+  },
+  "current_blockers": [
+    {
+      "id": "G2-B01",
+      "blocks": "Current actual quality results",
+      "reason": "Prior actual Q A is older version; later detailed G2 isfictional.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/docs/CURRENT-STATE.md",
+      "resolution": "Runafter G0 accepted against exact canonical hash.",
+      "next_unblocked_action": "Freeze variable/year state and test case registry."
+    }
+  ],
+  "references": [
+    {
+      "title": "Exact Deasy source row",
+      "locator": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/requests/data/02-quality-checks/SOURCE.md",
+      "purpose": "Original request; blank completion and PIC preserved",
+      "verified_status": "read exact task.json/source fields"
+    },
+    {
+      "title": "Latest actual local G0",
+      "locator": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/HANDOFF.md",
+      "purpose": "Current 3, 824-column source boundary; supersedes historical 3, 793-column file",
+      "verified_status": "fresh exact DTA metadata/hash confirmed"
+    },
+    {
+      "title": "Annual variable mapping evidence",
+      "locator": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv",
+      "purpose": "Separate verified annual semantics from parsed/provisional mappings",
+      "verified_status": "read; completeness not asserted"
+    },
+    {
+      "title": "Full source authored minimum checks",
+      "locator": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/requests/data/02-quality-checks/task.json",
+      "purpose": "Repository definition of done is notan original Word quotation; preserved exactly in plan",
+      "verified_status": "read and copied exactly"
+    }
+  ],
+  "review": {
+    "planning_review": "root_independent_review_fixed; final_global_consistency_pending",
+    "execution_review": "not_started",
+    "numerical_review": "not_started",
+    "visual_review": "not_started",
+    "exhibit_review": "Each of 24 exhibits now has a computation, unit, denominator, uncertainty rule and substantive reader explanation. Numerical and visual output review still required after execution.",
+    "final_independent_pass": "Narrow source/cardinality repairs applied; no empirical execution. See work/plans/reviews/G0-G7-final-review.json."
+  },
+  "rationale": "Quality is a set of explicit, variable-specific reasons; a single blanket clean sample hides useful data and uncertainty.",
+  "scope": "Capital, each fuel/electricity source, R&D, trade, export value and FDI on exact accepted actual G0.",
+  "unit_of_analysis": "Source record-year and variable-year quality state.",
+  "target_estimands": [
+    {
+      "name": "Quality-state share",
+      "formula": "s_{vyt}=n_{vyt}/N_y",
+      "symbols": {
+        "v": "variable",
+        "y": "year",
+        "t": "one mutually exclusive source state",
+        "n": "state count",
+        "N": "all supplied yearly records"
+      },
+      "interpretation": "Show how many records are usable, zero, unknown or unavailable.",
+      "limits": "State definitions are source-specific; validity is not automatically semantic certification."
+    },
+    {
+      "name": "Implied export value",
+      "formula": "EX=(p/100)\\times OUTPUT",
+      "symbols": {
+        "p": "validated output-export percentage",
+        "OUTPUT": "the exact output concept named by source",
+        "EX": "implied nominal export value"
+      },
+      "interpretation": "Convert a reported percentage into the matching money amount.",
+      "limits": "Only valid if percentage denominator is verified; no direct comparison when direct export value absent."
+    }
+  ],
+  "dataflow_protocol": {
+    "input_integrity": "Physical source data and source-definition evidence are separate declared inputs. Pin both before transforming a value.",
+    "join_keys": "Never merge by row order. Use declared keys and assert intended 1:1, m:1 or explicitly weighted 1:m cardinality; record unmatched and duplicate rows.",
+    "source_rows": "source_year/source_row identifies a row within the frozen canonical source family, not a longitudinal plant. If another source family is added, source_file_hash is part of the raw key until the canonical manifest proves uniqueness.",
+    "branch_status": "Each branch produces either a validated state or a typed unsupported receipt with the missing prerequisite. Unsupported receipts are not numeric datasets and cannot satisfy a required input gate.",
+    "missing_states": "Source absence, inapplicable questionnaire universe, parse failure, unknown unit, masked identifier, observed zero and valid positive/negative values remain distinguishable.",
+    "downstream_gate": "Only a passed input contract may unlock its dependent statistical branch. Publishing a diagnostic about a blocked branch does not complete the Word row."
+  },
+  "plan_revision": {
+    "id": "wave-foundation-v2",
+    "supersedes_boundary_of_sha256": "f0fbf9c79b7a6289808267af44b3226831ceca77b9a3fcf52be79fdd4a9eacd4",
+    "scope": "Input boundary, readable code comments and hierarchical execution visibility; exact original Word request and statistical plan retained.",
+    "implementation_status": "This revision does not execute this assignment row."
+  },
+  "code_readability_and_progress_contract": {
+    "comments": "Non-executable Stata comments explain purpose, actual inputs, outputs and failure checks at file, block and subblock levels in simple Indonesian. Do not invent scientific interpretations.",
+    "runtime": "Every file, block, subblock, iteration and deepest step prints start, finish or explicit early/error outcome, x/X, percent, elapsed time and exact location; stream live and save the same log.",
+    "clock": "Date-aware native Stata wall clock, one-second resolution; preserve scientific timers and fail certification on backward clock.",
+    "semantics": "Original operative source remains exactly recoverable; verify r(), e(), _rc, conditional branches and early transfers with a constructed runtime fixture before company execution.",
+    "rerun": "A documented launcher must run the actual preparation with visible progress before declaring data prep ready."
+  },
+  "wave_input_contract": {
+    "rule": "Every company-data operand in analysis must be the single published consolidated master or a declared derivative whose entire company-data ancestry ends at that consolidated master. Direct annual-wave reads are prohibited in analysis; only the master builder may append annual waves. Raw/staged/legacy/cached final company files cannot be numerical analysis parents. A required field missing from the wave is an upstream preparation failure; never repair it by opening an external company file inside this row. Comparison-only validators may read older data but may not feed construction or estimates. External reference and metadata inputs retain explicit non-company roles.",
+    "boundary_role": "consumer",
+    "release_root": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-wave-foundation-v2",
+    "annual_paths": [
+      "data/waves/wave_2010.dta",
+      "data/waves/wave_2011.dta",
+      "data/waves/wave_2012.dta",
+      "data/waves/wave_2013.dta",
+      "data/waves/wave_2014.dta",
+      "data/waves/wave_2015.dta",
+      "data/waves/wave_2017.dta",
+      "data/waves/wave_2018.dta",
+      "data/waves/wave_2019.dta",
+      "data/waves/wave_2020.dta",
+      "data/waves/wave_2021.dta",
+      "data/waves/wave_2022.dta"
+    ],
+    "master_path": "data/analysis/G0_analysis_ready.dta",
+    "wave_count": 12,
+    "key": [
+      "source_year",
+      "source_row"
+    ],
+    "expected_rows": 33049,
+    "expected_columns": 4593,
+    "original_projection_columns": 4591,
+    "new_columns": [
+      "rd17_own_token_class",
+      "rd17_external_token_class"
+    ],
+    "root_plan": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-wave-foundation-v2/PLAN.md",
+    "root_plan_sha256": "8cc95e89c9bbc68ac6ef417d8e60cadc97c2f266553376c3c6611b22ad1ec211",
+    "input_release_status": "Not certified until actual build, value comparisons and read-boundary checks pass.",
+    "scientific_gates": "All existing field-specific, identity, unit, price, scope and source gates remain binding."
+  },
+  "execution_input_policy": {
+    "authority": "work-items/G0.5/OWNER-REQUEST.md",
+    "effective_date": "2026-09-13",
+    "role": "downstream_consumer",
+    "development_mode": "development",
+    "development_input": "data/g0-5-development/manifest.json",
+    "adapter": "harness.data_source.load_data",
+    "finalisation_mode": "actual",
+    "finalisation_input": "explicit local accepted G0; exact parent checksum required",
+    "actual_parent_sha256": "d0438798e28d67f5ac4fce3ea6a07b46630be28d88fd6cb6f17c15dc99baca08",
+    "identity_workflow": "harness/g05/EXTERNAL-WORKFLOW.md",
+    "identity_preparation_independent_of_G0_execution": true,
+    "same_analysis_code_both_modes": true,
+    "recompute_all_results_for_finalisation": true,
+    "fallback_to_historical_actual_Git_data": false,
+    "supersedes_older_planned_company_input_for_development": true,
+    "historical_source_references_retained_for_provenance": true,
+    "panel_rule": "Development accepts declared synthetic_development psid with firm-year uniqueness; actual requires verified real linkage. obs_id and annual clusters are not firm keys.",
+    "row_specific_source_and_method_gates_still_apply": true,
+    "research_execution_authorized_by_this_registration": false
+  }
+}

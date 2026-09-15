@@ -1,0 +1,263 @@
+\GOneSubsection{Proxy-variable estimators}
+\GOneLabel{sec:methods}
+We want to compare reported value added after accounting for how much labor and capital each company uses. Equation~\GOneEqref{eq:native-definition} gives this calculation once we know the coefficients that measure the two inputs' contributions. The difficulty is estimating those coefficients. A company that expects favorable production conditions may hire more workers or purchase more materials. A regression can then attribute some of the favorable conditions' contribution to the inputs, because both contributed to the higher output. Econometricians call this the simultaneity problem: input choices and the unexplained part of production depend on the same information.
+
+We separate the unexplained part of logged value added into conditions the company knows when choosing its inputs, $\omega_{it}$, and a remaining discrepancy that it does not know at that point, $\varepsilon_{it}$. With $y$, $l$ and $k$ denoting the logarithms of reported value added, workers and beginning-of-year capital for company $i$ in year $t$, the resulting equation is
+\begin{equation}
+y_{it}=\beta_Ll_{it}+\beta_Kk_{it}+\omega_{it}+\varepsilon_{it}.
+\GOneLabel{eq:production}
+\end{equation}
+The coefficients $\beta_L$ and $\beta_K$ measure the contributions assigned to labor and capital. Ordinary least squares chooses these coefficients to minimize squared prediction errors. Interpreting them as the inputs' separate economic contributions requires, among other conditions, that the inputs be unrelated to the unexplained term. The company's response to $\omega$ is a reason that condition can fail.
+
+We therefore examine methods that use an observed company decision to learn about production conditions we cannot observe directly. Such a decision serves as a \emph{proxy}: materials purchases or investment may reveal whether the company expects favorable conditions. Levinsohn--Petrin (LP) uses materials; Olley--Pakes (OP) uses investment and also addresses which companies remain in the sample. Ackerberg--Caves--Frazer (ACF) revises how we separate labor's contribution from the information in materials purchases. Wooldridge combines equations based on current and previous-year information. Each approach requires assumptions about company decisions and how production conditions change over time. We first explain those common assumptions, then give the equations and results for each method.
+
+\GOneSubsubsection{Materials demand and input timing}
+\GOneLabel{sec:proxy-inversion}
+Suppose two companies have the same capital and face the same other determinants of materials demand. If the company with more favorable production conditions always buys more materials, we can work backward from its purchases to the conditions that motivated them. Formally, write materials demand as $M_{it}=\mathcal M_t(K_{it},\omega_{it})$ and require it to increase strictly with $\omega$ at a given $K$. This requirement is called strict monotonicity. Working backward through the demand rule, or \emph{inverting} it, gives the following expression in logarithms:
+\begin{equation}
+\omega_{it}=h_t(k_{it},m_{it}).
+\GOneLabel{eq:proxy-inversion}
+\end{equation}
+The function $h_t$ associates each combination of capital and materials with one value of $\omega$. This one-to-one relationship requires more than positive purchases. Positive values allow us to calculate logarithms; they do not show that a larger materials purchase always reflects more favorable production conditions. Differences in input prices, customer demand, financing constraints or other unobserved shocks may also affect purchases. We use the available nominal materials measure to implement the calculation, while retaining these limits on its economic interpretation. Within each sector, we impose the same control function over all pooled years, replacing the general time-varying function by one common polynomial. We likewise use one transition relationship across the supported calendar pairs and add no year effects. Common price movements and changes in the composition of the samples can therefore enter the estimated relation.
+
+We use materials to account for $\omega$ through Equation~\GOneEqref{eq:proxy-inversion}; this role gives $h_t$ its name, the \emph{control function}. Equation~\GOneEqref{eq:production} therefore has coefficients for labor and capital, while materials enter through that function. Estimating a separate materials contribution would require a different production equation and a fresh assessment of the outcome and input timing. In particular, a gross-output equation would answer a different accounting question from the value-added equation used here.
+
+We also use the previous year's production conditions to predict the current year's conditions. Companies may retain advantages or disadvantages from one year to the next. We represent that predictable part by $g(\omega_{i,t-1})$ and call the remaining new component $\xi_{it}$ the \emph{productivity innovation}:
+\begin{equation}
+\omega_{it}=g(\omega_{i,t-1})+\xi_{it},\qquad
+E[\xi_{it}\mid\mathcal I_{i,t-1},k_{it}]=0.
+\GOneLabel{eq:markov-transition}
+\end{equation}
+The expectation restriction says that the new component has mean zero after we use the relevant past information, $\mathcal I_{i,t-1}$, and beginning-of-year capital, $k_{it}$. Capital already in place at the start of the year cannot be changed in response to an unexpected event later that year. Under this timing assumption, we call it \emph{predetermined} relative to the current innovation. Current employment and materials purchases may respond to the event. Previous-year employment and beginning-of-year capital can therefore help estimate the input coefficients without using current choices that respond to the same surprise. Whether companies actually make their decisions in this order is an economic assumption. The available columns, particularly when linked through fictional company IDs, do not establish it.
+
+\GOneSubsubsection{Polynomial approximation}
+\GOneLabel{sec:common-basis}
+The functions relating materials to production conditions, and past conditions to current conditions, are unknown. We approximate them with polynomial regressions, which let a fitted relationship bend and let its slope depend on more than one variable. For capital $k$ and a logged proxy $p$, we include their levels, squares, cubes and all products whose total degree is at most three. We collect these terms in the vector
+\begin{equation}
+B_3(k,p)=(k,p,k^2,kp,p^2,k^3,k^2p,kp^2,p^3)' .
+\GOneLabel{eq:polynomial-basis}
+\end{equation}
+We estimate an intercept separately. The ACF first-stage regression adds labor and the corresponding powers and products of labor, capital and materials. Our primary estimates use the cubic polynomial above. To examine how the approximation affects the estimates, we also fit a quadratic polynomial, which drops terms of degree three. LP, OP and ACF keep a separate cubic relationship between current and previous-year productivity in both specifications. For Wooldridge, we change the current and previous-year proxy polynomials together, as explained in Section~\GOneRef{sec:wrdg}.
+
+Before estimating each sector and method, we subtract each logged variable's median in that method's eligible source sample. We subtract the same median from its previous-year values. This makes the numbers used in the polynomial easier to handle numerically. Because we include every polynomial term up to the chosen degree, subtracting a constant changes how we write the fitted function without changing the set of functions the polynomial can represent. A numerical search can nevertheless respond to the changed scale and location of its inputs, which is why we examine convergence and sensitivity to starting values.
+
+After estimation, we calculate residuals using the estimated labor and capital coefficients and the original log inputs in Equation~\GOneEqref{eq:native-definition}. Subtracting input medians before estimation therefore serves a different purpose from subtracting sector residual means afterward. The latter calculation, in Equation~\GOneEqref{eq:centered-definition}, gives each sector a common residual reference level for comparison.
+
+\GOneSubsubsection{Coefficient uncertainty}
+\GOneLabel{sec:method-uncertainty}
+An estimated coefficient depends on the observations used to calculate it. We examine this source of uncertainty by drawing repeated samples of fictional companies, with replacement, and re-estimating the model in each sample. We resample each company's complete history together so that its consecutive-year records remain linked, and we repeat every estimation stage. This procedure is the company-history bootstrap.
+
+We report the standard deviation of the resulting coefficient estimates as the bootstrap \emph{standard error}. A larger value means that the estimate varies more across the resampled histories. We also report a percentile interval covering the middle 95\% of those estimates, which shows where most of the resampled coefficients lie without imposing a symmetric interval around the original estimate. These intervals are exploratory and conditional on the fictional links, measurement choices and estimator. They do not measure uncertainty about whether a fictional match represents a real company, nor do they incorporate unresolved prices or source definitions. Numerical convergence in every resample also does not establish that a nonlinear search has found a unique solution.
+
+We begin with Levinsohn--Petrin because its two stages show how materials purchases and previous-year information play different roles. We then examine what investment and sample-continuation information would add under Olley--Pakes, before turning to Ackerberg--Caves--Frazer and Wooldridge. For each method, we specify the calculation we actually use; the method's name alone does not determine its polynomial, input timing or estimation criterion.
+
+\GOneSubsection{Levinsohn--Petrin}
+\GOneLabel{sec:lp}
+\GOneSubsubsection{Materials proxy}
+\GOneLabel{sec:lp-economics}
+Levinsohn and Petrin use a company's purchases of intermediate inputs, such as materials, to account for production conditions that the company observes and the researcher does not \citep{lp}. A company may purchase materials every year even if it invests in new capital only occasionally. Materials can therefore supply information in years with no positive investment. The separate availability of materials and investment is therefore important when comparing the methods' samples. Materials purchases can reveal unobserved conditions because companies respond to those conditions; using purchases this way still requires the demand assumptions described above.
+
+\GOneSubsubsection{Variables and timing}
+\GOneLabel{sec:lp-data}
+We use the logarithms of positive reported nominal value added for $y$, positive worker counts for $l$, and positive reported raw/supporting materials for $m$. For $k$, we use the logarithm of the capital stock reported for the preceding December, under the maintained year-end-stock assumption. Production in year $t$ uses the positive reported stock in calendar year $t-1$. The first-stage regression pools all observations with eligible current inputs. The second-stage calculation requires an eligible predecessor linked by the same fictional company ID, and pools every supported calendar pair within the sector.
+
+The two stages consequently use different sample sizes, as Table~\GOneRef{tab:support} shows. An eligible production record can inform the first-stage regression even if it has no eligible predecessor or continuation. The second stage also needs the previous-year capital and materials values; usable current values cannot fill those gaps. We check each stage's minimum sample requirement before estimation. When resampling company histories to calculate uncertainty, we reapply these same sample rules.
+
+@@lpdata_tables@@
+
+\GOneSubsubsection{Estimation procedure}
+\GOneLabel{sec:lp-stages}
+Substituting Equation~\GOneEqref{eq:proxy-inversion} into the production equation gives
+\begin{equation}
+y_{it}=\beta_Ll_{it}+\phi(k_{it},m_{it})+\varepsilon_{it},\qquad
+\phi(k,m)=\beta_Kk+h(k,m).
+\GOneLabel{eq:lp-first-population}
+\end{equation}
+The function $\phi$ contains both capital's contribution, $\beta_Kk$, and the unobserved conditions represented by $h$. The equation alone cannot separate them: changing the capital coefficient and offsetting that change inside $h$ would give the same predicted output. We therefore estimate capital's contribution in a second stage, using changes over time. In the first stage, the original LP procedure estimates labor's coefficient separately from $\phi$. For that separation to have an economic interpretation, labor must vary in ways that the capital and materials function cannot already explain. Section~\GOneRef{sec:acf} examines why choosing labor and materials using the same information can undermine that requirement.
+
+We first regress logged value added on logged workers, an intercept and the capital--materials polynomial $B_3(k,m)$, using records with positive values for all required inputs and the outcome. Let $\widehat y^{\,1}$ denote this regression's fitted value. We retain its labor coefficient, $\widehat\beta_L$, and subtract the fitted labor contribution from predicted output. We then try a capital coefficient, $b_K$, and subtract the capital contribution it would imply:
+\begin{equation}
+\widehat\phi_{it}=\widehat y^{\,1}_{it}-\widehat\beta_Ll_{it},\qquad
+\widehat\omega_{it}(b_K)=\widehat\phi_{it}-b_Kk_{it}.
+\GOneLabel{eq:lp-phi}
+\end{equation}
+Each choice of $b_K$ gives a different provisional estimate of $\omega$. We calculate that estimate for both years of every eligible company pair one calendar year apart. We then regress its current value on an intercept and the first three powers of its previous-year value. With $\mathcal D$ denoting the sample of these consecutive-year pairs, the calculation is
+\begin{equation}
+\begin{aligned}
+H_{it}(b_K)&=(1,w_{it},w_{it}^2,w_{it}^3),\\
+w_{it}&=\widehat\phi_{i,t-1}-b_Kk_{i,t-1},\\
+\widehat\gamma(b_K)&=\arg\min_\gamma\sum_{(i,t)\in\mathcal D}
+ [\widehat\omega_{it}(b_K)-H_{it}(b_K)\gamma]^2.
+\end{aligned}
+\GOneLabel{eq:lp-transition}
+\end{equation}
+The fitted value from this regression estimates the predictable component in Equation~\GOneEqref{eq:markov-transition}: how much of current productivity we could predict from the previous year. For every trial capital coefficient, we refit this relationship, obtain $\widehat\gamma(b_K)$ and calculate the resulting error in predicted value added. We select the capital coefficient that gives the smallest sum of squared errors:
+\begin{equation}
+\widehat\beta_K=\arg\min_{b_K}\sum_{(i,t)\in\mathcal D}
+ [y_{it}-\widehat\beta_Ll_{it}-b_Kk_{it}-H_{it}(b_K)\widehat\gamma(b_K)]^2.
+\GOneLabel{eq:lp-objective}
+\end{equation}
+This calculation is called \emph{profiled nonlinear least squares}. We search over the capital coefficient while solving for the productivity-transition coefficients at each trial value; those transition coefficients are thus ``profiled out'' of the outer search. Equations~\GOneEqref{eq:lp-phi}--\GOneEqref{eq:lp-objective} define the LP implementation reported here, drawing on the implementation family described by \citet{prodest}. Other implementations use different estimation criteria. Our reported calculation uses this squared-error criterion and does not include a correction for which companies remain in the sample.
+
+@@lpworked@@
+
+@@lpresults@@
+
+\GOneSubsection{Olley--Pakes}
+\GOneLabel{sec:op}
+\GOneSubsubsection{Investment proxy}
+\GOneLabel{sec:op-economics}
+Olley and Pakes use investment to learn about unobserved production conditions and account for companies' decisions to continue operating \citep{op}. At a given capital stock, a company expecting more favorable conditions may invest more. If investment strictly increases with those conditions, after accounting for the other determinants of investment, we can work backward from investment to the unobserved component in the same way as with materials. The additional issue is \emph{selection}: the companies we still observe may differ systematically from those that disappear. For example, if less productive companies are more likely to close, the relationship between past and current productivity among continuing companies will not describe every company that could have continued.
+
+\GOneSubsubsection{Variables and timing}
+\GOneLabel{sec:op-data-mapping}
+@@opdata_tables@@
+
+\GOneSubsubsection{Risk sample}
+\GOneLabel{sec:op-data}
+We use positive reported capital additions, assuming they measure investment as OP's investment measure. We measure beginning-of-year capital from the preceding December stock, following the LP timing rule. These two variables serve different purposes: the stock measures capital already available, while additions measure investment. Subtracting consecutive stocks would combine additions with disposals, depreciation, valuation and reporting changes. We therefore retain the reported additions measure under that assumption rather than reconstruct investment from stock differences.
+
+We create a risk interval for every fictional company assignment at the start of each adjacent pair of supplied calendar years. If the assignment appears in the next year, we record zero for disappearance; if it has no match, we record one. We create no interval across the absent 2016 file and no interval following the terminal 2022 observation. These outcomes describe the assignment, not the survival of an actual establishment. To estimate Equation~\GOneEqref{eq:op-selection}, an interval also needs positive previous-year investment and capital. Counting every fictional ID would therefore overstate the observations available for the selection regression.
+
+\GOneSubsubsection{Selection equation}
+\GOneLabel{sec:op-stages}
+To account for selective continuation, the method uses both previous productivity and the probability of disappearance when predicting current productivity among continuing companies. Let $i_{it}$ denote the logarithm of positive investment, $S_{it}=1$ identify a company that continues over the interval ending in year $t$, and $q_{it}$ denote its modeled probability of disappearance. The two relationships are
+\begin{equation}
+\begin{aligned}
+\omega_{it}&=h(k_{it},i_{it}),\\
+E[\omega_{it}\mid\omega_{i,t-1},S_{it}=1,\mathcal I_{i,t-1}]&=g_S(\omega_{i,t-1},q_{it}),
+\end{aligned}
+\GOneLabel{eq:op-economics}
+\end{equation}
+We calculate $q$ from the relevant previous-year information. We use the probability of disappearance consistently throughout the calculation; using a continuation probability would require transforming the approximation accordingly. The application also requires a credible interpretation of disappearance. Absence from a file alone does not establish that a company closed. Here the links are fictional, so their continuation describes the generated assignment rather than actual company survival.
+
+The OP procedure first regresses logged value added on logged workers, an intercept and the capital--investment polynomial $B_3(k,i)$. It retains $\widehat\beta_L$ and constructs $\widehat\phi$ as in Equation~\GOneEqref{eq:lp-phi}. It also estimates a separate disappearance equation using all eligible company intervals, including those without a continuing production record. We specify a logistic regression, which maps the previous-year capital and investment polynomial into a probability between zero and one:
+\begin{equation}
+\widehat q_{it}=\Lambda\!\left(\widehat\pi_0+B_3(k_{i,t-1},i_{i,t-1})'\widehat\pi\right),
+\qquad \Lambda(v)=\frac{\exp(v)}{1+\exp(v)}.
+\GOneLabel{eq:op-selection}
+\end{equation}
+The outcome equals one when the assignment disappears and zero when it continues. The coefficients $\pi$ describe how its probability varies with previous-year capital and investment. We define this risk sample before applying the current-year production requirements: otherwise we could delete the very disappearances needed to estimate their probability. An application to actual company survival would require evidence establishing which companies could continue and which closed. Our risk sample instead follows the fictional assignment rule described above.
+
+For each trial capital coefficient $b_K$, we calculate previous-year productivity as $w=\widehat\phi_{t-1}-b_Kk_{t-1}$. We then predict current productivity using both $w$ and the estimated disappearance probability $q$, including their powers and products up to total degree three:
+\begin{equation}
+H^S_{it}(b_K)=(1,w,w^2,w^3,q,q^2,q^3,qw,q^2w,qw^2).
+\GOneLabel{eq:op-transition}
+\end{equation}
+We regress the current productivity estimate on these terms, then choose capital's coefficient by minimizing the counterpart of Equation~\GOneEqref{eq:lp-objective} among eligible continuing records. This requires a predicted disappearance probability for every production pair. The risk sample must contain both disappearances and continuations; the logistic regression must converge; and the regressors used in the selection and productivity equations must contain enough independent variation to estimate their coefficients. These last requirements are the full-rank conditions. If the selection equation fails, we do not proceed by dropping the selection correction. We retain failed or unsupported cells separately from the estimates that meet these requirements.
+
+\GOneSubsubsection{Sample support}
+\GOneLabel{sec:op-support}
+@@opall_support@@
+
+We compare the usable investment and continuation records with the minimum sample sizes specified before estimation in Figure~\GOneRef{fig:deep-op-support}. Table~\GOneRef{tab:support} gives the corresponding production and risk counts across observed sectors. The selection equation requires @@minrisk@@ risk intervals, including @@minexit@@ disappearances and @@mincontinue@@ continuations. The production equations must separately meet their first-stage and consecutive-year sample requirements.
+@@opsupportfig@@
+@@opworked@@
+
+@@opresults@@
+
+Investment changes both the proxy information and the continuation adjustment. A separate issue concerns whether labor's contribution can be distinguished from the information carried by materials, even with an adequate sample. Ackerberg--Caves--Frazer addresses that issue.
+
+\GOneSubsection{Ackerberg--Caves--Frazer}
+\GOneLabel{sec:acf}
+\GOneSubsubsection{Labor identification}
+\GOneLabel{sec:acf-economics}
+Ackerberg, Caves and Frazer examine whether LP's first-stage regression can separate labor's contribution from the capital--materials function \citep{acf}. Suppose a company chooses labor and materials using the same production information. Employment may then be predictable from the very capital and materials variables used to account for unobserved conditions. The regression would have no independent variation with which to distinguish labor's effect from that function. A finite polynomial can still return a labor coefficient, but the coefficient would depend on the approximation rather than establish the separate economic contribution of labor. This is the labor-identification problem.
+
+We follow ACF by leaving labor and capital combined with the predictable part of production in the first stage. We then estimate both input coefficients together in the second stage, using restrictions on the new productivity component that remains after accounting for the previous year. This shifts the work of separating the two input contributions to the second stage. The timing assumptions and the information available in the selected variables still determine whether that separation is credible.
+
+\GOneSubsubsection{Variables and timing}
+\GOneLabel{sec:acf-data}
+We use the same positive reported nominal value added, workers, preceding-December capital and materials measures as for LP. We apply the same eligibility rules and require consecutive calendar years for the second stage. ACF's first-stage regression nevertheless differs because its polynomial includes labor and labor's products with capital and materials. We estimate the two input contributions jointly on all eligible consecutive-year records pooled within a sector. We also apply these coefficients to observations with eligible current inputs outside the dynamic stage. Those observations may already have contributed to the first-stage regression; predicting their residuals does not fit another annual equation.
+
+Using the same observed measures lets us trace the residual difference between ACF and LP to their coefficients. Within a sector, subtracting the LP residual from the ACF residual gives the negative of the labor-coefficient difference times logged workers, plus the negative of the capital-coefficient difference times logged capital. Centering then subtracts that difference's mean in the sector's second-stage sample. We therefore examine the estimated coefficients before interpreting how ACF changes the residual distribution.
+
+@@acfdata_tables@@
+
+\GOneSubsubsection{Estimation procedure}
+\GOneLabel{sec:acf-stages}
+We first predict logged value added from logged workers, capital and materials without assigning a separate economic coefficient to labor:
+\begin{equation}
+y_{it}=\Phi(l_{it},k_{it},m_{it})+\varepsilon_{it},\qquad
+\widehat\Phi_{it}=\widehat E[y_{it}\mid l_{it},k_{it},m_{it}],
+\GOneLabel{eq:acf-first}
+\end{equation}
+We use an intercept and every power and product of $(l,k,m)$ with total degree up to three. The predicted value $\widehat\Phi$ includes the contributions of labor and capital, so it is not yet an estimate of productivity alone. For each trial pair of coefficients $b=(b_L,b_K)'$, we subtract the implied input contributions. We then subtract the part of this provisional productivity estimate that we can predict from its previous-year value:
+\begin{equation}
+\widehat\omega_{it}(b)=\widehat\Phi_{it}-b_Ll_{it}-b_Kk_{it},\qquad
+\widehat\xi_{it}(b)=\widehat\omega_{it}(b)-\widehat g_b\!\left(\widehat\omega_{i,t-1}(b)\right).
+\GOneLabel{eq:acf-innovation}
+\end{equation}
+To obtain $\widehat g_b$, we regress current provisional productivity on an intercept and the first three powers of its previous-year value. We refit this regression for every trial pair of input coefficients. The remaining component, $\widehat\xi(b)$, estimates the current-year productivity surprise under that trial pair.
+
+We choose the coefficient pair by asking whether the remaining surprise is related to information that, under our timing assumptions, should not predict it. The two variables we use are previous-year labor and beginning-of-year capital. They serve as \emph{instruments}: their assumed lack of association with the surprise supplies restrictions for estimating the coefficients. For each instrument, we form a \emph{moment} by multiplying it by $\widehat\xi(b)$ and averaging across the estimation sample. The assumed population moments are zero. With $Z=[l_{t-1},k_t]$ and $N$ consecutive-year observations, we minimize the following weighted measure of how far the sample moments are from zero:
+\begin{equation}
+Q_{\mathrm{ACF}}(b)=\left[Z'\widehat\xi(b)\right]'
+\frac{(Z'Z)^{-1}}{N}\left[Z'\widehat\xi(b)\right].
+\GOneLabel{eq:acf}
+\end{equation}
+The zero-product restrictions are also described as \emph{orthogonality} between the instruments and the productivity innovation. We check that the instruments contain independent information and that changes in each input coefficient produce distinguishable changes in the moments near the estimated solution. These are the instrument-rank and moment-derivative-rank checks. They assess whether we can solve the numerical problem, not whether company decisions satisfy the assumed timing or materials-demand rule. With two moments for two input coefficients, a value near zero for the criterion does not provide an additional, independent test of those assumptions. Fictional company histories also cannot establish their validity for actual companies.
+
+@@acfworked@@
+
+@@acfresults@@
+
+\GOneSubsection{Wooldridge}
+\GOneLabel{sec:wrdg}
+Wooldridge combines two ways of explaining the same observed output in one estimation procedure \citep{wooldridge}. In the first equation, we use current capital and materials purchases to account for production conditions known to the company. What remains is the discrepancy $\varepsilon$ that the company did not know when choosing its inputs. In the second equation, we use previous-year capital and materials to predict current conditions. That prediction cannot account for the current productivity surprise $\xi$, so the remaining error includes both $\xi$ and $\varepsilon$. The difference in these errors determines which variables can supply valid instruments for each equation.
+
+\GOneSubsubsection{Variables and timing}
+\GOneLabel{sec:wrdg-data}
+We use the reported nominal value added, workers, preceding-December capital and materials measures already described for LP and ACF. Wooldridge therefore changes the restrictions used to estimate their contributions while keeping the observed measures fixed. Its two equations use current and previous-year values for the same eligible calendar pairs, pooling all supported years within each sector.
+
+@@wrdgdata_tables@@
+
+\GOneSubsubsection{System equations}
+\GOneLabel{sec:wrdg-economics}
+Writing these two explanations of logged value added gives
+\begin{equation}
+\begin{aligned}
+y_{it}&=\alpha+\beta_Ll_{it}+\beta_Kk_{it}+h(k_{it},m_{it})+\varepsilon_{it},\\
+y_{it}&=\alpha+\beta_Ll_{it}+\beta_Kk_{it}+g\!\left[h(k_{i,t-1},m_{i,t-1})\right]+\xi_{it}+\varepsilon_{it}.
+\end{aligned}
+\GOneLabel{eq:wrdg-general}
+\end{equation}
+The intercept $\alpha$ captures a constant component common to these expressions. Current labor can respond to $\xi_{it}$, so it may be unrelated to the first equation's error while still related to the second equation's error. We therefore use current labor among the first equation's instruments, and previous-year labor with beginning-of-year capital for the second. Estimating the equations jointly uses both sets of restrictions; the first equation need not identify each input coefficient separately on its own.
+
+\GOneSubsubsection{Productivity transition}
+\GOneLabel{sec:wrdg-restriction}
+We impose a specific relationship between current and previous-year productivity. We use the same coefficients on the current and previous-year proxy polynomials. Within this approximation, we predict current productivity as previous productivity plus a constant change. Thus an advantage in the previous year carries forward without shrinking or growing; a new surprise changes its subsequent level. This is a random-walk specification with a drift, the constant expected change. Wooldridge describes this special case in his author lecture \citep[pp.~21--22]{wooldridgelecture}. It restricts the general function $g(\cdot)$ in Equation~\GOneEqref{eq:wrdg-general}.
+
+To implement that restriction, we collect the labor and capital coefficients, the common intercept $a_0$, the drift $e_0$ and the polynomial coefficients $\theta$ in $\vartheta=(b_L,b_K,a_0,e_0,\theta')'$. Subtracting each equation's predicted value from observed logged value added gives two errors:
+\begin{equation}
+\begin{aligned}
+u_{1,it}(\vartheta)&=y_{it}-b_Ll_{it}-b_Kk_{it}-a_0-B_3(k_{it},m_{it})'\theta,\\
+u_{2,it}(\vartheta)&=y_{it}-b_Ll_{it}-b_Kk_{it}-a_0-e_0-B_3(k_{i,t-1},m_{i,t-1})'\theta.
+\end{aligned}
+\GOneLabel{eq:wooldridge}
+\end{equation}
+The second equation includes the drift $e_0$, while both equations use the same $\theta$. We therefore estimate a shared relationship for current and previous-year proxy values. LP and ACF instead refit a separate cubic relationship between previous-year and current productivity. This difference in the assumed evolution of productivity is part of the Wooldridge specification reported here.
+
+In the quadratic sensitivity specification, we replace both cubic proxy polynomials, $B_3$, with quadratic polynomials, $B_2$, and retain the shared coefficients. This changes the proxy approximation while preserving the random-walk restriction on productivity.
+
+\GOneSubsubsection{Estimation procedure}
+\GOneLabel{sec:wrdg-stages}
+We choose instruments separately for the two errors. For the first equation, we use an intercept, current labor and the current capital--materials polynomial. For the second, we use an intercept, beginning-of-year capital, previous-year labor and the previous-year capital--materials polynomial. These choices give
+\begin{equation}
+\begin{aligned}
+z_{1,it}&=(1,l_{it},B_3(k_{it},m_{it})')',\\
+z_{2,it}&=(1,k_{it},l_{i,t-1},B_3(k_{i,t-1},m_{i,t-1})')'.
+\end{aligned}
+\GOneLabel{eq:wrdg-instruments}
+\end{equation}
+For each consecutive-year observation, we multiply each equation's error by each of its instruments. We combine these products, $z_1u_1$ and $z_2u_2$, in $v_{it}(\vartheta)$ and average them across the common estimation sample, $\mathcal D$. As in ACF, the assumed population averages are zero. We choose the coefficients to minimize a weighted measure of the sample averages' departures from zero:
+\begin{equation}
+Q_W(\vartheta)=\overline v(\vartheta)'W\overline v(\vartheta),\qquad
+\overline v(\vartheta)=N^{-1}\sum_{(i,t)\in\mathcal D}v_{it}(\vartheta).
+\GOneLabel{eq:wrdg-gmm}
+\end{equation}
+The matrix $W$ determines the relative weight given to these departures. We estimate the system twice: first using an independent, unadjusted weight matrix, then updating the weights using the variation in the fitted moment products. We solve the minimization with Gauss--Newton optimization, which uses local changes in the criterion to update trial coefficients. We also check the independent information in the instruments and whether changes in the coefficients produce distinguishable changes in the moments. These instrument and moment-derivative ranks address different questions from the rank of the estimated coefficient covariance matrix. Both equations use the same consecutive-year sample.
+
+@@wrdgworked@@
+
+@@wrdgresults@@

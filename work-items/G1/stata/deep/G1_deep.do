@@ -1,0 +1,46 @@
+version 17
+* WFDOC: Driver anak untuk N08–N13 pada G0.5 DEVELOPMENT — perturbed data; bukan temuan empiris final dan bukan primary real yang diadmit.
+* WFDOC: Argumen root/base/run adalah repo, snapshot nominal read-only, dan folder diagnostik baru; base dan run harus berbeda.
+* WFDOC: Kunci sumber ialah obs_id-tahun; psid fiktif dipakai hanya untuk transisi panel internal. Keluaran dua belas CSV adalah agregat, sedangkan DTA perantara tetap lokal.
+* WFDOC: Sumber berasal dari S01/N01/N03/N04 dan CSV fit/draw pada base; N08–N13 menulis CSV bernama dalam deep/outputs, bukan ke release utama.
+* WFDOC: Output publiknya input_domains/distributions, method_funnel, prediction_profiles/tails/histograms, paired_changes/histograms, worked_calculations, fit_sensitivities, dan bootstrap_profiles/histograms.
+* WFDOC: Tahap gagal jika input/kolom/kunci/assert tidak cocok; log external mencatat tahap terakhir, dan sentinel akhir hanya muncul setelah semua do-file kembali.
+clear all
+set more off
+set type double
+args root base run
+global G1_ROOT "`root'"
+global G1_BASE "`base'"
+global G1_DEEP "`run'"
+assert "$G1_BASE"!="$G1_DEEP"
+* WFDOC: Folder output terpisah mencegah perubahan pada receipt run dasar; mkdir ditangkap agar folder yang sudah ada dapat dipakai.
+capture mkdir "$G1_DEEP"
+capture mkdir "$G1_DEEP/outputs"
+capture mkdir "$G1_DEEP/intermediate"
+capture mkdir "$G1_DEEP/qa"
+capture log close _all
+log using "$G1_DEEP/deep_execution.log", text replace
+do "$G1_ROOT/work-items/G1/stata/deep/helpers.do"
+* WFDOC: Semesta ALL plus setiap sektor pengamatan dibangun dari N03, tanpa kelompok interval-only; batas tersebut dipakai konsisten oleh stage yang mengagregasi sektor.
+use "$G1_BASE/nominal/N03_frozen.dta", clear
+levelsof nom_sector if !nom_interval_only, local(sectors) clean
+global D_SECTORS "ALL `sectors'"
+levelsof source_year if !nom_interval_only, local(years)
+global D_YEARS "0 `years'"
+global D_ACTUAL_YEARS "`years'"
+global D_PAIR_TO ""
+foreach year in $D_ACTUAL_YEARS {
+    local previous=`year'-1
+    if strpos(" $D_ACTUAL_YEARS "," `previous' ")>0 global D_PAIR_TO "$D_PAIR_TO `year'"
+}
+* WFDOC: D_PAIR_TO hanya memuat endpoint yang memiliki t−1 aktual; pasangan 2015→2017 dan interval yang menyeberangi 2016 tidak pernah dibentuk.
+* WFDOC: Urutan ini hanya merangkum domain/hasil yang sudah dibekukan: ketersediaan, funnel, prediksi, pasangan, contoh aritmetika, lalu variasi fit/draw lama.
+* WFDOC: Stage membaca snapshot base secara berurutan dan hanya membuat agregat diagnostics; loop ini tidak refit koefisien, sedangkan sentinel akhir menjadi bukti semua edge kembali.
+foreach edge in N08_inputs N09_funnel N10_profiles N11_pairs N12_worked N13_existing_fits {
+    display "DEEP `edge' START"
+    quietly do "$G1_ROOT/work-items/G1/stata/deep/`edge'.do"
+    display "DEEP `edge' END"
+}
+display "DEEP_STATA_COMPLETE_NO_REFIT"
+log close
+exit, clear

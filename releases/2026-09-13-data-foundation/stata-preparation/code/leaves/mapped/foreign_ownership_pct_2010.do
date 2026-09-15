@@ -1,0 +1,37 @@
+* Tujuan: Untuk 2010, ubah raw_dasing10 menjadi foreign_ownership_pct; vs_foreign_ownership_pct mencatat 3 untuk nilai kosong/penanda yang dibiarkan kosong; 5 untuk teks yang tidak dapat dibaca sebagai angka; 2 untuk angka negatif, 1 untuk nol, dan 0 untuk angka lain yang terbaca. // WFDOC-INJECTED
+* Input: data/intermediate/raw_wave_2010.dta // WFDOC-INJECTED
+* Output: dag/data/word_data/G0/variable_year/N_G0_foreign_ownership_pct_2010.dta // WFDOC-INJECTED
+* Jika perintah atau syarat berhenti dengan error, hasil belum selesai; cek pesan error dan baris terakhir di log. // WFDOC-INJECTED
+capture noisily __wf_progress start "code/leaves/mapped/foreign_ownership_pct_2010.do:L1:file" "" "file" 1 1 `=_rc' // WFLOG-INJECTED
+capture noisily __wf_progress start "code/leaves/mapped/foreign_ownership_pct_2010.do:L1:step-do" "code/leaves/mapped/foreign_ownership_pct_2010.do:L1:file" "statement" 1 9 `=_rc' // WFLOG-INJECTED
+do "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-wave-foundation-v2/code/init.do"
+capture noisily __wf_progress end "code/leaves/mapped/foreign_ownership_pct_2010.do:L1:step-do" "code/leaves/mapped/foreign_ownership_pct_2010.do:L1:file" "statement" 1 9 `=_rc' // WFLOG-INJECTED
+capture noisily __wf_progress start "code/leaves/mapped/foreign_ownership_pct_2010.do:L2:step-use" "code/leaves/mapped/foreign_ownership_pct_2010.do:L1:file" "statement" 2 9 `=_rc' // WFLOG-INJECTED
+* Muat kolom sumber untuk foreign_ownership_pct tahun 2010; baris tetap memakai source_year dan source_row. // WFDOC-INJECTED
+use source_year source_row raw_dasing10 using "data/intermediate/raw_wave_2010.dta", clear
+capture noisily __wf_progress end "code/leaves/mapped/foreign_ownership_pct_2010.do:L2:step-use" "code/leaves/mapped/foreign_ownership_pct_2010.do:L1:file" "statement" 2 9 `=_rc' // WFLOG-INJECTED
+capture noisily __wf_progress start "code/leaves/mapped/foreign_ownership_pct_2010.do:L3:step-assert" "code/leaves/mapped/foreign_ownership_pct_2010.do:L1:file" "statement" 3 9 `=_rc' // WFLOG-INJECTED
+* Pastikan setiap baris milik tahun 2010; pemeriksaan isid berikutnya menolak kunci source_year/source_row yang berulang. // WFDOC-INJECTED
+assert source_year==2010
+capture noisily __wf_progress end "code/leaves/mapped/foreign_ownership_pct_2010.do:L3:step-assert" "code/leaves/mapped/foreign_ownership_pct_2010.do:L1:file" "statement" 3 9 `=_rc' // WFLOG-INJECTED
+capture noisily __wf_progress start "code/leaves/mapped/foreign_ownership_pct_2010.do:L4:step-isid" "code/leaves/mapped/foreign_ownership_pct_2010.do:L1:file" "statement" 4 9 `=_rc' // WFLOG-INJECTED
+isid source_year source_row
+capture noisily __wf_progress end "code/leaves/mapped/foreign_ownership_pct_2010.do:L4:step-isid" "code/leaves/mapped/foreign_ownership_pct_2010.do:L1:file" "statement" 4 9 `=_rc' // WFLOG-INJECTED
+capture noisily __wf_progress start "code/leaves/mapped/foreign_ownership_pct_2010.do:L5:step-tempfile" "code/leaves/mapped/foreign_ownership_pct_2010.do:L1:file" "statement" 5 9 `=_rc' // WFLOG-INJECTED
+tempfile metrics
+capture noisily __wf_progress end "code/leaves/mapped/foreign_ownership_pct_2010.do:L5:step-tempfile" "code/leaves/mapped/foreign_ownership_pct_2010.do:L1:file" "statement" 5 9 `=_rc' // WFLOG-INJECTED
+capture noisily __wf_progress start "code/leaves/mapped/foreign_ownership_pct_2010.do:L6:step-postclose" "code/leaves/mapped/foreign_ownership_pct_2010.do:L1:file" "statement" 6 9 `=_rc' // WFLOG-INJECTED
+capture postclose cell
+capture noisily __wf_progress end "code/leaves/mapped/foreign_ownership_pct_2010.do:L6:step-postclose" "code/leaves/mapped/foreign_ownership_pct_2010.do:L1:file" "statement" 6 9 `=_rc' // WFLOG-INJECTED
+capture noisily __wf_progress start "code/leaves/mapped/foreign_ownership_pct_2010.do:L7:step-postfile" "code/leaves/mapped/foreign_ownership_pct_2010.do:L1:file" "statement" 7 9 `=_rc' // WFLOG-INJECTED
+* Buka tabel hitungan diagnostik; isinya mencatat banyak baris dan status, bukan mengubah nilai sumber. // WFDOC-INJECTED
+postfile cell int year str32 field long rows observed zeros invalid source_absent using `metrics', replace
+capture noisily __wf_progress end "code/leaves/mapped/foreign_ownership_pct_2010.do:L7:step-postfile" "code/leaves/mapped/foreign_ownership_pct_2010.do:L1:file" "statement" 7 9 `=_rc' // WFLOG-INJECTED
+capture noisily __wf_progress start "code/leaves/mapped/foreign_ownership_pct_2010.do:L8:step-do" "code/leaves/mapped/foreign_ownership_pct_2010.do:L1:file" "statement" 8 9 `=_rc' // WFLOG-INJECTED
+* Jalankan aturan pembentukan foreign_ownership_pct tahun 2010 yang ada di do-file anak ini. // WFDOC-INJECTED
+do "dag/edges/word_rows/G0/variable_year/foreign_ownership_pct_2010.do"
+capture noisily __wf_progress end "code/leaves/mapped/foreign_ownership_pct_2010.do:L8:step-do" "code/leaves/mapped/foreign_ownership_pct_2010.do:L1:file" "statement" 8 9 `=_rc' // WFLOG-INJECTED
+capture noisily __wf_progress start "code/leaves/mapped/foreign_ownership_pct_2010.do:L9:step-postclose" "code/leaves/mapped/foreign_ownership_pct_2010.do:L1:file" "statement" 9 9 `=_rc' // WFLOG-INJECTED
+postclose cell
+capture noisily __wf_progress end "code/leaves/mapped/foreign_ownership_pct_2010.do:L9:step-postclose" "code/leaves/mapped/foreign_ownership_pct_2010.do:L1:file" "statement" 9 9 `=_rc' // WFLOG-INJECTED
+capture noisily __wf_progress end "code/leaves/mapped/foreign_ownership_pct_2010.do:L1:file" "" "file" 1 1 `=_rc' // WFLOG-INJECTED

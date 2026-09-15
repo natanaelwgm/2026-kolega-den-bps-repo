@@ -1,0 +1,58 @@
+{
+  "id": "G0.5",
+  "optimum_work_item_id": "WI-deasy-imed-g05",
+  "workstream_id": "WS-deasy-imed-si-2010-2022",
+  "origin": "owner_operational_extension",
+  "source_row": false,
+  "source_word_rows_unchanged": 44,
+  "title": "External G0.5 identity workflow, development data and actual finalisation",
+  "status": "complete",
+  "remote_publication": {
+    "commit": "a79cd5a5e8c1eb7fdf55c5c8aa698e4f5917f9ef",
+    "verified_at": "2026-09-13T19:06:52.371521+07:00",
+    "receipt": "work-items/G0.5/publication-verification.json"
+  },
+  "authority": "work-items/G0.5/OWNER-REQUEST.md",
+  "basis_commit": "2d5e190f4aa23ae9598a70f9053d7cb3961c0aaf",
+  "input_master_sha256": "d0438798e28d67f5ac4fce3ea6a07b46630be28d88fd6cb6f17c15dc99baca08",
+  "output": "data/g0-5-development/manifest.json",
+  "downstream_routing": "work-items/G0.5/downstream-routing.json",
+  "grain": "one supplied observation with a fictional firm-year assignment for development",
+  "keys": [
+    "obs_id"
+  ],
+  "development_panel_key": [
+    "psid",
+    "source_year"
+  ],
+  "panel_identity_kind": "synthetic_development",
+  "actual_panel_linkage_verified": false,
+  "definition_of_done": [
+    "All supplied observations/waves retained in labelled perturbed parts",
+    "Explicit field treatment, coherent derived values, checksums and coverage verified",
+    "Same column interface and observation IDs through development/actual adapters",
+    "Excel-first identity preparation outside G0, reuse suitable existing IDs or generate, then verify lineage port",
+    "Nine-feature province-sector fictional panel, full replay and Stata calendar checks",
+    "Synthetic company links never copied into actual finalisation",
+    "Default development routing for all 43 downstream source requests",
+    "Actual current-tree parts retired after verified local preservation",
+    "G0.5 available on private main; original 44 Word requests preserved"
+  ],
+  "verification": [
+    "data/g0-5-development/verification.json",
+    "data/g0-5-development/package-verification.json",
+    "data/g0-5-development/adapter-verification.json",
+    "data/g0-5-development/panel-generation.json",
+    "data/g0-5-development/stata-panel-verification.json",
+    "data/g0-5-development/external-workflow-verification.json",
+    "harness/g05/test_g05.py",
+    "harness/g05/test_panel.py",
+    "harness/g05/test_external_identity.py"
+  ],
+  "not_completed_by_this_item": [
+    "real longitudinal psid verification",
+    "TFP/other estimations",
+    "44 source-row research completion"
+  ],
+  "completion_scope": "G0.5 development package and input/ID contract only; no source-row research completion"
+}

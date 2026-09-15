@@ -1,0 +1,357 @@
+#!/usr/bin/env python3
+"""Generate the English G1 appendix and native tables from frozen Stata aggregates.
+
+This publication builder never fits an estimator or reads a firm-level dataset.
+Every empirical table cell and numerical prose token records its exact operands.
+"""
+from __future__ import annotations
+import argparse,csv,hashlib,json,math,re
+from pathlib import Path
+import numpy as np
+import pandas as pd
+
+P=Path(__file__).resolve().parent
+ROOT=P.parents[2]
+DEFAULT=P.parent/'release'/'outputs'
+METHOD={'op':'OP','lp':'LP','acf':'ACF','wrdg':'Wooldridge'}
+SOURCE="G0.5 v3 modified manufacturing records with fictional company links; authors' calculations."
+
+
+def sha(p): return hashlib.sha256(Path(p).read_bytes()).hexdigest()
+def clean(v):
+    if isinstance(v,(np.integer,np.floating)): v=v.item()
+    return None if isinstance(v,float) and not math.isfinite(v) else v
+
+def year_text(values):
+    """Compact calendar ranges while preserving gaps in the supplied years."""
+    years=sorted({int(v) for v in values if pd.notna(v) and int(v)>0})
+    groups=[]
+    for year in years:
+        if groups and year==groups[-1][-1]+1: groups[-1].append(year)
+        else: groups.append([year])
+    return ', '.join(str(g[0]) if len(g)==1 else f'{g[0]}--{g[-1]}' for g in groups)
+
+def main():
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--results',type=Path,default=DEFAULT)
+    parser.add_argument('--deep-results',type=Path,default=P.parent/'deep-release'/'outputs')
+    a=parser.parse_args()
+    src=a.results.resolve()
+    if (src/'outputs').is_dir(): src=src/'outputs'
+    specpath=P.parent/'nominal-specification.json'
+    spec=json.loads(specpath.read_text())
+    traces={'table_cells':[],'numerical_prose':[]}
+    inputs={}; raw={}; data={}
+    for name in ['nominal_sample_support','nominal_coefficients','nominal_bootstrap_summary','nominal_distribution_quantiles','nominal_pairwise_comparisons']:
+        path=src/(name+'.csv')
+        data[name]=pd.read_csv(path,dtype={'sector':str})
+        with path.open(newline='') as f: raw[name]=list(csv.DictReader(f))
+        inputs[name]={'path':str(path),'sha256':sha(path),'rows':len(data[name])}
+    deep_src=a.deep_results.resolve()
+    if (deep_src/'outputs').is_dir(): deep_src=deep_src/'outputs'
+    for path in sorted(deep_src.glob('deep_*.csv')):
+        name=path.stem
+        data[name]=pd.read_csv(path,dtype={'sector':str})
+        with path.open(newline='') as stream: raw[name]=list(csv.DictReader(stream))
+        inputs[name]={'path':str(path.resolve()),'sha256':sha(path),'rows':len(data[name])}
+    assert len([k for k in data if k.startswith('deep_')])==12
+    f=data['nominal_coefficients']; b=data['nominal_bootstrap_summary']; d=data['nominal_distribution_quantiles']; pairs=data['nominal_pairwise_comparisons']; supp=data['nominal_sample_support']
+    primary=f[(f.variant=='primary')&(f.status=='fit_success')&(f.sample_id=='own')]
+    sectors=sorted(primary.sector.unique())
+    assert not primary.empty, 'No admitted own-sample estimates to publish'
+    methods=[m for m in METHOD if m in set(primary.method)]
+    common_primary=f[(f.variant=='primary')&(f.status=='fit_success')&(f.sample_id=='common')]
+    all_primary=f[(f.variant=='primary')&(f.status=='fit_success')]
+    assert b.successful.le(spec['bootstrap_draws']).all()
+    assert b.loc[b.interval_admitted.eq(1),'successful'].ge(spec['bootstrap_success_minimum']).all()
+    assert f.measurement_mode.eq('nominal_development').all() and f.real_input_verified.eq(0).all()
+    assert f.specification_id.eq(spec['specification_id']).all(), 'Aggregate specification does not match current manuscript specification'
+    assert set(['normalizer_scope','coefficient_year_min','coefficient_year_max']).issubset(data['deep_prediction_profiles'].columns), 'Old diagnostic schema cannot supply this manuscript'
+    assert data['deep_prediction_profiles'].normalizer_scope.dropna().eq('pooled_dynamic').all()
+    keys={
+      'nominal_sample_support':['sector','method','sample_id'],
+      'nominal_coefficients':['sector','method','sample_id','variant'],
+      'nominal_bootstrap_summary':['sector','method','sample_id'],
+      'nominal_distribution_quantiles':['sector','method','sample_id','measure'],
+      'nominal_pairwise_comparisons':['sector','sample_id','method_a','method_b','comparison_scope']}
+
+    for name in data:
+        if name.startswith('deep_'):
+            keys[name]=[k for k in ['sector','method','sample_id','source_year','year_from','year_to','input','scale','fit_scope','measure','stage','variant','example_type','bin_lower','bin_upper'] if k in data[name].columns]
+
+    def operand(name,row,field):
+        index=int(row.name)
+        return {'source_file':inputs[name]['path'],'source_sha256':inputs[name]['sha256'],'csv_line':index+2,'row_key':{k:clean(row[k]) for k in keys[name]},'field':field,'value':clean(row[field]),'source_text':raw[name][index][field]}
+    def emit(bucket,anchor,value,operands,fmt='.3f',scale=1,operation='identity',display=None):
+        if display is None:
+            display='---' if pd.isna(value) else format(float(value)*scale,fmt)
+        traces[bucket].append({'anchor':anchor,'operation':operation,'operands':operands,'unrounded_value':clean(value),'scale':scale,'format':fmt,'printed_string':display})
+        return display
+    def cell(name,row,field,anchor,fmt='.3f',display=None):
+        if field in {'source_year','year','year_from','year_to','coefficient_year','normalizer_year'}: fmt='.0f'
+        return emit('table_cells',anchor,row[field],[operand(name,row,field)],fmt=('text-map' if display is not None else fmt),operation=('label mapping' if display is not None else 'identity'),display=display)
+    def val(name,row,field,anchor,fmt='.3f'):
+        return emit('numerical_prose',anchor,row[field],[operand(name,row,field)],fmt=fmt)
+    def deriv(bucket,anchor,rows,fields,operation,value,fmt='.3f'):
+        return emit(bucket,anchor,value,[operand(name,row,field) for name,row in rows for field in fields],fmt=fmt,operation=operation)
+    def specval(field,anchor,fmt=',.0f'):
+        value=spec[field]
+        return emit('numerical_prose',anchor,value,[{'source_file':str(specpath),'source_sha256':sha(specpath),'json_pointer':'/'+field,'value':value}],fmt=fmt)
+    def declared(anchor,field,printed):
+        return emit('table_cells',anchor,spec[field],[{'source_file':str(specpath),'source_sha256':sha(specpath),'json_pointer':'/'+field,'value':spec[field]}],fmt='declared-definition paraphrase',display=printed)
+    def one(name,**query):
+        g=data[name]
+        for k,v in query.items(): g=g[g[k].eq(v)]
+        assert len(g)==1,(name,query)
+        return g.iloc[0]
+    def table(file,caption,label,columns,head,rows,notes,source=SOURCE):
+        if len(rows)>24:
+            header=' & '.join(head)+' \\\\\n'
+            text='\\begingroup\\fontsize{9.2}{11.2}\\selectfont\n\\setlength{\\tabcolsep}{4.3pt}\\renewcommand{\\arraystretch}{1.1}\n'
+            text+='\\begin{longtable}{'+columns+'}\n\\caption{'+caption+'}\\GOneLabel{tab:'+label+'}\\\\\n\\toprule\n'+header+'\\midrule\n\\endfirsthead\n'
+            text+='\\multicolumn{'+str(len(head))+'}{l}{\\textit{'+caption+' (continued)}}\\\\\n\\toprule\n'+header+'\\midrule\n\\endhead\n'
+            text+='\\midrule\n\\multicolumn{'+str(len(head))+'}{r}{\\textit{Continued on next page}}\\\\\n\\endfoot\n\\bottomrule\n\\endlastfoot\n'
+            text+='\n'.join(' & '.join(row)+' \\\\' for row in rows)
+            text+='\n\\end{longtable}\n\\endgroup\n\\appnotes{'+notes+'}{'+source+'}\n'
+            (P/'tables'/file).write_text(text)
+            return
+        text='\\begin{table}[H]\n\\centering\n\\caption{'+caption+'}\n\\GOneLabel{tab:'+label+'}\n\\begingroup\\fontsize{9.2}{11.2}\\selectfont\n\\setlength{\\tabcolsep}{4.3pt}\\renewcommand{\\arraystretch}{1.1}\n\\begin{tabular}{'+columns+'}\n\\toprule\n'+' & '.join(head)+' \\\\\n\\midrule\n'
+        text+='\n'.join(' & '.join(row)+' \\\\' for row in rows)
+        text+='\n\\bottomrule\n\\end{tabular}\n\\endgroup\n\\appnotes{'+notes+'}{'+source+'}\n\\end{table}\n'
+        (P/'tables'/file).write_text(text)
+
+    # Definitions bind to the maintained specification; no historic documentary gate is silently reinstated.
+    definitions=[('Outcome $y$','outcome','Log positive reported nominal value added'),('Labor $l$','labor','Log positive reported workers'),('Capital $k$','capital','Log positive preceding-calendar-year stock, assuming year-end timing'),('OP proxy $i$','op_proxy','Log positive reported additions, assuming investment meaning'),('Other proxies $m$','lp_acf_wrdg_proxy','Log positive reported raw/supporting materials')]
+    rows=[]
+    for i,(label,field,printed) in enumerate(definitions):
+        for j,text in enumerate([label,printed]): declared(f'measurement:r{i+1}:c{j+1}',field,text)
+        rows.append([label,printed])
+    table('measurement.tex','Variables in the production equation','measurement','lp{10.0cm}',['Measure','Construction'],rows,'We retain each variable\'s reported unit scale. Capital at the beginning of a production year uses the preceding calendar-year total under the year-end-stock assumption. Reported additions separately supply assumed investment. We require positive values and exact timing, preserve the narrower documentary flags, and apply no price adjustment.',"G0.5 v3 development fields and the assumed-capital nominal specification; authors' construction.")
+    rows=[]
+    observed_sectors=sorted(supp.sector.unique())
+    for sector in observed_sectors:
+        lp=one('nominal_sample_support',sector=sector,method='lp',sample_id='own');op=one('nominal_sample_support',sector=sector,method='op',sample_id='own');common=one('nominal_sample_support',sector=sector,method='lp',sample_id='common')
+        rows.append([cell('nominal_sample_support',lp,'sector',f'support:{sector}:sector',display=sector),*[cell('nominal_sample_support',r,col,f'support:{sector}:{tag}',',.0f') for r,col,tag in [(lp,'N_domain','materials_domain'),(lp,'N_dynamic','materials_dynamic'),(common,'N_dynamic','common_dynamic'),(op,'N_domain','investment_domain'),(op,'N_selection','selection'),(op,'N_disappearance','disappearance')]]])
+    table('support.tex','Input and consecutive-year samples by sector','support','lrrrrrr',['Code',r'\makecell{Materials\\inputs}',r'\makecell{Materials\\pairs}',r'\makecell{Four-method\\pairs}',r'\makecell{Investment\\inputs}',r'\makecell{OP risk\\intervals}',r'\makecell{Fictional\\disappearances}'],rows,'The materials domain supplies LP, ACF and Wooldridge before method-specific numerical checks. All counts pool supported calendar years. Four-method eligibility additionally requires the investment proxy before taking exact lags. The OP risk sample includes eligible prior-year state and proxy information, including assignments that disappear, separately from the continuing production sample. Counts are observations or intervals, not unique companies. We retain every observed sector, including those without a successful fit.')
+    rows=[]
+    for _,rr in all_primary.sort_values(['sample_id','sector','method']).iterrows():
+        sector,m,sample=rr.sector,rr.method,rr.sample_id
+        br=one('nominal_bootstrap_summary',sector=sector,method=m,sample_id=sample)
+        anchor=f'coeff:{sample}:{sector}:{m}'
+        vals=[cell('nominal_coefficients',rr,'sample_id',anchor+':sample',display=sample.capitalize()),cell('nominal_coefficients',rr,'sector',anchor+':sector',display=sector),cell('nominal_coefficients',rr,'method',anchor+':method',display=METHOD[m]),cell('nominal_coefficients',rr,'N',anchor+':N',',.0f')]
+        for term,lo,hi in [('L','ci_L_lo','ci_L_hi'),('K','ci_K_lo','ci_K_hi')]:
+            point=cell('nominal_coefficients',rr,'beta_'+term,anchor+':beta'+term,'.4f');low=cell('nominal_bootstrap_summary',br,lo,anchor+':'+lo,'.4f');high=cell('nominal_bootstrap_summary',br,hi,anchor+':'+hi,'.4f')
+            vals.append(r'\makecell{'+point+r'\\{['+low+', '+high+']}}')
+        vals.append(cell('nominal_coefficients',rr,'returns_to_scale',anchor+':RTS','.4f'))
+        rows.append(vals)
+    table('coefficients.tex','Production coefficients and bootstrap intervals','coefficients','lllrrrr',['Sample','Code','Method','$N$',r'$\widehat\beta_L$',r'$\widehat\beta_K$',r'$\widehat\beta_L+\widehat\beta_K$'],rows,'Each row uses one sector and sample with constant coefficients over its eligible years, the primary cubic approximation and the ordinary-least-squares starting rule. Own samples use each method\'s required inputs; common samples require all four methods\' inputs before taking exact lags. Brackets contain admitted 95 percent percentile intervals from whole-history bootstrap resamples. A dash means an interval is unavailable under the minimum-success rule. The method tables show standard errors and successful draw counts. We retain the original estimates, without imposing coefficient signs or returns to scale after seeing the results.')
+    rows=[]
+    for sample in ['own','common']:
+        for m in METHOD:
+            rr=one('nominal_distribution_quantiles',sector='ALL',method=m,sample_id=sample,measure='centered')
+            rows.append([cell('nominal_distribution_quantiles',rr,'sample_id',f'distribution:{sample}:{m}:sample',display=sample.capitalize()),cell('nominal_distribution_quantiles',rr,'method',f'distribution:{sample}:{m}:method',display=METHOD[m]),*[cell('nominal_distribution_quantiles',rr,c,f'distribution:{sample}:{m}:{c}',',.0f' if c=='N' else '.3f') for c in ['N','sd','p1','p25','p50','p75','p99']]])
+    table('distribution.tex','Pooled centered residual distributions','distribution','llrrrrrrr',['Sample','Method','$N$','SD','P1','P25','Median','P75','P99'],rows,'Each distribution uses the named method\'s pooled dynamic estimation records. We subtract its own sector-method-sample fitted mean. The pooled fit mean is therefore zero when the group is nonempty. An own-sample distribution can use different records from another method; the common rows use the separate common-input estimation specification. Quantiles and standard deviations describe dispersion across observations, not coefficient uncertainty. Zero counts and unavailable numeric summaries remain distinct.')
+    rows=[]
+    for sample in ['own','common']:
+        for ma,mb in [('op','lp'),('op','acf'),('op','wrdg'),('lp','acf'),('lp','wrdg'),('acf','wrdg')]:
+            rr=one('nominal_pairwise_comparisons',sector='ALL',sample_id=sample,method_a=ma,method_b=mb,comparison_scope='pairwise')
+            anchor=f'pairs:{sample}:{ma}:{mb}'
+            rows.append([cell('nominal_pairwise_comparisons',rr,'sample_id',anchor+':sample',display=sample.capitalize()),cell('nominal_pairwise_comparisons',rr,'method_a',anchor+':a',display=METHOD[ma])+r'--'+cell('nominal_pairwise_comparisons',rr,'method_b',anchor+':b',display=METHOD[mb]),*[cell('nominal_pairwise_comparisons',rr,c,anchor+':'+c,',.0f' if c.startswith('N_') else '.3f') for c in ['N_compared','N_four_method','pearson_centered','rho_spearman']]])
+    table('rank_comparison.tex','Residual agreement on shared estimation records','rank-comparison','llrrrr',['Sample','Methods',r'\makecell{Pairwise\\records}',r'\makecell{Four-method\\records}',r'\makecell{Pearson\\correlation}',r'\makecell{Spearman\\correlation}'],rows,'We match primary dynamic-fit predictions to the same original company-year record. Each row compares the pair\'s shared observations within the named estimation specification. Own and common rows can use different coefficient vectors as well as different records. Pearson and Spearman correlations use centered logs, with average ranks for ties. The four-method count describes the intersection of all four fitted prediction sets, which need not equal a pairwise intersection. A dash means the correlation is unavailable.')
+    sens=[];rows=[]
+    for m in methods:
+        cols=[]
+        for variants,term,fmt in [(['low_l','high_l'],'L','.2e'),(['low_l','high_l'],'K','.2e'),(['poly2'],'L','.4f'),(['poly2'],'K','.4f')]:
+            operands=[];differences=[]
+            for _,pr in primary.loc[primary.method.eq(m)].iterrows():
+                for variant in variants:
+                    sr=one('nominal_coefficients',sector=pr.sector,method=m,sample_id='own',variant=variant)
+                    if sr.status!='fit_success': continue
+                    operands += [operand('nominal_coefficients',pr,'beta_'+term),operand('nominal_coefficients',sr,'beta_'+term)]
+                    differences.append(abs(sr['beta_'+term]-pr['beta_'+term]))
+            if not differences:
+                cols.append('---');continue
+            maximum=max(differences)
+            cols.append(emit('table_cells',f'sensitivity:{m}:{variants[0]}:{term}',maximum,operands,fmt=fmt,operation='maximum absolute paired sensitivity minus primary, across displayed sectors'))
+            sens.append((m,variants[0],term,maximum,operands))
+        rr=primary.loc[primary.method.eq(m)].iloc[0]
+        rows.append([cell('nominal_coefficients',rr,'method',f'sensitivity:{m}:method',display=METHOD[m]),*cols])
+    table('sensitivity.tex','Coefficient changes under alternative estimation choices','sensitivity','lrrrr',['Method',r'\makecell{Starts:\\labor}',r'\makecell{Starts:\\capital}',r'\makecell{Quadratic:\\labor}',r'\makecell{Quadratic:\\capital}'],rows,'Each entry is the maximum absolute difference from the primary coefficient over sectors with successful own-sample fits in both compared variants. Alternative deterministic starts are $(0.3,0.7)$ and $(0.7,0.3)$ with the cubic proxy. The quadratic comparison retains the ordinary-least-squares start and changes proxy degree to two. OP, LP and ACF retain the separate cubic transition; Wooldridge changes both current and lagged proxy bases. The input sample and median translations remain fixed. Missing alternatives are not treated as zero changes; the attempt tables retain their outcomes.')
+
+    n={}
+    source_manifest=ROOT/'data/g0-5-development/manifest.json';source_meta=json.loads(source_manifest.read_text())
+    n['source_records']=emit('numerical_prose','source:records',source_meta['rows'],[{'source_file':str(source_manifest),'source_sha256':sha(source_manifest),'json_pointer':'/rows','value':source_meta['rows']}],fmt=',.0f')
+    n['sectors']=deriv('numerical_prose','sample:sector_count',[('nominal_coefficients',r) for _,r in primary.iterrows()],['sector'],'count distinct admitted sector codes',len(sectors),',.0f')
+    n['primary']=deriv('numerical_prose','sample:primary_count',[('nominal_coefficients',r) for _,r in primary.iterrows()],['status'],'count admitted own-domain primary coefficient rows',len(primary),',.0f')
+    n['common_primary']=deriv('numerical_prose','sample:common_primary_count',[('nominal_coefficients',r) for _,r in common_primary.iterrows()],['status'],'count successful fixed-variant coefficient rows',len(common_primary),',.0f')
+    n['allfits']=deriv('numerical_prose','sensitivity:fit_count',[('nominal_coefficients',r) for _,r in f[f.status.eq('fit_success')].iterrows()],['status'],'count successful fixed-variant coefficient rows',int(f.status.eq('fit_success').sum()),',.0f')
+    ownboot=b[b.sample_id.eq('own')]
+    commonboot=b[b.sample_id.eq('common')]
+    n['draws']=specval('bootstrap_draws','inference:draws')
+    n['drawtotal']=deriv('numerical_prose','inference:total_resamples',[('nominal_bootstrap_summary',r) for _,r in ownboot.iterrows()],['successful'],'sum successful resamples over all admitted primary cells',ownboot.successful.sum(),',.0f')
+    n['common_drawtotal']=deriv('numerical_prose','inference:common_total_resamples',[('nominal_bootstrap_summary',r) for _,r in commonboot.iterrows()],['successful'],'sum successful resamples over all admitted primary cells',commonboot.successful.sum(),',.0f')
+    for field,key in [('minimum_first_stage_N','minfirst'),('minimum_dynamic_N','mindyn'),('minimum_dynamic_firms','minfirm'),('minimum_OP_selection_N','minrisk'),('minimum_OP_selection_exits','minexit'),('minimum_OP_selection_continuers','mincontinue'),('bootstrap_success_minimum','minsuccess')]: n[key]=specval(field,'threshold:'+field)
+    for field in ['history_years','production_years','dynamic_years']:
+        n[field]=emit('numerical_prose','timing:'+field,spec[field],[{'source_file':str(specpath),'source_sha256':sha(specpath),'json_pointer':'/'+field,'value':spec[field]}],fmt='declared design',display=year_text(spec[field]))
+
+    def method_count(m):
+        part=primary[primary.method.eq(m)]
+        return deriv('numerical_prose','sample:'+m+':sectors',[('nominal_coefficients',r) for _,r in part.iterrows()],['sector'],'count distinct admitted sector codes',part.sector.nunique(),',.0f')
+    method_counts={m:method_count(m) for m in METHOD}
+    coverage=[]
+    for m in METHOD:
+        rr=one('nominal_distribution_quantiles',sector='ALL',method=m,sample_id='own',measure='centered')
+        count=val('nominal_distribution_quantiles',rr,'N','sample:'+m+':fitN',',.0f')
+        estimate_noun='estimate' if int(primary.method.eq(m).sum())==1 else 'estimates'
+        coverage.append(f'{METHOD[m]} has {method_counts[m]} accepted sector {estimate_noun} and {count} dynamic company-year observations')
+    n['support_results']='; '.join(coverage)+'. These counts describe each method\'s own sample. Repeated annual observations from a fictional company remain distinct records. We keep failures of the sample and numerical requirements visible rather than borrowing coefficients from another sector.'
+    n['intro_results']=f"Using the observations required by each method, we obtain {n['primary']} main sector estimates: LP in {method_counts['lp']} sectors, ACF in {method_counts['acf']}, Wooldridge in {method_counts['wrdg']} and OP in {method_counts['op']}. These estimates span {n['sectors']} manufacturing groups. Requiring inputs suitable for all four methods gives {n['common_primary']} separate common-sample estimates. We compare the methods on shared records and distinguish that comparison from the coverage of their broader samples."
+    n['opening_answer']='We compare the value manufacturers report creating after accounting for the workers and capital they use. The methods support different comparisons: some cover more industry groups, while a comparison shared by all four uses a much smaller set of observations. We therefore examine the estimated input contributions alongside the records on which the methods can be compared.'
+
+    coefficient_parts=[]
+    for field,title in [('beta_L','labor'),('beta_K','capital')]:
+        low=primary.loc[primary[field].idxmin()];high=primary.loc[primary[field].idxmax()]
+        lo=val('nominal_coefficients',low,field,'coeff:range:'+field+':min','.4f');hi=val('nominal_coefficients',high,field,'coeff:range:'+field+':max','.4f')
+        coefficient_parts.append(f'the {title} coefficient ranges from {lo} ({METHOD[low.method]}, sector {low.sector}) to {hi} ({METHOD[high.method]}, sector {high.sector})')
+    n['coefficient_results']='Across own-sample estimates, '+'; '.join(coefficient_parts)+'. These ranges describe variation across both methods and sectors. They do not isolate a method effect unless we also fix the sector and comparison sample. We retain the estimated signs rather than constraining the coefficients after seeing them.'
+    uncertainty_synthesis='The bootstrap summaries describe additional variation in the estimated input contributions when the sample histories change.'
+    if ownboot.se_L.notna().any():
+        uncertain=ownboot.loc[ownboot.se_L.idxmax()]
+        se=val('nominal_bootstrap_summary',uncertain,'se_L','coefficient:largest_labor_se','.4f')
+        lo=val('nominal_bootstrap_summary',uncertain,'ci_L_lo','coefficient:largest_labor_se:lo','.4f')
+        hi=val('nominal_bootstrap_summary',uncertain,'ci_L_hi','coefficient:largest_labor_se:hi','.4f')
+        n['coefficient_results']+=f" The largest labor standard error is {se}, for {METHOD[uncertain.method]} in sector {uncertain.sector}; its admitted percentile interval is [{lo}, {hi}]. Standard errors measure dispersion across the resampled estimates, while percentile intervals can leave a small number of extreme resamples outside their endpoints. We examine both summaries and the full coefficient tails in the method chapters."
+        uncertainty_synthesis=f"Uncertainty also differs across equations: the largest labor bootstrap standard error is {se}, for {METHOD[uncertain.method]} in sector {uncertain.sector}."
+
+    distribution_parts=[]
+    for m in methods:
+        rr=one('nominal_distribution_quantiles',sector='ALL',method=m,sample_id='own',measure='centered')
+        n['sd_'+m]=val('nominal_distribution_quantiles',rr,'sd','distribution:sd_'+m,'.3f')
+        distribution_parts.append(METHOD[m]+' '+n['sd_'+m])
+    n['distribution_results']='The standard deviations of own-sample centered residuals are '+', '.join(distribution_parts)+' log points. A narrower distribution leaves less variation after the fitted input contributions, but does not establish better measurement of physical productivity. These own-sample summaries also differ in sector and observation coverage. The common-sample rows and matched comparisons help separate that coverage issue from differences between fitted equations.'
+    valid=pairs.query("sector == 'ALL' and sample_id == 'own' and comparison_scope == 'pairwise'").dropna(subset=['rho_spearman'])
+    pair_parts=[]
+    for _,rr in valid.iterrows():
+        pair=f'{METHOD[rr.method_a]}--{METHOD[rr.method_b]}'
+        rho=val('nominal_pairwise_comparisons',rr,'rho_spearman',f'pairs:own:{rr.method_a}:{rr.method_b}:rho','.3f')
+        nn=val('nominal_pairwise_comparisons',rr,'N_compared',f'pairs:own:{rr.method_a}:{rr.method_b}:N',',.0f')
+        pair_parts.append(f'{pair}: {rho} on {nn} shared records')
+    n['pair_results']='The own-sample rank correlations are '+('; '.join(pair_parts) if pair_parts else 'unavailable under the required shared-record comparison')+'. Each pair holds its records fixed, but different pairs can use different intersections. The common-sample rows compare the separately fitted common-input specifications; we do not equate those coefficients with the own-sample coefficients. Correlation measures agreement, not which estimator best measures physical productivity.'
+    rank_lpw=one('nominal_pairwise_comparisons',sector='ALL',sample_id='own',method_a='lp',method_b='wrdg',comparison_scope='pairwise')
+    rank_lpa=one('nominal_pairwise_comparisons',sector='ALL',sample_id='own',method_a='lp',method_b='acf',comparison_scope='pairwise')
+    n['rank_synthesis']='The pairwise comparisons distinguish agreement about ordering from agreement about coefficient values.'
+    if rank_lpw.rho_spearman >= .98 and rank_lpa.rho_spearman < rank_lpw.rho_spearman-.05:
+        lpw=val('nominal_pairwise_comparisons',rank_lpw,'rho_spearman','rank_synthesis:lpw','.3f')
+        lpa=val('nominal_pairwise_comparisons',rank_lpa,'rho_spearman','rank_synthesis:lpa','.3f')
+        nn=val('nominal_pairwise_comparisons',rank_lpw,'N_compared','rank_synthesis:N',',.0f')
+        n['intro_results']+=' LP and Wooldridge place the shared records in closely aligned order, while ACF changes their ordering more. We examine those comparisons together with coefficient uncertainty and sensitivity to estimation choices.'
+        n['rank_synthesis']=f'LP and Wooldridge give closely aligned rankings on {nn} shared own-sample records, with a rank correlation of {lpw}. The LP--ACF correlation is {lpa}. These comparisons show that methods can agree strongly about ordering without assigning the same contributions to the inputs.'
+    common_pair=one('nominal_pairwise_comparisons',sector='ALL',sample_id='common',method_a='op',method_b='lp',comparison_scope='pairwise')
+    n['common_records']=val('nominal_pairwise_comparisons',common_pair,'N_four_method','comparison:common:fourN',',.0f')
+    if sens:
+        start=max((row for row in sens if row[1]=='low_l'),key=lambda row:row[3]);poly=max((row for row in sens if row[1]=='poly2'),key=lambda row:row[3])
+        change=emit('numerical_prose','sensitivity:max_start',start[3],[operand for row in sens if row[1]=='low_l' for operand in row[4]],fmt='.4f',operation='maximum absolute start difference across all methods and displayed sectors')
+        polychange=emit('numerical_prose','sensitivity:max_poly2',poly[3],[operand for row in sens if row[1]=='poly2' for operand in row[4]],fmt='.4f',operation='maximum absolute proxy-degree difference across displayed methods, sectors and coefficients')
+        n['sensitivity_results']=f"The largest absolute change under alternative starts is {change}, for {METHOD[start[0]]}'s {'labor' if start[2]=='L' else 'capital'} coefficient. The quadratic proxy comparison reaches {polychange}, for {METHOD[poly[0]]}'s {'labor' if poly[2]=='L' else 'capital'} coefficient. These maxima identify sensitivity within the tested choices, keeping each compared method-sector sample fixed. Changing the approximation changes the fitted model as well as the numerical problem."
+        sensitivity_synthesis=f"Keeping the records and model fixed but changing the numerical start moves {METHOD[start[0]]}'s {'labor' if start[2]=='L' else 'capital'} coefficient by as much as {change}."
+    else:
+        n['sensitivity_results']='No alternative fit supplies an admitted coefficient comparison. The attempt ledger distinguishes unavailable alternatives from zero changes.'
+        sensitivity_synthesis=n['sensitivity_results']
+    n['conclusion_results']=f"Treating the reported capital totals as year-end stocks permits {n['primary']} own-sample sector estimates and {n['common_primary']} common-sample estimates. The materials-based methods cover more of the available records, while the comparison shared by all four methods contains {n['common_records']} fitted company-year observations. We therefore distinguish broad prediction coverage from the narrower basis for a four-method comparison.\n\n"+n['rank_synthesis']+' '+uncertainty_synthesis+' '+sensitivity_synthesis+' Agreement about residual ordering alone cannot establish stable input contributions or validate the assumed production relationship.'
+    # Bind fixed design declarations to their exact source specification or analytical code.
+    for anchor,field,display in [('basis:primary_degree','primary_polynomial',str(spec['primary_polynomial'])),('basis:sensitivity_degree','sensitivity_proxy_polynomial',str(spec['sensitivity_proxy_polynomial'])),('inference:draws_in_exhibit_notes','bootstrap_draws',str(spec['bootstrap_draws']))]:
+        emit('numerical_prose',anchor,spec[field],[{'source_file':str(specpath),'source_sha256':sha(specpath),'json_pointer':'/'+field,'value':spec[field]}],fmt='declared design',display=display)
+    for anchor,values,display in [('design:quantile_probabilities',[.01,.05,.25,.5,.75,.95,.99],'P1, P5, P25, P50, P75, P95, P99'),('design:bootstrap_percentile_endpoints',[.025,.975],'95 percent; 2.5th and 97.5th'),('design:rank_bins_and_minimum_count',[20,5],'20 bins; at least five records'),('design:alternative_structural_starts',[[.3,.7],[.7,.3]],'(0.3,0.7) and (0.7,0.3)')]:
+        code=P.parent/'stata'/('nominal/N06_outputs.do' if 'rank' in anchor or 'quantile' in anchor else 'methods/g1_bootstrap.ado' if 'bootstrap' in anchor else 'methods/g1_fit.ado')
+        emit('numerical_prose',anchor,values,[{'source_file':str(code),'source_sha256':sha(code),'declared_calculation':anchor,'value':values}],fmt='declared calculation',display=display)
+
+    # Select only assets from the current plot manifests and verify their source hashes before inclusion.
+    registered_figures={}
+    for manifest_name in ['figure-manifest.json','deep-figure-manifest.json']:
+        plot_manifest=json.loads((P/'provenance'/manifest_name).read_text())
+        for item in plot_manifest['figures']:
+            for source in item['sources']:
+                basename=Path(source.get('file',source.get('path',''))).name
+                source_path=(deep_src if basename.startswith('deep_') else src)/basename
+                assert source_path.is_file() and sha(source_path)==source['sha256'], ('Figure uses a different aggregate source',item['figure'],basename)
+            for output in item['outputs']:
+                if Path(output['path']).suffix=='.pdf':
+                    file=P/output['path']
+                    assert file.is_file() and sha(file)==output['sha256'], ('Figure asset differs from manifest',str(file))
+                    registered_figures[item['figure']]=file
+
+    def figure(name,caption,label,notes):
+        assert name in registered_figures, ('Unregistered figure',name)
+        return '\\begin{figure}[H]\n\\centering\n\\caption{'+caption+'}\n\\GOneLabel{fig:'+label+'}\n\\includegraphics[width=\\linewidth]{figures/'+name+'.pdf}\n\\appnotes{'+notes+'}{'+SOURCE+'}\n\\end{figure}'
+    def figure_group(name,caption,label,notes):
+        paths=sorted((path for key,path in registered_figures.items() if key==name or re.fullmatch(re.escape(name)+r'_p[0-9]+',key)),key=lambda path:(0 if path.stem==name else int(path.stem.rsplit('_p',1)[-1]) if '_p' in path.stem and path.stem.rsplit('_p',1)[-1].isdigit() else 999,path.name))
+        assert paths and paths[0].stem==name, ('Missing current figure family',name)
+        return '\n'.join(figure(path.stem,caption+(' (continued)' if pos else ''),label+('-p'+str(pos+1) if pos else ''),notes) for pos,path in enumerate(paths))
+    figs={
+        'supportfig':figure_group('sample_support','Consecutive-year estimation samples','sample-support','Counts pool all supported calendar transitions under each method\'s own input requirements. Common-input counts appear separately in Table~\\GOneRef{tab:support}. Sample thresholds precede numerical estimation; positive support alone does not guarantee a fitted coefficient.'),
+        'coefffig':figure_group('coefficients','Own-sample input coefficients and uncertainty','coefficients','Marks show primary own-sample coefficients. Available percentile intervals use successful full-history bootstrap resamples and the declared minimum-success rule. We retain full interval endpoints; the table separately includes common-sample estimates.'),
+        'distfig':figure_group('distribution','Own-sample centered residual distributions','distribution','We pool dynamic estimation records after subtracting each sector-method-sample fitted mean. Bins span 0.5 log points and retain all finite tails. Numeric labels identify the modal and first and last occupied bins. Each method uses its own denominator.'),
+        'rankfig':figure_group('rank_comparison','Own-sample rank correlations by sector','rank-comparison','Each coefficient compares the same original company-year records in a method pair. Pooled correlations combine available sectors after centering. An unavailable pair is not zero agreement. Different pairs can use different intersections.'),
+        'scatterfig':figure_group('rank_scatter','Binned residual comparisons','rank-scatter','We rank the first method\'s centered residual on shared dynamic records, assign average ranks to ties and form 20 bins. We show a bin only if it contains at least five records. Each mark summarizes paired residuals or ranks as indicated on its axes; sparse bins remain outside the plotted summaries.'),
+        'sensfig':figure_group('sensitivity','Labor-coefficient sensitivity','sensitivity','We keep the own-sample records fixed within each sector and method. Alternative starts change only initial structural coefficients. The quadratic specification changes the proxy approximation. The primary estimate remains the one specified before examining these comparisons.'),
+        'opsupportfig':figure_group('deep_op_support','Investment and continuation support','deep-op-support','The OP risk sample records whether eligible fictional assignments continue into the immediately following supplied calendar year, including disappearances. It is formed separately from the continuing production sample. No interval crosses the missing source year or follows the final year. Sample thresholds do not replace rank or convergence checks.')}
+    if float(common_pair.N_four_method)>0:
+        common_spread=[]
+        for m in METHOD:
+            rr=one('nominal_distribution_quantiles',sector='ALL',method=m,sample_id='common',measure='centered')
+            sd=val('nominal_distribution_quantiles',rr,'sd',f'common_distribution:{m}:sd','.3f')
+            common_spread.append(METHOD[m]+' '+sd)
+        common_fig=figure_group('deep_common_distribution','Common-sample centered residual distributions','deep-common-distribution','The four panels use common-input primary models on their shared pooled dynamic company-year records. Each method has separately estimated coefficients and its own pooled sector-method reference mean. Bins span 0.5 log points and use the same display axes across methods. Numeric labels identify the modal and first and last occupied bins. Every finite tail remains; the common sample is distinct from the wider own-input samples.')
+        n['common_distribution']=f'Figure~\\GOneRef{{fig:deep-common-distribution}} compares the four methods after requiring inputs suitable for all of them. The common intersection contains {n["common_records"]} fitted company-year records. Each model is estimated separately under the common-input rule, so this fixes the observations in the comparison without forcing the methods to use identical coefficients.\n'+common_fig+'\nThe common-sample standard deviations are '+', '.join(common_spread)+' log points. Since these panels use the same records, their differences describe how the fitted methods allocate value added between input contributions and the remainder. These common-sample distributions do not replace the wider own-sample results: requiring inputs suitable for all four methods changes the records available for estimation and can change an earlier regression even when a dynamic pair remains the same.\n'
+    else:
+        n['common_distribution']='No records supply a shared four-method fitted comparison under the common-input specification. The common rows retain this absence rather than replacing an unavailable distribution with zero residuals.\n'
+    from deep_publication import build as build_deep
+    n.update(build_deep(data,one,cell,val,table,sectors,figure,P))
+    from method_tables import build as build_method_tables
+    n.update(build_method_tables(data,one,cell,val,table,declared,sectors))
+    for m in METHOD:
+        part=primary.loc[primary.method.eq(m)]
+        if part.empty:
+            n[m+'results']=r'\GOneSubsubsection{Estimation outcome}\GOneLabel{sec:'+m+r'-coefficients} No sector supplies an accepted own-sample estimate under the sample and numerical requirements for this method. We report the support information and leave unavailable coefficients and derived residuals missing.'
+            continue
+        label=METHOD[m]
+        interpretation=[]
+        for field,title in [('beta_L','labor'),('beta_K','capital')]:
+            low=part.loc[part[field].idxmin()];high=part.loc[part[field].idxmax()]
+            lo=val('nominal_coefficients',low,field,f'{m}:coefficient:min:{field}','.4f');hi=val('nominal_coefficients',high,field,f'{m}:coefficient:max:{field}','.4f')
+            interpretation.append(f'the {title} coefficient is {lo}' if len(part)==1 else f'{title} ranges from {lo} to {hi}')
+        coefftext=(f'In sector {part.iloc[0].sector}, ' if len(part)==1 else 'Across the estimated sectors, ')+'; '.join(interpretation)+'. We retain the signs and magnitudes returned by the primary specification. Their interpretation depends on beginning-capital timing, reported monetary scales, the proxy assumptions and the estimation criterion. The intervals describe additional variation when the same calculation is repeated on resampled histories.'
+        negative_capital=part.loc[part.beta_K.lt(0)].sort_values('sector')
+        if not negative_capital.empty:
+            sector_names=[emit('numerical_prose',f'{m}:negative_capital:{r.sector}:sector',r.sector,[operand('nominal_coefficients',r,'sector')],fmt='text-map',operation='label mapping',display=r.sector) for _,r in negative_capital.iterrows()]
+            joined=sector_names[0] if len(sector_names)==1 else ', '.join(sector_names[:-1])+' and '+sector_names[-1]
+            coefftext+=f" The capital slope is negative in {'sector' if len(sector_names)==1 else 'sectors'} {joined}. At given reported value added and workers, higher beginning capital therefore raises the calculated residual in those equations. This sign is a feature of the nominal fitted relationship; it does not establish that additional productive capital reduces actual output. It changes how capital differences enter the residual ranking and must be considered when interpreting that ordering."
+        sensparts=[]
+        for _,variant,term,value,operands in [row for row in sens if row[0]==m]:
+            text=emit('numerical_prose',f'{m}:sensitivity:{variant}:{term}',value,operands,fmt='.2e',operation='maximum absolute paired sensitivity minus primary, across displayed sectors')
+            sensparts.append(('alternative starts' if variant=='low_l' else 'the quadratic proxy')+f" change the {'labor' if term=='L' else 'capital'} coefficient by at most {text}")
+        sensitivity_text='; '.join(sensparts)+'. These comparisons keep each sector\'s records fixed. We do not use an economically convenient sign, a narrow residual distribution or a smaller criterion under a different model to select a replacement primary estimate.'
+        coef_fig=figure_group('deep_'+m+'_coefficients',label+': coefficient estimates','deep-'+m+'-coefficients','We pool supported years within each sector under constant coefficients. Marks show own-sample primary estimates and intervals admitted under the bootstrap minimum-success rule. Intervals retain their full endpoints and condition on the fictional histories and maintained measurements.')
+        hist_fig=figure_group('deep_'+m+'_histogram',label+': pooled residual distributions','deep-'+m+'-histogram','Both panels contain the same own-sample dynamic observations pooled across all fitted years. Uncentered residuals use original logs; centering subtracts one mean per sector-method-sample. Bins span 0.5 log points and retain all finite tails. Labels show the modal and first and last occupied bins with source-derived counts and shares.')
+        sens_fig=figure_group('deep_'+m+'_sensitivity',label+': estimation sensitivity','deep-'+m+'-sensitivity','The primary cubic specification, two alternative starts and quadratic proxy use the same own-sample eligibility and numerical translations. Objective values are comparable only within a method and matching polynomial specification. Missing alternatives remain visible as missing; continuation panels retain identical construction.')
+        n[m+'results']=f'''\\GOneSubsubsection{{Coefficient estimates}}
+\\GOneLabel{{sec:{m}-coefficients}}
+'''+n[m+'regression']+f'\nFigure~\\GOneRef{{fig:deep-{m}-coefficients}} displays the same own-sample coefficients and full admitted uncertainty intervals. Separate input panels preserve the scale of the labor and capital estimates.\n'+coef_fig+'\n'+coefftext+'\n'+n[m+'bootstrap']+f'''\\GOneSubsubsection{{Residual distributions}}
+\\GOneLabel{{sec:{m}-distribution}}
+We subtract the fitted labor and capital contributions from logged value added, then subtract each sector's pooled dynamic residual mean. Figure~\\GOneRef{{fig:deep-{m}-histogram}} compares the uncentered and centered distributions on exactly the same fitted records.
+'''+hist_fig+f'\nThe centered distribution has a standard deviation of {n["sd_"+m]} log points. Centering removes differences in sector means while preserving all within-sector gaps and rankings. The pooled shape can change because it previously combined those mean differences with variation within sectors. We retain all finite observations, including the tails.\n'+n[m+'deepdistribution']+f'''\\GOneSubsubsection{{Specification sensitivity}}
+\\GOneLabel{{sec:{m}-sensitivity}}
+Figure~\\GOneRef{{fig:deep-{m}-sensitivity}} and its continuation panels compare the prespecified starting values and proxy-polynomial alternatives. Changing the start leaves the model fixed; changing the polynomial alters the fitted control relationship. A numerical stopping rule need not identify the same solution from every starting value.
+'''+sens_fig+'\n'+sensitivity_text+'\n'
+    body=(P/'manuscript-template.tex').read_text().replace('@@method_chapters@@',(P/'method-chapters-template.tex').read_text())
+    for key,value in {**n,**figs}.items(): body=body.replace('@@'+key+'@@',value)
+    assert '@@' not in body, re.findall(r'@@([^@]+)@@',body)
+    (P/'appendix.tex').write_text(body)
+    (P/'provenance/table-cells.json').write_text(json.dumps(traces['table_cells'],indent=2,default=clean)+'\n')
+    (P/'provenance/numerical-prose.json').write_text(json.dumps(traces['numerical_prose'],indent=2,default=clean)+'\n')
+    fonts=[Path('/System/Library/Fonts/Supplemental')/n for n in ['Times New Roman.ttf','Times New Roman Bold.ttf','Times New Roman Italic.ttf','Times New Roman Bold Italic.ttf','STIXTwoMath.otf']]
+    manifest={'scope':'Nominal development production-function appendix; no G0 actual statistics','input_manifest_sha256':spec['input_manifest_sha256'],'specification':{'path':str(specpath),'sha256':sha(specpath)},'aggregate_sources':inputs,'table_cell_count':len(traces['table_cells']),'numerical_prose_count':len(traces['numerical_prose']),'fonts':[{'path':str(x),'sha256':sha(x),'role':'mathematics' if 'Math' in x.name else 'body/table/caption/notes'} for x in fonts],'body':{'path':'appendix.tex','sha256':sha(P/'appendix.tex')},'builder_sha256':sha(__file__),'reference_design_only':{'path':'releases/2026-09-13-g0-appendix','numbers_consumed':False},'figure_assets':re.findall(r'\\includegraphics\[[^\]]*\]\{([^}]+)\}',body),'writing_preferences':{'path':str(ROOT/'WRITING-PREFERENCES-SEE-HERE.md'),'sha256':sha(ROOT/'WRITING-PREFERENCES-SEE-HERE.md')},'templates':[{ 'path':p.name,'sha256':sha(p)} for p in [P/'manuscript-template.tex',P/'method-chapters-template.tex',P/'deep_publication.py',P/'method_tables.py',P/'g1-appendix.sty']],'scientific_sources':{'acf':'https://doi.org/10.3982/ECTA13408','lp':'https://www.nber.org/papers/w7819','op':'https://www.nber.org/papers/w3977','wooldridge':'https://doi.org/10.1016/j.econlet.2009.04.026','implementation':'https://www.stata-journal.com/article.html?article=st0537','wooldridge_author_lecture':'https://www.cemmap.ac.uk/wp-content/legacy/resources/imbens_wooldridge/slides_4.pdf'}}
+    (P/'provenance/publication-sources.json').write_text(json.dumps(manifest,indent=2)+'\n')
+    print(json.dumps({'tables':len(re.findall(r'\\GOneInput\{tables/',body)),'table_cells':len(traces['table_cells']),'numerical_prose_tokens':len(traces['numerical_prose']),'aggregate_source':str(src)}))
+
+if __name__=='__main__': main()

@@ -1,0 +1,43 @@
+* Tujuan: Untuk 2013, lengkapi export_flag dari export_any_binary hanya saat nilainya kosong dan syarat kode terpenuhi; v_export_flag menyimpan salinan nilai awal; vs_export_flag menandai pengisian sesuai aturan yang ada. // WFDOC-INJECTED
+* Input: data/intermediate/verified_wave_2013.dta; dag/data/word_data/G0/analysis_tunnel/N_G0_tunnel_export_any_binary_2013.dta // WFDOC-INJECTED
+* Output: dag/data/word_data/G0/analysis_tunnel/N_G0_tunnel_export_flag_2013.dta // WFDOC-INJECTED
+* Jika perintah atau syarat berhenti dengan error, hasil belum selesai; cek pesan error dan baris terakhir di log. // WFDOC-INJECTED
+capture noisily __wf_progress start "code/leaves/working/export_flag_2013.do:L1:file" "" "file" 1 1 `=_rc' // WFLOG-INJECTED
+capture noisily __wf_progress start "code/leaves/working/export_flag_2013.do:L1:step-do" "code/leaves/working/export_flag_2013.do:L1:file" "statement" 1 11 `=_rc' // WFLOG-INJECTED
+do "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-wave-foundation-v2/code/init.do"
+capture noisily __wf_progress end "code/leaves/working/export_flag_2013.do:L1:step-do" "code/leaves/working/export_flag_2013.do:L1:file" "statement" 1 11 `=_rc' // WFLOG-INJECTED
+capture noisily __wf_progress start "code/leaves/working/export_flag_2013.do:L2:step-use" "code/leaves/working/export_flag_2013.do:L1:file" "statement" 2 11 `=_rc' // WFLOG-INJECTED
+* Muat kolom sumber untuk export_flag tahun 2013; baris tetap memakai source_year dan source_row. // WFDOC-INJECTED
+use "data/intermediate/verified_wave_2013.dta", clear
+capture noisily __wf_progress end "code/leaves/working/export_flag_2013.do:L2:step-use" "code/leaves/working/export_flag_2013.do:L1:file" "statement" 2 11 `=_rc' // WFLOG-INJECTED
+capture noisily __wf_progress start "code/leaves/working/export_flag_2013.do:L3:step-assert" "code/leaves/working/export_flag_2013.do:L1:file" "statement" 3 11 `=_rc' // WFLOG-INJECTED
+* Pastikan setiap baris milik tahun 2013; pemeriksaan isid berikutnya menolak kunci source_year/source_row yang berulang. // WFDOC-INJECTED
+assert source_year==2013
+capture noisily __wf_progress end "code/leaves/working/export_flag_2013.do:L3:step-assert" "code/leaves/working/export_flag_2013.do:L1:file" "statement" 3 11 `=_rc' // WFLOG-INJECTED
+capture noisily __wf_progress start "code/leaves/working/export_flag_2013.do:L4:step-isid" "code/leaves/working/export_flag_2013.do:L1:file" "statement" 4 11 `=_rc' // WFLOG-INJECTED
+isid source_year source_row
+capture noisily __wf_progress end "code/leaves/working/export_flag_2013.do:L4:step-isid" "code/leaves/working/export_flag_2013.do:L1:file" "statement" 4 11 `=_rc' // WFLOG-INJECTED
+capture noisily __wf_progress start "code/leaves/working/export_flag_2013.do:L5:step-drop" "code/leaves/working/export_flag_2013.do:L1:file" "statement" 5 11 `=_rc' // WFLOG-INJECTED
+drop export_any_binary vs_export_any_binary
+capture noisily __wf_progress end "code/leaves/working/export_flag_2013.do:L5:step-drop" "code/leaves/working/export_flag_2013.do:L1:file" "statement" 5 11 `=_rc' // WFLOG-INJECTED
+capture noisily __wf_progress start "code/leaves/working/export_flag_2013.do:L6:step-merge" "code/leaves/working/export_flag_2013.do:L1:file" "statement" 6 11 `=_rc' // WFLOG-INJECTED
+merge 1:1 source_year source_row using "dag/data/word_data/G0/analysis_tunnel/N_G0_tunnel_export_any_binary_2013.dta", assert(match) nogen keepusing(export_any_binary vs_export_any_binary)
+capture noisily __wf_progress end "code/leaves/working/export_flag_2013.do:L6:step-merge" "code/leaves/working/export_flag_2013.do:L1:file" "statement" 6 11 `=_rc' // WFLOG-INJECTED
+capture noisily __wf_progress start "code/leaves/working/export_flag_2013.do:L7:step-tempfile" "code/leaves/working/export_flag_2013.do:L1:file" "statement" 7 11 `=_rc' // WFLOG-INJECTED
+tempfile metrics
+capture noisily __wf_progress end "code/leaves/working/export_flag_2013.do:L7:step-tempfile" "code/leaves/working/export_flag_2013.do:L1:file" "statement" 7 11 `=_rc' // WFLOG-INJECTED
+capture noisily __wf_progress start "code/leaves/working/export_flag_2013.do:L8:step-postclose" "code/leaves/working/export_flag_2013.do:L1:file" "statement" 8 11 `=_rc' // WFLOG-INJECTED
+capture postclose counts
+capture noisily __wf_progress end "code/leaves/working/export_flag_2013.do:L8:step-postclose" "code/leaves/working/export_flag_2013.do:L1:file" "statement" 8 11 `=_rc' // WFLOG-INJECTED
+capture noisily __wf_progress start "code/leaves/working/export_flag_2013.do:L9:step-postfile" "code/leaves/working/export_flag_2013.do:L1:file" "statement" 9 11 `=_rc' // WFLOG-INJECTED
+* Buka tabel hitungan diagnostik; isinya mencatat banyak baris dan status, bukan mengubah nilai sumber. // WFDOC-INJECTED
+postfile counts int source_year str32 variable long rows observed verified_only provisional using `metrics', replace
+capture noisily __wf_progress end "code/leaves/working/export_flag_2013.do:L9:step-postfile" "code/leaves/working/export_flag_2013.do:L1:file" "statement" 9 11 `=_rc' // WFLOG-INJECTED
+capture noisily __wf_progress start "code/leaves/working/export_flag_2013.do:L10:step-do" "code/leaves/working/export_flag_2013.do:L1:file" "statement" 10 11 `=_rc' // WFLOG-INJECTED
+* Jalankan aturan pembentukan export_flag tahun 2013 yang ada di do-file anak ini. // WFDOC-INJECTED
+do "dag/edges/word_rows/G0/analysis_tunnel/export_flag_2013.do"
+capture noisily __wf_progress end "code/leaves/working/export_flag_2013.do:L10:step-do" "code/leaves/working/export_flag_2013.do:L1:file" "statement" 10 11 `=_rc' // WFLOG-INJECTED
+capture noisily __wf_progress start "code/leaves/working/export_flag_2013.do:L11:step-postclose" "code/leaves/working/export_flag_2013.do:L1:file" "statement" 11 11 `=_rc' // WFLOG-INJECTED
+postclose counts
+capture noisily __wf_progress end "code/leaves/working/export_flag_2013.do:L11:step-postclose" "code/leaves/working/export_flag_2013.do:L1:file" "statement" 11 11 `=_rc' // WFLOG-INJECTED
+capture noisily __wf_progress end "code/leaves/working/export_flag_2013.do:L1:file" "" "file" 1 1 `=_rc' // WFLOG-INJECTED

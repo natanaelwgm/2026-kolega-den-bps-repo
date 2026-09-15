@@ -1,0 +1,57 @@
+{
+  "timestamp": "2026-09-10T14:32:47.695764+07:00",
+  "status": "SUPPORTED_SYNTHETIC_PREPARATION_AND_OUTPUT_WPI_VALIDATED",
+  "not_a_claim_of_full_real_company_readiness": true,
+  "primary_run": "run-20260910-142121",
+  "primary_log": "dag/logs/G0_build_synthetic_dataset.log",
+  "primary_and_stata_assertions": "PASS",
+  "repository_validation": "PASS",
+  "rows": 1200,
+  "columns": 3837,
+  "outputs": [
+    {
+      "path": "results/G0_analysis_ready_SYNTHETIC_CALCULATED.dta",
+      "sha256": "ebded0518f4ccbcbbe8da980a716ca797953d0d1f4fe83e5285dfd9a7ff8489e",
+      "bytes": 37901327
+    },
+    {
+      "path": "results/G0_analysis_ready_SYNTHETIC_CALCULATED.xlsx",
+      "sha256": "5ece228372c3c4c453eb2d3b88602f0864cceda25a51128d9ce7003f455106a0",
+      "bytes": 10739582
+    },
+    {
+      "path": "results/actual_schema.csv",
+      "sha256": "007e0d3f94da4508510d49fa345229013b0b515502e2ba723a685a80abef228f",
+      "bytes": 135640
+    },
+    {
+      "path": "results/coverage_by_variable_year.csv",
+      "sha256": "832da543f637ec03bca97adbf485b33eec5ed93f32b2f07fd99e1ff4e564402b",
+      "bytes": 1438808
+    }
+  ],
+  "raw_excel_cells_checked": 288000,
+  "independent_formula_checks": 10800,
+  "excel_data_cells_checked": 4604400,
+  "visual_review": {
+    "scope": "Bounded first-eight-row/first-seven-column previews of eleven data sheets, plus all four embedded Stata source charts; not every cell visually inspected",
+    "sheets": 12,
+    "charts": 4,
+    "result": "readable; long status/source descriptions widened and checked after regeneration"
+  },
+  "wpi_matched_rows": 1200,
+  "wpi_sector_year_cells": 48,
+  "original_columns_retained": 3793,
+  "documented_additions": 44,
+  "storage_type_differences": 330,
+  "reference_dta_files": 5,
+  "synthetic_dta_files": 2961,
+  "remaining_limits": [
+    "Verified concept-specific input/capital/wage deflators unavailable; legacy WPIN concept unverified",
+    "Single-output-deflator real VA is a proxy, not double deflation",
+    "Splice anchor publications and some reference monthly details absent",
+    "Complete energy/emissions source/unit/factor verification and real-company panel identity remain open"
+  ],
+  "original_company_data_read": false,
+  "tfp_or_estimators_run": false
+}

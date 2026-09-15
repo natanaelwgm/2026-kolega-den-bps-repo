@@ -1,0 +1,108 @@
+{
+  "node_id": "G1_S15",
+  "branch": "primary_real_prerequisite_audit",
+  "source_plan_node_preserved": {
+    "id": "G1_S15",
+    "state": "Predict method-specific TFP and normalize transparently — planned output state, not materialized",
+    "grain": "source record × year × method × sample × specification",
+    "keys": [
+      "source_year",
+      "source_row",
+      "method",
+      "sample_id",
+      "specification_id",
+      "normalization_id"
+    ],
+    "required_fields": [
+      "source_year",
+      "source_row",
+      "method",
+      "sample_id",
+      "specification_id",
+      "firm_id",
+      "year",
+      "tfp_log",
+      "estimation_sample",
+      "prediction_sample",
+      "normalization",
+      "normalization_id",
+      "technology"
+    ],
+    "units": {
+      "money": "nominal Rp000 unless verified concept-specific deflator applied",
+      "time": "actual calendar year",
+      "count": "source records, not national weights"
+    },
+    "folder": "dag/nodes/G1/G1_S15",
+    "planning_status": "planning_only"
+  },
+  "effective_state": "Predict method-specific TFP and normalize transparently",
+  "material_state_status": "primary_real_state_unadmitted_development_branch_separate",
+  "diagnostic_status": "See hash-bound run evidence; not inferred from this contract",
+  "grain": "frozen observation × method × sample × specification",
+  "keys": [
+    "obs_id",
+    "method",
+    "sample_id",
+    "specification_id",
+    "normalization_id"
+  ],
+  "input_nodes": [
+    "G1_S04",
+    "G1_S09",
+    "G1_S10",
+    "G1_S11",
+    "G1_S12",
+    "G1_S13",
+    "G1_S14"
+  ],
+  "producing_edge": "G1_E15",
+  "audit_output_contract": {
+    "paths_relative_to_private_run": [
+      "S15_prediction_status.dta"
+    ],
+    "role": "Record unsupported prediction coverage and metadata; no productivity or centering constant is estimated.",
+    "publication": "Only screened aggregate outputs copied to release/outputs. Private run root is recorded in run-manifest.json; .dta intermediates are outside the repository.",
+    "existence_and_execution": "Declared artifact names; actual existence/hash/status comes only from the run manifest."
+  },
+  "required_fields": [
+    "source_year",
+    "obs_id",
+    "method",
+    "sample_id",
+    "specification_id",
+    "psid",
+    "year",
+    "tfp_log",
+    "estimation_sample",
+    "prediction_sample",
+    "normalization",
+    "normalization_id",
+    "technology"
+  ],
+  "units": {
+    "TFP_residual_and_centering_constant": "natural-log points; not computed while input gates fail",
+    "correlations": "dimensionless; undefined without supported predictions",
+    "coverage": "observation count and percent of explicitly named denominator",
+    "original_input_columns": "unchanged source units; see variable registry"
+  },
+  "calendar": "2010–2015, 2017–2022; 2016 absent",
+  "denominator": "Supported prediction records; six pairwise comparisons use the same four-method intersection. Preserve source-denominator coverage separately from prediction-denominator distribution summaries.",
+  "missingness": "Keep source absence, unknown definition/unit, parse failure, observed zero/negative and valid positive states distinct. Unsupported statistical values stay missing, never zero.",
+  "row_reconciliation": "Observation diagnostics preserve 33,049 unique obs_id. Method expansion checks 33,049 × declared method/sample combinations separately. Any filtering records marginal and sequential losses. Aggregates reconcile to their explicit fixed denominators.",
+  "input_output_contract": "A validated numerical state and a typed unsupported receipt are distinct output types. A receipt cannot be consumed as the numerical state required by another estimator edge.",
+  "current_decision": "No predictions pasted into excluded years/records; centering choice explicit.",
+  "blocked_dependencies": {
+    "identity": "ACTUAL FINALISATION ONLY: authenticated real longitudinal linkage remains unresolved. G0.5 v3 official psid_status=synthetic_development and unique(psid,source_year) are accepted for explicitly labelled development; REAL linkage is not its blocker.",
+    "prices": "Accepted concept-specific output/input/capital deflators and lineage-preserving real-value operands; current real/deflator fields are unavailable.",
+    "capital": "Accepted capital-stock concept AND measurement unit, plus separately verified positive real investment. capital_stock_verified certifies questionnaire concept only, not measurement admission; additions and mixed aliases cannot replace stock.",
+    "technology": "Verified two-digit technology bridge across questionnaire/classification vintages; demo_industry2 is not a certified bridge.",
+    "quality": "G2 eligibility masks bound to this exact G0.5 input version, with semantic/unit/domain reasons; G1 local screens are not all of G2.",
+    "implementation": "Pinned adapter implementation and guard/numerical tests are documented in stata/methods/METHOD-AUDIT.md. Current nominal result receipts are separate from real-primary source acceptance; code existence alone never certifies either."
+  },
+  "numerical_output_privacy": "Record-level intermediate/output datasets remain local/private; only appropriate aggregate diagnostic tables and receipts are published.",
+  "plan": "releases/2026-09-13-data-foundation/stata-preparation/row-plans/G1.json",
+  "plan_sha256": "dd88cfa94af5f212a7b0a4b70f99fea1c0201f950cd19333357739b96b5da1ca",
+  "input_manifest": "data/g0-5-development/manifest.json",
+  "input_manifest_sha256": "060b0ee0a2158a9c94b0e7e68fcfba719eda37561422855471a99da6810ba260"
+}

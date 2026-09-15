@@ -1,0 +1,127 @@
+* WFDOC: N10 merangkum hanya prediksi primary dan koordinat sumber N01 yang diperlukan untuk identitas residual serta contoh N12.
+* WFDOC: Kunci agregat sektor×metode×sampel×tahun×scope×ukuran; source_year0 pools predictions; annual predictions use constant sector-method-sample slopes and pooled dynamic normalizer.
+* WFDOC: N01_source.dta dan N04_predictions.dta memberi data; keluaran ialah deep_prediction_profiles.csv, deep_prediction_tails.csv, dan deep_prediction_histograms.csv.
+* WFDOC: residual mentah r=y−βL·l−βK·k, centered=r−mean(r pooled dynamic fit), dan index=exp(centered); index tak berdimensi, bukan TFP fisik.
+* WFDOC: Histogram menambah bin_lower pada kunci agregat; N_source, N_domain, N_predicted, N_in_fit, dan N_outside_fit berbeda, dan ringkasan tepat disembunyikan ketika N<5.
+use "$G1_BASE/nominal/N01_source.dta", clear
+keep obs_id source_year nom_y nom_l nom_k
+tempfile logs
+save `logs'
+* WFDOC: N04_predictions sudah berisi residual dan status in_fit; join m:1 obs_id-tahun melampirkan y/l/k dari N01, lalu menyimpan linkage lokal.
+use "$G1_BASE/nominal/N04_predictions.dta", clear
+keep if variant=="primary"
+isid psid source_year sector method sample_id
+* WFDOC: Merge m:1 hanya melampirkan y/l/k dari N01 ke primary prediction yang punya source row; assert dan keep(3) mencegah linkage prediction tanpa observasi sumber.
+merge m:1 obs_id source_year using `logs', keep(3) assert(2 3) nogen
+rename raw_log_residual raw
+rename normalized_log_residual centered
+rename normalized_residual_index index
+* WFDOC: Batas tahun ini hanya diperiksa untuk baris in_fit; prediction di luar dynamic fit tetap boleh masuk profile annual bila berada pada production year yang tersedia.
+assert inlist(source_year,2012,2013,2014,2015,2019,2020,2021,2022) if in_fit
+assert reference_scope=="pooled_dynamic" & missing(reference_year)
+assert abs(index-exp(centered))<1e-10*max(1,index)
+save "$G1_DEEP/intermediate/primary_predictions.dta", replace
+tempname p t h
+postfile `p' str4 sector str8 method str8 sample_id double source_year str16 fit_scope str20 measure double N double mean double sd double min double p1 double p5 double p25 double p50 double p75 double p95 double p99 double max double iqr double fence_lo15 double fence_hi15 double fence_lo3 double fence_hi3 double N_below15 double N_above15 double N_below3 double N_above3 double numeric_released double N_source double N_domain double N_predicted double N_in_fit double N_outside_fit double coefficient_year double normalizer_year double coefficient_year_min double coefficient_year_max str24 normalizer_scope using "$G1_DEEP/intermediate/deep_prediction_profiles.dta", replace
+postfile `t' str4 sector str8 method str8 sample_id double source_year str16 fit_scope str20 measure double N double N_abs_gt2 double N_abs_gt3 double N_index_below_half double N_index_above_two double N_below15 double N_above15 double N_below3 double N_above3 double numeric_released using "$G1_DEEP/intermediate/deep_prediction_tails.dta", replace
+postfile `h' str4 sector str8 method str8 sample_id double source_year str16 fit_scope str20 measure double bin_lower double bin_upper double log_bin_lower double log_bin_upper double N_bin double N_total double share str20 bin_scale using "$G1_DEEP/intermediate/deep_prediction_histograms.dta", replace
+* WFDOC: Grid mencakup ALL, tiap sektor, empat metode dan own/common; dukungan kosong tetap tercermin pada tabel aggregate.
+foreach sector in $D_SECTORS {
+    foreach method in op lp acf wrdg {
+        foreach sample in own common {
+            local domain `method'
+            if "`sample'"=="common" local domain common
+            foreach year in $D_YEARS {
+                local yr "source_year==`year'"
+                if `year'==0 local yr "1"
+                use "$G1_BASE/nominal/N03_frozen.dta", clear
+                local sec "1"
+                if "`sector'"!="ALL" local sec `"nom_sector=="`sector'""'
+                count if !nom_interval_only & (`yr') & (`sec')
+                local ns=r(N)
+                count if !nom_interval_only & (`yr') & (`sec') & nom_domain_`domain'==1
+                local nd=r(N)
+                use "$G1_DEEP/intermediate/primary_predictions.dta", clear
+                keep if method=="`method'" & sample_id=="`sample'" & (`yr')
+                if "`sector'"!="ALL" keep if sector=="`sector'"
+                count
+                * WFDOC: N_source, N_domain, N_predicted, N_in_fit dan N_outside_fit memakai penyebut yang berbeda dan dicatat bersama; source_year=0 adalah kewajiban pooled, bukan tahun kalender.
+                local np=r(N)
+                local ymin .
+                local ymax .
+                if `np'>0 {
+                    summarize fit_year_min, meanonly
+                    local ymin=r(min)
+                    summarize fit_year_max, meanonly
+                    local ymax=r(max)
+                }
+                count if in_fit
+                local ni=r(N)
+                local no=`np'-`ni'
+                foreach scope in all in_fit outside_fit {
+                    local sc "1"
+                    if "`scope'"=="in_fit" local sc "in_fit==1"
+                    if "`scope'"=="outside_fit" local sc "in_fit==0"
+                    * WFDOC: Hitung tail flag strict untuk |centered|>2/3 dan index di luar [0.5,2]; IQR fence dihitung per domain di deep_stats.
+                    count if (`sc') & abs(centered)>2 & !missing(centered)
+                    local a2=r(N)
+                    count if (`sc') & abs(centered)>3 & !missing(centered)
+                    local a3=r(N)
+                    count if (`sc') & index<.5
+                    local below=r(N)
+                    count if (`sc') & index>2 & !missing(index)
+                    local above=r(N)
+                    foreach measure in raw centered index {
+                        local prefix `"("`sector'") ("`method'") ("`sample'") (`year') ("`scope'") ("`measure'")"'
+                        * WFDOC: deep_stats menerima scope yang sedang dipilih; hitungan tail dihitung strict sebelum supresi statistik tepat, sehingga jumlah outlier tetap tersedia saat N<5.
+                        deep_stats `measure' if `sc'
+                        post `p' `prefix' $D_POST (`ns') (`nd') (`np') (`ni') (`no') (.) (.) (`ymin') (`ymax') ("pooled_dynamic")
+                        post `t' `prefix' ($D_N) (`a2') (`a3') (`below') (`above') ($D_N_below15) ($D_N_above15) ($D_N_below3) ($D_N_above3) ($D_numeric_released)
+                        * WFDOC: Histogram memakai semua nilai finite dalam scope; bin centered/raw selebar 0.5 log point dan share=N_bin/N.
+                        if $D_N>0 {
+                            preserve
+                            keep if (`sc') & !missing(`measure')
+                            local nt=_N
+                            gen double bin_lower=floor(`measure'/.5)*.5
+                            * WFDOC: Index dibagi pada grid log-centered 0.5; batas publikasi dieksponensialkan agar bin geometrik, tanpa smoothing.
+                            if "`measure'"=="index" replace bin_lower=floor(centered/.5)*.5
+                            collapse (count) N_bin=`measure', by(bin_lower)
+                            forvalues j=1/`=_N' {
+                                local lo=bin_lower[`j']
+                                local hi=`lo'+.5
+                                local llo .
+                                local lhi .
+                                local bs linear
+                                if "`measure'"=="index" {
+                                    local llo=`lo'
+                                    local lhi=`hi'
+                                    local lo=exp(`llo')
+                                    local hi=exp(`lhi')
+                                    local bs geometric_log_0_5
+                                }
+                                post `h' `prefix' (`lo') (`hi') (`llo') (`lhi') (N_bin[`j']) (`nt') (N_bin[`j']/`nt') ("`bs'")
+                            }
+                            restore
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+* WFDOC: Tiga CSV memisahkan profil dan penyebut, hitungan tail, serta bin; identifier psid/obs_id tidak diekspor.
+postclose `p'
+use "$G1_DEEP/intermediate/deep_prediction_profiles.dta", clear
+ds, has(type numeric)
+format `r(varlist)' %24.17g
+export delimited using "$G1_DEEP/outputs/deep_prediction_profiles.csv", replace
+postclose `t'
+use "$G1_DEEP/intermediate/deep_prediction_tails.dta", clear
+ds, has(type numeric)
+format `r(varlist)' %24.17g
+export delimited using "$G1_DEEP/outputs/deep_prediction_tails.csv", replace
+postclose `h'
+use "$G1_DEEP/intermediate/deep_prediction_histograms.dta", clear
+ds, has(type numeric)
+format `r(varlist)' %24.17g
+export delimited using "$G1_DEEP/outputs/deep_prediction_histograms.csv", replace

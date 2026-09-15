@@ -1,0 +1,14 @@
+item,value
+Source,Kolega DEN BPS group description → Working Folder → 2026 - IBS BPS Research Project/WPI_deflator_package
+Version,OneDrive modified 3 September 2026 22:10 WIB; downloaded 10 September 2026 14:02:23 WIB
+Index,"Actual output WPI, base 2000=100; 131 four-digit ISIC Rev3/3.1 industries"
+Scope,1983–2022 columns; 2016 missing. Pipeline table 2010–2022; 1200 synthetic records omit 2016
+Splice,Native extension 2013–19 excluding 2016; 2020–22 supplied December2019 link; source uncertainty retained
+Conversion,deflator_output = wpi_output_index/100; real output = nominal output/deflator_output; Rp000 at 2000 prices
+Value added,value_added_real = nominal VA/output deflator: explicit single-deflator approximation; not double deflation
+Other deflators,"Appropriate input, capital and wage deflators unavailable; legacy WPIN concept unverified; their real measures remain missing. No WPI=1 fallback"
+Classification,Four detailed synthetic activities mapped explicitly; UN Rev31↔Rev4 bridge and BPS KBLI definitions reviewed; not a general real-data yearly bridge
+Matched,1200 / 1200; 48 year/industry cells; source lookup key isic4/year unique
+Reconstruction,1179 extension values compared to delivered DTA; maximum relative discrepancy <1e-6 from CSV/float precision; delivered DTA values retained
+Workbook validation,438 monthly annual-average rows recomputed; 12 incomplete monthly rows; 21 claimed newer subsector rows absent; 147 splice cells reconciled at displayed rounding precision
+Interpretation,All company values are synthetic; actual macro indices do not make this empirical BPS evidence

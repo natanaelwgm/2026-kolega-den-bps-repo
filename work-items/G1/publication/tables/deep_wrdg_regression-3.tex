@@ -1,0 +1,34 @@
+\begin{table}[H]
+\centering
+\caption{Wooldridge: own-sample production estimates}
+\GOneLabel{tab:deep-wrdg-regression-3}
+\begingroup\fontsize{9.2}{11.2}\selectfont
+\setlength{\tabcolsep}{4.3pt}\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{p{4.1cm}*{2}{>{\centering\arraybackslash}p{1.85cm}}}
+\toprule
+Dependent variable: log value added & 31 & 32 \\
+\midrule
+Labor $\widehat\beta_L$ & 0.8631 & 0.7786 \\
+(Bootstrap SE) & (0.0919) & (0.1014) \\
+95\% percentile interval & \makecell{[0.6612,\\1.0597]} & \makecell{[0.5430,\\0.9717]} \\
+Capital $\widehat\beta_K$ & 0.0072 & -0.0169 \\
+(Bootstrap SE) & (0.0259) & (0.0500) \\
+95\% percentile interval & \makecell{[-0.0415,\\0.0566]} & \makecell{[-0.0711,\\0.1218]} \\
+Coefficient sum $\widehat\beta_L+\widehat\beta_K$ & 0.8704 & 0.7617 \\
+(Bootstrap SE) & (0.0849) & (0.1029) \\
+Consecutive-year observations & 341 & 110 \\
+Fictional firms in fit & 125 & 54 \\
+Records with eligible inputs & 663 & 267 \\
+First fitted endpoint & 2012 & 2012 \\
+Last fitted endpoint & 2022 & 2022 \\
+Distinct fitted years & 8 & 8 \\
+Proxy polynomial degree & 3 & 3 \\
+Initial labor coefficient & 1.1640 & 0.8851 \\
+Initial capital coefficient & 0.0906 & 0.2052 \\
+Objective value & 6.019e-02 & 1.995e-01 \\
+Successful bootstrap draws & 99 & 99 \\
+\bottomrule
+\end{tabular}
+\endgroup
+\appnotes{Each column pools eligible calendar observations in one sector with one coefficient vector and no added year effects. The own sample requires this method's inputs; the common sample separately requires all four methods' inputs before exact lagging. Parentheses show whole-history bootstrap standard errors; the coefficient-sum error includes labor-capital covariance. Brackets show admitted 95 percent percentile intervals. A dash denotes unavailable inference. The first and last years bound the observed endpoints but do not fill intervening calendar gaps; the distinct-year count records actual coverage. Primary polynomial and starting rules are fixed before results.}{G0.5 v3 modified manufacturing records with fictional company links; authors' calculations.}
+\end{table}

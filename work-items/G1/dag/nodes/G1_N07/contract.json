@@ -1,0 +1,55 @@
+{
+  "node_id": "G1_N07",
+  "branch": "nominal_development_compatibility",
+  "material_state_status": "implemented_aggregate_receipt_present_validation_separate",
+  "state": "Attach full original master",
+  "inputs": [
+    "full_input.dta",
+    "nominal/N06_selected_attached.dta"
+  ],
+  "input_nodes": [
+    "G1_N06",
+    "G1_INPUT_CANONICAL"
+  ],
+  "outputs_relative_to_external_run": [
+    "analysis/G1_main_with_tfp.dta"
+  ],
+  "aggregate_outputs_relative_to_external_run": [
+    "outputs/nominal_master_attachment.csv"
+  ],
+  "available_aggregate_receipts": [
+    "outputs/nominal_master_attachment.csv"
+  ],
+  "available_private_artifacts": [],
+  "grain": "Every original full-master observation with separate development nominal columns",
+  "keys": [
+    "obs_id",
+    "source_year"
+  ],
+  "denominator": "All33049 original observations and4396 original columns preserved; added sidecar coverage counted by source_year and method",
+  "units": {
+    "levels": "reported monetary candidate units; no verified conversion or deflation",
+    "logs_and_residuals": "natural-log points; nominal structural residual contains price/measurement/transitory components",
+    "coefficients": "dimensionless elasticities",
+    "counts": "source observations, derivative risk intervals, distinct synthetic firms and draws explicitly distinguished"
+  },
+  "calendar": "Source2010–2015/2017–2022; production2011–2015/2018–2022; dynamic2012–2015/2019–2022; actual delta1",
+  "decision": "Merge unique sidecar1:1 using obs_id/source_year, preserve original order and every original field, keep unsupported residuals missing. Full artifact remains external/private. Code implementation is distinct from completed full-master validation.",
+  "missingness": "Missing/zero/negative remain distinct; no imputation; unsupported statistical results remain missing and every skipped/failed obligation is retained",
+  "source_code": "work-items/G1/stata/nominal/N07_master.do",
+  "source_code_sha256": "37798290a422ea744d99a08da8b94ec91c0ba22fa0d86e88d555ead093c59e2c",
+  "executed_source_sha256": "73b200852bf21dcf411bd01433561265d9812c6cf15b0af0396578f607167fed",
+  "executed_source_or_proven_comment_only": true,
+  "specification_path": "work-items/G1/nominal-specification.json",
+  "specification_sha256": "b7d44ee476be421e158868783f6f31f1408d7f3b028230fecbc600083cebf8b5",
+  "aggregate_receipt_sha256": {
+    "outputs/nominal_master_attachment.csv": "0ac4e09350c7dbaad65b0b75a4dae950a84cd2dbb4c9f2289af9142d09ce2658"
+  },
+  "execution_evidence_root": "/Users/natanaelmassie/Downloads/deasy-g1-issue9-20260913/work-items/G1/release",
+  "primary_real_admission": false,
+  "panel_mode": "official synthetic_development; real linkage not required or claimed",
+  "plan": "releases/2026-09-13-data-foundation/stata-preparation/row-plans/G1.json",
+  "plan_sha256": "dd88cfa94af5f212a7b0a4b70f99fea1c0201f950cd19333357739b96b5da1ca",
+  "input_manifest": "data/g0-5-development/manifest.json",
+  "input_manifest_sha256": "060b0ee0a2158a9c94b0e7e68fcfba719eda37561422855471a99da6810ba260"
+}

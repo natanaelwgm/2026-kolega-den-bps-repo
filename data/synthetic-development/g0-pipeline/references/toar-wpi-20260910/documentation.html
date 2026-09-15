@@ -1,0 +1,522 @@
+<title>Indonesian WPI Deflator</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@400;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --ground:#F6F8F9; --surface:#FFFFFF; --sunken:#EDF1F3;
+  --ink:#15222E; --body:#2C3B45; --muted:#5A6B76; --faint:#8A9AA3;
+  --accent:#0E6A6B; --accent-soft:#E2EFEF; --accent-line:#9CC7C7;
+  --warn:#8A5410; --warn-soft:#FAF0E2; --warn-line:#D9B784;
+  --rule:#DCE4E7; --rule-strong:#C3D0D5;
+  --sans:"IBM Plex Sans",ui-sans-serif,system-ui,sans-serif;
+  --serif:"IBM Plex Serif",Georgia,serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#0E1418; --surface:#161F25; --sunken:#1B262D;
+    --ink:#E7EEF1; --body:#C3D0D6; --muted:#93A5AF; --faint:#6F818B;
+    --accent:#5CBDBE; --accent-soft:#122A2B; --accent-line:#2C5F60;
+    --warn:#D9A257; --warn-soft:#2A2013; --warn-line:#6B5228;
+    --rule:#26333A; --rule-strong:#374750;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0E1418; --surface:#161F25; --sunken:#1B262D;
+  --ink:#E7EEF1; --body:#C3D0D6; --muted:#93A5AF; --faint:#6F818B;
+  --accent:#5CBDBE; --accent-soft:#122A2B; --accent-line:#2C5F60;
+  --warn:#D9A257; --warn-soft:#2A2013; --warn-line:#6B5228;
+  --rule:#26333A; --rule-strong:#374750;
+}
+*{box-sizing:border-box}
+body{background:var(--ground); color:var(--body); font-family:var(--serif);
+  font-size:16.5px; line-height:1.62; -webkit-font-smoothing:antialiased}
+.wrap{max-width:1120px; margin:0 auto; padding:0 28px 96px;
+  display:grid; grid-template-columns:1fr; gap:0}
+@media(min-width:1000px){
+  .wrap{grid-template-columns:196px minmax(0,1fr); gap:56px; padding-right:40px}
+}
+
+/* ---------- masthead ---------- */
+header.mast{grid-column:1/-1; padding:56px 0 34px; border-bottom:2px solid var(--ink)}
+.eyebrow{font-family:var(--mono); font-size:11.5px; font-weight:500; letter-spacing:.13em;
+  text-transform:uppercase; color:var(--accent); margin:0 0 16px}
+h1{font-family:var(--sans); font-weight:700; font-size:clamp(30px,4.6vw,46px);
+  line-height:1.06; letter-spacing:-.022em; color:var(--ink); margin:0 0 14px; text-wrap:balance}
+.standfirst{font-size:19px; line-height:1.5; color:var(--muted); margin:0; max-width:62ch}
+.facts{list-style:none; margin:32px 0 0; padding:0; display:grid; gap:1px;
+  background:var(--rule); border:1px solid var(--rule);
+  grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.facts li{background:var(--surface); padding:13px 16px}
+.facts dt{font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--faint); margin:0 0 5px}
+.facts dd{font-family:var(--sans); font-weight:600; font-size:16px; color:var(--ink); margin:0;
+  font-variant-numeric:tabular-nums}
+
+/* ---------- side rail ---------- */
+nav.rail{display:none}
+@media(min-width:1000px){
+  nav.rail{display:block; padding-top:44px}
+  nav.rail div{position:sticky; top:28px}
+  nav.rail p{font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase;
+    color:var(--faint); margin:0 0 12px}
+  nav.rail a{display:block; font-family:var(--sans); font-size:13.5px; line-height:1.35;
+    color:var(--muted); text-decoration:none; padding:6px 0 6px 12px;
+    border-left:2px solid var(--rule)}
+  nav.rail a:hover{color:var(--accent); border-left-color:var(--accent)}
+  nav.rail a:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+}
+
+main{padding-top:44px; min-width:0}
+section{margin:0 0 52px; scroll-margin-top:24px}
+h2{font-family:var(--sans); font-weight:600; font-size:24px; letter-spacing:-.012em;
+  color:var(--ink); margin:0 0 6px; text-wrap:balance}
+h2 .num{font-family:var(--mono); font-size:14px; font-weight:500; color:var(--accent);
+  margin-right:11px; letter-spacing:0}
+h3{font-family:var(--sans); font-weight:600; font-size:16.5px; color:var(--ink);
+  margin:30px 0 8px; letter-spacing:-.006em}
+.sub{color:var(--muted); font-size:14.5px; margin:0 0 22px; padding-bottom:14px;
+  border-bottom:1px solid var(--rule)}
+p{margin:0 0 15px; max-width:68ch}
+main a{color:var(--accent); text-decoration-thickness:1px; text-underline-offset:2px}
+code{font-family:var(--mono); font-size:.875em; background:var(--sunken);
+  padding:.1em .38em; border-radius:2px; color:var(--ink)}
+strong{color:var(--ink); font-weight:600}
+ol,ul{max-width:68ch; padding-left:22px; margin:0 0 15px}
+li{margin-bottom:8px}
+
+/* ---------- coverage strip: the one real graphic ---------- */
+.cov{background:var(--surface); border:1px solid var(--rule); padding:22px 24px 18px; margin:0 0 8px}
+.covgrid{display:grid; grid-template-columns:repeat(23,1fr); gap:2px; margin-bottom:9px}
+.covgrid span{height:34px; border-radius:1px; position:relative}
+.c-native{background:var(--accent)}
+.c-gap{background:repeating-linear-gradient(135deg,var(--rule-strong) 0 3px,transparent 3px 6px);
+  border:1px solid var(--rule-strong)}
+.c-splice{background:var(--warn-soft); border:1px solid var(--warn-line)}
+.covax{display:grid; grid-template-columns:repeat(23,1fr); gap:2px;
+  font-family:var(--mono); font-size:9.5px; color:var(--faint); margin-bottom:16px}
+.covax span{text-align:center; overflow:hidden}
+.covkey{display:flex; flex-wrap:wrap; gap:8px 20px; font-family:var(--sans); font-size:12.5px;
+  color:var(--muted); padding-top:14px; border-top:1px solid var(--rule)}
+.covkey span{display:flex; align-items:center; gap:7px}
+.sw{width:13px; height:13px; flex:none; border-radius:1px}
+.regimes{display:grid; grid-template-columns:repeat(23,1fr); gap:2px;
+  font-family:var(--mono); font-size:10px; letter-spacing:.04em; color:var(--muted)}
+.regimes b{grid-column:span 20; border-top:2px solid var(--accent-line); padding-top:5px; font-weight:500}
+.regimes i{grid-column:span 3; border-top:2px solid var(--warn-line); padding-top:5px;
+  font-style:normal; color:var(--warn)}
+
+/* ---------- tables ---------- */
+.scroll{overflow-x:auto; margin:0 0 18px; border:1px solid var(--rule); background:var(--surface)}
+table{border-collapse:collapse; width:100%; font-family:var(--sans); font-size:13.8px}
+th,td{text-align:left; padding:10px 15px; border-bottom:1px solid var(--rule); vertical-align:top}
+thead th{background:var(--sunken); color:var(--ink); font-weight:600; font-size:11.5px;
+  letter-spacing:.06em; text-transform:uppercase; white-space:nowrap;
+  border-bottom:1px solid var(--rule-strong)}
+tbody tr:last-child td{border-bottom:none}
+td.n,th.n{font-family:var(--mono); font-variant-numeric:tabular-nums; text-align:right; white-space:nowrap}
+td code{background:none; padding:0; font-size:13px}
+tr.flag td{background:var(--warn-soft)}
+.tag{display:inline-block; font-family:var(--mono); font-size:10px; letter-spacing:.06em;
+  padding:2px 6px; border-radius:2px; white-space:nowrap; font-weight:500}
+.t-a{background:var(--accent-soft); color:var(--accent); border:1px solid var(--accent-line)}
+.t-b{background:var(--warn-soft); color:var(--warn); border:1px solid var(--warn-line)}
+.t-x{background:var(--sunken); color:var(--faint); border:1px solid var(--rule-strong)}
+caption{caption-side:bottom; text-align:left; padding:9px 15px; font-family:var(--sans);
+  font-size:12px; color:var(--faint); border-top:1px solid var(--rule)}
+
+/* ---------- callouts ---------- */
+.note{border-left:3px solid var(--accent); background:var(--accent-soft);
+  padding:15px 18px; margin:0 0 20px; max-width:70ch}
+.note.warn{border-left-color:var(--warn); background:var(--warn-soft)}
+.note p{margin:0 0 9px; font-size:15.5px}
+.note p:last-child{margin:0}
+.note .lbl{font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--accent); display:block; margin-bottom:7px; font-weight:500}
+.note.warn .lbl{color:var(--warn)}
+
+/* ---------- code ---------- */
+pre{font-family:var(--mono); font-size:12.8px; line-height:1.62; background:var(--surface);
+  border:1px solid var(--rule); padding:16px 18px; overflow-x:auto; margin:0 0 18px;
+  color:var(--body)}
+pre b{color:var(--accent); font-weight:400}
+pre i{color:var(--faint); font-style:normal}
+pre.tree{font-size:12.2px; line-height:1.72}
+
+/* ---------- verdict pair ---------- */
+.pick{display:grid; gap:14px; margin:0 0 20px}
+@media(min-width:640px){.pick{grid-template-columns:1fr 1fr}}
+.pick div{background:var(--surface); border:1px solid var(--rule); padding:18px 20px}
+.pick div.on{border-color:var(--accent); border-top:3px solid var(--accent)}
+.pick h4{font-family:var(--mono); font-size:12.5px; margin:0 0 4px; color:var(--ink); font-weight:500}
+.pick .rec{font-family:var(--mono); font-size:10px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--accent); display:block; margin-bottom:9px; font-weight:500}
+.pick p{font-size:14.5px; margin:0; color:var(--muted)}
+
+footer{grid-column:1/-1; border-top:1px solid var(--rule); padding-top:22px; margin-top:20px;
+  font-family:var(--sans); font-size:13px; color:var(--faint)}
+footer p{max-width:70ch; margin:0 0 8px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important; animation:none!important}}
+</style>
+
+<div class="wrap">
+<header class="mast">
+  <p class="eyebrow">Data package · documentation</p>
+  <h1>Indonesian WPI Deflator</h1>
+  <p class="standfirst">Wholesale Price Index deflators at the 4-digit ISIC level for Indonesian
+    manufacturing, 2000–2022. Built by extending <code>wpio.dta</code> forward with BPS
+    <i>Indeks Harga Perdagangan Besar</i> publications.</p>
+  <ul class="facts">
+    <li><dt>Base year</dt><dd>2000 = 100</dd></li>
+    <li><dt>ISIC4 codes</dt><dd>131</dd></li>
+    <li><dt>Native span</dt><dd>2000–2019</dd></li>
+    <li><dt>Spliced</dt><dd>2020–2022</dd></li>
+    <li><dt>Rows verified</dt><dd>471 / 471</dd></li>
+  </ul>
+</header>
+
+<nav class="rail"><div>
+  <p>Contents</p>
+  <a href="#pick">Which file</a>
+  <a href="#data">What's in it</a>
+  <a href="#use">Using it</a>
+  <a href="#method">Sources &amp; method</a>
+  <a href="#splice">The 2020–22 splice</a>
+  <a href="#valid">Validation</a>
+  <a href="#limits">Limitations</a>
+  <a href="#files">File inventory</a>
+</div></nav>
+
+<main>
+
+<section id="pick">
+  <h2><span class="num">01</span>Which file should I use?</h2>
+  <p class="sub">Two datasets. They are identical on every shared year — the second only adds columns.</p>
+
+  <div class="cov">
+    <div class="covgrid">
+      <span class="c-native"></span><span class="c-native"></span><span class="c-native"></span>
+      <span class="c-native"></span><span class="c-native"></span><span class="c-native"></span>
+      <span class="c-native"></span><span class="c-native"></span><span class="c-native"></span>
+      <span class="c-native"></span><span class="c-native"></span><span class="c-native"></span>
+      <span class="c-native"></span><span class="c-native"></span><span class="c-native"></span>
+      <span class="c-native"></span><span class="c-gap" title="2016 — no BPS publication"></span>
+      <span class="c-native"></span><span class="c-native"></span><span class="c-native"></span>
+      <span class="c-splice"></span><span class="c-splice"></span><span class="c-splice"></span>
+    </div>
+    <div class="covax">
+      <span>00</span><span>01</span><span>02</span><span>03</span><span>04</span><span>05</span>
+      <span>06</span><span>07</span><span>08</span><span>09</span><span>10</span><span>11</span>
+      <span>12</span><span>13</span><span>14</span><span>15</span><span>16</span><span>17</span>
+      <span>18</span><span>19</span><span>20</span><span>21</span><span>22</span>
+    </div>
+    <div class="regimes"><b>IHPB base 2010 = 100 · natively chain-linked</b><i>2018 = 100 · spliced</i></div>
+    <div class="covkey">
+      <span><span class="sw c-native"></span>Native chain-link — use freely</span>
+      <span><span class="sw c-gap"></span>2016 — no BPS publication, missing by design</span>
+      <span><span class="sw c-splice"></span>Spliced across a base change — levels ±a few percent</span>
+    </div>
+  </div>
+  <p style="font-family:var(--sans);font-size:12.5px;color:var(--faint);margin:0 0 26px">
+    Coverage by year. The deflator also runs back to 1983, omitted here for scale.</p>
+
+  <div class="pick">
+    <div class="on">
+      <span class="rec">Recommended default</span>
+      <h4>wpio_extended_2000_2019.dta</h4>
+      <p>Every year natively chain-linked on one consistent base. No splice, no base change.
+         Covers the current SI analysis panel (2000–2014) with room to spare.</p>
+    </div>
+    <div>
+      <span class="rec" style="color:var(--muted)">Only if you need 2020+</span>
+      <h4>wpio_extended_2000_2022.dta</h4>
+      <p>The same file plus 2020–22, brought across a BPS base change by splice.
+         Read <a href="#splice">§05</a> before using those three years.</p>
+    </div>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Scope note</span>
+    <p>The <strong>SI analysis panel currently runs 2000–2014.</strong> Either file covers it.
+       The 2022 file matters only if firm-level survey data for 2015 onward is added later —
+       and that data does not yet exist in this project.</p>
+  </div>
+  <p>The two <code>.dta</code> files were diffed on all shared years (1983–2019): maximum absolute
+     difference <strong>0.0</strong>. Matching <code>.csv</code> exports carry identical content;
+     the <code>_long.csv</code> variants give one row per <code>isic × year</code>, which merges
+     more easily outside Stata.</p>
+</section>
+
+<section id="data">
+  <h2><span class="num">02</span>What's in the data</h2>
+  <p class="sub">131 rows, one per manufacturing ISIC4 code.</p>
+  <div class="scroll"><table>
+    <thead><tr><th>Variable</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td><code>isic</code></td><td>4-digit ISIC Rev. 3 / KBLI 2000 manufacturing code (1511–3720)</td></tr>
+      <tr><td><code>wpi1983</code> … <code>wpi2022</code></td><td>WPI deflator for that year, base 2000 = 100</td></tr>
+    </tbody>
+  </table></div>
+
+  <p><code>wpi2000 = 100</code> for every code by construction; the do-file asserts this and halts
+     if it fails. Stored as <code>double</code> — 111 of 131 codes are bit-exactly 100 and the rest
+     differ in the last bit (max deviation 1.4×10⁻¹⁴, inherited from <code>wpio.dta</code>'s own
+     storage). Test it with a tolerance, not <code>==</code>.</p>
+
+  <div class="note warn">
+    <span class="lbl">2016 is missing</span>
+    <p>No BPS IHPB 2016 publication was available. <code>wpi2016</code> is missing for
+       <strong>all 131 codes</strong> — held uniform rather than filled for some codes and not
+       others, so the gap never masquerades as an ISIC-specific artefact.</p>
+  </div>
+
+  <h3>Deflator path — median across the 131 codes</h3>
+  <div class="scroll"><table>
+    <thead><tr><th class="n">2000</th><th class="n">2010</th><th class="n">2015</th><th class="n">2019</th>
+      <th class="n">2020</th><th class="n">2021</th><th class="n">2022</th></tr></thead>
+    <tbody><tr>
+      <td class="n">100.0</td><td class="n">224.1</td><td class="n">279.3</td><td class="n">306.1</td>
+      <td class="n">313.9</td><td class="n">321.3</td><td class="n">327.1</td>
+    </tr></tbody>
+    <caption>Base 2000 = 100. Figures from 2020 onward are spliced.</caption>
+  </table></div>
+</section>
+
+<section id="use">
+  <h2><span class="num">03</span>Using it downstream</h2>
+  <p class="sub">Stored at ISIC4, applied at ISIC3.</p>
+  <p>The deflator is held at 4-digit level but applied at <strong>3-digit</strong>, following
+     Narjoko &amp; Hill (2007) and Aswicahyono, Hill &amp; Narjoko (2010), both of whom use 3-digit
+     WPI deflators in the SI/IBS literature. This is the pattern already in
+     <code>16_energy_intensity.do</code>:</p>
+<pre><i>* 1. collapse ISIC4 -&gt; ISIC3 and reshape to a year lookup</i>
+use "wpio_extended_2000_2019.dta", clear
+gen isic3 = <b>floor</b>(isic / 10)
+<b>reshape long</b> wpi, i(isic) j(year)
+<b>collapse</b> (mean) wpi, by(isic3 year)
+keep if <b>inrange</b>(year, 2000, 2019)
+tempfile wpi_lookup
+save `wpi_lookup'
+
+<i>* 2. merge onto firm data and deflate</i>
+use "si_energy_emissions.dta", clear
+<b>merge</b> m:1 isic3 year using `wpi_lookup', keep(master match) nogen
+
+gen double output_real   = output / (wpi / 100)      <i>// 2000 Rp000</i>
+gen double ei_gj_real    = total_gj_s1 / output_real
+gen double ln_ei_gj_real = <b>ln</b>(ei_gj_real)</pre>
+  <p>This yields <strong>67 ISIC3 groups × 23 years = 1,541 cells</strong>, with only 2016 missing.
+     ISIC3 range is 151–372. Non-manufacturing firm-years get <code>wpi = .</code> and therefore
+     <code>output_real = .</code>, dropping out of log-scale intensity outcomes.</p>
+  <div class="note">
+    <span class="lbl">Deflate the denominator only</span>
+    <p><strong>Monetary</strong> intensity (expenditure ÷ output) has nominal Rupiah on both sides,
+       so any deflator cancels exactly — do not apply one.
+       <strong>Physical</strong> intensity (GJ or tCO₂e ÷ output) has a unit-free numerator and
+       does need the deflated denominator.</p>
+  </div>
+</section>
+
+<section id="method">
+  <h2><span class="num">04</span>Sources and method</h2>
+  <p class="sub">Three stages: the original series, a native chain-link, then a splice.</p>
+
+  <h3>Stage 1 — 1983–2012, unchanged</h3>
+  <p>Taken directly from <code>wpio.dta</code>: WPI indices at 4-digit ISIC, base 2000 = 100, for
+     131 manufacturing codes. Originally derived from BPS IHPB publications following
+     <strong>Imbruno &amp; Ketterer (2018)</strong>, <i>Journal of Development Economics</i>.</p>
+
+  <h3>Stage 2 — 2013–2019, native chain-link</h3>
+  <p>Chain-linked off the 2010 anchor using IHPB annual averages on the (2010 = 100) base:</p>
+<pre>wpi<i>_t</i> = wpi2010 × (IHPB<i>_t</i> / 100)</pre>
+  <p>Where two IHPB sub-sectors jointly represent one ISIC4 group, their arithmetic mean is used —
+     consistent with the original <code>wpio.dta</code> construction, which already assigned a
+     single WPI series to those codes. <strong>ISIC 3710 / 3720</strong> (Recycling) have no IHPB
+     sub-sector and are extrapolated from the 2010–2012 CAGR, as in the original pipeline; under
+     0.5% of firm-years.</p>
+
+  <h3>Source publications</h3>
+  <div class="scroll"><table>
+    <thead><tr><th>Year</th><th>Base</th><th>File</th><th>Extraction</th></tr></thead>
+    <tbody>
+      <tr><td class="n">2013</td><td><span class="tag t-a">2010=100</span></td><td><code>…besar-indonesia-2013-….xlsx</code></td><td>Direct cell read</td></tr>
+      <tr><td class="n">2014</td><td><span class="tag t-a">2010=100</span></td><td><code>…besar-indonesia-2014-….xlsx</code></td><td>Direct cell read</td></tr>
+      <tr><td class="n">2015</td><td><span class="tag t-a">2010=100</span></td><td><code>ihpb2015.pdf</code></td><td>LLM vision — no text layer (pure scan)</td></tr>
+      <tr class="flag"><td class="n">2016</td><td><span class="tag t-x">none</span></td><td colspan="2"><strong>Not available.</strong> No publication supplied; the 2017 edition carries 2017 months only.</td></tr>
+      <tr><td class="n">2017</td><td><span class="tag t-a">2010=100</span></td><td><code>ihpb2017.pdf</code></td><td>PDF text layer; p6 by vision (rotated page)</td></tr>
+      <tr><td class="n">2018</td><td><span class="tag t-a">2010=100</span></td><td><code>ihpb2018.pdf</code></td><td>PDF text layer; subs 8/16/17 by vision</td></tr>
+      <tr><td class="n">2019</td><td><span class="tag t-a">2010=100</span></td><td><code>ihpb2019.pdf</code></td><td>PDF text layer</td></tr>
+      <tr><td class="n">2020</td><td><span class="tag t-b">2018=100</span></td><td><code>ihpb2020.pdf</code></td><td>PDF text layer</td></tr>
+      <tr><td class="n">2021</td><td><span class="tag t-b">2018=100</span></td><td><code>ihpb2021.pdf</code></td><td>PDF text layer</td></tr>
+      <tr><td class="n">2022</td><td><span class="tag t-b">2018=100</span></td><td><code>ihpb2022.pdf</code></td><td>PDF text layer</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note">
+    <span class="lbl">If you re-extract these PDFs</span>
+    <p>The BPS watermark injects oversized <code>Helvetica-Bold</code> glyphs <i>inside</i> the
+       digits — <code>221.11</code> arrives as <code>2.21.11</code>. Filtering characters to
+       ≤ 12 pt removes it. Anyone parsing these files will hit this.</p>
+  </div>
+</section>
+
+<section id="splice">
+  <h2><span class="num">05</span>The 2020–2022 splice</h2>
+  <p class="sub">Read this before using those three years for anything level-sensitive.</p>
+
+  <p>BPS changed <strong>two things at once</strong> with the 2020 edition:</p>
+  <ol>
+    <li><strong>Rebased</strong> the index from (2010 = 100) to (2018 = 100).</li>
+    <li><strong>Renumbered and redefined</strong> the sub-sectors — 50 groups became
+        <strong>57</strong>. Only sub-sectors 1–13 keep their meaning; 37 of 50 numbers now refer
+        to a different industry. Eight groups are new: 14, 21, 35, 42, 44, 49, 55, 57.</li>
+  </ol>
+  <p>So those years cannot use the same chain-link. They are brought onto the (2010 = 100) scale by
+     a link factor anchored on <strong>December 2019</strong>, observable on both bases — published
+     directly in the 2019 edition, and back-solved on the new base from the 2020 edition's
+     <code>Perubahan / Change (%)</code> column, which that edition's own footnote defines as
+     <i>“Persentase perubahan IHPB Januari 2020 terhadap IHPB Desember 2019.”</i></p>
+<pre><i>f</i><b>_sub</b> = IHPB_Dec2019(2010=100) / IHPB_Dec2019(2018=100)
+
+IHPB<i>_t</i>(2010-equivalent) = IHPB<i>_t</i>(2018=100) × <i>f</i><b>_sub</b>        <i>t = 2020, 2021, 2022</i></pre>
+  <p>Results are expressed back in <strong>2010-base sub-sector numbers</strong>, which means
+     <code>ihpb_isic4_concordance.csv</code> is reused <strong>completely unchanged</strong> — no
+     ISIC4 remapping, and no second semantic match layered on the original one. Every link factor
+     is tabulated in the workbook's <code>splice_2020_2022</code> sheet.</p>
+
+  <h3>How accurate is it?</h3>
+  <p>The two index definitions do not agree exactly — different baskets and weights. Measured on the
+     13 sub-sectors whose number means the same industry on both bases, so that no crosswalk error
+     enters:</p>
+  <div class="scroll"><table>
+    <thead><tr><th>Divergence of <i>f</i> from its theoretical value</th><th class="n">Median</th><th class="n">Mean</th><th class="n">Max</th></tr></thead>
+    <tbody><tr><td>Across the 13 directly comparable sub-sectors</td>
+      <td class="n">0.91%</td><td class="n">1.62%</td><td class="n">5.48%</td></tr></tbody>
+    <caption>This is the floor for any splice between these two series. Better sub-sector matching would not reduce it.</caption>
+  </table></div>
+  <ul>
+    <li>Treat 2020–2022 <strong>levels</strong> as ±a few percent; prefer 2000–2019 wherever levels matter.</li>
+    <li>In a <strong>DiD with year fixed effects the splice error is fully absorbed</strong> and does
+        not bias the treatment coefficient — year FE remove anything constant within a calendar year.</li>
+    <li>There is <strong>no visible seam</strong>: the 2019→2020 deflator ratio (median 1.015) is
+        <i>smaller</i> than an ordinary within-regime year (2021→2022, median 1.038), consistent with
+        COVID-year low inflation rather than a splice artefact.</li>
+  </ul>
+
+  <div class="note warn">
+    <span class="lbl">One code affected</span>
+    <p>2010-base sub 36, <i>“Industri Media Magnetik dan Media Optik”</i>, has no 2018-base
+       counterpart. It is used only as the <i>secondary</i> of the averaged pair for
+       <strong>ISIC 3210</strong>, so for 2020–2022 that code falls back to its primary (sub 33)
+       alone. All other codes are unaffected; the do-file handles it automatically and logs it.</p>
+  </div>
+</section>
+
+<section id="valid">
+  <h2><span class="num">06</span>Validation</h2>
+  <p class="sub">Extraction checked arithmetically; construction re-derived outside Stata.</p>
+
+  <h3>Extraction</h3>
+  <p>Every IHPB row was checked by recomputing the annual average from its own twelve monthly
+     indices and comparing to the printed <i>Rata2 / Rata-rata</i> value, tolerance 0.05.</p>
+  <div class="scroll"><table>
+    <thead><tr><th>Block</th><th class="n">Rows</th><th class="n">Verified</th></tr></thead>
+    <tbody>
+      <tr><td>(2010 = 100) — 50 sub-sectors × 6 years</td><td class="n">300</td><td class="n">300</td></tr>
+      <tr><td>(2018 = 100) — 57 sub-sectors × 3 years</td><td class="n">171</td><td class="n">171</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note">
+    <span class="lbl">The check earned its keep</span>
+    <p>It caught <strong>three real errors in 2018</strong> — sub-sectors 8, 16 and 17 — where the
+       PDF text layer silently dropped the Average token and the parser picked up December instead.
+       Errors of 3–6 index points, invisible to inspection. Those rows were re-read visually and
+       corrected.</p>
+  </div>
+
+  <h3>Deflator construction</h3>
+  <ul>
+    <li>2019 file: <strong>774 / 774</strong> chain-linked values reproduced exactly by independent recomputation.</li>
+    <li>2022 file: <strong>1,161 / 1,161</strong> values reproduced exactly.</li>
+    <li>CAGR path for ISIC 3710 / 3720 verified; <code>wpi2000 = 100</code> for all 131 codes.</li>
+    <li>No seam at the 2012→2013 join — median ratio 1.025, ordinary ~2.5% inflation.</li>
+    <li>Downstream ISIC3 collapse yields exactly the expected 67 × <i>n</i>-years cells.</li>
+  </ul>
+  <p>Full Stata run logs are in <code>logs/</code>.</p>
+</section>
+
+<section id="limits">
+  <h2><span class="num">07</span>Known limitations</h2>
+  <p class="sub">Ordered by how much they should change what you do.</p>
+  <ol>
+    <li><strong>The concordance rests on semantic matching.</strong> BPS publishes no official
+        crosswalk between IHPB sub-sector labels and ISIC codes. Each ISIC4 code was assigned to the
+        sub-sector whose description most closely corresponds in meaning. Inspect
+        <code>ihpb_isic4_concordance.csv</code> — columns <code>isic4_description</code> and
+        <code>notes</code> — to judge individual matches.</li>
+    <li><strong>The concordance is ISIC Rev. 3 / KBLI 2000.</strong> If SI/IBS microdata for 2015+
+        is added it will be KBLI 2015/2020 coded (ISIC Rev. 4 lineage). Rev. 3 → Rev. 4 is
+        <i>not</i> a clean 1:1 remap in manufacturing. Budget real time here — this is the expensive
+        dependency, not the deflator.</li>
+    <li><strong>2020–2022 are spliced, not native.</strong> ±a few percent on levels. See §05.</li>
+    <li><strong>2016 is missing.</strong> Sourcing the BPS IHPB 2016 edition closes it: add
+        <code>2016</code> to the <code>YEARS</code> local in the do-file and re-run. A one-line change.</li>
+    <li><strong>Do not extend past 2022 with this method.</strong> First verify whether IHPB
+        (2018 = 100) continued beyond 2022, and whether BPS rebased again or moved to the Producer
+        Price Index (IHPr).</li>
+  </ol>
+</section>
+
+<section id="files">
+  <h2><span class="num">08</span>File inventory</h2>
+  <p class="sub">Everything needed to use, audit, or rebuild the deflator.</p>
+<pre class="tree">WPI_deflator_package/
+├── README.md                              <i>this document, in Markdown</i>
+├── documentation.html                     <i>this document, rendered</i>
+├── data/
+│   ├── <b>wpio_extended_2000_2019.dta</b>          <i>RECOMMENDED — native chain-link only</i>
+│   ├── wpio_extended_2000_2019.csv            <i>same, wide</i>
+│   ├── wpio_extended_2000_2019_long.csv       <i>same, one row per isic x year</i>
+│   ├── wpio_extended_2000_2022.dta            <i>adds spliced 2020-2022</i>
+│   ├── wpio_extended_2000_2022.csv
+│   └── wpio_extended_2000_2022_long.csv
+├── source/
+│   ├── ihpb_isic4_concordance.csv          <i>131 ISIC4 -&gt; IHPB sub-sector</i>
+│   ├── ihpb_annual_averages_2013_2019.csv  <i>lookup, 2010=100, native years</i>
+│   ├── ihpb_annual_averages_2013_2022.csv  <i>lookup incl. spliced 2020-2022</i>
+│   └── ihpb_annual_averages_2013_2022_clean.xlsx
+│                                           <i>full IHPB extract + audit trail:</i>
+│                                           <i>annual_long, wide_2010base,</i>
+│                                           <i>wide_2018base (57 groups),</i>
+│                                           <i>monthly_long (all 12 months),</i>
+│                                           <i>subsector_map, splice_2020_2022</i>
+├── dofiles/
+│   ├── 15b_extend_wpio_2019.do             <i>builds the 2019 file</i>
+│   └── 15c_extend_wpio_2022.do             <i>builds the 2022 file</i>
+└── logs/
+    ├── 15b_extend_wpio_2019.log            <i>full Stata run logs</i>
+    ├── 15c_extend_wpio_2022.log
+    ├── wpi_extension_qa.csv                <i>per-year mean/min/max</i>
+    └── wpi_extension_qa_2022.csv</pre>
+
+  <h3>Reproducing from scratch</h3>
+  <p>Requires <code>wpio.dta</code>, not redistributed here — 131 × 31, base 2000 = 100, 1983–2012.</p>
+<pre><i>* place wpio.dta in            &lt;root&gt;/data/raw/</i>
+<i>* place the two source CSVs in &lt;root&gt;/data/concordance/</i>
+global handoff "&lt;root&gt;"
+do "&lt;root&gt;/dofiles/15c_extend_wpio_2022.do"</pre>
+  <p>Both do-files derive every path from <code>$handoff</code> and create <code>output/</code> and
+     <code>logs/</code> themselves. They assert on base year, concordance coverage and per-year
+     completeness, so a wrong input file fails loudly rather than silently.</p>
+</section>
+
+</main>
+
+<footer>
+  <p><strong>References.</strong> Imbruno &amp; Ketterer (2018), <i>Journal of Development
+     Economics</i> — WPI deflator construction and the monetary energy-intensity measure.
+     Narjoko &amp; Hill (2007); Aswicahyono, Hill &amp; Narjoko (2010) — precedent for applying WPI
+     deflators at 3-digit ISIC in the SI/IBS literature. BPS, <i>Indeks Harga Perdagangan Besar
+     Indonesia</i>, annual editions 2013–2022.</p>
+  <p>Deflators are for research use. Index values are reproduced from published BPS aggregates;
+     no BPS microdata is redistributed in this package.</p>
+</footer>
+</div>

@@ -1,0 +1,63 @@
+{
+  "node_id": "G1_N04",
+  "branch": "nominal_development_compatibility",
+  "material_state_status": "implemented_aggregate_receipt_present_validation_separate",
+  "state": "Nominal points and sensitivities",
+  "inputs": [
+    "nominal/N03_frozen.dta",
+    "nominal-specification.json",
+    "stata/methods/METHOD-CONTRACT.md"
+  ],
+  "input_nodes": [
+    "G1_N03"
+  ],
+  "outputs_relative_to_external_run": [
+    "nominal/fit_results.dta",
+    "nominal/N04_predictions.dta"
+  ],
+  "aggregate_outputs_relative_to_external_run": [
+    "outputs/nominal_coefficients.csv",
+    "outputs/nominal_optimizer_diagnostics.csv"
+  ],
+  "available_aggregate_receipts": [
+    "outputs/nominal_coefficients.csv",
+    "outputs/nominal_optimizer_diagnostics.csv"
+  ],
+  "available_private_artifacts": [],
+  "grain": "Declared fit cell; prediction sidecar additionally keyed by original obs_id",
+  "keys": [
+    "sector",
+    "method",
+    "sample_id",
+    "variant",
+    "start",
+    "poly"
+  ],
+  "denominator": "All declared sector×method×own/common×variant cells, including every unsupported cell. Primary d3/OLS, d3 low/high starts and d2 sensitivity retained",
+  "units": {
+    "levels": "reported monetary candidate units; no verified conversion or deflation",
+    "logs_and_residuals": "natural-log points; nominal structural residual contains price/measurement/transitory components",
+    "coefficients": "dimensionless elasticities",
+    "counts": "source observations, derivative risk intervals, distinct synthetic firms and draws explicitly distinguished"
+  },
+  "calendar": "Source2010–2015/2017–2022; production2011–2015/2018–2022; dynamic2012–2015/2019–2022; actual delta1",
+  "decision": "Fit the pinned distinct methods under explicit nominal_development/syntheticpanel1; freeze within-cell log medians before optimizer. Restore native-log residuals; normalize by the sector-method-sample pooled dynamic fit mean. Only successful supported cells produce predictions.",
+  "missingness": "Missing/zero/negative remain distinct; no imputation; unsupported statistical results remain missing and every skipped/failed obligation is retained",
+  "source_code": "work-items/G1/stata/nominal/N04_fits.do",
+  "source_code_sha256": "1ecbdb99562781f35c33533d6587d08f39123945aa6ac58c08d0d076c704c826",
+  "executed_source_sha256": "550c4183a966af66d2f88a8ef79fd5a0fc84de6c6a0f9008bd5da8cd99be02e2",
+  "executed_source_or_proven_comment_only": true,
+  "specification_path": "work-items/G1/nominal-specification.json",
+  "specification_sha256": "b7d44ee476be421e158868783f6f31f1408d7f3b028230fecbc600083cebf8b5",
+  "aggregate_receipt_sha256": {
+    "outputs/nominal_coefficients.csv": "df624673679e47cdb1b03749670624aec6ac7cb0b20f050c4a4f4c7adc287a3a",
+    "outputs/nominal_optimizer_diagnostics.csv": "df624673679e47cdb1b03749670624aec6ac7cb0b20f050c4a4f4c7adc287a3a"
+  },
+  "execution_evidence_root": "/Users/natanaelmassie/Downloads/deasy-g1-issue9-20260913/work-items/G1/release",
+  "primary_real_admission": false,
+  "panel_mode": "official synthetic_development; real linkage not required or claimed",
+  "plan": "releases/2026-09-13-data-foundation/stata-preparation/row-plans/G1.json",
+  "plan_sha256": "dd88cfa94af5f212a7b0a4b70f99fea1c0201f950cd19333357739b96b5da1ca",
+  "input_manifest": "data/g0-5-development/manifest.json",
+  "input_manifest_sha256": "060b0ee0a2158a9c94b0e7e68fcfba719eda37561422855471a99da6810ba260"
+}

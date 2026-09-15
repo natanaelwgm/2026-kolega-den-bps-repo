@@ -1,0 +1,118 @@
+{
+  "status": "SUPPLEMENTAL_COMMENT_DIRECTIVES_NOT_INSTALLED",
+  "main_manifest_sha256": "900dc4dd50f41b693a0cfd76892628dafc059782be7f63f0c531e172cce65aa8",
+  "supplemental_entries": [
+    {
+      "path": "rd2017/lib/shared.do",
+      "source_archive": "provenance/logging-originals/rd2017/lib/shared.do",
+      "source_sha256": "6253a3c16dbc01ecc82b3a88956ac7b38bdb1e7708ce3c47e3ab86f249f4826d",
+      "projection": "archived_original_science_source_matches_active_non_WFDOC_projection",
+      "header_comments": [
+        "* Tujuan: Menyediakan helper R&D 2017 untuk klasifikasi token, status kandidat, rasio/hitungan, pemeriksaan skema, dan uji CSV.",
+        "* Input: token mentah dan flag keberadaan; tabel ringkas; atau CSV beserta nama skema yang dipilih pemanggil.",
+        "* Output: kelas/status kandidat, hitungan/rasio, dan tabel DTA/CSV yang diperiksa menurut skema.",
+        "* Batas: tahap audit dan tabel hitungan menulis measurement_admitted=0; label candidate tetap berarti hasil kandidat."
+      ],
+      "block_notes": [
+        {
+          "line": 4,
+          "comment": "* Definisikan perintah pembentuk kandidat; opsi stage memilih bagian token, status universe, jawaban, atau audit yang dijalankan."
+        },
+        {
+          "line": 6,
+          "comment": "* Pada stage tokens, pastikan raw_rnd17/raw_costrd17 berupa teks, rapikan spasi luar, lalu bedakan jawaban 1/2, teks kosong, sumber absen, dan teks lain."
+        },
+        {
+          "line": 21,
+          "comment": "* Pada stage universe, kode kandidat parent menjadi 0 untuk token 2, 1 untuk token 1, 2 untuk blank/other, dan 3 untuk absent; ini kelas kerja, bukan keputusan rilis."
+        },
+        {
+          "line": 30,
+          "comment": "* Pada stage answer, jika universe=0, kelas child 1/2/blank/other/absent dipetakan ke status 0/1/2/3/6; universe=1 mendapat 4 dan universe=2/3 mendapat 5. external_candidate hanya 1 untuk status 0 atau 0 untuk status 1; lainnya tetap kosong."
+        },
+        {
+          "line": 46,
+          "comment": "* Stage audit menandai child nonblank di luar universe, memastikan flag audit sesuai gerbang, dan menetapkan measurement_admitted=0 serta primary_release=0."
+        },
+        {
+          "line": 58,
+          "comment": "* Definisikan dua rasio kandidat: yes/(yes+no) untuk yes di antara eligible yang diketahui, dan (yes+no)/eligible_n untuk cakupan jawaban diketahui; rasio hanya dihitung bila denominator positif, lalu percent=100×ratio."
+        },
+        {
+          "line": 77,
+          "comment": "* Hitung jumlah per tahun 2017 dan kategori token/status, pastikan pecahannya saling cocok dengan total, lalu siapkan tabel group counts yang ditandai candidate_only=1 dan measurement_admitted=0."
+        },
+        {
+          "line": 136,
+          "comment": "* Impor CSV sebagai teks untuk semua kolom, dengan kutip ketat dan UTF-8; spec memilih kolom yang dikonversi, sedangkan teks nonkosong/non-titik yang gagal dibaca sebagai angka membuat assert berhenti."
+        },
+        {
+          "line": 830,
+          "comment": "* Definisikan pemeriksa skema: untuk spec yang dipilih, cocokkan urutan/nama kolom, jumlah baris, tipe, kunci, dan rentang yang ditetapkan; skema salah menghentikan proses."
+        },
+        {
+          "line": 1318,
+          "comment": "* Ekspor hanya setelah skema lulus: simpan DTA acuan, format angka, tulis CSV, impor ulang menurut spec, cocokkan jumlah baris/kolom dan semua nilai, cek skema lagi, lalu muat kembali DTA acuan."
+        }
+      ]
+    },
+    {
+      "path": "code/validation/compare_reports.do",
+      "source_archive": "provenance/worker-key-comparison-amendment/code/validation/compare_reports.do",
+      "source_sha256": "51b979c5037b86bb6fa8f30199715d7c9f832ac891447e00e7faebea4c3da742",
+      "projection": "worker_key_comparison_amendment_current_science_source",
+      "header_comments": [
+        "* Tujuan: Bandingkan tabel laporan saat ini dengan hasil G0-rebuild; untuk tabel pekerja, cocokkan baris dengan kunci source_year dan ratio yang unik.",
+        "* Input: corrections/reports/*.dta dan tabel pembanding pada work/G0-rebuild/corrections/reports.",
+        "* Output: penanda WF_REPORT_VALUES_30_EXACT hanya setelah seluruh tabel lolos perbandingan; nilai laporan tidak dihitung ulang atau disimpan ulang.",
+        "* Pada tabel pekerja, sort hanya mengurutkan baris untuk pencocokan; pasangan kunci ganda menghentikan validasi."
+      ],
+      "block_notes": [
+        {
+          "line": 58,
+          "comment": "* Buka tabel worker_denominator_domains saat ini; tabel ini dibandingkan per pasangan tahun dan ratio."
+        },
+        {
+          "line": 60,
+          "comment": "* Wajibkan source_year+ratio unik; jika pasangan ini berulang, hentikan validasi karena baris pembanding tidak dapat dipasangkan satu lawan satu."
+        },
+        {
+          "line": 61,
+          "comment": "* Urutkan tabel saat ini menurut kunci itu supaya baris yang sama berada pada urutan yang sama; nilai tidak diubah."
+        },
+        {
+          "line": 63,
+          "comment": "* Simpan salinan sementara tabel saat ini sebelum membuka pembanding."
+        },
+        {
+          "line": 64,
+          "comment": "* Buka tabel pekerja dari hasil G0-rebuild sebagai pembanding; nilai tabel ini hanya dibaca."
+        },
+        {
+          "line": 65,
+          "comment": "* Periksa kunci source_year+ratio pembanding juga unik."
+        },
+        {
+          "line": 66,
+          "comment": "* Urutkan pembanding memakai kunci yang sama agar urutan baris sejalan."
+        },
+        {
+          "line": 67,
+          "comment": "* Simpan versi terurut pembanding ke tempfile untuk pemeriksaan berikut."
+        },
+        {
+          "line": 68,
+          "comment": "* Pulihkan tabel saat ini dari preserve; tidak ada angka laporan yang diganti."
+        },
+        {
+          "line": 69,
+          "comment": "* Bandingkan semua kolom tabel saat ini dengan pembanding terurut; perbedaan nilai atau kolom menghentikan pemeriksaan."
+        },
+        {
+          "line": 72,
+          "comment": "* Tampilkan tanda lulus setelah seluruh 30 tabel cocok."
+        }
+      ]
+    }
+  ]
+}

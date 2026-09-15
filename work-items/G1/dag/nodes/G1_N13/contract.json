@@ -1,0 +1,601 @@
+{
+  "node_id": "G1_N13",
+  "branch": "nominal_development_deep_diagnostics",
+  "material_state_status": "validated_aggregate_receipt_validator_revision_documented_primary_dispatch_replay_pass_no_refit",
+  "state": "Existing fit sensitivities and bootstrap-draw diagnostics",
+  "input_nodes": [
+    "G1_N03",
+    "G1_N04",
+    "G1_N05"
+  ],
+  "direct_input_artifacts": [
+    {
+      "artifact": "nominal/N03_frozen.dta",
+      "scope": "read-only base-run input",
+      "path": "/Users/natanaelmassie/Downloads/deasy-g1-issue9-20260913-g1-runs/v3-assumed-stock-all-years-02/nominal/N03_frozen.dta",
+      "sha256": "1e3744974eb3e492aa7cacd08fa0b3e8c499ad9f0ab8a7b90d9ad4eda997e59b",
+      "bytes": 34002594,
+      "receipt_sha256": "1e3744974eb3e492aa7cacd08fa0b3e8c499ad9f0ab8a7b90d9ad4eda997e59b",
+      "current_hash_matches_receipt": null,
+      "exists": true,
+      "public": false
+    },
+    {
+      "artifact": "outputs/nominal_coefficients.csv",
+      "scope": "read-only base-run input",
+      "path": "/Users/natanaelmassie/Downloads/deasy-g1-issue9-20260913-g1-runs/v3-assumed-stock-all-years-02/outputs/nominal_coefficients.csv",
+      "sha256": "df624673679e47cdb1b03749670624aec6ac7cb0b20f050c4a4f4c7adc287a3a",
+      "bytes": 496588,
+      "receipt_sha256": "df624673679e47cdb1b03749670624aec6ac7cb0b20f050c4a4f4c7adc287a3a",
+      "current_hash_matches_receipt": null,
+      "exists": true,
+      "public": false
+    },
+    {
+      "artifact": "outputs/bootstrap_draws/nominal_<sector>_<method>_<sample>.csv",
+      "scope": "existing base-run bootstrap inputs",
+      "matches": [
+        {
+          "path": "outputs/bootstrap_draws/nominal_10_acf_common.csv",
+          "sha256": "cc2e85cb5617fa6f38bacc4a7c23b2d4f21ecb4db9322f42afb4255c190b5005",
+          "bytes": 17400,
+          "current_hash_matches_receipt": null
+        },
+        {
+          "path": "outputs/bootstrap_draws/nominal_10_acf_own.csv",
+          "sha256": "11abbd73b3d60105eb18109a6b3b87ca92b0a857848405ca6b4d2527a1fd8384",
+          "bytes": 17507,
+          "current_hash_matches_receipt": null
+        },
+        {
+          "path": "outputs/bootstrap_draws/nominal_10_lp_common.csv",
+          "sha256": "3d0e21eb2293f148168fba0b8f8b6ea2ef59517dcf31f140dfc54462101994c5",
+          "bytes": 17299,
+          "current_hash_matches_receipt": null
+        },
+        {
+          "path": "outputs/bootstrap_draws/nominal_10_lp_own.csv",
+          "sha256": "615914c0c94667d7c4551517fe0d6671b9b6d090ed6890d43515aab48baab13a",
+          "bytes": 17501,
+          "current_hash_matches_receipt": null
+        },
+        {
+          "path": "outputs/bootstrap_draws/nominal_10_op_common.csv",
+          "sha256": "af291f17ccd54bf2bac48505f7ada9cc91212a52d146ff18ac0dc9931d998467",
+          "bytes": 17610,
+          "current_hash_matches_receipt": null
+        },
+        {
+          "path": "outputs/bootstrap_draws/nominal_10_op_own.csv",
+          "sha256": "9498563297d63db3295fac1574979a796727fbc3764817e4389b1858006bc103",
+          "bytes": 17506,
+          "current_hash_matches_receipt": null
+        },
+        {
+          "path": "outputs/bootstrap_draws/nominal_10_wrdg_common.csv",
+          "sha256": "936d80f3ef171a76afc512418a49f3f9e64a69875fb19c24561fbaa1dc9c4b73",
+          "bytes": 17410,
+          "current_hash_matches_receipt": null
+        },
+        {
+          "path": "outputs/bootstrap_draws/nominal_10_wrdg_own.csv",
+          "sha256": "2b05e66a945a9f9830b4b9e127276acd6af64a62eb5bd1b13093300974fe1af2",
+          "bytes": 17494,
+          "current_hash_matches_receipt": null
+        },
+        {
+          "path": "outputs/bootstrap_draws/nominal_12_acf_own.csv",
+          "sha256": "82f315683221cce85e55fca1ced6ddadb131728b8c5d437c6adf2b46cf2654e5",
+          "bytes": 17412,
+          "current_hash_matches_receipt": null
+        },
+        {
+          "path": "outputs/bootstrap_draws/nominal_12_lp_own.csv",
+          "sha256": "68c576d041a1f2e109910589633c5ccfbf4701202b53be09ca39ff90c2b35a0e",
+          "bytes": 17203,
+          "current_hash_matches_receipt": null
+        },
+        {
+          "path": "outputs/bootstrap_draws/nominal_12_wrdg_own.csv",
+          "sha256": "5bb2a863c6641de3291d37344dd50267fe7c7bc116e1f8dee8b0975803e8f61d",
+          "bytes": 17417,
+          "current_hash_matches_receipt": null
+        },
+        {
+          "path": "outputs/bootstrap_draws/nominal_13_acf_own.csv",
+          "sha256": "283d2a8702ffc045c3ec4b08c01ec0e0a8c6e4d3a44ce598c9b3e0d36f44155c",
+          "bytes": 17395,
+          "current_hash_matches_receipt": null
+        },
+        {
+          "path": "outputs/bootstrap_draws/nominal_13_lp_own.csv",
+          "sha256": "5cb14d12af650e4a858d61af40727656054b308d238b5bf2e858d6cc96420b47",
+          "bytes": 17403,
+          "current_hash_matches_receipt": null
+        },
+        {
+          "path": "outputs/bootstrap_draws/nominal_13_wrdg_own.csv",
+          "sha256": "3be1be4db11719b1fe8fffc227d26a06f407f6648e55b836acd67aaa0d31798e",
+          "bytes": 17405,
+          "current_hash_matches_receipt": null
+        },
+        {
+          "path": "outputs/bootstrap_draws/nominal_14_acf_own.csv",
+          "sha256": "0c8b7d70b04036baf556d3cd47ac33ae849501e94cc3bbd489f0827c933fbddd",
+          "bytes": 17390,
+          "current_hash_matches_receipt": null
+        },
+        {
+          "path": "outputs/bootstrap_draws/nominal_14_lp_own.csv",
+          "sha256": "e49f92abd6edff2f8bd10bce4c125bbc2b8b620452432952da2b43686763b81c",
+          "bytes": 17557,
+          "current_hash_matches_receipt": null
+        },
+        {
+          "path": "outputs/bootstrap_draws/nominal_14_wrdg_own.csv",
+          "sha256": "f2560395ba4edba92c3e3a3af28959026753c6e40ba140f00477595977479394",
+          "bytes": 17558,
+          "current_hash_matches_receipt": null
+        },
+        {
+          "path": "outputs/bootstrap_draws/nominal_15_acf_own.csv",
+          "sha256": "639a85fdf808857d88d8c46edc8ffa9420f09ed2c1016226911956fa3d142508",
+          "bytes": 17402,
+          "current_hash_matches_receipt": null
+        },
+        {
+          "path": "outputs/bootstrap_draws/nominal_15_lp_own.csv",
+          "sha256": "62c5d7c686bc77c06ff178e20c9f6ab5b75f1f60af28680e5767274f5a7611b1",
+          "bytes": 17405,
+          "current_hash_matches_receipt": null
+        },
+        {
+          "path": "outputs/bootstrap_draws/nominal_15_wrdg_own.csv",
+          "sha256": "03a56eac88b402c39c48c154dee7757d631ff311dbc93005c8f52759af13b764",
+          "bytes": 17397,
+          "current_hash_matches_receipt": null
+        },
+        {
+          "path": "outputs/bootstrap_draws/nominal_16_acf_own.csv",
+          "sha256": "8a4d55e3c2b4b159a31910e3292fbcfbd8a77008384fcba781e9f582a5b6c858",
+          "bytes": 17396,
+          "current_hash_matches_receipt": null
+        },
+        {
+          "path": "outputs/bootstrap_draws/nominal_16_lp_own.csv",
+          "sha256": "82c66f2a38619dd12bce9be0c820ac7ced1d12ff997d790f72cb5aacc6a0a680",
+          "bytes": 17417,
+          "current_hash_matches_receipt": null
+        },
+        {
+          "path": "outputs/bootstrap_draws/nominal_16_wrdg_own.csv",
+          "sha256": "eda4eb601294b8a53c3d5a1d40806600b7d8074ea14865bb220fe02006897e64",
+          "bytes": 17410,
+          "current_hash_matches_receipt": null
+        },
+        {
+          "path": "outputs/bootstrap_draws/nominal_20_acf_own.csv",
+          "sha256": "f23c39002a1cd5ec4e947a84d4d26ae26c5c36f39c7b5e2face7b466e50ca211",
+          "bytes": 17403,
+          "current_hash_matches_receipt": null
+        },
+        {
+          "path": "outputs/bootstrap_draws/nominal_20_lp_own.csv",
+          "sha256": "a1b8f7a572634d9bed5c4d678d3a1c6733046f7306fa9f819da5f75b8b172dde",
+          "bytes": 17396,
+          "current_hash_matches_receipt": null
+        },
+        {
+          "path": "outputs/bootstrap_draws/nominal_20_wrdg_own.csv",
+          "sha256": "f74bb8f11da24cd19947164e112b720400fd77552525f9b03714098000924745",
+          "bytes": 17403,
+          "current_hash_matches_receipt": null
+        },
+        {
+          "path": "outputs/bootstrap_draws/nominal_22_acf_own.csv",
+          "sha256": "2c83b2f0966675d284c611dcbe465d467c8f9776d0c1e9932cad01c3fdd55263",
+          "bytes": 17400,
+          "current_hash_matches_receipt": null
+        },
+        {
+          "path": "outputs/bootstrap_draws/nominal_22_lp_own.csv",
+          "sha256": "728883176d329c2185bd4e57c5c1e43c61271b984e254b5986ec1ce1f7387411",
+          "bytes": 17578,
+          "current_hash_matches_receipt": null
+        },
+        {
+          "path": "outputs/bootstrap_draws/nominal_22_wrdg_own.csv",
+          "sha256": "fdff99d299a31e300ea94095bc33bcfb982863262e5e7078c508d67b6884b438",
+          "bytes": 17416,
+          "current_hash_matches_receipt": null
+        },
+        {
+          "path": "outputs/bootstrap_draws/nominal_23_acf_own.csv",
+          "sha256": "7b3e4eb4019a4990a6e944ab02b9ecf7b5f8dea69bb8d337ec5d11c56a9dd9df",
+          "bytes": 17403,
+          "current_hash_matches_receipt": null
+        },
+        {
+          "path": "outputs/bootstrap_draws/nominal_23_lp_own.csv",
+          "sha256": "3625127785f6238f61a7cb67fa6b297ebd017386e687b89029dcafdf011032eb",
+          "bytes": 17422,
+          "current_hash_matches_receipt": null
+        },
+        {
+          "path": "outputs/bootstrap_draws/nominal_23_wrdg_own.csv",
+          "sha256": "cdb3d2788c2e64d7a5e2405de23945499e1623ad64733214022177ae7e3e578d",
+          "bytes": 17446,
+          "current_hash_matches_receipt": null
+        },
+        {
+          "path": "outputs/bootstrap_draws/nominal_25_acf_own.csv",
+          "sha256": "42ce6e74f1a1eb80816f8b027ca16acb9419433844c30d0640a8c339e48a47d0",
+          "bytes": 17453,
+          "current_hash_matches_receipt": null
+        },
+        {
+          "path": "outputs/bootstrap_draws/nominal_25_lp_own.csv",
+          "sha256": "959121ee995e734b5ce3d6ac89bdb4d120db3de88e53d9613871ff4ee8f9d1c3",
+          "bytes": 17430,
+          "current_hash_matches_receipt": null
+        },
+        {
+          "path": "outputs/bootstrap_draws/nominal_25_wrdg_own.csv",
+          "sha256": "926d4ed9d83671e7f1c91942a98d0b1569f31d3c42f2f026146a3f35f7e6ccdb",
+          "bytes": 17457,
+          "current_hash_matches_receipt": null
+        },
+        {
+          "path": "outputs/bootstrap_draws/nominal_31_acf_own.csv",
+          "sha256": "0b708cc16f646f2666415ce7e7b213615e0b422b5d14325f6916363d02328a58",
+          "bytes": 17403,
+          "current_hash_matches_receipt": null
+        },
+        {
+          "path": "outputs/bootstrap_draws/nominal_31_lp_own.csv",
+          "sha256": "97ab4e1637979f1f90984ba04435ada01d6e5af513e0ec316e380b4c1a3381cd",
+          "bytes": 17427,
+          "current_hash_matches_receipt": null
+        },
+        {
+          "path": "outputs/bootstrap_draws/nominal_31_wrdg_own.csv",
+          "sha256": "6e3907e72fbf2c05d1d7b9ebdb86d9dcd1e5c37221c9934d4a89d14cc5aeb4d2",
+          "bytes": 17435,
+          "current_hash_matches_receipt": null
+        },
+        {
+          "path": "outputs/bootstrap_draws/nominal_32_acf_own.csv",
+          "sha256": "020be426da5d4bb06aeebadf8e0f90cd49e70ff48a54574f1d7200be42197c12",
+          "bytes": 17379,
+          "current_hash_matches_receipt": null
+        },
+        {
+          "path": "outputs/bootstrap_draws/nominal_32_lp_own.csv",
+          "sha256": "c41a1763b95bfe78388766a2bbbef9dfbbea73a5a1fbfe39d04bdac25182b881",
+          "bytes": 17317,
+          "current_hash_matches_receipt": null
+        },
+        {
+          "path": "outputs/bootstrap_draws/nominal_32_wrdg_own.csv",
+          "sha256": "bdb31b3687cd66810301258240d33824703d67d5a8d49766ff9f48757ecd44c0",
+          "bytes": 17410,
+          "current_hash_matches_receipt": null
+        }
+      ],
+      "exists": true,
+      "public": false
+    }
+  ],
+  "source_code": "work-items/G1/stata/deep/N13_existing_fits.do",
+  "source_code_sha256": "97abe56e7f0016c0375469c8fcc16ba24caa898199582cea880e0bc5b16fe67b",
+  "source_code_matches_original_run_manifest": true,
+  "runner_entry_point": {
+    "primary_do": "work-items/G1/stata/G1.do",
+    "primary_do_sha256": "08a40ae7f0b355a60b33adf4fd1d15f338645af14ae3b6109d2038f6e0b26ec7",
+    "diagnostics_child_driver": "work-items/G1/stata/deep/G1_deep.do",
+    "diagnostics_child_driver_sha256": "18e7841c4e37cf78684744b87ece680bfb9776e598d7c415b52b167b5a17469d",
+    "dispatch_revision_receipt": "qa/deep-primary-dispatch-source-revision.json",
+    "dispatch_source_revision_verified": true,
+    "execution_status": "Routed primary G1.do execution PASS; exit0, completion sentinel, exact output/contract/source hashes and independent numeric validation. Historical replay and fresh all-years runs retain their distinct receipt kinds.",
+    "final_execution_receipt": "work-items/G1/qa/deep-final-execution.json",
+    "final_execution_receipt_sha256": "e2e0cc27e036f7ea1abfc16b3542c725ace29caa2f5c003ceead0ef3d7c721ae",
+    "final_execution_status": "PASS",
+    "final_execution_verified": true,
+    "final_execution_checks": {
+      "successful_execution": true,
+      "completion_sentinel": true,
+      "exact_manifest": true,
+      "exact_validation": true,
+      "source_code": true,
+      "contract": true,
+      "source_run": true,
+      "primary_route": true,
+      "primary_dispatch_source": true,
+      "complete_output_grid": true,
+      "exact_output_files": true
+    }
+  },
+  "executed_code_receipt": {
+    "manifest_path": "deep-release/run-manifest.json",
+    "manifest_sha256": "481731a8155cb004c502c013fa74f59dc47402f1351ace9fa4e3dd6da37cd469",
+    "code": [
+      {
+        "path": "work-items/G1/stata/deep/G1_deep.do",
+        "sha256": "18e7841c4e37cf78684744b87ece680bfb9776e598d7c415b52b167b5a17469d",
+        "current_sha256": "18e7841c4e37cf78684744b87ece680bfb9776e598d7c415b52b167b5a17469d",
+        "current_hash_matches_receipt": true
+      },
+      {
+        "path": "work-items/G1/stata/deep/N08_inputs.do",
+        "sha256": "f669e8a9475d01c7602ee4d244e629978a787af0d540cb6a3d37495a933601fb",
+        "current_sha256": "f669e8a9475d01c7602ee4d244e629978a787af0d540cb6a3d37495a933601fb",
+        "current_hash_matches_receipt": true
+      },
+      {
+        "path": "work-items/G1/stata/deep/N09_funnel.do",
+        "sha256": "ad6c5e43e571e095207825fbb1db4aee8ae7719c5387abdc996ef3d3a9481b69",
+        "current_sha256": "ad6c5e43e571e095207825fbb1db4aee8ae7719c5387abdc996ef3d3a9481b69",
+        "current_hash_matches_receipt": true
+      },
+      {
+        "path": "work-items/G1/stata/deep/N10_profiles.do",
+        "sha256": "0ced63439de72d4fbfa5ebdf4befab78ec1a962f0d0c804fc788879c0ea88003",
+        "current_sha256": "0ced63439de72d4fbfa5ebdf4befab78ec1a962f0d0c804fc788879c0ea88003",
+        "current_hash_matches_receipt": true
+      },
+      {
+        "path": "work-items/G1/stata/deep/N11_pairs.do",
+        "sha256": "c9851e979c91df74fd27bfd0aee39067cb4ed9658a9ac45eaec479f28995a30d",
+        "current_sha256": "c9851e979c91df74fd27bfd0aee39067cb4ed9658a9ac45eaec479f28995a30d",
+        "current_hash_matches_receipt": true
+      },
+      {
+        "path": "work-items/G1/stata/deep/N12_worked.do",
+        "sha256": "e97691c92bf6c6a41e641532a9bcfc1e8c3186ef0852149c66603aece772ca82",
+        "current_sha256": "e97691c92bf6c6a41e641532a9bcfc1e8c3186ef0852149c66603aece772ca82",
+        "current_hash_matches_receipt": true
+      },
+      {
+        "path": "work-items/G1/stata/deep/N13_existing_fits.do",
+        "sha256": "97abe56e7f0016c0375469c8fcc16ba24caa898199582cea880e0bc5b16fe67b",
+        "current_sha256": "97abe56e7f0016c0375469c8fcc16ba24caa898199582cea880e0bc5b16fe67b",
+        "current_hash_matches_receipt": true
+      },
+      {
+        "path": "work-items/G1/stata/deep/helpers.do",
+        "sha256": "6915264050ac78be449eaf058d4c9ee645b1749bafddce58a65a83ef9accb0dd",
+        "current_sha256": "6915264050ac78be449eaf058d4c9ee645b1749bafddce58a65a83ef9accb0dd",
+        "current_hash_matches_receipt": true
+      },
+      {
+        "path": "work-items/G1/validate_deep.py",
+        "sha256": "3cb8ab9fea21ca44f032dd3e95a5c9c7979474398f4597216c2e6f967a200808",
+        "current_sha256": "3cb8ab9fea21ca44f032dd3e95a5c9c7979474398f4597216c2e6f967a200808",
+        "current_hash_matches_receipt": true
+      },
+      {
+        "path": "work-items/G1/deep-diagnostics-contract.json",
+        "sha256": "0447443beecd73db044abd6204e5472cb4a7b36d2619108467d0c8f1c2bcd641",
+        "current_sha256": "0447443beecd73db044abd6204e5472cb4a7b36d2619108467d0c8f1c2bcd641",
+        "current_hash_matches_receipt": true
+      }
+    ],
+    "validator_revision_status": "current source matches executed validator",
+    "validator_source_revision_receipt": "qa/deep-validator-source-revision.json",
+    "final_routed_execution_receipt": "work-items/G1/qa/deep-final-execution.json",
+    "final_routed_execution_receipt_sha256": "e2e0cc27e036f7ea1abfc16b3542c725ace29caa2f5c003ceead0ef3d7c721ae",
+    "final_routed_execution_status": "PASS",
+    "final_routed_execution_verified": true
+  },
+  "specification_path": "work-items/G1/deep-diagnostics-contract.json",
+  "specification_sha256": "0447443beecd73db044abd6204e5472cb4a7b36d2619108467d0c8f1c2bcd641",
+  "base_run": "/Users/natanaelmassie/Downloads/deasy-g1-issue9-20260913-g1-runs/v3-assumed-stock-all-years-02",
+  "deep_run": "/Users/natanaelmassie/Downloads/deasy-g1-issue9-20260913-g1-runs/v3-assumed-stock-all-years-02-deep02",
+  "base_run_input_manifest_sha256": "060b0ee0a2158a9c94b0e7e68fcfba719eda37561422855471a99da6810ba260",
+  "no_new_coefficient_fits": true,
+  "grain": "Existing fit rows compare each sector/method/sample variant with its primary fit; bootstrap rows summarize successful existing draw values by sector/method/sample/measure, with histogram bins for labor and capital.",
+  "keys_by_output": {
+    "deep_fit_sensitivities.csv": [
+      "sector",
+      "method",
+      "sample_id",
+      "variant"
+    ],
+    "deep_bootstrap_profiles.csv": [
+      "sector",
+      "method",
+      "sample_id",
+      "measure"
+    ],
+    "deep_bootstrap_histograms.csv": [
+      "sector",
+      "method",
+      "sample_id",
+      "measure",
+      "bin_lower"
+    ]
+  },
+  "output_contracts": [
+    {
+      "path": "deep-release/outputs/deep_fit_sensitivities.csv",
+      "schema": [
+        "sector",
+        "method",
+        "sample_id",
+        "variant",
+        "status",
+        "beta_L",
+        "beta_K",
+        "objective",
+        "primary_beta_L",
+        "primary_beta_K",
+        "primary_objective",
+        "delta_L",
+        "delta_K",
+        "delta_objective",
+        "objective_below_primary",
+        "N"
+      ],
+      "keys": [
+        "sector",
+        "method",
+        "sample_id",
+        "variant"
+      ],
+      "grain": "Existing fit rows compare each sector/method/sample variant with its primary fit; bootstrap rows summarize successful existing draw values by sector/method/sample/measure, with histogram bins for labor and capital.",
+      "denominator": "All declared sensitivity variants including skipped fits; bootstrap profiles retain requested and successful draw counts. Fit cells and bootstrap draws are not new fits. Objective functions remain method-specific and are not pooled across estimators.",
+      "units": {
+        "beta_L_beta_K": "dimensionless elasticities",
+        "objective": "method-specific objective value; compare variants only under an unchanged objective",
+        "delta": "variant minus primary within cell",
+        "bootstrap_labor_capital": "draw values in fitted source log units",
+        "counts": "requested/successful complete-process draws"
+      },
+      "sha256": "8987cb2ebc333c3060b44c0f83d47ecc97dc0ad7ea096b9d1bd7cce725ed5888",
+      "rows": 768,
+      "cells_validated": 12288,
+      "maximum_scaled_error": 1.4209646869276175e-14,
+      "status": "PASS",
+      "hash_matches_release_and_validation": true
+    },
+    {
+      "path": "deep-release/outputs/deep_bootstrap_profiles.csv",
+      "schema": [
+        "sector",
+        "method",
+        "sample_id",
+        "measure",
+        "N",
+        "mean",
+        "sd",
+        "min",
+        "p1",
+        "p5",
+        "p25",
+        "p50",
+        "p75",
+        "p95",
+        "p99",
+        "max",
+        "iqr",
+        "fence_lo15",
+        "fence_hi15",
+        "fence_lo3",
+        "fence_hi3",
+        "N_below15",
+        "N_above15",
+        "N_below3",
+        "N_above3",
+        "numeric_released",
+        "N_requested",
+        "N_successful"
+      ],
+      "keys": [
+        "sector",
+        "method",
+        "sample_id",
+        "measure"
+      ],
+      "grain": "Existing fit rows compare each sector/method/sample variant with its primary fit; bootstrap rows summarize successful existing draw values by sector/method/sample/measure, with histogram bins for labor and capital.",
+      "denominator": "All declared sensitivity variants including skipped fits; bootstrap profiles retain requested and successful draw counts. Fit cells and bootstrap draws are not new fits. Objective functions remain method-specific and are not pooled across estimators.",
+      "units": {
+        "beta_L_beta_K": "dimensionless elasticities",
+        "objective": "method-specific objective value; compare variants only under an unchanged objective",
+        "delta": "variant minus primary within cell",
+        "bootstrap_labor_capital": "draw values in fitted source log units",
+        "counts": "requested/successful complete-process draws"
+      },
+      "sha256": "4d66e302a20337e38683770297a325c9afb15daa640503f0f7381d1fd50f00a5",
+      "rows": 123,
+      "cells_validated": 3444,
+      "maximum_scaled_error": 1.2955978030613363e-15,
+      "status": "PASS",
+      "hash_matches_release_and_validation": true
+    },
+    {
+      "path": "deep-release/outputs/deep_bootstrap_histograms.csv",
+      "schema": [
+        "sector",
+        "method",
+        "sample_id",
+        "measure",
+        "bin_lower",
+        "bin_upper",
+        "N_bin",
+        "N_total",
+        "share"
+      ],
+      "keys": [
+        "sector",
+        "method",
+        "sample_id",
+        "measure",
+        "bin_lower"
+      ],
+      "grain": "Existing fit rows compare each sector/method/sample variant with its primary fit; bootstrap rows summarize successful existing draw values by sector/method/sample/measure, with histogram bins for labor and capital.",
+      "denominator": "All declared sensitivity variants including skipped fits; bootstrap profiles retain requested and successful draw counts. Fit cells and bootstrap draws are not new fits. Objective functions remain method-specific and are not pooled across estimators.",
+      "units": {
+        "beta_L_beta_K": "dimensionless elasticities",
+        "objective": "method-specific objective value; compare variants only under an unchanged objective",
+        "delta": "variant minus primary within cell",
+        "bootstrap_labor_capital": "draw values in fitted source log units",
+        "counts": "requested/successful complete-process draws"
+      },
+      "sha256": "f8da0d5cbf85c3648c90d594a5eca97f6745f35b0c3217d5b7867e7585e45009",
+      "rows": 359,
+      "cells_validated": 3231,
+      "maximum_scaled_error": 1.7415263131375002e-16,
+      "status": "PASS",
+      "hash_matches_release_and_validation": true
+    }
+  ],
+  "private_intermediates": [
+    {
+      "path_relative_to_external_run": "intermediate/deep_bootstrap_profiles.dta",
+      "sha256_at_contract_build": "33aa20a5d34ef69595e8002befe85fb7e038eaaa765a007aa365a1f851f06015",
+      "exists": true,
+      "publication": "private/local; not copied to deep-release"
+    },
+    {
+      "path_relative_to_external_run": "intermediate/deep_bootstrap_histograms.dta",
+      "sha256_at_contract_build": "b44349a5b05595c2593e04ba5488b40ae8242322981b864523a3c4db89e39a5b",
+      "exists": true,
+      "publication": "private/local; not copied to deep-release"
+    }
+  ],
+  "calendar": "Reuses the owner-authorized all-years assumed-stock nominal fit results and the already executed exploratory synthetic-firm bootstrap draws; no re-estimation or new resampling.",
+  "units": {
+    "beta_L_beta_K": "dimensionless elasticities",
+    "objective": "method-specific objective value; compare variants only under an unchanged objective",
+    "delta": "variant minus primary within cell",
+    "bootstrap_labor_capital": "draw values in fitted source log units",
+    "counts": "requested/successful complete-process draws"
+  },
+  "denominator": "All declared sensitivity variants including skipped fits; bootstrap profiles retain requested and successful draw counts. Fit cells and bootstrap draws are not new fits. Objective functions remain method-specific and are not pooled across estimators.",
+  "missingness": "Preserve unsupported variants and failed/missing draws. The objective_below_primary flag is descriptive within a fixed objective; a quadratic variant changes the specification. Keep all successful values and tails without trimming.",
+  "suppression": "Retain declared-cell N and requested/successful draw counts. Suppress exact bootstrap profiles when successful N<5; fixed-bin counts remain aggregate categories.",
+  "decision": "Diagnose start/specification sensitivity and the distribution of previously executed bootstrap draws without pooling objectives or representing diagnostics as accepted-real inference.",
+  "figure_scope": "Coefficient intervals reuse existing nominal fit/bootstrap receipts; sensitivity panels show all existing nominal variants. The deep output adds a validated table of fit deltas and successful-draw profiles.",
+  "validation": {
+    "status": "PASS",
+    "scope": "Independent arithmetic validation of all twelve new Stata aggregate outputs; no full-master load or re-estimation.",
+    "aggregate_cells_compared": 2588035,
+    "receipt_path": "deep-release/qa/deep-validation.json",
+    "receipt_sha256": "1b38990abdc2e11839b28d60063dc111bbd3e117be3b5544379cde23e01eb463",
+    "validator_source_hash_matches_manifest": true,
+    "validator_source_revision_status": "current source matches executed validator",
+    "output_hashes_match_both_receipts": true,
+    "routed_primary_execution_receipt_path": "work-items/G1/qa/deep-final-execution.json",
+    "routed_primary_execution_receipt_sha256": "e2e0cc27e036f7ea1abfc16b3542c725ace29caa2f5c003ceead0ef3d7c721ae",
+    "routed_primary_execution_status": "PASS",
+    "routed_primary_execution_verified": true
+  },
+  "release_root": "deep-release/ (separate from release/; aggregate evidence only)",
+  "primary_real_admission": false,
+  "interpretation_limit": "G0.5 nominal-development diagnostics on the official fictional panel. They do not establish real-valued productivity. Unsupported sector cells retain their recorded missing state; N11 is descriptive, not causal.",
+  "numerical_output_privacy": "Only aggregate outputs are in deep-release. obs_id/psid are used for exact internal joins and remain in private external-run intermediates.",
+  "plan": "releases/2026-09-13-data-foundation/stata-preparation/row-plans/G1.json",
+  "plan_sha256": "dd88cfa94af5f212a7b0a4b70f99fea1c0201f950cd19333357739b96b5da1ca",
+  "input_manifest": "data/g0-5-development/manifest.json",
+  "input_manifest_sha256": "060b0ee0a2158a9c94b0e7e68fcfba719eda37561422855471a99da6810ba260"
+}

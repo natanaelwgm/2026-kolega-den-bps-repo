@@ -1,0 +1,5 @@
+# SYNTHETIC decision — N_G0_fuel_biomass_kg_2020
+
+Grain: source_year/source_row; 100 fictional input records. Source: raw_ecakgu20. Rule: numeric; factor 1000; source-definition status: annual_unit_verified. Evidence reference: 2020 questionnaire Q302f/i; 2021 Lampung PDF p90 Q302g/j; 2022 Sumbar PDF p69 Q302h/k. Gas MMBTU; mixed biomass tonnes ×1000. Not pure charcoal.. These references describe code semantics, not validation of real observations.
+
+Observed: 100; zeros: 0; invalid/universe-excluded: 0; source absent: 0. Status and raw text are retained.

@@ -1,0 +1,30 @@
+{
+  "status": "PASS",
+  "scope": "Stage 2 only: 27 frozen Stata pipeline sources G1.do, E01-E19, N01-N07; no Stata execution and no estimator/method source edits during this stage.",
+  "runtime_assignment": {
+    "model": "gpt-5.6-luna",
+    "reasoning_effort": "max"
+  },
+  "changed_source_policy": "Standalone * WFDOC comment lines only. No non-comment edits, removals, or replacements were present in the diff proof.",
+  "baseline_policy": "The two explicitly authorized N06 source revisions were recorded separately before commentary and are represented in the refreshed N06 snapshot and manifest SHA; all other source baselines remain the frozen manifest snapshots.",
+  "coverage_receipt": "/Users/natanaelmassie/Downloads/deasy-g1-issue9-20260913/work-items/G1/stata/luna-pipeline-comment-coverage.json",
+  "progress_receipt": "/Users/natanaelmassie/Downloads/deasy-g1-issue9-20260913/work-items/G1/stata/luna-pipeline-comment-progress.json",
+  "source_revision_receipt": "/Users/natanaelmassie/Downloads/deasy-g1-issue9-20260913/work-items/G1/qa/luna-pipeline-source-revisions.json",
+  "source_count": 27,
+  "added_WFDOC_lines": 100,
+  "content_notes": [
+    "Explains scope, guards, calendar transitions, samples, merges, missingness, cutoffs, outputs, and progress/failure distinctions.",
+    "N04 now explicitly points to method-defined moment/instrument construction and the pinned WRDG shared-theta restriction.",
+    "Comments distinguish synthetic nominal development from admitted real-input TFP.",
+    "Comments do not claim G0.5 fit results; prior root-run results and skipped OP/common-support cells are parent-owned runtime facts."
+  ],
+  "validation": [
+    "27/27 snapshot hashes matched the refreshed pre-comment manifest.",
+    "All diffs had only equal or insert opcodes.",
+    "Every inserted physical line matched standalone * WFDOC syntax.",
+    "Removing only inserted current-line positions restored exact baseline bytes for all 27 sources.",
+    "No inserted WFDOC line follows a Stata /// continuation.",
+    "Existing baseline WFDOC lines, including N04 and N06, were retained."
+  ],
+  "stata_execution": "Not run by this comment-only agent; root owns Stata validation and final run."
+}

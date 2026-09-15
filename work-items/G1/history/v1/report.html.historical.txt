@@ -1,0 +1,137 @@
+<!doctype html><html lang="id"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>G1 — G0.5 DEVELOPMENT</title><style>body{font:17px/1.65 system-ui,sans-serif;color:#163047;max-width:1120px;margin:40px auto;padding:0 24px}h1,h2{line-height:1.22}h2{margin-top:48px}img{width:100%;height:auto}table{border-collapse:collapse;width:100%;font-size:15px}th,td{padding:9px;border-bottom:1px solid #dbe4ed;text-align:left}a{color:#006a86}code{font-size:.88em}pre{white-space:pre-wrap}</style><main><h1>G1 — data tersedia, empat estimasi TFP masih tertahan</h1>
+<p><strong>G0.5 DEVELOPMENT — perturbed data; not final empirical findings.</strong></p>
+<p>Empat estimator OP, LP, ACF dan Wooldridge <strong>belum menghasilkan koefisien atau TFP pada G0.5</strong>. Audit yang benar-benar dijalankan mencakup 33.049 observasi dari 12 wave, tetapi nol hubungan perusahaan lintas tahun terverifikasi dan nol nilai pada variabel riil/deflator. Hasil ini menjelaskan kesiapan input; bukan hasil produktivitas manufaktur Indonesia. Issue #9 harus tetap terbuka.</p>
+<p>Input dibekukan pada manifest SHA256 <code>85f7cd5e79bb7868cf6c0956cbc4ed2d6e8f84ecb1a44e7713d38570929a4270</code>. Run <code>audit-03</code> mengeksekusi Stata untuk domain angka, status sumber, sampel kandidat, status metode dan sambungan observasi. Sebanyak <strong>374 pemeriksaan independen</strong> lulus, termasuk 168 sel domain, 7,200 sel alur sampel dan 1,156,715 nilai sumber pada sambungan. Kelulusan itu tidak mengesahkan definisi atau identitas yang belum dibuktikan.</p>
+<h2>Apa yang dihitung dan apa penyebutnya?</h2>
+<p><img alt="Cakupan tahun" src="release/figures/coverage_by_year.svg" /></p>
+<p>Setiap batang menghitung catatan sumber pada tahun terkait. <code>obs_id</code> unik pada snapshot ini dan dapat menyambungkan kembali satu observasi; ia bukan identitas perusahaan. Jumlah lintas tahun 33.049 bukan jumlah pabrik unik. Tidak ada bobot populasi nasional. Tahun 2016 tetap kosong, sehingga 2015 ke 2017 tidak pernah dijadikan lag satu tahun.</p>
+<p>Untuk setiap variabel dan tahun, audit membagi seluruh catatan menjadi empat keadaan eksklusif: positif, nol, negatif, missing. Jumlah empat kelompok harus sama dengan jumlah sumber. Tabel <code>source_status.csv</code> secara terpisah menghitung flag nilai/sumber; karena itu kehilangan source field dapat dibedakan dari nilai observasi yang kosong. Status asli dipertahankan, bukan diterjemahkan menjadi pengesahan pengukuran.</p>
+<table>
+<thead>
+<tr>
+<th>Kandidat</th>
+<th style="text-align: right;">Positif</th>
+<th style="text-align: right;">Nol</th>
+<th style="text-align: right;">Negatif</th>
+<th style="text-align: right;">Missing</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Nilai tambah nominal</td>
+<td style="text-align: right;">33,049</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td>Pekerja</td>
+<td style="text-align: right;">33,021</td>
+<td style="text-align: right;">28</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td>Stok modal nominal</td>
+<td style="text-align: right;">18,885</td>
+<td style="text-align: right;">13,039</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1,125</td>
+</tr>
+<tr>
+<td>Tambahan modal nominal</td>
+<td style="text-align: right;">6,172</td>
+<td style="text-align: right;">23,485</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">3,392</td>
+</tr>
+<tr>
+<td>Kandidat total bahan baku</td>
+<td style="text-align: right;">31,895</td>
+<td style="text-align: right;">1,154</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td>Nilai tambah riil</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">33,049</td>
+</tr>
+<tr>
+<td>Stok modal riil</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">33,049</td>
+</tr>
+</tbody>
+</table>
+<p>Penyebut setiap baris tabel adalah 33.049 catatan. Angka nominal ditampilkan sebagai kandidat sesuai sumber; laporan tidak mengklaim skala rupiah telah disahkan. Kuantil 1%, median dan 99% tersedia di <a href="release/outputs/variable_domains.csv">tabel domain</a>, dengan satuan kandidat aslinya. Kuantil mendeskripsikan sebaran, bukan interval ketidakpastian estimator. Tidak dilakukan trimming atau winsorisation untuk membuat koefisien tampak masuk akal.</p>
+<p><img alt="Domain input" src="release/figures/input_domains.svg" /></p>
+<p>Nilai positif hanya lolos domain logaritma. Untuk modal, <code>capital_stock_verified</code> yang diwarisi memberi bukti konsep kuesioner pada 2010–2012, tetapi <a href="PREREQUISITE-AUDIT.md">pemeriksaan sumber yang lebih baru</a> tetap menandai skala pemasok/release sebagai belum diterima. Stok akhir tahun, tambahan/pembelian modal dan alias modal campuran berbeda secara ekonomi. Tidak satupun ditukar agar sampel bertambah.</p>
+<h2>Seberapa jauh calon sampel dapat berjalan?</h2>
+<table>
+<thead>
+<tr>
+<th>Metode</th>
+<th style="text-align: right;">Domain nominal positif</th>
+<th style="text-align: right;">Flag konsep modal</th>
+<th style="text-align: right;">Input riil diterima</th>
+<th style="text-align: right;">Sampel estimasi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OP</td>
+<td style="text-align: right;">5,603</td>
+<td style="text-align: right;">1,620</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td>LP</td>
+<td style="text-align: right;">18,165</td>
+<td style="text-align: right;">4,452</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td>ACF</td>
+<td style="text-align: right;">18,165</td>
+<td style="text-align: right;">4,452</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td>WRDG</td>
+<td style="text-align: right;">18,165</td>
+<td style="text-align: right;">4,452</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+</tr>
+</tbody>
+</table>
+<p>OP memakai calon tambahan modal positif pada tahap domain. LP, ACF dan Wooldridge memakai <code>val_rtlvcu</code> sebagai kandidat bahan baku, hanya untuk audit domain; definisi proxy belum disahkan. Total pengeluaran <code>intermediate_inputs_nominal</code> tetap diperiksa, tetapi tidak otomatis dianggap bahan baku. Stage “flag konsep modal” adalah persyaratan tambahan atas domain nominal, bukan sampel yang sudah sah untuk estimasi.</p>
+<p><img alt="Alur sampel" src="release/figures/sample_flow.svg" /></p>
+<p>Alur ini bersifat berurutan: setiap stage harus merupakan bagian dari stage sebelumnya, sehingga loss adalah selisih catatan antara dua stage. Angka dibagi per metode, tahun dan awalan kode industri pada <a href="release/outputs/tfp_sample_attrition.csv">CSV lengkap</a>. Awalan kode yang dilaporkan merupakan kelompok deskriptif sementara. Ia belum menjadi teknologi dua digit yang homogen dan tervalidasi lintas versi klasifikasi. Hasil yang tersedia memenuhi bagian diagnostik G1-C1; sampel teknologi terverifikasi dan sampel estimasi tetap belum tersedia.</p>
+<p><img alt="Status prasyarat" src="release/figures/estimator_status.svg" /></p>
+<p>Persentase pada gambar menghitung catatan yang memenuhi setiap gate terhadap semua catatan tahun tersebut. Status “belum dicoba” berbeda dari “optimizer gagal”. Semua empat metode mempunyai nol upaya fit pada G0.5. Karena tidak ada model yang dipanggil, convergence, instrument rank, moment criterion, koefisien dan interval dibiarkan missing, bukan diberi nol atau status lulus. Bagian alasan tertahan pada G1-C4 tersedia; scatter/rank dan convergence hasil fit masih tertahan. G1-C2 dan G1-C3 tidak digambar menggunakan angka buatan.</p>
+<h2>Empat metode menjawab masalah yang berbeda</h2>
+<p>Kontrak utama ialah <code>y_it = beta_L l_it + beta_K k_it + omega_it + epsilon_it</code>, dengan <code>y=ln(VA riil)</code>, <code>l=ln(pekerja)</code>, dan <code>k=ln(stok modal riil)</code>. VA dan output bruto memiliki perimeter input berbeda; spesifikasi output bruto tidak diam-diam menggantikan kontrak VA. Realisasi riil memerlukan harga yang sesuai konsep, bukan pembagian semua seri dengan satu indeks tanpa pembenaran. Koefisien menggambarkan elastisitas dalam model produksi yang dipertahankan; ini bukan desain efek kausal perdagangan.</p>
+<p><strong>OP:</strong> investasi positif membalik keputusan investasi menjadi proxy produktivitas. First stage mengestimasi labor bersama polinomial modal/investasi. Second stage mengestimasi modal dan hukum Markov produktivitas, dengan probabilitas seleksi dari risk/exit universe yang diautentikasi. Keluar dari potongan sampel bukan bukti tutup pabrik. Wrapper mempertahankan observasi risk set di luar sampel produksi dan menolak seleksi yang gagal atau terpisah sempurna.</p>
+<p><strong>LP:</strong> proxy input antara menggantikan investasi, dengan asumsi monotonisitas dan timing yang substantif. Implementasi yang dipatok memakai first stage partially linear dan second-stage nonlinear least squares dengan cubic Markov projection; tidak dilabeli ulang sebagai sistem GMM yang tidak dijalankan.</p>
+<p><strong>ACF:</strong> first stage memakai basis polinomial lengkap labor/modal/proxy; elastisitas labor tidak diambil begitu saja dari LP. Second stage membentuk inovasi produktivitas dan moment <code>E[Z xi]=0</code>, dengan <code>Z=[labor_(t−1), capital_t]</code> menurut kontrak timing. Rank instrumen saja tidak membuktikan identifikasi; local moment Jacobian juga diperiksa. Asumsi ekonomi tetap memerlukan bukti di luar convergence.</p>
+<p><strong>Wooldridge:</strong> dua persamaan dipasang bersama melalui GMM, dengan instrumen per persamaan. Versi <code>prodest</code> yang dipatok menggunakan nuisance coefficients bersama pada polinomial kini dan lag; pembatasan versi ini dinyatakan, bukan diam-diam diubah menjadi koefisien terpisah seperti calon kode PR #4. <a href="registries/method-contracts.md">Registri metode</a> dan <a href="METHOD-AUDIT.md">audit kode</a> memberi persamaan, instrument set, perbaikan adapter serta batas exact-version compatibility.</p>
+<p>Polinomial proxy derajat 3 adalah primary; derajat 2 hanya mengubah first-stage basis, sedangkan Markov projection tetap cubic. Start OLS adalah titik awal numerik, bukan estimator pengganti. Start alternatif dan optimizer dicatat sebelum membandingkan hasil. OP/LP memakai instrumen nonlinear/derivatif efektif; ACF dan WRDG mempunyai matriks moment yang terpisah dari rank matriks kovarians.</p>
+<h2>Apa yang sudah dibuktikan oleh uji kode?</h2>
+<p><a href="stata/methods/README.md">Uji metode</a> menggunakan fixture yang sengaja dibangun dan diberi label terpisah. Ia mengecek program dengan parameter pembangkit yang diketahui, penolakan prasyarat salah, kalender gap, rank dan full-process resampling terbatas. Ia tidak menambah satu observasi pun ke G0.5. Koefisien fixture tidak dimasukkan ke tabel atau grafik G0.5.</p>
+<p>Untuk inference empiris, kontrak yang dipatok meminta 999 draw cluster perusahaan dari universe yang dibekukan, refit seluruh proses termasuk seleksi OP, hitung kovarians dari vektor draw berhasil dengan pembagi B_success−1, dan laporkan failures. Uji bootstrap kecil tidak memenuhi kontrak inference tersebut. Tidak ada bootstrap G0.5 karena tidak ada original fit yang teridentifikasi.</p>
+<h2>TFP, normalisasi dan sambungan kembali</h2>
+<p>Ukuran yang sebanding lintas empat metode kelak adalah residual struktural log-VA <code>r_it = y_it − beta_L l_it − beta_K k_it</code>. Residual ini masih mengandung transitory error/measurement error; ia bukan pengamatan langsung efisiensi teknis. Proxy-based latent omega yang didukung suatu metode harus memakai nama terpisah. Residual mentah dan versi yang dicenter harus mempunyai <code>normalization_id</code> berbeda dan basis centering yang eksplisit.</p>
+<p>Run sekarang membuat sambungan satu-ke-satu menggunakan <code>obs_id</code> dan <code>source_year</code> ke turunan <strong>36 kolom terpilih</strong>. Semua nilai sumber terpilih dipertahankan persis. Empat kolom TFP tetap missing dengan alasan tertahan, bersama estimator/specification/sample/normalisation status. File bernama <code>analysis/G1_main_with_tfp.dta</code> adalah turunan status lokal, bukan master 4.379 kolom yang sudah berisi TFP. Kewajiban sambungan numerik ke master penuh masih terbuka. Enam pasangan perbandingan memiliki common prediction N=0, sehingga korelasi dibiarkan missing.</p>
+<h2>Reproduksi, mutu, dan tindakan berikutnya</h2>
+<p>Satu primary Stata mengendalikan 19 edge, masing-masing terkait node triage/decision dan kontrak grain/key/denominator. Python mengecek hasil lalu menggambar CSV Stata. <a href="release/run-manifest.json">Run manifest</a> mengikat input, bukti semantik, kode, keluaran dan log. <a href="release/qa/intermediate_inventory.json">Daftar intermediate</a> merekam hash data lokal tanpa mempublikasikan observasi. <a href="registries/exhibits.md">Seluruh 24 keluarga exhibit</a> direkonsiliasi satu per satu: definisi yang tersedia, diagnostik parsial, dan hasil inti yang tertahan. Tidak ada klaim semua exhibit selesai.</p>
+<p>Urutan penyelesaian empiris: (1) terima crosswalk establishment/company yang sah beserta kalender dan ambiguitas; (2) terima definisi serta skala tahunan Y/L/K/I/materials; (3) terima harga konsep-spesifik dan padanan industri; (4) terima OP risk/exit dan timing; (5) cocokkan mask kualitas G2 terhadap hash yang sama; (6) jalankan empat metode pada sampel sendiri dan bersama, periksa rank/convergence/sensitivitas/inference; (7) sambungkan TFP dan gambar semua exhibit numerik. Ketiadaan 2016 dan tambahan modal 2015 harus tetap ditangani sebagai keterbatasan nyata.</p>
+<p>Finalisasi memilih input actual lokal yang disahkan dan menjalankan ulang badan analisis yang sama. Saat ini actual finalisation belum diterima dan runner menolak mode tersebut. Tidak ada relabel hasil development. Perbandingan konkret dengan referensi G0 beserta kekurangan yang belum selesai tersedia di <a href="quality-review.md">quality-review.md</a>.</p></main></html>

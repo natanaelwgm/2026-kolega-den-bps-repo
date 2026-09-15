@@ -1,0 +1,17 @@
+\begin{table}[H]
+\centering
+\caption{OP pooled residual tail counts by sector}
+\GOneLabel{tab:deep-op-tails}
+\begingroup\fontsize{9.2}{11.2}\selectfont
+\setlength{\tabcolsep}{4.3pt}\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{lrrrrrrr}
+\toprule
+Code & $N$ & \makecell{Below\\IQR fence} & \makecell{Above\\IQR fence} & $|\widetilde r|>2$ & $|\widetilde r|>3$ & $I<0.5$ & $I>2$ \\
+\midrule
+10 & 128 & 0 & 1 & 13 & 1 & 43 & 36 \\
+ALL & 128 & 0 & 1 & 13 & 1 & 43 & 36 \\
+\bottomrule
+\end{tabular}
+\endgroup
+\appnotes{The interquartile range is P75 minus P25. The fences are P25 minus 1.5 IQR and P75 plus 1.5 IQR, with strict inequalities for tail counts. The pooled ALL row has its own fences, whose counts need not equal the sum of sector counts. Absolute-log and index thresholds are fixed across sectors. Each row uses all pooled dynamic observations in its named group. Flags can overlap; we retain flagged observations.}{G0.5 v3 modified manufacturing records with fictional company links; authors' calculations.}
+\end{table}

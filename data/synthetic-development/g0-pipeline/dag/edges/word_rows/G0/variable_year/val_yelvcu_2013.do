@@ -1,0 +1,25 @@
+* SYNTHETIC EXECUTION COPY; see contracts/reuse-manifest.csv for source hash.
+* N_G0_val_yelvcu_2013: annual staged raw state -> val_yelvcu at source_year/source_row.
+* Evidence: legacy_layout_2010_2015.json: sheet 2013 row 91; yelvcu13 | electric sold to other, 000 rp
+log using "$VYL/N_G0_val_yelvcu_2013.log", text replace name(vycell)
+generate double val_yelvcu=.
+generate byte vs_val_yelvcu=3
+replace val_yelvcu=real(subinstr(strtrim(raw_yelvcu13),",","",.))*1
+replace vs_val_yelvcu=5 if missing(real(subinstr(strtrim(raw_yelvcu13),",","",.))) & !inlist(upper(strtrim(raw_yelvcu13)),"","***",".","NA","N/A","NULL","-")
+replace vs_val_yelvcu=cond(val_yelvcu<0,2,cond(val_yelvcu==0,1,0)) if !missing(val_yelvcu)
+quietly count if !missing(val_yelvcu)
+local obs=r(N)
+quietly count if val_yelvcu==0
+local zeros=r(N)
+quietly count if inlist(vs_val_yelvcu,5,6,8)
+local bad=r(N)
+quietly count if vs_val_yelvcu==4
+local absent=r(N)
+post cell (2013) ("val_yelvcu") (_N) (`obs') (`zeros') (`bad') (`absent')
+preserve
+keep source_year source_row val_yelvcu vs_val_yelvcu raw_yelvcu13
+isid source_year source_row
+save "$VYD/N_G0_val_yelvcu_2013.dta", replace
+restore
+display "VARIABLE_YEAR_PASS N_G0_val_yelvcu_2013"
+log close vycell

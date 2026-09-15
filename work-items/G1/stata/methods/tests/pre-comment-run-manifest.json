@@ -1,0 +1,47 @@
+{
+  "recorded_at": "2026-09-13T18:09:30.137427+07:00",
+  "scope": "INDEPENDENT_ALGORITHM_TEST_NOT_G05; final executable run before Luna comment-only pass",
+  "source_state": "Frozen scientific code; later WFDOC-only edits require separate executable-continuity receipt",
+  "base_branch": "g1/issue-9-g05-20260913",
+  "runtime": "Stata/SE 17 app version 17.0.099; wrapper version 17; WRDG effective compatibility 14",
+  "source_files": {
+    "work-items/G1/stata/methods/load.do": "8ac450151fb0ae2dbfd0ba2b64d12df3e451bce2d4639657131db73403864ff6",
+    "work-items/G1/stata/methods/g1_fit.ado": "1133065679f537e2f2ff7250e29fab8eda6a96813d4c45a63134ef2fa16ba04b",
+    "work-items/G1/stata/methods/g1_bootstrap.ado": "e0aa2283c15b6cc24f44d5fa6f49450dd8868ad387f4be3525a1cc8ff0c373b4",
+    "work-items/G1/stata/methods/g1_prodest_point.ado": "9fcd7b0dd463e03f6aaca3f8579af8244c4cd0f8b99f94719aba636a6072e421",
+    "work-items/G1/stata/methods/build_adapter.py": "76ae522f79b73cda27569bc2bb89fd2a89ec51345408eb9b3abb0c2dcb5b3052",
+    "work-items/G1/stata/methods/tests/guards.do": "94771b170f742987d6df3015ea721f459801eb4f0c19e0446ea6474c13079557",
+    "work-items/G1/stata/methods/tests/algorithm.do": "3fd4673a985fab3a93ab2214a5783883556e91d5e211a7051d64d221ad04eb66",
+    "work-items/G1/stata/methods/tests/bootstrap.do": "279cf9e4b46aa4da59f2366c8c935072fbb90075e5bf5ce8ae0e651aea90a161",
+    "work-items/G1/stata/methods/tests/validate_arithmetic.py": "9dc7a24758eb6a1fbfd7853bcef5491a440aeaf4c39942dd279d0332b4fd29b8",
+    "work-items/G1/stata/methods/tests/validate_overlay.py": "1478501c80cb5b16aeff7967871b811c028e6f3c68517384611980c923d855d5"
+  },
+  "outputs": {
+    "work-items/G1/stata/methods/tests/guards.log": "78935c908737ead1f2bbf4cfe0d8268138ba3a244c277f066e04f379502eacec",
+    "work-items/G1/stata/methods/tests/algorithm.log": "deb276dc46333a2dec04a461963f164524d0243de366009316ff20a8c4a87136",
+    "work-items/G1/stata/methods/tests/bootstrap.log": "4475f8f8f252484eb7d6d8fc803ebf59b071c58aff351963602ce762f835d78c",
+    "work-items/G1/stata/methods/tests/algorithm-results.csv": "61e9b337c698157f3962483c3517bd769ea3e1cbb1bc5b7e9b7ebcafd9b51a93",
+    "work-items/G1/stata/methods/tests/arithmetic-validation.json": "1e40008a5e8aa5567f6c03e12fc9b8f26c8250344379eae094be6b8aa1901252",
+    "work-items/G1/stata/methods/tests/overlay-validation.json": "a30afef6bb3a921e52f59d0b24f2e16140c213f4d9f7d96e2fa66a8831c048a6",
+    "work-items/G1/stata/methods/adapter-manifest.json": "44c6323e5486dcf920e887d66ad28e03e2949d33077f40fa1e83c91848b87a33"
+  },
+  "commands": [
+    "stata-se -b do work-items/G1/stata/methods/tests/guards.do",
+    "stata-se -b do work-items/G1/stata/methods/tests/algorithm.do EXTERNAL_METHOD_TEST_DIR",
+    "stata-se -b do work-items/G1/stata/methods/tests/bootstrap.do EXTERNAL_METHOD_TEST_DIR",
+    "python3 work-items/G1/stata/methods/tests/validate_arithmetic.py EXTERNAL_METHOD_TEST_DIR",
+    "python3 work-items/G1/stata/methods/tests/validate_overlay.py"
+  ],
+  "external_method_test_dir": "/Users/natanaelmassie/Downloads/deasy-g1-issue9-20260913-g1-runs/method-tests",
+  "checks": {
+    "guard_cases": 11,
+    "malformed_direct_OP_probability_refusal": true,
+    "distinct_point_fits": 4,
+    "full_process_random_draws": 8,
+    "random_draws_per_method": 2,
+    "production_transitions": 1273,
+    "OP_risk_selection_observations": 1348,
+    "research_999_draws_completed": false,
+    "G05_estimates_produced": false
+  }
+}

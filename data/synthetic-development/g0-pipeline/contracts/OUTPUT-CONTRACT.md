@@ -1,0 +1,11 @@
+# G0 output contract v2 — WPI on synthetic firms
+
+Authoritative output: `../results/G0_analysis_ready_SYNTHETIC_CALCULATED.dta`; identically named XLSX is a readable companion. Shape1200×3837: original3793 names in unchanged order followed by the44 names in `schema-additions.csv`. No original names removed or silently repurposed. Existing real columns change from unavailable to their explicitly labelled calculated definitions. DTA's variable labels/full dictionary and WPI-INTEGRATION.md govern meanings. Wider storage is required where values do not fit; no forced truncation or recast.
+
+Unique keys: source_year/source_row and selected_firm_id/source_year. Supplied six-digit IDs800001–800100 stay fixed on 12 waves; dummy1, real_verified0, real_panel_ready0. All original synthetic raw cells preserved. No2016 firm records. Full coverage has46044 variable/year cells, denominator100 each; workbook Data has4604400 values independently compared.
+
+Actual output price reference: wpi_output_index base2000=100; deflator_output=index/100; gross_output_real=nominal/factor. Deflator_applied1 marks output deflation only. Value_added_real is the single-output-deflator approximation, flagged real_va_is_single_proxy1 and real_va_double_deflated0. Input/capital/wage deflators and their unsupported real variables remain missing. Matched/unmatched audited across48 year/industry cells and on unique reference keys. Preserve nominal measures and source/splice status.
+
+Negative/extreme diagnostics and clean_* sensitivity columns never remove source rows. Logs require positivity, ratios positive workers. Capital stock/additions remain separate; mixed old alias labelled compatibility-only. Energy subtotal completeness is distinct from complete Scope 1/2 sources; full coverage not claimed.
+
+Require complete primary success, actual reference/application checks, production-shared adversarial cleaning cases, raw preservation, formula/key/domain/coverage checks, reopened complete Excel validation and exact source/output hashes. Source gaps remain independent of execution assertions. Publication permits only exact hash-bound synthetic DTA and separately classified actual WPI reference DTA in their scoped paths.

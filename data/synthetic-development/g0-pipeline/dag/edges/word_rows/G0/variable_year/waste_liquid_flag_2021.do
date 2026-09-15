@@ -1,0 +1,22 @@
+* SYNTHETIC EXECUTION COPY; see contracts/reuse-manifest.csv for source hash.
+* N_G0_waste_liquid_flag_2021: annual staged raw state -> waste_liquid_flag at source_year/source_row.
+* Evidence: 2022 Sumbar PDF p68 Q210: 3=yes, 4=no; asked only when Q209d=7. Out-of-universe observations retained in source text, excluded from harmonized flag.
+log using "$VYL/N_G0_waste_liquid_flag_2021.log", text replace name(vycell)
+generate double waste_liquid_flag=.
+generate byte vs_waste_liquid_flag=4
+quietly count if !missing(waste_liquid_flag)
+local obs=r(N)
+quietly count if waste_liquid_flag==0
+local zeros=r(N)
+quietly count if inlist(vs_waste_liquid_flag,5,6,8)
+local bad=r(N)
+quietly count if vs_waste_liquid_flag==4
+local absent=r(N)
+post cell (2021) ("waste_liquid_flag") (_N) (`obs') (`zeros') (`bad') (`absent')
+preserve
+keep source_year source_row waste_liquid_flag vs_waste_liquid_flag
+isid source_year source_row
+save "$VYD/N_G0_waste_liquid_flag_2021.dta", replace
+restore
+display "VARIABLE_YEAR_PASS N_G0_waste_liquid_flag_2021"
+log close vycell

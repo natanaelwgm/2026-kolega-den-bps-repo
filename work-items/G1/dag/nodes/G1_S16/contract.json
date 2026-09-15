@@ -1,0 +1,107 @@
+{
+  "node_id": "G1_S16",
+  "branch": "primary_real_prerequisite_audit",
+  "source_plan_node_preserved": {
+    "id": "G1_S16",
+    "state": "Resample the full estimation process — planned output state, not materialized",
+    "grain": "bootstrap draw × method × technology × sample × parameter",
+    "keys": [
+      "draw",
+      "method",
+      "technology",
+      "sample_id",
+      "specification_id",
+      "parameter"
+    ],
+    "required_fields": [
+      "draw",
+      "method",
+      "technology",
+      "sample_id",
+      "specification_id",
+      "parameter",
+      "sample",
+      "beta",
+      "tfp_summary",
+      "rc",
+      "valid_draw"
+    ],
+    "units": {
+      "money": "nominal Rp000 unless verified concept-specific deflator applied",
+      "time": "actual calendar year",
+      "count": "source records, not national weights"
+    },
+    "folder": "dag/nodes/G1/G1_S16",
+    "planning_status": "planning_only"
+  },
+  "effective_state": "Resample the full estimation process",
+  "material_state_status": "primary_real_state_unadmitted_development_branch_separate",
+  "diagnostic_status": "See hash-bound run evidence; not inferred from this contract",
+  "grain": "bootstrap draw × method × technology × sample × parameter",
+  "keys": [
+    "draw",
+    "method",
+    "technology",
+    "sample_id",
+    "specification_id",
+    "parameter"
+  ],
+  "input_nodes": [
+    "G1_S04",
+    "G1_S05",
+    "G1_S06",
+    "G1_S07",
+    "G1_S08",
+    "G1_S09",
+    "G1_S14",
+    "G1_INPUT_ESTIMATOR"
+  ],
+  "producing_edge": "G1_E16",
+  "audit_output_contract": {
+    "paths_relative_to_private_run": [
+      "outputs/bootstrap_status.csv"
+    ],
+    "role": "Record zero attempted bootstrap draws and unknown successful-draw outcomes; no bootstrap distribution.",
+    "publication": "Only screened aggregate outputs copied to release/outputs. Private run root is recorded in run-manifest.json; .dta intermediates are outside the repository.",
+    "existence_and_execution": "Declared artifact names; actual existence/hash/status comes only from the run manifest."
+  },
+  "required_fields": [
+    "draw",
+    "method",
+    "technology",
+    "sample_id",
+    "specification_id",
+    "parameter",
+    "sample",
+    "beta",
+    "tfp_summary",
+    "rc",
+    "valid_draw"
+  ],
+  "units": {
+    "beta_L_beta_K_returns_to_scale": "elasticities, dimensionless",
+    "N": "observations / distinct verified plants / calendar waves, explicitly distinguished",
+    "rank_instruments_iterations_draws": "integer counts",
+    "objective": "method-specific squared log-output residual or quadratic moment criterion; numerical convention must be saved",
+    "status": "categorical outcome; not an estimate"
+  },
+  "calendar": "2010–2015, 2017–2022; 2016 absent",
+  "denominator": "999 external complete-process verified-plant cluster draws plus a distinct original estimate; ≥950 successful draws required for 95% percentile intervals. Covariance divisor is B_success−1.",
+  "missingness": "Keep source absence, unknown definition/unit, parse failure, observed zero/negative and valid positive states distinct. Unsupported statistical values stay missing, never zero.",
+  "row_reconciliation": "Observation diagnostics preserve 33,049 unique obs_id. Method expansion checks 33,049 × declared method/sample combinations separately. Any filtering records marginal and sequential losses. Aggregates reconcile to their explicit fixed denominators.",
+  "input_output_contract": "A validated numerical state and a typed unsupported receipt are distinct output types. A receipt cannot be consumed as the numerical state required by another estimator edge.",
+  "current_decision": "Use 999 external full-process verified-plant cluster draws plus the original estimate, seed 20260913. Require ≥950 successes (ceil(0.95×999)); no PRIMARY REAL bootstrap results before real-input gates pass. The separate nominal DEVELOPMENT contract permits99 draws, at least95 successes, conditional on official fictional linkage. The detailed pinned_method_contract supersedes the stale 499-draw shorthand in the preserved original D16.",
+  "blocked_dependencies": {
+    "identity": "ACTUAL FINALISATION ONLY: authenticated real longitudinal linkage remains unresolved. G0.5 v3 official psid_status=synthetic_development and unique(psid,source_year) are accepted for explicitly labelled development; REAL linkage is not its blocker.",
+    "prices": "Accepted concept-specific output/input/capital deflators and lineage-preserving real-value operands; current real/deflator fields are unavailable.",
+    "capital": "Accepted capital-stock concept AND measurement unit, plus separately verified positive real investment. capital_stock_verified certifies questionnaire concept only, not measurement admission; additions and mixed aliases cannot replace stock.",
+    "technology": "Verified two-digit technology bridge across questionnaire/classification vintages; demo_industry2 is not a certified bridge.",
+    "quality": "G2 eligibility masks bound to this exact G0.5 input version, with semantic/unit/domain reasons; G1 local screens are not all of G2.",
+    "implementation": "Pinned adapter implementation and guard/numerical tests are documented in stata/methods/METHOD-AUDIT.md. Current nominal result receipts are separate from real-primary source acceptance; code existence alone never certifies either."
+  },
+  "numerical_output_privacy": "Record-level intermediate/output datasets remain local/private; only appropriate aggregate diagnostic tables and receipts are published.",
+  "plan": "releases/2026-09-13-data-foundation/stata-preparation/row-plans/G1.json",
+  "plan_sha256": "dd88cfa94af5f212a7b0a4b70f99fea1c0201f950cd19333357739b96b5da1ca",
+  "input_manifest": "data/g0-5-development/manifest.json",
+  "input_manifest_sha256": "060b0ee0a2158a9c94b0e7e68fcfba719eda37561422855471a99da6810ba260"
+}

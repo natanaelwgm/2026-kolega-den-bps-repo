@@ -1,0 +1,45 @@
+name,type,description
+wpi_bridge_merge,byte,Stata match status of explicit synthetic sector bridge
+wpi_index_merge,byte,Stata match status of industry-year WPI lookup
+wpi_mapping_status,str40,Synthetic-only detailed activity bridge; not annual real-data concordance
+wpi_isic4,int,WPI source ISIC Rev3/3.1 four-digit sector
+wpi_output_index,double,"Actual sector output price index, 2000=100"
+wpi_spliced,byte,2020–2022 index uses supplied Dec2019 splice
+wpi_cagr,byte,Recycling extension uses supplied extrapolation; not selected fixtures
+wpi_base_year,int,Constant price reference year 2000
+real_va_is_single_proxy,byte,VA uses output deflator: single-deflator approximation
+real_va_double_deflated,byte,Zero; no supported input deflator supplied
+ln_output_real,double,Positive-domain log of output at 2000 Rp000
+ln_va_real_proxy,double,Positive-domain log of single-output-deflator VA approximation
+output_real_per_worker,double,Output at 2000 Rp000 divided by strictly positive workers
+va_real_proxy_per_worker,double,VA approximation at 2000 Rp000 per strictly positive worker
+gj_per_real_output,double,Partial nine-fuel GJ per 2000 Rp000 output
+co2_per_real_output,double,Partial combustion CO2 tonnes per 2000 Rp000 output
+p99_econ_output,double,Within-year p99 of nonnegative output; diagnostic reference
+out_checked_output,byte,Negative or >10*p99 output; missing input keeps missing flag
+clean_output_nominal,double,Sensitivity output excluding negatives/extreme tails; original retained; workers is a count
+p99_econ_va,double,Within-year p99 of nonnegative va; diagnostic reference
+out_checked_va,byte,Negative or >10*p99 va; missing input keeps missing flag
+clean_va_nominal,double,Sensitivity va excluding negatives/extreme tails; original retained; workers is a count
+p99_econ_stock,double,Within-year p99 of nonnegative stock; diagnostic reference
+out_checked_stock,byte,Negative or >10*p99 stock; missing input keeps missing flag
+clean_stock_nominal,double,Sensitivity stock excluding negatives/extreme tails; original retained; workers is a count
+p99_econ_additions,double,Within-year p99 of nonnegative additions; diagnostic reference
+out_checked_additions,byte,Negative or >10*p99 additions; missing input keeps missing flag
+clean_additions_nominal,double,Sensitivity additions excluding negatives/extreme tails; original retained; workers is a count
+p99_econ_workers,double,Within-year p99 of nonnegative workers; diagnostic reference
+out_checked_workers,byte,Negative or >10*p99 workers; missing input keeps missing flag
+clean_workers_count,double,Sensitivity workers excluding negatives/extreme tails; original retained; workers is a count
+clean_output_per_worker,double,Sensitivity output over positive clean worker count
+clean_va_per_worker,double,Sensitivity va over positive clean worker count
+clean_stock_per_worker,double,Sensitivity stock over positive clean worker count
+energy_all_sources_complete,byte,Zero: extra-fuel/heat/unit/factor sources incomplete; not zero energy use
+energy_unit_gap_2018_19,byte,Known coal/fuel unit evidence gap in 2018/19
+grid_factor_is_carried,byte,Inherited grid factor carried past 2014
+gj_scope1_complete9,double,All-nine-observed fuel subtotal excluding known 2018/19 unit gap; conditional factors
+gj_scope2_complete,double,"Purchased-electricity GJ, both source quantities observed"
+co2_scope2_no_grid_carry,double,Purchased-electricity CO2 in inherited observed-factor years
+total_gj_clean_sensitivity,double,Partial total GJ sensitivity excluding energy outlier flags
+gj_firewood_reference,double,Reference heat 0.0156 GJ/kg; not added to legacy fossil subtotal
+gj_charcoal_reference,double,Reference charcoal heat 0.0295 GJ/kg; mixed biomass excluded
+gj_lubricant_potential,double,Potential heat .03538 GJ/litre; not claimed combustion

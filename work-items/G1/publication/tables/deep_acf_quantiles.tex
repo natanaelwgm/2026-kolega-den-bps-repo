@@ -1,0 +1,18 @@
+\begin{table}[H]
+\centering
+\caption{ACF: pooled residual and index quantiles}
+\GOneLabel{tab:deep-acf-quantiles}
+\begingroup\fontsize{9.2}{11.2}\selectfont
+\setlength{\tabcolsep}{4.3pt}\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{lrrrrrrr}
+\toprule
+Scale & Min & P1 & P25 & Median & P75 & P99 & Max \\
+\midrule
+Uncentered log & 2.746 & 4.441 & 7.889 & 8.772 & 9.712 & 11.918 & 14.811 \\
+Centered log & -5.446 & -2.629 & -0.746 & -0.076 & 0.677 & 3.100 & 6.539 \\
+Relative index & 4.313e-03 & 7.214e-02 & 4.743e-01 & 9.266e-01 & 1.967e+00 & 2.219e+01 & 6.914e+02 \\
+\bottomrule
+\end{tabular}
+\endgroup
+\appnotes{All rows use this method's own pooled dynamic estimation sample. We center original-log residuals within sector and method, then exponentiate with multiplier one. We compute empirical percentiles separately on each scale. If the percentile averages adjacent observations, exponentiating that average need not equal the index percentile. Log rows use three decimals; index rows use scientific notation with three decimals to preserve tiny positive tails. All finite tails remain in the calculation.}{G0.5 v3 modified manufacturing records with fictional company links; authors' calculations.}
+\end{table}

@@ -1,0 +1,202 @@
+{
+  "specification_id": "G1_DEV_APPROX_REAL_NONLAND_2010_2012_V1",
+  "status": "FROZEN_BEFORE_INPUT_PARSE_AND_FITS_DEVELOPMENT_SENSITIVITY",
+  "registered_on": "2026-09-13",
+  "measurement_mode": "approximate_real_development",
+  "data_label": "G0.5 DEVELOPMENT - approximate-real nonland VA sensitivity; not empirical TFP",
+  "actual_finalisation_allowed": false,
+  "primary_real_input_admission": false,
+  "source_certified_real_quantities": false,
+  "input_manifest_sha256": "060b0ee0a2158a9c94b0e7e68fcfba719eda37561422855471a99da6810ba260",
+  "history_years": [
+    2010,
+    2011,
+    2012
+  ],
+  "production_years": [
+    2011,
+    2012
+  ],
+  "dynamic_moment_years": [
+    2012
+  ],
+  "input_columns": [
+    "obs_id",
+    "psid",
+    "psid_status",
+    "source_year",
+    "industry_code",
+    "dev_panel_stratum",
+    "dev_prev_year",
+    "value_added_nominal",
+    "workers",
+    "val_rtlvcu",
+    "capital_additions_nominal",
+    "raw_v1103",
+    "raw_v1106",
+    "raw_v1109",
+    "raw_v1112",
+    "raw_cbttcu10",
+    "raw_cmttcu10",
+    "raw_cvttcu10",
+    "raw_cottcu10",
+    "raw_cbttcu11",
+    "raw_cmttcu11",
+    "raw_cvttcu11",
+    "raw_cottcu11",
+    "raw_cbttcu12",
+    "raw_cmttcu12",
+    "raw_cvttcu12",
+    "raw_cottcu12"
+  ],
+  "stock_components": [
+    "raw_v1103",
+    "raw_v1106",
+    "raw_v1109",
+    "raw_v1112"
+  ],
+  "stock_component_meanings": [
+    "buildings",
+    "machinery_and_equipment",
+    "vehicles",
+    "other_fixed_assets"
+  ],
+  "stock_source_date": "December31 of exact source_year; land excluded coherently using four preserved raw components",
+  "gross_additions_components_by_year": {
+    "2010": [
+      "raw_cbttcu10",
+      "raw_cmttcu10",
+      "raw_cvttcu10",
+      "raw_cottcu10"
+    ],
+    "2011": [
+      "raw_cbttcu11",
+      "raw_cmttcu11",
+      "raw_cvttcu11",
+      "raw_cottcu11"
+    ],
+    "2012": [
+      "raw_cbttcu12",
+      "raw_cmttcu12",
+      "raw_cvttcu12",
+      "raw_cottcu12"
+    ]
+  },
+  "gross_additions_meaning": "Nonland purchase/additions/construction/major repairs during exact source year; gross, no sales deduction",
+  "raw_component_policy": "Every component must have action=preserve in pinned G0.5 column-policy. Do not mix jittered totals with raw components, infer jitter factors, reconcile totals or fill missing components with zero.",
+  "numeric_parser": {
+    "id": "G1_ASCII_DECIMAL_GROUPED_COMMA_V1",
+    "trim": "ASCII space only at either end; tabs and other unsupported characters are not silently stripped",
+    "missing_tokens": [
+      "",
+      ".",
+      ".a",
+      ".b",
+      ".c",
+      ".d",
+      ".e",
+      ".f",
+      ".g",
+      ".h",
+      ".i",
+      ".j",
+      ".k",
+      ".l",
+      ".m",
+      ".n",
+      ".o",
+      ".p",
+      ".q",
+      ".r",
+      ".s",
+      ".t",
+      ".u",
+      ".v",
+      ".w",
+      ".x",
+      ".y",
+      ".z"
+    ],
+    "source_null_export": "Adapter null raw strings are preserved as Stata blank strings; source-null counts are separately recorded by preparation.",
+    "accepted_pattern": "^[+-]?(([0-9]+([.][0-9]*)?)|([.][0-9]+)|([0-9]{1,3}(,[0-9]{3})+([.][0-9]*)?))([eE][+-]?[0-9]+)?$",
+    "transform": "Remove commas only after full-string grammar match; decimal point is dot, exponent e/E permitted; no decimal-comma or arbitrary comma stripping.",
+    "finite_bound": "abs(value) <= 8.988465674311579e307 (Stata largest nonmissing double); overflow and nonfinite conversion fail.",
+    "component_domain": "All four components finite and nonnegative; sum finite. Zero sums retained as measured zero, excluded only from logarithm. Negative components invalidate construction.",
+    "status_codes": {
+      "0": "blank_or_source_null",
+      "1": "explicit_stata_missing_marker",
+      "2": "malformed_numeric_text",
+      "3": "nonfinite_or_outside_stata_double_range",
+      "4": "valid_zero",
+      "5": "valid_negative",
+      "6": "valid_positive",
+      "7": "not_the_component_source_year"
+    }
+  },
+  "transformations": {
+    "apr_va_deflated": "value_added_nominal/(apr_p_y/100)",
+    "apr_m_deflated": "val_rtlvcu/(apr_p_m/100)",
+    "apr_k_end_nominal": "sum of the four parsed nonnegative complete stock components",
+    "apr_i_nominal": "sum of four parsed nonnegative complete additions components from exact source year",
+    "apr_k_end_deflated": "apr_k_end_nominal/(apr_p_k_dec/100)",
+    "apr_k_begin": "L.apr_k_end_deflated with psid and actual source_year, delta1",
+    "apr_i_deflated": "apr_i_nominal/(apr_p_k_ann/100)",
+    "apr_y": "log positive finite apr_va_deflated",
+    "apr_l": "log positive finite workers",
+    "apr_k": "log positive finite apr_k_begin; lagged documentary stock-year flag required",
+    "apr_i": "log positive finite apr_i_deflated",
+    "apr_m": "log positive finite apr_m_deflated"
+  },
+  "units_assumption": "Candidate monetary units are used as received, with no invented unit multiplier. Maintain a common positive unit within each monetary family across2010–2012 (annual legacy layouts label000rupiah), without claiming supplier-scale verification. Constant log shifts may be absorbed by intercept/complete polynomial spans; unknown year/firm-varying units, prices, jitter, conditioning and matching dependence are not eliminated.",
+  "prices": {
+    "manifest_path": "work-items/G1/price-sources/manifest.json",
+    "manifest_sha256": "d7b6d50e96b17e7fa1411581931f0cd91ff5cb1caff1a19991326cb1004f202f",
+    "table_path": "work-items/G1/price-sources/bps-wpi-2005base-2010-2012.csv",
+    "table_sha256": "84fdac974266189bf3dbc525c48cb1205d2cd78cb417afc7cbd65984f86691fb"
+  },
+  "documentary_evidence": {
+    "annual_metadata_path": "releases/2026-09-13-g0/source/source-metadata/inputs/annual_metadata.csv",
+    "annual_metadata_sha256": "2fb77056bc7e98c0fb1e3eaacca3164c24fd97db4a2b72779387f1bd48045158",
+    "stock_and_additions_bindings": [
+      "S2-2010-capital_stock",
+      "S2-2010-capital_additions",
+      "S2-2011-capital_stock",
+      "S2-2011-capital_additions",
+      "S2-2012-capital_stock",
+      "S2-2012-capital_additions"
+    ],
+    "audit_path": "work-items/G1/qa/v3-economic-prerequisites.md",
+    "component_dictionary_sha256": "c90aee9c44e856ce346b5f8a4ca57638c1276775ff7ad1e5ab79b00fdd04329e"
+  },
+  "technology": "Separate observed valid five-digit industry_code first-two-digit manufacturing groups10–33. No padding or pooling for N; inter-vintage harmonisation remains provisional.",
+  "domain": "Pre-lag complete positive production eligibility; history2010 retained. Wrapper intersects exact current and lag eligibility once; dynamic year2012 only. Own OP uses I; LP/ACF/WRDG use materials; common requires both.",
+  "selection": "One derivative interval ending2012 per synthetic firm observed2011, before production-domain exclusion; official psid matching gives disappearance0 for continuers and1 if unmatched. Endpoint-only rows have no production obs_id/quantities. Fit on available lagged2011 beginning-K and gross-I. Last wave right-censored; no actual closure inferred.",
+  "minimum_first_stage_N": 100,
+  "minimum_dynamic_N": 50,
+  "minimum_dynamic_firms": 50,
+  "minimum_OP_selection_N": 100,
+  "minimum_OP_selection_exits": 10,
+  "minimum_OP_selection_continuers": 10,
+  "primary_polynomial": 3,
+  "sensitivity_proxy_polynomial": 2,
+  "numerical_starts": [
+    "ols",
+    "low_l",
+    "high_l"
+  ],
+  "calendar_controls": "No additional calendar controls under pinned core; any added year treatment is a separate registered sensitivity.",
+  "centering": "Use the nominal compatibility branch frozen within-cell logged-variable median translations, preserving full polynomial spans and native-log residual restoration; do not adapt to successful results.",
+  "bootstrap_draws": 99,
+  "bootstrap_success_minimum": 95,
+  "bootstrap_seed": 9132026,
+  "inference_scope": "Exploratory full-process synthetic-firm cluster resampling conditional on fictional linkage; no generator uncertainty or population inference. Not999-draw primary acceptance.",
+  "outcome_label": "development_structural_log_single_deflated_VA_residual",
+  "limits": [
+    "Reported VA is single-output-deflated, not double-deflated.",
+    "Broad capital-goods basket is coarse for buildings/repairs and does not certify physical capital services.",
+    "Output/materials remain coherently jittered current G0.5 values; raw nonland K/I preserve their own common raw convention. No attempt removes perturbations.",
+    "Fictional trajectories/disappearance reflect official production-feature matching, not identified economic dynamics or real exit.",
+    "Keep all support/rank/convergence failures; no threshold relaxation or extra sectors/years.",
+    "Same-version G2 integration remains pending and primary source-unit/price-mapping admission remains false."
+  ]
+}

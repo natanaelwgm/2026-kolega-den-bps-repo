@@ -1,0 +1,28 @@
+\begin{table}[H]
+\centering
+\caption{LP: rank and optimization diagnostics}
+\GOneLabel{tab:deep-lp-numerics}
+\begingroup\fontsize{9.2}{11.2}\selectfont
+\setlength{\tabcolsep}{4.3pt}\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{llrrrrrrr}
+\toprule
+Sample & Code & \makecell{First-stage\\rank} & \makecell{Transition\\rank} & \makecell{Transition\\columns} & \makecell{Instrument\\rank} & \makecell{Instrument\\columns} & \makecell{Moment\\Jacobian rank} & Iterations \\
+\midrule
+Common & 10 & 11 & 4 & 4 & --- & --- & --- & 20 \\
+Own & 10 & 11 & 4 & 4 & --- & --- & --- & 24 \\
+Own & 12 & 11 & 4 & 4 & --- & --- & --- & 22 \\
+Own & 13 & 11 & 4 & 4 & --- & --- & --- & 24 \\
+Own & 14 & 11 & 4 & 4 & --- & --- & --- & 21 \\
+Own & 15 & 11 & 4 & 4 & --- & --- & --- & 21 \\
+Own & 16 & 11 & 4 & 4 & --- & --- & --- & 22 \\
+Own & 20 & 11 & 4 & 4 & --- & --- & --- & 22 \\
+Own & 22 & 11 & 4 & 4 & --- & --- & --- & 23 \\
+Own & 23 & 11 & 4 & 4 & --- & --- & --- & 24 \\
+Own & 25 & 11 & 4 & 4 & --- & --- & --- & 18 \\
+Own & 31 & 11 & 4 & 4 & --- & --- & --- & 21 \\
+Own & 32 & 11 & 4 & 4 & --- & --- & --- & 24 \\
+\bottomrule
+\end{tabular}
+\endgroup
+\appnotes{Each row is a successful primary fit. Rank is the number of independent columns in the corresponding matrix. Transition and instrument column counts show the dimension against which to read the reported rank. The moment Jacobian measures local changes in the moments as parameters change. A dash denotes a diagnostic not applicable to that estimator. These numerical checks do not test whether the assumed instruments, proxy rule or fictional continuation represent actual company behavior.}{G0.5 v3 modified manufacturing records with fictional company links; authors' calculations.}
+\end{table}

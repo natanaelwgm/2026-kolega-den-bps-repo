@@ -1,0 +1,393 @@
+{
+  "node_id": "G1_N10",
+  "branch": "nominal_development_deep_diagnostics",
+  "material_state_status": "validated_aggregate_receipt_validator_revision_documented_primary_dispatch_replay_pass_no_refit",
+  "state": "Primary prediction coverage, profiles, tails, and histograms",
+  "input_nodes": [
+    "G1_N01",
+    "G1_N03",
+    "G1_N04"
+  ],
+  "direct_input_artifacts": [
+    {
+      "artifact": "nominal/N01_source.dta",
+      "scope": "read-only base-run input",
+      "path": "/Users/natanaelmassie/Downloads/deasy-g1-issue9-20260913-g1-runs/v3-assumed-stock-all-years-02/nominal/N01_source.dta",
+      "sha256": "48f2ab0b21cac694be8a17f9353d6f0f0e3f15a11a6e3006cb1463c3771e600c",
+      "bytes": 27076946,
+      "receipt_sha256": "48f2ab0b21cac694be8a17f9353d6f0f0e3f15a11a6e3006cb1463c3771e600c",
+      "current_hash_matches_receipt": null,
+      "exists": true,
+      "public": false
+    },
+    {
+      "artifact": "nominal/N03_frozen.dta",
+      "scope": "read-only base-run input",
+      "path": "/Users/natanaelmassie/Downloads/deasy-g1-issue9-20260913-g1-runs/v3-assumed-stock-all-years-02/nominal/N03_frozen.dta",
+      "sha256": "1e3744974eb3e492aa7cacd08fa0b3e8c499ad9f0ab8a7b90d9ad4eda997e59b",
+      "bytes": 34002594,
+      "receipt_sha256": "1e3744974eb3e492aa7cacd08fa0b3e8c499ad9f0ab8a7b90d9ad4eda997e59b",
+      "current_hash_matches_receipt": null,
+      "exists": true,
+      "public": false
+    },
+    {
+      "artifact": "nominal/N04_predictions.dta",
+      "scope": "read-only base-run input",
+      "path": "/Users/natanaelmassie/Downloads/deasy-g1-issue9-20260913-g1-runs/v3-assumed-stock-all-years-02/nominal/N04_predictions.dta",
+      "sha256": "512c448771373047dd46ed614f942f469c96a5dc4c4122a41100387fff207199",
+      "bytes": 47808048,
+      "receipt_sha256": "512c448771373047dd46ed614f942f469c96a5dc4c4122a41100387fff207199",
+      "current_hash_matches_receipt": null,
+      "exists": true,
+      "public": false
+    }
+  ],
+  "source_code": "work-items/G1/stata/deep/N10_profiles.do",
+  "source_code_sha256": "0ced63439de72d4fbfa5ebdf4befab78ec1a962f0d0c804fc788879c0ea88003",
+  "source_code_matches_original_run_manifest": true,
+  "runner_entry_point": {
+    "primary_do": "work-items/G1/stata/G1.do",
+    "primary_do_sha256": "08a40ae7f0b355a60b33adf4fd1d15f338645af14ae3b6109d2038f6e0b26ec7",
+    "diagnostics_child_driver": "work-items/G1/stata/deep/G1_deep.do",
+    "diagnostics_child_driver_sha256": "18e7841c4e37cf78684744b87ece680bfb9776e598d7c415b52b167b5a17469d",
+    "dispatch_revision_receipt": "qa/deep-primary-dispatch-source-revision.json",
+    "dispatch_source_revision_verified": true,
+    "execution_status": "Routed primary G1.do execution PASS; exit0, completion sentinel, exact output/contract/source hashes and independent numeric validation. Historical replay and fresh all-years runs retain their distinct receipt kinds.",
+    "final_execution_receipt": "work-items/G1/qa/deep-final-execution.json",
+    "final_execution_receipt_sha256": "e2e0cc27e036f7ea1abfc16b3542c725ace29caa2f5c003ceead0ef3d7c721ae",
+    "final_execution_status": "PASS",
+    "final_execution_verified": true,
+    "final_execution_checks": {
+      "successful_execution": true,
+      "completion_sentinel": true,
+      "exact_manifest": true,
+      "exact_validation": true,
+      "source_code": true,
+      "contract": true,
+      "source_run": true,
+      "primary_route": true,
+      "primary_dispatch_source": true,
+      "complete_output_grid": true,
+      "exact_output_files": true
+    }
+  },
+  "executed_code_receipt": {
+    "manifest_path": "deep-release/run-manifest.json",
+    "manifest_sha256": "481731a8155cb004c502c013fa74f59dc47402f1351ace9fa4e3dd6da37cd469",
+    "code": [
+      {
+        "path": "work-items/G1/stata/deep/G1_deep.do",
+        "sha256": "18e7841c4e37cf78684744b87ece680bfb9776e598d7c415b52b167b5a17469d",
+        "current_sha256": "18e7841c4e37cf78684744b87ece680bfb9776e598d7c415b52b167b5a17469d",
+        "current_hash_matches_receipt": true
+      },
+      {
+        "path": "work-items/G1/stata/deep/N08_inputs.do",
+        "sha256": "f669e8a9475d01c7602ee4d244e629978a787af0d540cb6a3d37495a933601fb",
+        "current_sha256": "f669e8a9475d01c7602ee4d244e629978a787af0d540cb6a3d37495a933601fb",
+        "current_hash_matches_receipt": true
+      },
+      {
+        "path": "work-items/G1/stata/deep/N09_funnel.do",
+        "sha256": "ad6c5e43e571e095207825fbb1db4aee8ae7719c5387abdc996ef3d3a9481b69",
+        "current_sha256": "ad6c5e43e571e095207825fbb1db4aee8ae7719c5387abdc996ef3d3a9481b69",
+        "current_hash_matches_receipt": true
+      },
+      {
+        "path": "work-items/G1/stata/deep/N10_profiles.do",
+        "sha256": "0ced63439de72d4fbfa5ebdf4befab78ec1a962f0d0c804fc788879c0ea88003",
+        "current_sha256": "0ced63439de72d4fbfa5ebdf4befab78ec1a962f0d0c804fc788879c0ea88003",
+        "current_hash_matches_receipt": true
+      },
+      {
+        "path": "work-items/G1/stata/deep/N11_pairs.do",
+        "sha256": "c9851e979c91df74fd27bfd0aee39067cb4ed9658a9ac45eaec479f28995a30d",
+        "current_sha256": "c9851e979c91df74fd27bfd0aee39067cb4ed9658a9ac45eaec479f28995a30d",
+        "current_hash_matches_receipt": true
+      },
+      {
+        "path": "work-items/G1/stata/deep/N12_worked.do",
+        "sha256": "e97691c92bf6c6a41e641532a9bcfc1e8c3186ef0852149c66603aece772ca82",
+        "current_sha256": "e97691c92bf6c6a41e641532a9bcfc1e8c3186ef0852149c66603aece772ca82",
+        "current_hash_matches_receipt": true
+      },
+      {
+        "path": "work-items/G1/stata/deep/N13_existing_fits.do",
+        "sha256": "97abe56e7f0016c0375469c8fcc16ba24caa898199582cea880e0bc5b16fe67b",
+        "current_sha256": "97abe56e7f0016c0375469c8fcc16ba24caa898199582cea880e0bc5b16fe67b",
+        "current_hash_matches_receipt": true
+      },
+      {
+        "path": "work-items/G1/stata/deep/helpers.do",
+        "sha256": "6915264050ac78be449eaf058d4c9ee645b1749bafddce58a65a83ef9accb0dd",
+        "current_sha256": "6915264050ac78be449eaf058d4c9ee645b1749bafddce58a65a83ef9accb0dd",
+        "current_hash_matches_receipt": true
+      },
+      {
+        "path": "work-items/G1/validate_deep.py",
+        "sha256": "3cb8ab9fea21ca44f032dd3e95a5c9c7979474398f4597216c2e6f967a200808",
+        "current_sha256": "3cb8ab9fea21ca44f032dd3e95a5c9c7979474398f4597216c2e6f967a200808",
+        "current_hash_matches_receipt": true
+      },
+      {
+        "path": "work-items/G1/deep-diagnostics-contract.json",
+        "sha256": "0447443beecd73db044abd6204e5472cb4a7b36d2619108467d0c8f1c2bcd641",
+        "current_sha256": "0447443beecd73db044abd6204e5472cb4a7b36d2619108467d0c8f1c2bcd641",
+        "current_hash_matches_receipt": true
+      }
+    ],
+    "validator_revision_status": "current source matches executed validator",
+    "validator_source_revision_receipt": "qa/deep-validator-source-revision.json",
+    "final_routed_execution_receipt": "work-items/G1/qa/deep-final-execution.json",
+    "final_routed_execution_receipt_sha256": "e2e0cc27e036f7ea1abfc16b3542c725ace29caa2f5c003ceead0ef3d7c721ae",
+    "final_routed_execution_status": "PASS",
+    "final_routed_execution_verified": true
+  },
+  "specification_path": "work-items/G1/deep-diagnostics-contract.json",
+  "specification_sha256": "0447443beecd73db044abd6204e5472cb4a7b36d2619108467d0c8f1c2bcd641",
+  "base_run": "/Users/natanaelmassie/Downloads/deasy-g1-issue9-20260913-g1-runs/v3-assumed-stock-all-years-02",
+  "deep_run": "/Users/natanaelmassie/Downloads/deasy-g1-issue9-20260913-g1-runs/v3-assumed-stock-all-years-02-deep02",
+  "base_run_input_manifest_sha256": "060b0ee0a2158a9c94b0e7e68fcfba719eda37561422855471a99da6810ba260",
+  "no_new_coefficient_fits": true,
+  "grain": "Primary prediction summaries by sector × method × sample × production year × fit scope × residual measure; histograms add the lower bin boundary.",
+  "keys_by_output": {
+    "deep_prediction_profiles.csv": [
+      "sector",
+      "method",
+      "sample_id",
+      "source_year",
+      "fit_scope",
+      "measure"
+    ],
+    "deep_prediction_tails.csv": [
+      "sector",
+      "method",
+      "sample_id",
+      "source_year",
+      "fit_scope",
+      "measure"
+    ],
+    "deep_prediction_histograms.csv": [
+      "sector",
+      "method",
+      "sample_id",
+      "source_year",
+      "fit_scope",
+      "measure",
+      "bin_lower"
+    ]
+  },
+  "output_contracts": [
+    {
+      "path": "deep-release/outputs/deep_prediction_profiles.csv",
+      "schema": [
+        "sector",
+        "method",
+        "sample_id",
+        "source_year",
+        "fit_scope",
+        "measure",
+        "N",
+        "mean",
+        "sd",
+        "min",
+        "p1",
+        "p5",
+        "p25",
+        "p50",
+        "p75",
+        "p95",
+        "p99",
+        "max",
+        "iqr",
+        "fence_lo15",
+        "fence_hi15",
+        "fence_lo3",
+        "fence_hi3",
+        "N_below15",
+        "N_above15",
+        "N_below3",
+        "N_above3",
+        "numeric_released",
+        "N_source",
+        "N_domain",
+        "N_predicted",
+        "N_in_fit",
+        "N_outside_fit",
+        "coefficient_year",
+        "normalizer_year",
+        "coefficient_year_min",
+        "coefficient_year_max",
+        "normalizer_scope"
+      ],
+      "keys": [
+        "sector",
+        "method",
+        "sample_id",
+        "source_year",
+        "fit_scope",
+        "measure"
+      ],
+      "grain": "Primary prediction summaries by sector × method × sample × production year × fit scope × residual measure; histograms add the lower bin boundary.",
+      "denominator": "N_source is the full N03 source-year sector count; N_domain is the frozen pre-lag method/common domain; N_predicted, N_in_fit, and N_outside_fit are prediction-side counts. Report each separately.",
+      "units": {
+        "raw_and_centered": "natural-log residual points",
+        "index": "exp(centered log residual), dimensionless; geometric mean one in the pooled dynamic fit group, not arithmetic mean one and not physical TFP",
+        "counts": "observations",
+        "share": "bin count / N_total"
+      },
+      "sha256": "c238c4fa07d1472983643e92cff0b9b329e0910b879b0489920dfd221b9b3299",
+      "rows": 23400,
+      "cells_validated": 889200,
+      "maximum_scaled_error": 1.5788245991023304e-15,
+      "status": "PASS",
+      "hash_matches_release_and_validation": true
+    },
+    {
+      "path": "deep-release/outputs/deep_prediction_tails.csv",
+      "schema": [
+        "sector",
+        "method",
+        "sample_id",
+        "source_year",
+        "fit_scope",
+        "measure",
+        "N",
+        "N_abs_gt2",
+        "N_abs_gt3",
+        "N_index_below_half",
+        "N_index_above_two",
+        "N_below15",
+        "N_above15",
+        "N_below3",
+        "N_above3",
+        "numeric_released"
+      ],
+      "keys": [
+        "sector",
+        "method",
+        "sample_id",
+        "source_year",
+        "fit_scope",
+        "measure"
+      ],
+      "grain": "Primary prediction summaries by sector × method × sample × production year × fit scope × residual measure; histograms add the lower bin boundary.",
+      "denominator": "N_source is the full N03 source-year sector count; N_domain is the frozen pre-lag method/common domain; N_predicted, N_in_fit, and N_outside_fit are prediction-side counts. Report each separately.",
+      "units": {
+        "raw_and_centered": "natural-log residual points",
+        "index": "exp(centered log residual), dimensionless; geometric mean one in the pooled dynamic fit group, not arithmetic mean one and not physical TFP",
+        "counts": "observations",
+        "share": "bin count / N_total"
+      },
+      "sha256": "418b9a840f9ba4e5c3e0e5be4baaa79a98374cd79291ec95bc553f59a455f852",
+      "rows": 23400,
+      "cells_validated": 374400,
+      "maximum_scaled_error": 0.0,
+      "status": "PASS",
+      "hash_matches_release_and_validation": true
+    },
+    {
+      "path": "deep-release/outputs/deep_prediction_histograms.csv",
+      "schema": [
+        "sector",
+        "method",
+        "sample_id",
+        "source_year",
+        "fit_scope",
+        "measure",
+        "bin_lower",
+        "bin_upper",
+        "log_bin_lower",
+        "log_bin_upper",
+        "N_bin",
+        "N_total",
+        "share",
+        "bin_scale"
+      ],
+      "keys": [
+        "sector",
+        "method",
+        "sample_id",
+        "source_year",
+        "fit_scope",
+        "measure",
+        "bin_lower"
+      ],
+      "grain": "Primary prediction summaries by sector × method × sample × production year × fit scope × residual measure; histograms add the lower bin boundary.",
+      "denominator": "N_source is the full N03 source-year sector count; N_domain is the frozen pre-lag method/common domain; N_predicted, N_in_fit, and N_outside_fit are prediction-side counts. Report each separately.",
+      "units": {
+        "raw_and_centered": "natural-log residual points",
+        "index": "exp(centered log residual), dimensionless; geometric mean one in the pooled dynamic fit group, not arithmetic mean one and not physical TFP",
+        "counts": "observations",
+        "share": "bin count / N_total"
+      },
+      "sha256": "7d7bfc3296b06c3624f5c78e82248421f8fab29c0f449683040f3167eb3bf7fe",
+      "rows": 52696,
+      "cells_validated": 737744,
+      "maximum_scaled_error": 4.142981171756425e-16,
+      "status": "PASS",
+      "hash_matches_release_and_validation": true
+    }
+  ],
+  "private_intermediates": [
+    {
+      "path_relative_to_external_run": "intermediate/primary_predictions.dta",
+      "sha256_at_contract_build": "e356e74f0b632c038c34da5c063dcf3060ff30d7cff77cce9facd2cd829a3cee",
+      "exists": true,
+      "publication": "private/local; not copied to deep-release"
+    },
+    {
+      "path_relative_to_external_run": "intermediate/deep_prediction_profiles.dta",
+      "sha256_at_contract_build": "24a6b9d3946d98408c3e94635c34b0e9910083451f9d75157e77bbe563a28bc6",
+      "exists": true,
+      "publication": "private/local; not copied to deep-release"
+    },
+    {
+      "path_relative_to_external_run": "intermediate/deep_prediction_tails.dta",
+      "sha256_at_contract_build": "ecc497b20c6c310c137b99213c7a3c12300ad50ac59340283e4a218821001900",
+      "exists": true,
+      "publication": "private/local; not copied to deep-release"
+    },
+    {
+      "path_relative_to_external_run": "intermediate/deep_prediction_histograms.dta",
+      "sha256_at_contract_build": "92fe0dc11ed28ab79a9809cab7d83e833af72db1505e2aea874f4aa04b72609a",
+      "exists": true,
+      "publication": "private/local; not copied to deep-release"
+    }
+  ],
+  "calendar": "All supported production prediction years; coefficients are pooled across valid dynamic transitions within sector and the pooled fit mean is held fixed across years.",
+  "units": {
+    "raw_and_centered": "natural-log residual points",
+    "index": "exp(centered log residual), dimensionless; geometric mean one in the pooled dynamic fit group, not arithmetic mean one and not physical TFP",
+    "counts": "observations",
+    "share": "bin count / N_total"
+  },
+  "denominator": "N_source is the full N03 source-year sector count; N_domain is the frozen pre-lag method/common domain; N_predicted, N_in_fit, and N_outside_fit are prediction-side counts. Report each separately.",
+  "missingness": "Only existing primary predictions are summarized. Preserve unsupported method/sample cells and empty histogram support. Tails are counted without trimming; a missing or zero count is not replaced with a fitted value.",
+  "suppression": "For N<5 suppress exact means, SDs, quantiles, fences, and related exact numeric summaries; retain N, named source/domain/prediction denominators, and fixed-bin counts/bounds. No obs_id or psid is released.",
+  "decision": "Report raw residual, pooled-fit-centered residual, and exp(centered) separately; distinguish all/in-fit/outside-fit records and source/domain/prediction coverage.",
+  "figure_scope": "Histograms use the existing nominal histogram aggregate; year-sector profiles use the new N10 deep_prediction_profiles.csv. OP and common support failures remain visible in tables and the related support figure.",
+  "validation": {
+    "status": "PASS",
+    "scope": "Independent arithmetic validation of all twelve new Stata aggregate outputs; no full-master load or re-estimation.",
+    "aggregate_cells_compared": 2588035,
+    "receipt_path": "deep-release/qa/deep-validation.json",
+    "receipt_sha256": "1b38990abdc2e11839b28d60063dc111bbd3e117be3b5544379cde23e01eb463",
+    "validator_source_hash_matches_manifest": true,
+    "validator_source_revision_status": "current source matches executed validator",
+    "output_hashes_match_both_receipts": true,
+    "routed_primary_execution_receipt_path": "work-items/G1/qa/deep-final-execution.json",
+    "routed_primary_execution_receipt_sha256": "e2e0cc27e036f7ea1abfc16b3542c725ace29caa2f5c003ceead0ef3d7c721ae",
+    "routed_primary_execution_status": "PASS",
+    "routed_primary_execution_verified": true
+  },
+  "release_root": "deep-release/ (separate from release/; aggregate evidence only)",
+  "primary_real_admission": false,
+  "interpretation_limit": "G0.5 nominal-development diagnostics on the official fictional panel. They do not establish real-valued productivity. Unsupported sector cells retain their recorded missing state; N11 is descriptive, not causal.",
+  "numerical_output_privacy": "Only aggregate outputs are in deep-release. obs_id/psid are used for exact internal joins and remain in private external-run intermediates.",
+  "plan": "releases/2026-09-13-data-foundation/stata-preparation/row-plans/G1.json",
+  "plan_sha256": "dd88cfa94af5f212a7b0a4b70f99fea1c0201f950cd19333357739b96b5da1ca",
+  "input_manifest": "data/g0-5-development/manifest.json",
+  "input_manifest_sha256": "060b0ee0a2158a9c94b0e7e68fcfba719eda37561422855471a99da6810ba260"
+}

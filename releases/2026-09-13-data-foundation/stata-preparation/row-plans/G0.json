@@ -1,0 +1,3483 @@
+{
+  "schema_version": 1,
+  "row_id": "G0",
+  "title": "Main dataset, cleaning, logs, panel, WPI, energy/emissions and worker ratios",
+  "family": "data",
+  "status": "planning_only",
+  "row_complete": false,
+  "source": {
+    "task_json": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/requests/data/00-main-dataset/task.json",
+    "docx_sha256": "027fbf675aa8001a50060561781930440ee4d9697cc790ba593452fe528edd92",
+    "locator": "word/document.xml table 1, row 3",
+    "number": "0",
+    "pic": "Waran",
+    "completion_cell": "",
+    "request": "Create dataset utama\nSemua variable diincludekan\nCleaning data2 pencilan\nVariable value dibuat ln juga\nVariable name disesuaikan sehingga mudah untuk proses2 selanjutnya\nPanel \nMerge dengan wpi (Cek data wpi apakah ada dimana ya)\nConstruct energy use scope 1, scope 2 dan total\nConstruct emisi per firms (scope 1, scope 2, dan total)\nConstruct Value added/worker; output/worker; capital/worker (dan variable lainnya yg bisa dilihat per workernya)\n",
+    "strategy": "",
+    "notes": ""
+  },
+  "question": "Can every source file become one trustworthy, readable annual dataset?",
+  "dependencies": [
+    {
+      "id": "C_RAW",
+      "required_for": "required source/method branch defined by exact row and graph",
+      "availability": "available_restricted_twelve_waves",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/05-analysis/analytical-dag/dag/registries/source_inputs.csv",
+      "gate": "All source files/schema/hashes; 2016 absent; preserve original records; no full-population claim."
+    },
+    {
+      "id": "C_CODEBOOK",
+      "required_for": "required source/method branch defined by exact row and graph",
+      "availability": "partly_verified",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv",
+      "gate": "Each annual field has exact definition/unit/code evidence or an explicit provisional/unknown state."
+    },
+    {
+      "id": "C_ID",
+      "required_for": "required source/method branch defined by exact row and graph",
+      "availability": "provenance_ready_real_link_unavailable",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/HANDOFF.md",
+      "gate": "source_year/source_row unique; true firm ID/crosswalk must be provided and validated before longitudinal use."
+    },
+    {
+      "id": "C_WPI",
+      "required_for": "required source/method branch defined by exact row and graph",
+      "availability": "actual_macro_reference_available_company_bridge_unverified",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/synthetic-development/g0-pipeline/references/toar-wpi-20260910",
+      "gate": "Verify annual company-classification bridge, proper price concept, index base/splice and merge cardinality. Input/capital/wage prices still missing."
+    },
+    {
+      "id": "C_CLASSIFICATION",
+      "required_for": "required source/method branch defined by exact row and graph",
+      "availability": "partly_documented_annual_revisions_unresolved",
+      "evidence": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/wpi-classification-evidence.md",
+      "gate": "2013/2015 KLUI 2009 evidence; other years need exact vintage; partial correspondence cannot become arbitrary averaging."
+    },
+    {
+      "id": "C_ENERGY_FACTORS",
+      "required_for": "required source/method branch defined by exact row and graph",
+      "availability": "partial_inherited_method_only",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/HANDOFF.md",
+      "gate": "Complete component and unit/factor gates; no complete-nine-fuel rows; post 2014 grid carry is sensitivity only."
+    }
+  ],
+  "decisions": [
+    {
+      "id": "G0_D01",
+      "question": "Inventory original files and exact annual scope",
+      "selected_rule": "No fallbacks to fictional company data or historical candidate without explicit version selection.",
+      "rationale": "Freeze original Excel/staged-input/reference hashes; record which route is raw-Excel or staged-DTA; preserve receipt for every physical file.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G0_D02",
+      "question": "Capture every sheet, header, storage type and raw field",
+      "selected_rule": "Detect unknown schema; stop the affected import and request mapping evidence rather than guess from column names.",
+      "rationale": "Inspect all candidate sheets, duplicate/blank header positions, locale/encoding and per-wave schema before import; retain positional raw names even when source names duplicate.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G0_D03",
+      "question": "Preserve all raw values without interpretation",
+      "selected_rule": "Raw text/codes/missing tokens are kept; no string-to-number coercion destroys originals.",
+      "rationale": "Import the frozen source under explicit parser contract into an immutable all-fields raw layer; add source_year/source_row without treating a reported YEAR string as calendar authority.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G0_D04",
+      "question": "Freeze annual variable mapping and definition registry",
+      "selected_rule": "Arbitrary input schema enters through a reviewed adapter; unknown fields preserved but cannot silently become known concepts.",
+      "rationale": "Map each raw field/year to canonical variable, source unit, target unit, factor, code direction, respondent universe, definition status and exact codebook locator. Expand one planned processing node per variable-year; retain all 2796 existing verification rules and 108 working branches only after revalidation.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G0_D05",
+      "question": "Parse annual numeric values and missing-state reasons",
+      "selected_rule": "No conversion of unknown, blank or structural absence into zero.",
+      "rationale": "Apply only the frozen locale/decimal/text-to-number parser to each mapped source-year cell; materialize parse failure, masked, source-absent and observed-zero separately.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G0_D06",
+      "question": "Decode binary/categorical annual question meanings",
+      "selected_rule": "Source 0 stays unknown where not a documented no; provisional working values carry vs=10 and do not overwrite verified-only columns.",
+      "rationale": "Apply the exact annual yes/no code pair and conditional universe; produce working and verified-only companions, including export-any versus direct 2022 and distinct R&D meanings.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G0_D07",
+      "question": "Convert monetary/count units and separate stock/additions",
+      "selected_rule": "Rp000 nominal; later stock semantics remain provisional; capital_nominal mixed alias is not main stock.",
+      "rationale": "Apply approved per-year unit factors; preserve stock V1115, additions CTTTCU, output, inputs, VA, workers and R&D IRDVCU as distinct concepts.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G0_D08",
+      "question": "Validate real identity and source observation universe",
+      "selected_rule": "Identity OFF while real continuity unverified; no dummy/random-slot/row-order fallback; disappearance is not closure.",
+      "rationale": "Use a supplied authorized real-ID crosswalk only; test duplicates, ID recycling, year adjacency, entry/absence and frame changes independently of source-row key.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G0_D09",
+      "question": "Establish annual industry and geographic code vintage",
+      "selected_rule": "2013/2015 KLUI 2009 evidence does not certify other years; no inference that unmasked industry equals harmonized sector; no dummy geography.",
+      "rationale": "Verify each annual classification using actual definitions; keep raw/reported code, source vintage and exact concordance ambiguity; province/district/subdistrict are separate mappings.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G0_D10",
+      "question": "Validate macro WPI source concept and splice",
+      "selected_rule": "Retain actual Toar package 18 hashes, base 2000=100, 131 ISIC 3/3.1 sectors, 2016 absence, 2013–19 extension and 2020–22 splice flags; recompute stated arithmetic from supplied anchors/monthly detail. Preserve index_value with its distinct price_concept, price_sector and year; wpi_output is an output-only alias, never an input/capital/wage price. Other price concepts require separately supplied physical series and their own source checks; absent series remain absent.",
+      "rationale": "Retain actual Toar package 18 hashes, base 2000=100, 131 ISIC 3/3.1 sectors, 2016 absence, 2013–19 extension and 2020–22 splice flags; recompute stated arithmetic from supplied anchors/monthly detail.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G0_D11",
+      "question": "Resolve annual company-to-WPI classification bridge",
+      "selected_rule": "Never reuse four synthetic fixture codes, blind string prefixes or unweighted averages of unrelated industries.",
+      "rationale": "Map verified annual company activity to valid WPI technology; retain one-to-many/partial correspondences and preregister whether to exclude or aggregate with defensible weights.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G0_D12",
+      "question": "Deflate each supported money concept",
+      "selected_rule": "After a positive unique activity-year output-price merge, compute real output in constant base-2000 Rp000. Preferred real value added is deflated output minus intermediate inputs deflated by an appropriate verified input-price series. If input prices are unavailable, preferred real VA remains missing. A separately named VA/output-WPI approximation is a registered sensitivity, never the canonical real-VA field. Capital and wages require separately appropriate price series.",
+      "rationale": "Compute real output only after positive unique sector-year WPI merge; independently choose double-deflated VA or separately labelled single-output-deflator approximation; input/capital/wage fields need appropriate prices.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G0_D13",
+      "question": "Map each fuel quantity and source unit",
+      "selected_rule": "2018/2019 unresolved units cannot quietly enter verified physical totals; costs and quantities are distinct.",
+      "rationale": "Create per-fuel/year observed/zero/missing values with exact physical unit conversions; separate coal/coke, MMBTU natural gas, mixed biomass and retired aliases.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G0_D14",
+      "question": "Choose documented fuel heat and carbon factors",
+      "selected_rule": "No factor for an unknown fuel; no CO2 e label when only combustion CO2 calculated.",
+      "rationale": "Freeze fuel-factor basis, source, physical conversion and factor alternatives per fuel; fuel-consumption versus potential lubricant heat are separate branches.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G0_D15",
+      "question": "Construct complete and partial fuel-energy/CO2 measures",
+      "selected_rule": "Missing is not zero; absence of complete-nine-fuel rows remains visible; expand fuel coverage only with actual source definitions.",
+      "rationale": "Compute sum over known fuel components with count of observed required components; create complete-only output and separately labelled partial diagnostic.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G0_D16",
+      "question": "Construct purchased-electricity and self-generation accounting",
+      "selected_rule": "Annual layout verified 2010–15; later source map not semantic proof; publish mapping-qualified branch separately.",
+      "rationale": "Sum PLN/non-PLN only when each observed/nonnegative for complete branch; multiply kWh by 0.0036 for GJ. Maintain own generation separately, not added to already-counted fuel energy.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G0_D17",
+      "question": "Apply annual grid-factor evidence",
+      "selected_rule": "No new annual grid factor inferred from neighboring years; Scope 2 completeness does not imply factor validity.",
+      "rationale": "Use observed verified grid factor by actual year where available; post 2014 carry explicitly sensitivity, not actual source series.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G0_D18",
+      "question": "Reconcile energy, CO2 and expenditure accounting",
+      "selected_rule": "A total is named complete only when component/units/factors all meet contract; investigate 217 historical cost discrepancies including 215 in 2015.",
+      "rationale": "Verify physical Scope 1+Scope 2 identity, no own generation double count and fuel/purchased-electricity cost reconciliation; separate complete and partial outputs.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G0_D19",
+      "question": "Define transparent outlier sensitivity",
+      "selected_rule": "Flags are diagnostic; no silent winsorization/deletion and no threshold chosen to make results attractive.",
+      "rationale": "Retain every source value; apply existing within-year >10*p99/negative flags in a separately named companion and compare to valid-domain baseline.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G0_D20",
+      "question": "Create domain-safe logs for every eligible value",
+      "selected_rule": "No log(x+1) or tiny constant; log samples differ visibly from levels.",
+      "rationale": "Generate natural log only for strictly positive observed concept values; retain nonpositive and unavailable-state flags for each variable-year.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G0_D21",
+      "question": "Construct named ratios with positive denominators",
+      "selected_rule": "Positive workers only; 28 historical nonpositive records produce unavailable ratios; no mixed capital alias.",
+      "rationale": "Build VA/worker, output/worker, stock/worker, additions/worker and other justified per-worker outcomes with original components preserved.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G0_D22",
+      "question": "Assemble one shared canonical annual dataset",
+      "selected_rule": "Before attachment, assert each long state on its complete variable/concept/scope/scenario key. Use a frozen canonical-column registry to reshape each accepted state to one row per source_year/source_row, with collision-free column names for variable, price scenario, coverage mask and factor scenario. Retain every original long state as a companion. Keep annual mapping metadata as a referenced registry, not a numeric table merged by provenance. Then assert each wide attachment is unique and merge 1:1 on source_year/source_row into the raw-preserving spine. Preserve 3,793 historical names, 2,545 retained raw fields and the documented latest extensions. Never choose one duplicate/ambiguous mapping silently or substitute dummy real links.",
+      "rationale": "Merge audited field/year states 1:1 on source provenance key; preserve 3793 historical names/raw 2545 fields and documented extensions; merge optional accepted real-link state without dummy fallback.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G0_D23",
+      "question": "Independently validate final schema, values and gates",
+      "selected_rule": "Code success/schema presence is not full DoD; any missing mandatory source keeps row blocked.",
+      "rationale": "Reopen final DTA; compare raw preservation and exact formula/sample counts against independent controls; reconcile all variable-year coverage including absent 2016 and scalar flags.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G0_D24",
+      "question": "Publish local human-readable G0 and offline row bundle",
+      "selected_rule": "Row may only pass when exact source/QA/reader/visual gates pass; no PDF-as-completion substitution.",
+      "rationale": "Create custom charts/LaTeX from full-precision Stata aggregates; package G0 entrypoint and child dofiles with relative paths, source manifest and definition guide; retain restricted data locally.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "G0_INPUT_FACTORS",
+      "state": "Annual fuel, electricity and emissions factors with evidence",
+      "grain": "factor type × fuel/grid × year × scenario",
+      "keys": [
+        "factor_type",
+        "carrier",
+        "source_year",
+        "factor_scenario"
+      ],
+      "required_fields": [
+        "factor_type",
+        "carrier",
+        "source_year",
+        "factor_scenario",
+        "factor_value",
+        "input_unit",
+        "output_unit",
+        "factor_version",
+        "evidence_id",
+        "assumption_flag"
+      ],
+      "units": "Explicit conversion ratio, e.g. GJ/litre or tonnes CO2/kWh",
+      "folder": "dag/nodes/G0/G0_INPUT_FACTORS",
+      "planning_status": "external_input_not_materialized_by_plan",
+      "input_receipt": "No future factor or carried grid factor enters the verified branch without its own justified scenario"
+    },
+    {
+      "id": "G0_INPUT_CLASSIFICATIONS",
+      "state": "Annual industry/geography dictionaries and documented correspondence",
+      "grain": "source vintage × source code × target vintage × target code",
+      "keys": [
+        "source_vintage",
+        "source_code",
+        "target_vintage",
+        "target_code"
+      ],
+      "required_fields": [
+        "source_vintage",
+        "source_code",
+        "target_vintage",
+        "target_code",
+        "mapping_weight",
+        "mapping_basis",
+        "effective_year",
+        "evidence_id"
+      ],
+      "units": "Code labels; mapping weight is dimensionless",
+      "folder": "dag/nodes/G0/G0_INPUT_CLASSIFICATIONS",
+      "planning_status": "external_input_not_materialized_by_plan",
+      "input_receipt": "Require each annual classification vintage; no guessed prefix bridge or fictional industry crosswalk"
+    },
+    {
+      "id": "G0_INPUT_IDENTITY",
+      "state": "Authenticated plant identifier and observation-frame evidence",
+      "grain": "source record × year",
+      "keys": [
+        "source_year",
+        "source_row"
+      ],
+      "required_fields": [
+        "source_year",
+        "source_row",
+        "real_firm_id",
+        "frame_membership",
+        "exit_reason",
+        "authentication_receipt"
+      ],
+      "units": "Identifiers and source-state codes",
+      "folder": "dag/nodes/G0/G0_INPUT_IDENTITY",
+      "planning_status": "external_input_not_materialized_by_plan",
+      "input_receipt": "External real identifiers absent in current local sample; this input remains source gated"
+    },
+    {
+      "id": "G0_INPUT_PRICES",
+      "state": "Physical macro price series and their methodological source",
+      "grain": "price concept × source sector × calendar year",
+      "keys": [
+        "price_concept",
+        "price_sector",
+        "source_year"
+      ],
+      "required_fields": [
+        "price_concept",
+        "price_sector",
+        "source_year",
+        "index_value",
+        "base_year",
+        "source_segment",
+        "splice_rule",
+        "evidence_id"
+      ],
+      "units": "Index points; base specified for each series",
+      "folder": "dag/nodes/G0/G0_INPUT_PRICES",
+      "planning_status": "external_input_not_materialized_by_plan",
+      "input_receipt": "Actual WPI reference identified; input/capital price series not assumed available"
+    },
+    {
+      "id": "G0_INPUT_DEFINITIONS",
+      "state": "Original annual questionnaire, layout and codebook evidence",
+      "grain": "evidence item",
+      "keys": [
+        "evidence_id"
+      ],
+      "required_fields": [
+        "evidence_id",
+        "source_hash",
+        "year",
+        "page_or_sheet",
+        "field",
+        "question_text",
+        "unit",
+        "universe",
+        "code_values"
+      ],
+      "units": "Documented source units and categorical codes",
+      "folder": "dag/nodes/G0/G0_INPUT_DEFINITIONS",
+      "planning_status": "external_input_not_materialized_by_plan",
+      "input_receipt": "Exact local document plus page/sheet locator; unresolved annual semantics remain unsupported"
+    },
+    {
+      "id": "G0_INPUT_RAW",
+      "state": "Physical original annual files, kept byte-for-byte",
+      "grain": "source file × native sheet × native record",
+      "keys": [
+        "source_file_hash",
+        "sheet_id",
+        "native_row"
+      ],
+      "required_fields": [
+        "source_file_hash",
+        "sheet_id",
+        "native_row",
+        "source_year",
+        "raw_fields",
+        "raw_values"
+      ],
+      "units": "Native source units retained; no economic interpretation yet",
+      "folder": "dag/nodes/G0/G0_INPUT_RAW",
+      "planning_status": "external_input_not_materialized_by_plan",
+      "input_receipt": "G0 input manifest: each path, SHA256, file size, year and format; actual files must exist"
+    },
+    {
+      "id": "G0_S00",
+      "state": "Frozen input manifest and available source bytes; not generated by this plan",
+      "grain": "one input file/version",
+      "keys": [
+        "source_path",
+        "sha256"
+      ],
+      "required_fields": [
+        "source_path",
+        "sha256",
+        "source_year",
+        "format",
+        "availability",
+        "privacy",
+        "definition_evidence"
+      ],
+      "units": {
+        "source_year": "calendar year",
+        "bytes": "bytes"
+      },
+      "folder": "dag/nodes/G0/G0_S00",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G0_S01",
+      "state": "Inventory original files and exact annual scope — planned output state, not materialized",
+      "grain": "physical file inventory",
+      "keys": [
+        "source_path",
+        "sha256"
+      ],
+      "required_fields": [
+        "source_path",
+        "sha256",
+        "bytes",
+        "year",
+        "format",
+        "privacy",
+        "source_family"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G0/G0_S01",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G0_S02",
+      "state": "Capture every sheet, header, storage type and raw field — planned output state, not materialized",
+      "grain": "raw field position in one source sheet",
+      "keys": [
+        "source_file_hash",
+        "sheet_id",
+        "column_position"
+      ],
+      "required_fields": [
+        "source_file_hash",
+        "sheet_id",
+        "column_position",
+        "sheet",
+        "raw_header",
+        "source_type",
+        "locale",
+        "parser_version"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G0/G0_S02",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G0_S03",
+      "state": "Preserve all raw values without interpretation — planned output state, not materialized",
+      "grain": "canonical source record × year, raw wide values",
+      "keys": [
+        "source_year",
+        "source_row"
+      ],
+      "required_fields": [
+        "source_year",
+        "source_row",
+        "raw_field_manifest",
+        "raw_values",
+        "parse_receipt"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G0/G0_S03",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G0_S04",
+      "state": "Freeze annual variable mapping and definition registry — planned output state, not materialized",
+      "grain": "annual raw-to-canonical mapping",
+      "keys": [
+        "source_year",
+        "raw_field",
+        "canonical_variable",
+        "mapping_scenario"
+      ],
+      "required_fields": [
+        "source_year",
+        "raw_field",
+        "canonical_variable",
+        "mapping_scenario",
+        "year",
+        "source_unit",
+        "target_unit",
+        "factor",
+        "yes_codes",
+        "no_codes",
+        "universe",
+        "evidence",
+        "status"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G0/G0_S04",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G0_S05",
+      "state": "Parse annual numeric values and missing-state reasons — planned output state, not materialized",
+      "grain": "source record × year × canonical variable",
+      "keys": [
+        "source_year",
+        "source_row",
+        "canonical_variable"
+      ],
+      "required_fields": [
+        "source_year",
+        "source_row",
+        "canonical_variable",
+        "parsed_value",
+        "source_state"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G0/G0_S05",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G0_S06",
+      "state": "Decode binary/categorical annual question meanings — planned output state, not materialized",
+      "grain": "source record × year × categorical variable",
+      "keys": [
+        "source_year",
+        "source_row",
+        "canonical_variable"
+      ],
+      "required_fields": [
+        "source_year",
+        "source_row",
+        "canonical_variable",
+        "working_value",
+        "verified_value",
+        "verification_state",
+        "question_universe",
+        "source_code"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G0/G0_S06",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G0_S07",
+      "state": "Convert monetary/count units and separate stock/additions — planned output state, not materialized",
+      "grain": "source record × year, nominal economics in wide form",
+      "keys": [
+        "source_year",
+        "source_row"
+      ],
+      "required_fields": [
+        "source_year",
+        "source_row",
+        "output_nominal",
+        "value_added_nominal",
+        "inputs_nominal",
+        "capital_stock_nominal",
+        "capital_additions_nominal",
+        "workers",
+        "rd_cost_nominal",
+        "unit_status"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G0/G0_S07",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G0_S08",
+      "state": "Validate real identity and source observation universe — planned output state, not materialized",
+      "grain": "source record × year, identity/frame evidence",
+      "keys": [
+        "source_year",
+        "source_row"
+      ],
+      "required_fields": [
+        "source_year",
+        "source_row",
+        "firm_id",
+        "link_status",
+        "frame_status",
+        "calendar_gap"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G0/G0_S08",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G0_S09",
+      "state": "Establish annual industry and geographic code vintage — planned output state, not materialized",
+      "grain": "source record × year × code concept",
+      "keys": [
+        "source_year",
+        "source_row",
+        "code_concept"
+      ],
+      "required_fields": [
+        "source_year",
+        "source_row",
+        "code_concept",
+        "industry_raw",
+        "industry_vintage",
+        "province_raw",
+        "district_raw",
+        "mapping_status",
+        "concordance_weight"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G0/G0_S09",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G0_S10",
+      "state": "Validate macro WPI source concept and splice — planned output state, not materialized",
+      "grain": "price concept × price sector × calendar year",
+      "keys": [
+        "price_concept",
+        "price_sector",
+        "source_year"
+      ],
+      "required_fields": [
+        "price_concept",
+        "price_sector",
+        "source_year",
+        "isic3_sector",
+        "year",
+        "wpi_output",
+        "base_year",
+        "source_segment",
+        "splice_flag",
+        "factor_evidence",
+        "index_value",
+        "source_unit",
+        "target_unit",
+        "concept_verified"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G0/G0_S10",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G0_S11",
+      "state": "Resolve annual company-to-WPI classification bridge — planned output state, not materialized",
+      "grain": "source record × year × price concept × bridge scenario",
+      "keys": [
+        "source_year",
+        "source_row",
+        "price_concept",
+        "bridge_scenario"
+      ],
+      "required_fields": [
+        "source_year",
+        "source_row",
+        "price_concept",
+        "bridge_scenario",
+        "verified_activity",
+        "wpi_sector",
+        "bridge_status",
+        "ambiguity_id"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G0/G0_S11",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G0_S12",
+      "state": "Deflate each supported money concept — planned output state, not materialized",
+      "grain": "source record × year × monetary concept × price scenario",
+      "keys": [
+        "source_year",
+        "source_row",
+        "money_concept",
+        "price_scenario"
+      ],
+      "required_fields": [
+        "source_year",
+        "source_row",
+        "money_concept",
+        "price_scenario",
+        "nominal_value",
+        "price_index",
+        "real_value",
+        "price_concept",
+        "base_year",
+        "approximation_flag",
+        "merge_status"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G0/G0_S12",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G0_S13",
+      "state": "Map each fuel quantity and source unit — planned output state, not materialized",
+      "grain": "source record × year × fuel",
+      "keys": [
+        "source_year",
+        "source_row",
+        "fuel"
+      ],
+      "required_fields": [
+        "source_year",
+        "source_row",
+        "fuel",
+        "year",
+        "quantity",
+        "source_unit",
+        "target_unit",
+        "unit_status",
+        "cost",
+        "availability"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G0/G0_S13",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G0_S14",
+      "state": "Choose documented fuel heat and carbon factors — planned output state, not materialized",
+      "grain": "fuel × calendar year × factor scenario",
+      "keys": [
+        "fuel",
+        "source_year",
+        "factor_scenario"
+      ],
+      "required_fields": [
+        "fuel",
+        "source_year",
+        "factor_scenario",
+        "factor_version",
+        "heat_content",
+        "carbon_factor",
+        "basis",
+        "source_evidence"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G0/G0_S14",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G0_S15",
+      "state": "Construct complete and partial fuel-energy/CO2 measures — planned output state, not materialized",
+      "grain": "source record × year × fuel coverage mask × factor scenario",
+      "keys": [
+        "source_year",
+        "source_row",
+        "coverage_mask",
+        "factor_scenario"
+      ],
+      "required_fields": [
+        "source_year",
+        "source_row",
+        "coverage_mask",
+        "factor_scenario",
+        "fuel_energy_gj",
+        "fuel_co2",
+        "required_components",
+        "observed_components",
+        "complete_flag",
+        "partial_flag"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G0/G0_S15",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G0_S16",
+      "state": "Construct purchased-electricity and self-generation accounting — planned output state, not materialized",
+      "grain": "source record × year × electricity origin × flow",
+      "keys": [
+        "source_year",
+        "source_row",
+        "electricity_origin",
+        "flow"
+      ],
+      "required_fields": [
+        "source_year",
+        "source_row",
+        "electricity_origin",
+        "flow",
+        "pln_kwh",
+        "nonpln_kwh",
+        "own_generation_kwh",
+        "electricity_gj",
+        "observed_components",
+        "unit_status"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G0/G0_S16",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G0_S17",
+      "state": "Apply annual grid-factor evidence — planned output state, not materialized",
+      "grain": "source record × year × electricity origin × factor scenario",
+      "keys": [
+        "source_year",
+        "source_row",
+        "electricity_origin",
+        "factor_scenario"
+      ],
+      "required_fields": [
+        "source_year",
+        "source_row",
+        "electricity_origin",
+        "factor_scenario",
+        "electricity_kwh",
+        "grid_factor",
+        "year",
+        "factor_source",
+        "carry_flag",
+        "scope2_co2"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G0/G0_S17",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G0_S18",
+      "state": "Reconcile energy, CO2 and expenditure accounting — planned output state, not materialized",
+      "grain": "source record × year × accounting scope × scenario",
+      "keys": [
+        "source_year",
+        "source_row",
+        "accounting_scope",
+        "factor_scenario"
+      ],
+      "required_fields": [
+        "source_year",
+        "source_row",
+        "accounting_scope",
+        "factor_scenario",
+        "energy_components",
+        "co2_components",
+        "reported_cost",
+        "component_cost",
+        "reconciliation_gap",
+        "complete_status"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G0/G0_S18",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G0_S19",
+      "state": "Define transparent outlier sensitivity — planned output state, not materialized",
+      "grain": "source record × year × variable × cleaning rule",
+      "keys": [
+        "source_year",
+        "source_row",
+        "variable_id",
+        "cleaning_rule"
+      ],
+      "required_fields": [
+        "source_year",
+        "source_row",
+        "variable_id",
+        "cleaning_rule",
+        "raw_value",
+        "valid_value",
+        "p99_year",
+        "outlier_flag",
+        "clean_sensitivity",
+        "rule_version"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G0/G0_S19",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G0_S20",
+      "state": "Create domain-safe logs for every eligible value — planned output state, not materialized",
+      "grain": "source record × year × variable × scenario",
+      "keys": [
+        "source_year",
+        "source_row",
+        "variable_id",
+        "scenario_id"
+      ],
+      "required_fields": [
+        "source_year",
+        "source_row",
+        "variable_id",
+        "scenario_id",
+        "value",
+        "ln_value",
+        "log_domain",
+        "source_state"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G0/G0_S20",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G0_S21",
+      "state": "Construct named ratios with positive denominators — planned output state, not materialized",
+      "grain": "source record × year × ratio × scenario",
+      "keys": [
+        "source_year",
+        "source_row",
+        "ratio_id",
+        "scenario_id"
+      ],
+      "required_fields": [
+        "source_year",
+        "source_row",
+        "ratio_id",
+        "scenario_id",
+        "numerator",
+        "workers",
+        "ratio",
+        "denominator_status",
+        "units"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G0/G0_S21",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G0_S22",
+      "state": "Assemble one shared canonical annual dataset — planned output state, not materialized",
+      "grain": "source record × year, canonical wide dataset",
+      "keys": [
+        "source_year",
+        "source_row"
+      ],
+      "required_fields": [
+        "source_year",
+        "source_row",
+        "canonical_variables",
+        "verified_companions",
+        "source_states",
+        "schema_version"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G0/G0_S22",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G0_S23",
+      "state": "Independently validate final schema, values and gates — planned output state, not materialized",
+      "grain": "independent validation check × variable × year",
+      "keys": [
+        "check_id",
+        "variable_id",
+        "source_year"
+      ],
+      "required_fields": [
+        "check_id",
+        "variable_id",
+        "source_year",
+        "source_hash",
+        "output_hash",
+        "schema_controls",
+        "formula_controls",
+        "coverage_controls",
+        "mandatory_gate_matrix"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G0/G0_S23",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G0_S24",
+      "state": "Publish local human-readable G0 and offline row bundle — planned output state, not materialized",
+      "grain": "published artifact manifest",
+      "keys": [
+        "artifact_id"
+      ],
+      "required_fields": [
+        "artifact_id",
+        "exhibit_manifest",
+        "formula_symbol_guide",
+        "offline_manifest",
+        "acceptance",
+        "source_scope"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G0/G0_S24",
+      "planning_status": "planning_only"
+    }
+  ],
+  "edges": [
+    {
+      "id": "G0_E01",
+      "title": "Inventory original files and exact annual scope",
+      "input_nodes": [
+        "G0_S00",
+        "G0_INPUT_RAW"
+      ],
+      "output_nodes": [
+        "G0_S01"
+      ],
+      "depends_on": [],
+      "do_file": "rows/G0/edges/G0_E01.do",
+      "action": "Freeze original Excel/staged-input/reference hashes; record which route is raw-Excel or staged-DTA; preserve receipt for every physical file.",
+      "decision_ids": [
+        "G0_D01"
+      ],
+      "validation": [
+        "All 12 supplied wave entries resolve and immutable hashes match; 2016 status absent.",
+        "Current actual baseline matches 6 fc 70746...; original Excel versus staged route is explicitly named.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract; G0 preparation may read its registered upstream inputs before ready-wave publication."
+    },
+    {
+      "id": "G0_E02",
+      "title": "Capture every sheet, header, storage type and raw field",
+      "input_nodes": [
+        "G0_S01",
+        "G0_INPUT_RAW"
+      ],
+      "output_nodes": [
+        "G0_S02"
+      ],
+      "depends_on": [
+        "G0_E01"
+      ],
+      "do_file": "rows/G0/edges/G0_E02.do",
+      "action": "Inspect all candidate sheets, duplicate/blank header positions, locale/encoding and per-wave schema before import; retain positional raw names even when source names duplicate.",
+      "decision_ids": [
+        "G0_D02"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract; G0 preparation may read its registered upstream inputs before ready-wave publication."
+    },
+    {
+      "id": "G0_E03",
+      "title": "Preserve all raw values without interpretation",
+      "input_nodes": [
+        "G0_S02",
+        "G0_INPUT_RAW"
+      ],
+      "output_nodes": [
+        "G0_S03"
+      ],
+      "depends_on": [
+        "G0_E02"
+      ],
+      "do_file": "rows/G0/edges/G0_E03.do",
+      "action": "Import the frozen source under explicit parser contract into an immutable all-fields raw layer; add source_year/source_row without treating a reported YEAR string as calendar authority.",
+      "decision_ids": [
+        "G0_D03"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract; G0 preparation may read its registered upstream inputs before ready-wave publication."
+    },
+    {
+      "id": "G0_E04",
+      "title": "Freeze annual variable mapping and definition registry",
+      "input_nodes": [
+        "G0_S03",
+        "G0_INPUT_DEFINITIONS"
+      ],
+      "output_nodes": [
+        "G0_S04"
+      ],
+      "depends_on": [
+        "G0_E03"
+      ],
+      "do_file": "rows/G0/edges/G0_E04.do",
+      "action": "Map each raw field/year to canonical variable, source unit, target unit, factor, code direction, respondent universe, definition status and exact codebook locator. Expand one planned processing node per variable-year; retain all 2796 existing verification rules and 108 working branches only after revalidation.",
+      "decision_ids": [
+        "G0_D04"
+      ],
+      "validation": [
+        "Every original field is represented in raw inventory; every requested canonical-year cell is mapped or explicitly absent/unknown.",
+        "No ambiguous raw-field collision or unsupported many-to-one concept merge.",
+        "Expanded edge manifest has one independently auditable parsing/unit/code decision per actual variable-year.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract; G0 preparation may read its registered upstream inputs before ready-wave publication."
+    },
+    {
+      "id": "G0_E05",
+      "title": "Parse annual numeric values and missing-state reasons",
+      "input_nodes": [
+        "G0_S04",
+        "G0_S03"
+      ],
+      "output_nodes": [
+        "G0_S05"
+      ],
+      "depends_on": [
+        "G0_E04",
+        "G0_E03"
+      ],
+      "do_file": "rows/G0/edges/G0_E05.do",
+      "action": "Apply only the frozen locale/decimal/text-to-number parser to each mapped source-year cell; materialize parse failure, masked, source-absent and observed-zero separately.",
+      "decision_ids": [
+        "G0_D05"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract; G0 preparation may read its registered upstream inputs before ready-wave publication."
+    },
+    {
+      "id": "G0_E06",
+      "title": "Decode binary/categorical annual question meanings",
+      "input_nodes": [
+        "G0_S05",
+        "G0_S04",
+        "G0_INPUT_DEFINITIONS"
+      ],
+      "output_nodes": [
+        "G0_S06"
+      ],
+      "depends_on": [
+        "G0_E05",
+        "G0_E04"
+      ],
+      "do_file": "rows/G0/edges/G0_E06.do",
+      "action": "Apply the exact annual yes/no code pair and conditional universe; produce working and verified-only companions, including export-any versus direct 2022 and distinct R&D meanings.",
+      "decision_ids": [
+        "G0_D06"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract; G0 preparation may read its registered upstream inputs before ready-wave publication."
+    },
+    {
+      "id": "G0_E07",
+      "title": "Convert monetary/count units and separate stock/additions",
+      "input_nodes": [
+        "G0_S06",
+        "G0_S05",
+        "G0_S04"
+      ],
+      "output_nodes": [
+        "G0_S07"
+      ],
+      "depends_on": [
+        "G0_E06",
+        "G0_E05",
+        "G0_E04"
+      ],
+      "do_file": "rows/G0/edges/G0_E07.do",
+      "action": "Apply approved per-year unit factors; preserve stock V1115, additions CTTTCU, output, inputs, VA, workers and R&D IRDVCU as distinct concepts.",
+      "decision_ids": [
+        "G0_D07"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract; G0 preparation may read its registered upstream inputs before ready-wave publication."
+    },
+    {
+      "id": "G0_E08",
+      "title": "Validate real identity and source observation universe",
+      "input_nodes": [
+        "G0_S03",
+        "G0_INPUT_IDENTITY"
+      ],
+      "output_nodes": [
+        "G0_S08"
+      ],
+      "depends_on": [
+        "G0_E03"
+      ],
+      "do_file": "rows/G0/edges/G0_E08.do",
+      "action": "Use a supplied authorized real-ID crosswalk only; test duplicates, ID recycling, year adjacency, entry/absence and frame changes independently of source-row key.",
+      "decision_ids": [
+        "G0_D08"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Required panel branch remains blocked and G0 full DoD cannot pass. Preserve nominal source-record diagnostics without declaring row complete.",
+      "input_boundary": "wave_input_contract; G0 preparation may read its registered upstream inputs before ready-wave publication."
+    },
+    {
+      "id": "G0_E09",
+      "title": "Establish annual industry and geographic code vintage",
+      "input_nodes": [
+        "G0_S03",
+        "G0_INPUT_CLASSIFICATIONS",
+        "G0_INPUT_DEFINITIONS"
+      ],
+      "output_nodes": [
+        "G0_S09"
+      ],
+      "depends_on": [
+        "G0_E03"
+      ],
+      "do_file": "rows/G0/edges/G0_E09.do",
+      "action": "Verify each annual classification using actual definitions; keep raw/reported code, source vintage and exact concordance ambiguity; province/district/subdistrict are separate mappings.",
+      "decision_ids": [
+        "G0_D09"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract; G0 preparation may read its registered upstream inputs before ready-wave publication."
+    },
+    {
+      "id": "G0_E10",
+      "title": "Validate macro WPI source concept and splice",
+      "input_nodes": [
+        "G0_S01",
+        "G0_INPUT_PRICES"
+      ],
+      "output_nodes": [
+        "G0_S10"
+      ],
+      "depends_on": [
+        "G0_E01"
+      ],
+      "do_file": "rows/G0/edges/G0_E10.do",
+      "action": "Retain actual Toar package 18 hashes, base 2000=100, 131 ISIC 3/3.1 sectors, 2016 absence, 2013–19 extension and 2020–22 splice flags; recompute stated arithmetic from supplied anchors/monthly detail. Preserve index_value with its distinct price_concept, price_sector and year; wpi_output is an output-only alias, never an input/capital/wage price. Other price concepts require separately supplied physical series and their own source checks; absent series remain absent.",
+      "decision_ids": [
+        "G0_D10"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract; G0 preparation may read its registered upstream inputs before ready-wave publication."
+    },
+    {
+      "id": "G0_E11",
+      "title": "Resolve annual company-to-WPI classification bridge",
+      "input_nodes": [
+        "G0_S09",
+        "G0_S10",
+        "G0_INPUT_CLASSIFICATIONS"
+      ],
+      "output_nodes": [
+        "G0_S11"
+      ],
+      "depends_on": [
+        "G0_E09",
+        "G0_E10"
+      ],
+      "do_file": "rows/G0/edges/G0_E11.do",
+      "action": "Map verified annual company activity to valid WPI technology; retain one-to-many/partial correspondences and preregister whether to exclude or aggregate with defensible weights.",
+      "decision_ids": [
+        "G0_D11"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract; G0 preparation may read its registered upstream inputs before ready-wave publication."
+    },
+    {
+      "id": "G0_E12",
+      "title": "Deflate each supported money concept",
+      "input_nodes": [
+        "G0_S07",
+        "G0_S11",
+        "G0_S10"
+      ],
+      "output_nodes": [
+        "G0_S12"
+      ],
+      "depends_on": [
+        "G0_E07",
+        "G0_E11",
+        "G0_E10"
+      ],
+      "do_file": "rows/G0/edges/G0_E12.do",
+      "action": "After a positive unique activity-year output-price merge, compute real output in constant base-2000 Rp000. Preferred real value added is deflated output minus intermediate inputs deflated by an appropriate verified input-price series. If input prices are unavailable, preferred real VA remains missing. A separately named VA/output-WPI approximation is a registered sensitivity, never the canonical real-VA field. Capital and wages require separately appropriate price series.",
+      "decision_ids": [
+        "G0_D12"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract; G0 preparation may read its registered upstream inputs before ready-wave publication."
+    },
+    {
+      "id": "G0_E13",
+      "title": "Map each fuel quantity and source unit",
+      "input_nodes": [
+        "G0_S04",
+        "G0_S03",
+        "G0_S05",
+        "G0_INPUT_DEFINITIONS"
+      ],
+      "output_nodes": [
+        "G0_S13"
+      ],
+      "depends_on": [
+        "G0_E04",
+        "G0_E03",
+        "G0_E05"
+      ],
+      "do_file": "rows/G0/edges/G0_E13.do",
+      "action": "Create per-fuel/year observed/zero/missing values with exact physical unit conversions; separate coal/coke, MMBTU natural gas, mixed biomass and retired aliases.",
+      "decision_ids": [
+        "G0_D13"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract; G0 preparation may read its registered upstream inputs before ready-wave publication."
+    },
+    {
+      "id": "G0_E14",
+      "title": "Choose documented fuel heat and carbon factors",
+      "input_nodes": [
+        "G0_S13",
+        "G0_INPUT_FACTORS"
+      ],
+      "output_nodes": [
+        "G0_S14"
+      ],
+      "depends_on": [
+        "G0_E13"
+      ],
+      "do_file": "rows/G0/edges/G0_E14.do",
+      "action": "Freeze fuel-factor basis, source, physical conversion and factor alternatives per fuel; fuel-consumption versus potential lubricant heat are separate branches.",
+      "decision_ids": [
+        "G0_D14"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract; G0 preparation may read its registered upstream inputs before ready-wave publication."
+    },
+    {
+      "id": "G0_E15",
+      "title": "Construct complete and partial fuel-energy/CO2 measures",
+      "input_nodes": [
+        "G0_S14",
+        "G0_S13"
+      ],
+      "output_nodes": [
+        "G0_S15"
+      ],
+      "depends_on": [
+        "G0_E14",
+        "G0_E13"
+      ],
+      "do_file": "rows/G0/edges/G0_E15.do",
+      "action": "Compute sum over known fuel components with count of observed required components; create complete-only output and separately labelled partial diagnostic.",
+      "decision_ids": [
+        "G0_D15"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract; G0 preparation may read its registered upstream inputs before ready-wave publication."
+    },
+    {
+      "id": "G0_E16",
+      "title": "Construct purchased-electricity and self-generation accounting",
+      "input_nodes": [
+        "G0_S04",
+        "G0_S03",
+        "G0_S05",
+        "G0_INPUT_DEFINITIONS"
+      ],
+      "output_nodes": [
+        "G0_S16"
+      ],
+      "depends_on": [
+        "G0_E04",
+        "G0_E03",
+        "G0_E05"
+      ],
+      "do_file": "rows/G0/edges/G0_E16.do",
+      "action": "Sum PLN/non-PLN only when each observed/nonnegative for complete branch; multiply kWh by 0.0036 for GJ. Maintain own generation separately, not added to already-counted fuel energy.",
+      "decision_ids": [
+        "G0_D16"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract; G0 preparation may read its registered upstream inputs before ready-wave publication."
+    },
+    {
+      "id": "G0_E17",
+      "title": "Apply annual grid-factor evidence",
+      "input_nodes": [
+        "G0_S16",
+        "G0_INPUT_FACTORS"
+      ],
+      "output_nodes": [
+        "G0_S17"
+      ],
+      "depends_on": [
+        "G0_E16"
+      ],
+      "do_file": "rows/G0/edges/G0_E17.do",
+      "action": "Use observed verified grid factor by actual year where available; post 2014 carry explicitly sensitivity, not actual source series.",
+      "decision_ids": [
+        "G0_D17"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract; G0 preparation may read its registered upstream inputs before ready-wave publication."
+    },
+    {
+      "id": "G0_E18",
+      "title": "Reconcile energy, CO2 and expenditure accounting",
+      "input_nodes": [
+        "G0_S15",
+        "G0_S17",
+        "G0_S07",
+        "G0_S16"
+      ],
+      "output_nodes": [
+        "G0_S18"
+      ],
+      "depends_on": [
+        "G0_E15",
+        "G0_E17",
+        "G0_E07",
+        "G0_E16"
+      ],
+      "do_file": "rows/G0/edges/G0_E18.do",
+      "action": "Verify physical Scope 1+Scope 2 identity, no own generation double count and fuel/purchased-electricity cost reconciliation; separate complete and partial outputs.",
+      "decision_ids": [
+        "G0_D18"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract; G0 preparation may read its registered upstream inputs before ready-wave publication."
+    },
+    {
+      "id": "G0_E19",
+      "title": "Define transparent outlier sensitivity",
+      "input_nodes": [
+        "G0_S07",
+        "G0_S18",
+        "G0_S12"
+      ],
+      "output_nodes": [
+        "G0_S19"
+      ],
+      "depends_on": [
+        "G0_E07",
+        "G0_E18",
+        "G0_E12"
+      ],
+      "do_file": "rows/G0/edges/G0_E19.do",
+      "action": "Retain every source value; apply existing within-year >10*p99/negative flags in a separately named companion and compare to valid-domain baseline.",
+      "decision_ids": [
+        "G0_D19"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract; G0 preparation may read its registered upstream inputs before ready-wave publication."
+    },
+    {
+      "id": "G0_E20",
+      "title": "Create domain-safe logs for every eligible value",
+      "input_nodes": [
+        "G0_S19",
+        "G0_S12",
+        "G0_S07",
+        "G0_S18"
+      ],
+      "output_nodes": [
+        "G0_S20"
+      ],
+      "depends_on": [
+        "G0_E19",
+        "G0_E12",
+        "G0_E07",
+        "G0_E18"
+      ],
+      "do_file": "rows/G0/edges/G0_E20.do",
+      "action": "Generate natural log only for strictly positive observed concept values; retain nonpositive and unavailable-state flags for each variable-year.",
+      "decision_ids": [
+        "G0_D20"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract; G0 preparation may read its registered upstream inputs before ready-wave publication."
+    },
+    {
+      "id": "G0_E21",
+      "title": "Construct named ratios with positive denominators",
+      "input_nodes": [
+        "G0_S20",
+        "G0_S07",
+        "G0_S12",
+        "G0_S18"
+      ],
+      "output_nodes": [
+        "G0_S21"
+      ],
+      "depends_on": [
+        "G0_E20",
+        "G0_E07",
+        "G0_E12",
+        "G0_E18"
+      ],
+      "do_file": "rows/G0/edges/G0_E21.do",
+      "action": "Build VA/worker, output/worker, stock/worker, additions/worker and other justified per-worker outcomes with original components preserved.",
+      "decision_ids": [
+        "G0_D21"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract; G0 preparation may read its registered upstream inputs before ready-wave publication."
+    },
+    {
+      "id": "G0_E22",
+      "title": "Assemble one shared canonical annual dataset",
+      "input_nodes": [
+        "G0_S21",
+        "G0_S08",
+        "G0_S09",
+        "G0_S03",
+        "G0_S04",
+        "G0_S05",
+        "G0_S06",
+        "G0_S07",
+        "G0_S12",
+        "G0_S15",
+        "G0_S16",
+        "G0_S17",
+        "G0_S18",
+        "G0_S19",
+        "G0_S20"
+      ],
+      "output_nodes": [
+        "G0_S22"
+      ],
+      "depends_on": [
+        "G0_E21",
+        "G0_E08",
+        "G0_E09",
+        "G0_E03",
+        "G0_E04",
+        "G0_E05",
+        "G0_E06",
+        "G0_E07",
+        "G0_E12",
+        "G0_E15",
+        "G0_E16",
+        "G0_E17",
+        "G0_E18",
+        "G0_E19",
+        "G0_E20"
+      ],
+      "do_file": "rows/G0/edges/G0_E22.do",
+      "action": "Before attachment, assert each long state on its complete variable/concept/scope/scenario key. Use a frozen canonical-column registry to reshape each accepted state to one row per source_year/source_row, with collision-free column names for variable, price scenario, coverage mask and factor scenario. Retain every original long state as a companion. Keep annual mapping metadata as a referenced registry, not a numeric table merged by provenance. Then assert each wide attachment is unique and merge 1:1 on source_year/source_row into the raw-preserving spine. Preserve 3,793 historical names, 2,545 retained raw fields and the documented latest extensions. Never choose one duplicate/ambiguous mapping silently or substitute dummy real links.",
+      "decision_ids": [
+        "G0_D22"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes.",
+        "Before/after reshape numeric values agree by full original long key; canonical-column collisions are zero.",
+        "Every wide attachment has exactly one row per provenance key; final distinct source record count equals the frozen spine."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract; G0 preparation may read its registered upstream inputs before ready-wave publication."
+    },
+    {
+      "id": "G0_E23",
+      "title": "Independently validate final schema, values and gates",
+      "input_nodes": [
+        "G0_S22",
+        "G0_S03",
+        "G0_S04"
+      ],
+      "output_nodes": [
+        "G0_S23"
+      ],
+      "depends_on": [
+        "G0_E22",
+        "G0_E03",
+        "G0_E04"
+      ],
+      "do_file": "rows/G0/edges/G0_E23.do",
+      "action": "Reopen final DTA; compare raw preservation and exact formula/sample counts against independent controls; reconcile all variable-year coverage including absent 2016 and scalar flags.",
+      "decision_ids": [
+        "G0_D23"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract; G0 preparation may read its registered upstream inputs before ready-wave publication."
+    },
+    {
+      "id": "G0_E24",
+      "title": "Publish local human-readable G0 and offline row bundle",
+      "input_nodes": [
+        "G0_S23",
+        "G0_S01",
+        "G0_S02",
+        "G0_S03",
+        "G0_S04",
+        "G0_S05",
+        "G0_S06",
+        "G0_S07",
+        "G0_S08",
+        "G0_S09",
+        "G0_S10",
+        "G0_S11",
+        "G0_S12",
+        "G0_S13",
+        "G0_S14",
+        "G0_S15",
+        "G0_S16",
+        "G0_S17",
+        "G0_S18",
+        "G0_S19",
+        "G0_S20",
+        "G0_S21",
+        "G0_S22"
+      ],
+      "output_nodes": [
+        "G0_S24"
+      ],
+      "depends_on": [
+        "G0_E23",
+        "G0_E01",
+        "G0_E02",
+        "G0_E03",
+        "G0_E04",
+        "G0_E05",
+        "G0_E06",
+        "G0_E07",
+        "G0_E08",
+        "G0_E09",
+        "G0_E10",
+        "G0_E11",
+        "G0_E12",
+        "G0_E13",
+        "G0_E14",
+        "G0_E15",
+        "G0_E16",
+        "G0_E17",
+        "G0_E18",
+        "G0_E19",
+        "G0_E20",
+        "G0_E21",
+        "G0_E22"
+      ],
+      "do_file": "rows/G0/edges/G0_E24.do",
+      "action": "Create custom charts/LaTeX from full-precision Stata aggregates; package G0 entrypoint and child dofiles with relative paths, source manifest and definition guide; retain restricted data locally.",
+      "decision_ids": [
+        "G0_D24"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract; G0 preparation may read its registered upstream inputs before ready-wave publication."
+    }
+  ],
+  "primary_do": "rows/G0/G0.do",
+  "execution_order": [
+    "G0_E01",
+    "G0_E02",
+    "G0_E03",
+    "G0_E04",
+    "G0_E05",
+    "G0_E06",
+    "G0_E07",
+    "G0_E08",
+    "G0_E09",
+    "G0_E10",
+    "G0_E11",
+    "G0_E12",
+    "G0_E13",
+    "G0_E14",
+    "G0_E15",
+    "G0_E16",
+    "G0_E17",
+    "G0_E18",
+    "G0_E19",
+    "G0_E20",
+    "G0_E21",
+    "G0_E22",
+    "G0_E23",
+    "G0_E24"
+  ],
+  "entrypoint_contract": {
+    "inputs": [
+      "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/dag/data/word_data/G0/G0_analysis_ready_ACTUAL_LOCAL.dta",
+      "frozen all 44-row plan registry",
+      "G0 input/source/variable contracts"
+    ],
+    "outputs": [
+      "outputs/G0/tables/",
+      "outputs/G0/figures/",
+      "outputs/G0/G0.tex",
+      "outputs/G0/G0.pdf",
+      "outputs/G0/acceptance.json"
+    ],
+    "logs": [
+      "dag/logs/G0/primary.log",
+      "dag/logs/G0/edge_id.log"
+    ],
+    "restart": "Resume only from a passed immutable node whose input/code/decision hashes still match. Keep failed attempts. Primary returns nonzero on a mandatory unfulfilled gate; diagnostic output never passes the row.",
+    "offline_dependencies": [
+      "Stata17+ with compatible maxvar",
+      "local input manifest",
+      "frozen local source dictionaries/concordances",
+      "vendored documented estimator ado only when needed",
+      "Python for validation/custom charts/LaTeX rendering only",
+      "XeLaTeX and local fonts; no network required by offline bundle"
+    ],
+    "estimated_cost_basis": "No timing promised from file names. Inventory rows/columns and RAM/free disk before launch; start one bounded validation path; one Stata worker unless manager coordinates resource-safe parallel work. Package-relative row entry point is primary interface; optional master never forces blocked rows."
+  },
+  "exhibits": [
+    {
+      "id": "G0-X01",
+      "kind": "diagram",
+      "priority": "core",
+      "title": "From source files to one shared dataset",
+      "question": "Where does each number come from?",
+      "source_nodes": [
+        "G0_S24"
+      ],
+      "fields": [
+        "source_path",
+        "node_id",
+        "output_path"
+      ],
+      "formula_or_specification": "A directed graph links physical sources, annual mapping, canonical states and validation receipts.",
+      "units": "Dataset states and transformations",
+      "sample_and_denominator": "Every declared node and edge in the G0 plan, including external source gates.",
+      "uncertainty": "Descriptive source and accounting diagnostics; no survey confidence interval. Quantile intervals describe the observed distribution.",
+      "interpretation": "This map shows where each result comes from and which missing source prevents the next step.",
+      "limits": "Unweighted observed sample only; no population or causal claim.",
+      "prerequisites": "Planned; blocked whenever named node source gate unresolved. G0 full DoD requires identity/WPI/full-energy source closure where exact row demands it.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G0/exhibits/G0-X01.pdf",
+      "reader_sequence": [
+        "State the everyday question.",
+        "This map shows where each result comes from and which missing source prevents the next step.",
+        "Show the calculation and explain each symbol.",
+        "Give units, source years, N and the relevant limitation."
+      ]
+    },
+    {
+      "id": "G0-X02",
+      "kind": "chart",
+      "priority": "core",
+      "title": "Which years are supplied?",
+      "question": "Which years actually contain records?",
+      "source_nodes": [
+        "G0_S01",
+        "G0_S03"
+      ],
+      "fields": [
+        "year",
+        "source_n",
+        "availability"
+      ],
+      "formula_or_specification": "N_y=count of source records assigned to year y after raw preservation; preserve source-file membership.",
+      "units": "records",
+      "sample_and_denominator": "All preserved source records in each supplied year; 2016 is an absent-source slot.",
+      "uncertainty": "Descriptive source and accounting diagnostics; no survey confidence interval. Quantile intervals describe the observed distribution.",
+      "interpretation": "The bars count rows in the supplied extract. They do not count unique factories over time or the national population.",
+      "limits": "Unweighted observed sample only; no population or causal claim.",
+      "prerequisites": "Planned; blocked whenever named node source gate unresolved. G0 full DoD requires identity/WPI/full-energy source closure where exact row demands it.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G0/exhibits/G0-X02.pdf",
+      "reader_sequence": [
+        "State the everyday question.",
+        "The bars count rows in the supplied extract. They do not count unique factories over time or the national population.",
+        "Show the calculation and explain each symbol.",
+        "Give units, source years, N and the relevant limitation."
+      ]
+    },
+    {
+      "id": "G0-X03",
+      "kind": "table",
+      "priority": "core",
+      "title": "Exact source inventory and hashes",
+      "question": "Which files and routes were used?",
+      "source_nodes": [
+        "G0_S01"
+      ],
+      "fields": [
+        "source_path",
+        "sha256",
+        "rows",
+        "columns",
+        "route"
+      ],
+      "formula_or_specification": "One inventory row per original file version: path, SHA256, bytes, year, format and role.",
+      "units": "file metadata",
+      "sample_and_denominator": "Every original input file used or requested; missing files remain listed.",
+      "uncertainty": "Descriptive source and accounting diagnostics; no survey confidence interval. Quantile intervals describe the observed distribution.",
+      "interpretation": "A file hash identifies the exact version, so later changes cannot silently alter which data produced the report.",
+      "limits": "Unweighted observed sample only; no population or causal claim.",
+      "prerequisites": "Planned; blocked whenever named node source gate unresolved. G0 full DoD requires identity/WPI/full-energy source closure where exact row demands it.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G0/exhibits/G0-X03.tex",
+      "reader_sequence": [
+        "State the everyday question.",
+        "A file hash identifies the exact version, so later changes cannot silently alter which data produced the report.",
+        "Show the calculation and explain each symbol.",
+        "Give units, source years, N and the relevant limitation."
+      ]
+    },
+    {
+      "id": "G0-X04",
+      "kind": "chart",
+      "priority": "core",
+      "title": "Coverage and verification are different",
+      "question": "Which fields are populated and independently defined?",
+      "source_nodes": [
+        "G0_S04",
+        "G0_S05",
+        "G0_S06",
+        "G0_S22"
+      ],
+      "fields": [
+        "variable",
+        "year",
+        "observed",
+        "verified",
+        "provisional"
+      ],
+      "formula_or_specification": "Observed%=100*N_observed/N_source; verified%=100*N_observed_and_verified/N_source; preserve mutually exclusive missing and provisional states.",
+      "units": "percent of source records",
+      "sample_and_denominator": "Every source record in each canonical variable-year, including structural absence and unresolved definitions.",
+      "uncertainty": "Descriptive source and accounting diagnostics; no survey confidence interval. Quantile intervals describe the observed distribution.",
+      "interpretation": "A filled cell is available, but it is verified only when its meaning and unit have supporting evidence.",
+      "limits": "Unweighted observed sample only; no population or causal claim.",
+      "prerequisites": "Planned; blocked whenever named node source gate unresolved. G0 full DoD requires identity/WPI/full-energy source closure where exact row demands it.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G0/exhibits/G0-X04.pdf",
+      "reader_sequence": [
+        "State the everyday question.",
+        "A filled cell is available, but it is verified only when its meaning and unit have supporting evidence.",
+        "Show the calculation and explain each symbol.",
+        "Give units, source years, N and the relevant limitation."
+      ]
+    },
+    {
+      "id": "G0-X05",
+      "kind": "table",
+      "priority": "core",
+      "title": "Schema changes by survey wave",
+      "question": "How do differently shaped inputs enter?",
+      "source_nodes": [
+        "G0_S02"
+      ],
+      "fields": [
+        "year",
+        "raw_header",
+        "canonical_name",
+        "source_state"
+      ],
+      "formula_or_specification": "Count raw fields by year and source role; map each raw field to zero, one or explicitly justified multiple canonical concepts.",
+      "units": "fields and documented mapping states",
+      "sample_and_denominator": "Every original field position in every annual source sheet; duplicate headers retain positions.",
+      "uncertainty": "Descriptive source and accounting diagnostics; no survey confidence interval. Quantile intervals describe the observed distribution.",
+      "interpretation": "The inventory reveals what changed in the files without treating a renamed column as a new economic concept.",
+      "limits": "Unweighted observed sample only; no population or causal claim.",
+      "prerequisites": "Planned; blocked whenever named node source gate unresolved. G0 full DoD requires identity/WPI/full-energy source closure where exact row demands it.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G0/exhibits/G0-X05.tex",
+      "reader_sequence": [
+        "State the everyday question.",
+        "The inventory reveals what changed in the files without treating a renamed column as a new economic concept.",
+        "Show the calculation and explain each symbol.",
+        "Give units, source years, N and the relevant limitation."
+      ]
+    },
+    {
+      "id": "G0-X06",
+      "kind": "table",
+      "priority": "core",
+      "title": "Zero, missing, masked and absent",
+      "question": "Why can an empty cell have different meanings?",
+      "source_nodes": [
+        "G0_S05"
+      ],
+      "fields": [
+        "state",
+        "year",
+        "count"
+      ],
+      "formula_or_specification": "Count mutually exclusive source states within each variable-year; their sum must equal N_source.",
+      "units": "records",
+      "sample_and_denominator": "All preserved raw records for every mapped variable; observed zero remains separate from missing.",
+      "uncertainty": "Descriptive source and accounting diagnostics; no survey confidence interval. Quantile intervals describe the observed distribution.",
+      "interpretation": "A zero is an answer. An unanswered, unavailable or uninterpretable field is a different state.",
+      "limits": "Unweighted observed sample only; no population or causal claim.",
+      "prerequisites": "Planned; blocked whenever named node source gate unresolved. G0 full DoD requires identity/WPI/full-energy source closure where exact row demands it.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G0/exhibits/G0-X06.tex",
+      "reader_sequence": [
+        "State the everyday question.",
+        "A zero is an answer. An unanswered, unavailable or uninterpretable field is a different state.",
+        "Show the calculation and explain each symbol.",
+        "Give units, source years, N and the relevant limitation."
+      ]
+    },
+    {
+      "id": "G0-X07",
+      "kind": "chart",
+      "priority": "core",
+      "title": "Nominal output, value added and inputs",
+      "question": "Do the main economic components add up?",
+      "source_nodes": [
+        "G0_S07"
+      ],
+      "fields": [
+        "output",
+        "VA",
+        "inputs",
+        "gap"
+      ],
+      "formula_or_specification": "For comparable definitions compute accounting_gap=output_nominal-inputs_nominal-value_added_nominal; also show each amount’s distribution.",
+      "units": "nominal Rp000",
+      "sample_and_denominator": "Records with all three quantities observed, matching scope and verified units for the identity; separate N for each standalone distribution.",
+      "uncertainty": "Descriptive source and accounting diagnostics; no survey confidence interval. Quantile intervals describe the observed distribution.",
+      "interpretation": "The three quantities should add up only when their definitions match. A gap is evidence to investigate, not an amount to erase.",
+      "limits": "Unweighted observed sample only; no population or causal claim.",
+      "prerequisites": "Planned; blocked whenever named node source gate unresolved. G0 full DoD requires identity/WPI/full-energy source closure where exact row demands it.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G0/exhibits/G0-X07.pdf",
+      "reader_sequence": [
+        "State the everyday question.",
+        "The three quantities should add up only when their definitions match. A gap is evidence to investigate, not an amount to erase.",
+        "Show the calculation and explain each symbol.",
+        "Give units, source years, N and the relevant limitation."
+      ]
+    },
+    {
+      "id": "G0-X08",
+      "kind": "chart",
+      "priority": "core",
+      "title": "Workers and usable per-worker denominators",
+      "question": "When is division by workers valid?",
+      "source_nodes": [
+        "G0_S21"
+      ],
+      "fields": [
+        "workers",
+        "zero",
+        "missing",
+        "positive"
+      ],
+      "formula_or_specification": "Count workers missing, invalid negative, zero and positive; ratios use workers>0 only.",
+      "units": "persons for workers; records for domain counts",
+      "sample_and_denominator": "All source records for the count panel; valid positive-worker records for the ratio panel.",
+      "uncertainty": "Descriptive source and accounting diagnostics; no survey confidence interval. Quantile intervals describe the observed distribution.",
+      "interpretation": "Dividing by zero workers has no meaning. Those observations remain visible even when the per-worker calculation cannot use them.",
+      "limits": "Unweighted observed sample only; no population or causal claim.",
+      "prerequisites": "Planned; blocked whenever named node source gate unresolved. G0 full DoD requires identity/WPI/full-energy source closure where exact row demands it.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G0/exhibits/G0-X08.pdf",
+      "reader_sequence": [
+        "State the everyday question.",
+        "Dividing by zero workers has no meaning. Those observations remain visible even when the per-worker calculation cannot use them.",
+        "Show the calculation and explain each symbol.",
+        "Give units, source years, N and the relevant limitation."
+      ]
+    },
+    {
+      "id": "G0-X09",
+      "kind": "chart",
+      "priority": "diagnostic",
+      "title": "Stock and additions are different quantities",
+      "question": "Are we measuring assets or purchases?",
+      "source_nodes": [
+        "G0_S07"
+      ],
+      "fields": [
+        "capital_stock",
+        "capital_additions",
+        "definition_status"
+      ],
+      "formula_or_specification": "Summarize capital stock and capital additions separately: N, P25, P50, P75, P95 and P99.",
+      "units": "nominal Rp000",
+      "sample_and_denominator": "Each concept’s valid source responses by year, with negative additions allowed only under its verified net-flow definition.",
+      "uncertainty": "Descriptive source and accounting diagnostics; no survey confidence interval. Quantile intervals describe the observed distribution.",
+      "interpretation": "Assets already owned and investment during the year are different quantities. One cannot replace a missing value of the other.",
+      "limits": "Unweighted observed sample only; no population or causal claim.",
+      "prerequisites": "Planned; blocked whenever named node source gate unresolved. G0 full DoD requires identity/WPI/full-energy source closure where exact row demands it.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G0/exhibits/G0-X09.pdf",
+      "reader_sequence": [
+        "State the everyday question.",
+        "Assets already owned and investment during the year are different quantities. One cannot replace a missing value of the other.",
+        "Show the calculation and explain each symbol.",
+        "Give units, source years, N and the relevant limitation."
+      ]
+    },
+    {
+      "id": "G0-X10",
+      "kind": "table",
+      "priority": "diagnostic",
+      "title": "Every log-domain loss",
+      "question": "Which level observations cannot be logged?",
+      "source_nodes": [
+        "G0_S20"
+      ],
+      "fields": [
+        "variable",
+        "year",
+        "positive",
+        "zero",
+        "negative",
+        "missing"
+      ],
+      "formula_or_specification": "For each eligible variable count x>0, x=0, x<0 and missing/invalid; ln(x) is created only for x>0.",
+      "units": "records; natural-log units for the companion",
+      "sample_and_denominator": "All source records for each continuous variable-year; categorical codes and identifiers are ineligible for economic logs.",
+      "uncertainty": "Descriptive source and accounting diagnostics; no survey confidence interval. Quantile intervals describe the observed distribution.",
+      "interpretation": "A log makes proportional differences easier to see, but zeros and negative values cannot enter it. The report shows what is left out.",
+      "limits": "Unweighted observed sample only; no population or causal claim.",
+      "prerequisites": "Planned; blocked whenever named node source gate unresolved. G0 full DoD requires identity/WPI/full-energy source closure where exact row demands it.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G0/exhibits/G0-X10.tex",
+      "reader_sequence": [
+        "State the everyday question.",
+        "A log makes proportional differences easier to see, but zeros and negative values cannot enter it. The report shows what is left out.",
+        "Show the calculation and explain each symbol.",
+        "Give units, source years, N and the relevant limitation."
+      ]
+    },
+    {
+      "id": "G0-X11",
+      "kind": "chart",
+      "priority": "diagnostic",
+      "title": "Original versus outlier-sensitivity distributions",
+      "question": "How much does the declared tail rule change the picture?",
+      "source_nodes": [
+        "G0_S19"
+      ],
+      "fields": [
+        "raw",
+        "clean",
+        "flag",
+        "p99"
+      ],
+      "formula_or_specification": "Compare raw valid and prespecified year-specific outlier-sensitivity distributions; retain P99 threshold, flagged N and unchanged original values.",
+      "units": "the named variable’s canonical unit",
+      "sample_and_denominator": "The same source variable-year before and after the registered sensitivity rule; no result-driven cutoff selection.",
+      "uncertainty": "Descriptive source and accounting diagnostics; no survey confidence interval. Quantile intervals describe the observed distribution.",
+      "interpretation": "The sensitivity asks how much extreme observations influence the summary. It does not establish that the extreme values are errors.",
+      "limits": "Unweighted observed sample only; no population or causal claim.",
+      "prerequisites": "Planned; blocked whenever named node source gate unresolved. G0 full DoD requires identity/WPI/full-energy source closure where exact row demands it.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G0/exhibits/G0-X11.pdf",
+      "reader_sequence": [
+        "State the everyday question.",
+        "The sensitivity asks how much extreme observations influence the summary. It does not establish that the extreme values are errors.",
+        "Show the calculation and explain each symbol.",
+        "Give units, source years, N and the relevant limitation."
+      ]
+    },
+    {
+      "id": "G0-X12",
+      "kind": "table",
+      "priority": "diagnostic",
+      "title": "Working and verified export meanings",
+      "question": "What does an export answer mean in each year?",
+      "source_nodes": [
+        "G0_S06"
+      ],
+      "fields": [
+        "year",
+        "export_any",
+        "export_direct",
+        "v_export",
+        "unknown"
+      ],
+      "formula_or_specification": "Tabulate export-any and direct-export yes/no/unknown separately; known rate=100*yes/(yes+no); show verified and working mappings.",
+      "units": "records and percent",
+      "sample_and_denominator": "Each annual question’s actual universe; 2022 direct-export responses cannot fill any-export status without evidence.",
+      "uncertainty": "Descriptive source and accounting diagnostics; no survey confidence interval. Quantile intervals describe the observed distribution.",
+      "interpretation": "A factory can export through someone else. The report therefore keeps direct exporting separate from exporting at all.",
+      "limits": "Unweighted observed sample only; no population or causal claim.",
+      "prerequisites": "Planned; blocked whenever named node source gate unresolved. G0 full DoD requires identity/WPI/full-energy source closure where exact row demands it.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G0/exhibits/G0-X12.tex",
+      "reader_sequence": [
+        "State the everyday question.",
+        "A factory can export through someone else. The report therefore keeps direct exporting separate from exporting at all.",
+        "Show the calculation and explain each symbol.",
+        "Give units, source years, N and the relevant limitation."
+      ]
+    },
+    {
+      "id": "G0-X13",
+      "kind": "table",
+      "priority": "diagnostic",
+      "title": "R&D expense, activity and external funding",
+      "question": "Which R&D question is actually answered?",
+      "source_nodes": [
+        "G0_S06",
+        "G0_S07"
+      ],
+      "fields": [
+        "IRDVCU",
+        "activity",
+        "COSTRD",
+        "year"
+      ],
+      "formula_or_specification": "Show research expense distribution and separate activity/external-funding yes/no/unknown frequencies.",
+      "units": "nominal Rp000 for expense; percent for binary rates",
+      "sample_and_denominator": "Expense uses valid expense responses; each indicator has its own verified question universe.",
+      "uncertainty": "Descriptive source and accounting diagnostics; no survey confidence interval. Quantile intervals describe the observed distribution.",
+      "interpretation": "How much is spent, whether research occurs and whether someone else funds it answer different questions.",
+      "limits": "Unweighted observed sample only; no population or causal claim.",
+      "prerequisites": "Planned; blocked whenever named node source gate unresolved. G0 full DoD requires identity/WPI/full-energy source closure where exact row demands it.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G0/exhibits/G0-X13.tex",
+      "reader_sequence": [
+        "State the everyday question.",
+        "How much is spent, whether research occurs and whether someone else funds it answer different questions.",
+        "Show the calculation and explain each symbol.",
+        "Give units, source years, N and the relevant limitation."
+      ]
+    },
+    {
+      "id": "G0-X14",
+      "kind": "table",
+      "priority": "diagnostic",
+      "title": "Real identity acceptance",
+      "question": "Can records be linked across years?",
+      "source_nodes": [
+        "G0_S08"
+      ],
+      "fields": [
+        "key",
+        "link_coverage",
+        "duplicate",
+        "dummy",
+        "off"
+      ],
+      "formula_or_specification": "Check authenticated ID uniqueness, cross-year continuity, duplicate resolution and frame evidence; count passed/failed/source-unavailable cases.",
+      "units": "records, genuine plants only where authenticated, and link status",
+      "sample_and_denominator": "All source rows; no invented or masked key is counted as a verified longitudinal plant.",
+      "uncertainty": "Descriptive source and accounting diagnostics; no survey confidence interval. Quantile intervals describe the observed distribution.",
+      "interpretation": "Following a factory over time requires proof that its records belong to the same factory. A row number cannot supply that proof.",
+      "limits": "Unweighted observed sample only; no population or causal claim.",
+      "prerequisites": "Planned; blocked whenever named node source gate unresolved. G0 full DoD requires identity/WPI/full-energy source closure where exact row demands it.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G0/exhibits/G0-X14.tex",
+      "reader_sequence": [
+        "State the everyday question.",
+        "Following a factory over time requires proof that its records belong to the same factory. A row number cannot supply that proof.",
+        "Show the calculation and explain each symbol.",
+        "Give units, source years, N and the relevant limitation."
+      ]
+    },
+    {
+      "id": "G0-X15",
+      "kind": "table",
+      "priority": "diagnostic",
+      "title": "Annual industry/geography definitions",
+      "question": "Are codes comparable over time?",
+      "source_nodes": [
+        "G0_S09"
+      ],
+      "fields": [
+        "year",
+        "vintage",
+        "raw_code",
+        "verified_bridge"
+      ],
+      "formula_or_specification": "For each annual industry/geography field list vintage, source label, valid code, concordance evidence, ambiguity and verified-record coverage.",
+      "units": "codes, records and percent",
+      "sample_and_denominator": "All source records separately for each code concept/year; no unverified geographic labels or industry bridge.",
+      "uncertainty": "Descriptive source and accounting diagnostics; no survey confidence interval. Quantile intervals describe the observed distribution.",
+      "interpretation": "A changed code can reflect a new classification or boundary. It does not automatically mean the factory moved or changed activity.",
+      "limits": "Unweighted observed sample only; no population or causal claim.",
+      "prerequisites": "Planned; blocked whenever named node source gate unresolved. G0 full DoD requires identity/WPI/full-energy source closure where exact row demands it.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G0/exhibits/G0-X15.tex",
+      "reader_sequence": [
+        "State the everyday question.",
+        "A changed code can reflect a new classification or boundary. It does not automatically mean the factory moved or changed activity.",
+        "Show the calculation and explain each symbol.",
+        "Give units, source years, N and the relevant limitation."
+      ]
+    },
+    {
+      "id": "G0-X16",
+      "kind": "chart",
+      "priority": "diagnostic",
+      "title": "The actual WPI reference and gaps",
+      "question": "Which prices are available?",
+      "source_nodes": [
+        "G0_S10"
+      ],
+      "fields": [
+        "year",
+        "wpi",
+        "sector",
+        "splice",
+        "missing"
+      ],
+      "formula_or_specification": "Plot each supported macro output-price series with base 2000=100; identify source segments, splice rule and actual missing years.",
+      "units": "price-index points, 2000=100",
+      "sample_and_denominator": "Available sector-year macro observations; 2016 remains missing and 2020–22 splice assumptions are disclosed.",
+      "uncertainty": "Descriptive source and accounting diagnostics; no survey confidence interval. Quantile intervals describe the observed distribution.",
+      "interpretation": "A price index separates changes in prices from changes in monetary amounts only for the economic concept it actually measures.",
+      "limits": "Unweighted observed sample only; no population or causal claim.",
+      "prerequisites": "Planned; blocked whenever named node source gate unresolved. G0 full DoD requires identity/WPI/full-energy source closure where exact row demands it.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G0/exhibits/G0-X16.pdf",
+      "reader_sequence": [
+        "State the everyday question.",
+        "A price index separates changes in prices from changes in monetary amounts only for the economic concept it actually measures.",
+        "Show the calculation and explain each symbol.",
+        "Give units, source years, N and the relevant limitation."
+      ]
+    },
+    {
+      "id": "G0-X17",
+      "kind": "table",
+      "priority": "diagnostic",
+      "title": "Company-to-price match coverage",
+      "question": "Can each company use a defensible price index?",
+      "source_nodes": [
+        "G0_S11"
+      ],
+      "fields": [
+        "year",
+        "match",
+        "ambiguous",
+        "unmatched",
+        "price_concept"
+      ],
+      "formula_or_specification": "Count record-level output/input/capital price matches by unique valid, ambiguous, absent sector and absent year; match rate=N_unique_valid/N_source.",
+      "units": "records and percent",
+      "sample_and_denominator": "All candidate source records separately for each price concept; no one-to-many match accepted without a justified rule.",
+      "uncertainty": "Descriptive source and accounting diagnostics; no survey confidence interval. Quantile intervals describe the observed distribution.",
+      "interpretation": "Finding a price file is not enough. Each factory-year must link to a price series that matches its activity and the amount being deflated.",
+      "limits": "Unweighted observed sample only; no population or causal claim.",
+      "prerequisites": "Planned; blocked whenever named node source gate unresolved. G0 full DoD requires identity/WPI/full-energy source closure where exact row demands it.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G0/exhibits/G0-X17.tex",
+      "reader_sequence": [
+        "State the everyday question.",
+        "Finding a price file is not enough. Each factory-year must link to a price series that matches its activity and the amount being deflated.",
+        "Show the calculation and explain each symbol.",
+        "Give units, source years, N and the relevant limitation."
+      ]
+    },
+    {
+      "id": "G0-X18",
+      "kind": "table",
+      "priority": "diagnostic",
+      "title": "Nominal versus real definitions",
+      "question": "What precisely changes when we deflate?",
+      "source_nodes": [
+        "G0_S12"
+      ],
+      "fields": [
+        "nominal",
+        "index",
+        "real",
+        "concept",
+        "approximation"
+      ],
+      "formula_or_specification": "Output_real=output_nominal/(output_WPI/100); preferred real VA=output_real-inputs_real. VA/output-WPI is a separate named approximation; capital needs its own appropriate price series.",
+      "units": "constant-base Rp000, with base year and price concept shown",
+      "sample_and_denominator": "Records with valid positive price indices and verified bridges; missing required input prices leave preferred real VA unavailable.",
+      "uncertainty": "Descriptive source and accounting diagnostics; no survey confidence interval. Quantile intervals describe the observed distribution.",
+      "interpretation": "A real amount removes a specified price movement. Using an unrelated price index would change the number without establishing the intended economic meaning.",
+      "limits": "Unweighted observed sample only; no population or causal claim.",
+      "prerequisites": "Planned; blocked whenever named node source gate unresolved. G0 full DoD requires identity/WPI/full-energy source closure where exact row demands it.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G0/exhibits/G0-X18.tex",
+      "reader_sequence": [
+        "State the everyday question.",
+        "A real amount removes a specified price movement. Using an unrelated price index would change the number without establishing the intended economic meaning.",
+        "Show the calculation and explain each symbol.",
+        "Give units, source years, N and the relevant limitation."
+      ]
+    },
+    {
+      "id": "G0-X19",
+      "kind": "chart",
+      "priority": "diagnostic",
+      "title": "Fuel quantity units and annual verification",
+      "question": "Can a tonne, litre and MMBTU be combined?",
+      "source_nodes": [
+        "G0_S13"
+      ],
+      "fields": [
+        "fuel",
+        "year",
+        "unit",
+        "factor",
+        "status"
+      ],
+      "formula_or_specification": "For each fuel-year convert native quantity using a source-proven unit factor; preserve native amount, unit, converted amount and verification status.",
+      "units": "litres, kilograms, tonnes or other explicitly named physical fuel units",
+      "sample_and_denominator": "All fuel quantity records; unresolved units remain unavailable for physical summation.",
+      "uncertainty": "Descriptive source and accounting diagnostics; no survey confidence interval. Quantile intervals describe the observed distribution.",
+      "interpretation": "A thousand litres and a litre are not comparable until the unit conversion is proved.",
+      "limits": "Unweighted observed sample only; no population or causal claim.",
+      "prerequisites": "Planned; blocked whenever named node source gate unresolved. G0 full DoD requires identity/WPI/full-energy source closure where exact row demands it.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G0/exhibits/G0-X19.pdf",
+      "reader_sequence": [
+        "State the everyday question.",
+        "A thousand litres and a litre are not comparable until the unit conversion is proved.",
+        "Show the calculation and explain each symbol.",
+        "Give units, source years, N and the relevant limitation."
+      ]
+    },
+    {
+      "id": "G0-X20",
+      "kind": "chart",
+      "priority": "diagnostic",
+      "title": "How much of fuel energy is observed?",
+      "question": "Is our number a subtotal or a complete total?",
+      "source_nodes": [
+        "G0_S15"
+      ],
+      "fields": [
+        "required_components",
+        "observed_components",
+        "partial",
+        "complete"
+      ],
+      "formula_or_specification": "For each fixed fuel mask count observed verified components and required components; sum energy only as an observed subtotal unless all required components are known.",
+      "units": "GJ for energy; components and records for coverage",
+      "sample_and_denominator": "All source records by coverage mask and factor scenario; structural zeros require questionnaire evidence.",
+      "uncertainty": "Descriptive source and accounting diagnostics; no survey confidence interval. Quantile intervals describe the observed distribution.",
+      "interpretation": "The subtotal shows measured fuel energy. Without all required components it cannot tell us total fuel use.",
+      "limits": "Unweighted observed sample only; no population or causal claim.",
+      "prerequisites": "Planned; blocked whenever named node source gate unresolved. G0 full DoD requires identity/WPI/full-energy source closure where exact row demands it.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G0/exhibits/G0-X20.pdf",
+      "reader_sequence": [
+        "State the everyday question.",
+        "The subtotal shows measured fuel energy. Without all required components it cannot tell us total fuel use.",
+        "Show the calculation and explain each symbol.",
+        "Give units, source years, N and the relevant limitation."
+      ]
+    },
+    {
+      "id": "G0-X21",
+      "kind": "chart",
+      "priority": "diagnostic",
+      "title": "Purchased electricity versus self-generation",
+      "question": "Are we counting the same energy twice?",
+      "source_nodes": [
+        "G0_S16"
+      ],
+      "fields": [
+        "pln",
+        "nonpln",
+        "owngen",
+        "fuel_energy"
+      ],
+      "formula_or_specification": "Purchased energy GJ=(PLN_kWh+nonPLN_kWh)*0.0036 only when the required purchased components are known; retain own-generation, own-use and sold flows separately.",
+      "units": "kWh and GJ in separate panels",
+      "sample_and_denominator": "Each documented electricity origin and flow, with partial and complete purchased coverage distinguished.",
+      "uncertainty": "Descriptive source and accounting diagnostics; no survey confidence interval. Quantile intervals describe the observed distribution.",
+      "interpretation": "Electricity bought, generated and sold are different flows. The accounting keeps them separate so the same energy is not counted twice.",
+      "limits": "Unweighted observed sample only; no population or causal claim.",
+      "prerequisites": "Planned; blocked whenever named node source gate unresolved. G0 full DoD requires identity/WPI/full-energy source closure where exact row demands it.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G0/exhibits/G0-X21.pdf",
+      "reader_sequence": [
+        "State the everyday question.",
+        "Electricity bought, generated and sold are different flows. The accounting keeps them separate so the same energy is not counted twice.",
+        "Show the calculation and explain each symbol.",
+        "Give units, source years, N and the relevant limitation."
+      ]
+    },
+    {
+      "id": "G0-X22",
+      "kind": "chart",
+      "priority": "diagnostic",
+      "title": "Grid-factor evidence and carry assumptions",
+      "question": "How much of the emissions change comes from an assumption?",
+      "source_nodes": [
+        "G0_S17"
+      ],
+      "fields": [
+        "year",
+        "grid_factor",
+        "carry",
+        "scope2"
+      ],
+      "formula_or_specification": "Scope2_CO2_tonnes=purchased_kWh*grid_factor_tonnes_per_kWh; if a factor is in kg/kWh first divide it by 1000. Label carried or alternative factor scenarios.",
+      "units": "tonnes CO2; factor in tonnes CO2 per kWh",
+      "sample_and_denominator": "Supported purchased-electricity observations matched to the declared annual geographic factor; partial purchases give only a named subtotal.",
+      "uncertainty": "Descriptive source and accounting diagnostics; no survey confidence interval. Quantile intervals describe the observed distribution.",
+      "interpretation": "The emissions estimate depends on both electricity use and the documented emissions factor; it is not a directly observed emissions measurement.",
+      "limits": "Unweighted observed sample only; no population or causal claim.",
+      "prerequisites": "Planned; blocked whenever named node source gate unresolved. G0 full DoD requires identity/WPI/full-energy source closure where exact row demands it.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G0/exhibits/G0-X22.pdf",
+      "reader_sequence": [
+        "State the everyday question.",
+        "The emissions estimate depends on both electricity use and the documented emissions factor; it is not a directly observed emissions measurement.",
+        "Show the calculation and explain each symbol.",
+        "Give units, source years, N and the relevant limitation."
+      ]
+    },
+    {
+      "id": "G0-X23",
+      "kind": "table",
+      "priority": "diagnostic",
+      "title": "Energy and cost reconciliation exceptions",
+      "question": "Which components fail to add up?",
+      "source_nodes": [
+        "G0_S18"
+      ],
+      "fields": [
+        "fuel_cost",
+        "reported_total",
+        "electricity",
+        "gap",
+        "year"
+      ],
+      "formula_or_specification": "For like-defined monetary scopes compute reported_cost-sum(required component costs); show unknown components and no double-count identities separately.",
+      "units": "nominal Rp000 and counts of failed checks",
+      "sample_and_denominator": "Records with complete comparable components for each accounting identity; incomplete records are coverage evidence, not zero-gap successes.",
+      "uncertainty": "Descriptive source and accounting diagnostics; no survey confidence interval. Quantile intervals describe the observed distribution.",
+      "interpretation": "A balance check can expose missing pieces or mismatched definitions. It must not declare success merely because unknown costs were treated as zero.",
+      "limits": "Unweighted observed sample only; no population or causal claim.",
+      "prerequisites": "Planned; blocked whenever named node source gate unresolved. G0 full DoD requires identity/WPI/full-energy source closure where exact row demands it.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G0/exhibits/G0-X23.tex",
+      "reader_sequence": [
+        "State the everyday question.",
+        "A balance check can expose missing pieces or mismatched definitions. It must not declare success merely because unknown costs were treated as zero.",
+        "Show the calculation and explain each symbol.",
+        "Give units, source years, N and the relevant limitation."
+      ]
+    },
+    {
+      "id": "G0-X24",
+      "kind": "table",
+      "priority": "diagnostic",
+      "title": "G0 exact completion gate",
+      "question": "What remains before the next row can run?",
+      "source_nodes": [
+        "G0_S24"
+      ],
+      "fields": [
+        "DOCX_component",
+        "mandatory_check",
+        "evidence",
+        "status"
+      ],
+      "formula_or_specification": "Required acceptance checks must all pass with source hashes, input/output controls, independent formula checks and reader review.",
+      "units": "passed, failed and source-blocked checks",
+      "sample_and_denominator": "Every mandatory G0 requirement from Word and the separate operational completion contract.",
+      "uncertainty": "Descriptive source and accounting diagnostics; no survey confidence interval. Quantile intervals describe the observed distribution.",
+      "interpretation": "A readable report can document what is ready while the row itself remains incomplete if an essential source is still missing.",
+      "limits": "Unweighted observed sample only; no population or causal claim.",
+      "prerequisites": "Planned; blocked whenever named node source gate unresolved. G0 full DoD requires identity/WPI/full-energy source closure where exact row demands it.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G0/exhibits/G0-X24.tex",
+      "reader_sequence": [
+        "State the everyday question.",
+        "A readable report can document what is ready while the row itself remains incomplete if an essential source is still missing.",
+        "Show the calculation and explain each symbol.",
+        "Give units, source years, N and the relevant limitation."
+      ]
+    }
+  ],
+  "latex_outline": [
+    {
+      "h1": "What are we trying to learn?",
+      "lead_question": "Start with the actual question and the data we can observe.",
+      "h2": [
+        {
+          "title": "From source files to one shared dataset",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Where does each number come from?",
+              "exhibit_ids": [
+                "G0-X01"
+              ],
+              "formula": "A directed graph links physical sources, annual mapping, canonical states and validation receipts.",
+              "reader_explanation": "This map shows where each result comes from and which missing source prevents the next step."
+            }
+          ]
+        },
+        {
+          "title": "Which years are supplied?",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Which years actually contain records?",
+              "exhibit_ids": [
+                "G0-X02"
+              ],
+              "formula": "N_y=count of source records assigned to year y after raw preservation; preserve source-file membership.",
+              "reader_explanation": "The bars count rows in the supplied extract. They do not count unique factories over time or the national population."
+            }
+          ]
+        },
+        {
+          "title": "Exact source inventory and hashes",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Which files and routes were used?",
+              "exhibit_ids": [
+                "G0-X03"
+              ],
+              "formula": "One inventory row per original file version: path, SHA256, bytes, year, format and role.",
+              "reader_explanation": "A file hash identifies the exact version, so later changes cannot silently alter which data produced the report."
+            }
+          ]
+        },
+        {
+          "title": "Coverage and verification are different",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Which fields are populated and independently defined?",
+              "exhibit_ids": [
+                "G0-X04"
+              ],
+              "formula": "Observed%=100*N_observed/N_source; verified%=100*N_observed_and_verified/N_source; preserve mutually exclusive missing and provisional states.",
+              "reader_explanation": "A filled cell is available, but it is verified only when its meaning and unit have supporting evidence."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "h1": "What can the data support?",
+      "lead_question": "Show coverage, definitions and denominators before comparisons.",
+      "h2": [
+        {
+          "title": "Schema changes by survey wave",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "How do differently shaped inputs enter?",
+              "exhibit_ids": [
+                "G0-X05"
+              ],
+              "formula": "Count raw fields by year and source role; map each raw field to zero, one or explicitly justified multiple canonical concepts.",
+              "reader_explanation": "The inventory reveals what changed in the files without treating a renamed column as a new economic concept."
+            }
+          ]
+        },
+        {
+          "title": "Zero, missing, masked and absent",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Why can an empty cell have different meanings?",
+              "exhibit_ids": [
+                "G0-X06"
+              ],
+              "formula": "Count mutually exclusive source states within each variable-year; their sum must equal N_source.",
+              "reader_explanation": "A zero is an answer. An unanswered, unavailable or uninterpretable field is a different state."
+            }
+          ]
+        },
+        {
+          "title": "Nominal output, value added and inputs",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Do the main economic components add up?",
+              "exhibit_ids": [
+                "G0-X07"
+              ],
+              "formula": "For comparable definitions compute accounting_gap=output_nominal-inputs_nominal-value_added_nominal; also show each amount’s distribution.",
+              "reader_explanation": "The three quantities should add up only when their definitions match. A gap is evidence to investigate, not an amount to erase."
+            }
+          ]
+        },
+        {
+          "title": "Workers and usable per-worker denominators",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "When is division by workers valid?",
+              "exhibit_ids": [
+                "G0-X08"
+              ],
+              "formula": "Count workers missing, invalid negative, zero and positive; ratios use workers>0 only.",
+              "reader_explanation": "Dividing by zero workers has no meaning. Those observations remain visible even when the per-worker calculation cannot use them."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "h1": "What do the main results mean?",
+      "lead_question": "Explain the results in plain language after valid execution.",
+      "h2": [
+        {
+          "title": "Stock and additions are different quantities",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Are we measuring assets or purchases?",
+              "exhibit_ids": [
+                "G0-X09"
+              ],
+              "formula": "Summarize capital stock and capital additions separately: N, P25, P50, P75, P95 and P99.",
+              "reader_explanation": "Assets already owned and investment during the year are different quantities. One cannot replace a missing value of the other."
+            }
+          ]
+        },
+        {
+          "title": "Every log-domain loss",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Which level observations cannot be logged?",
+              "exhibit_ids": [
+                "G0-X10"
+              ],
+              "formula": "For each eligible variable count x>0, x=0, x<0 and missing/invalid; ln(x) is created only for x>0.",
+              "reader_explanation": "A log makes proportional differences easier to see, but zeros and negative values cannot enter it. The report shows what is left out."
+            }
+          ]
+        },
+        {
+          "title": "Original versus outlier-sensitivity distributions",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "How much does the declared tail rule change the picture?",
+              "exhibit_ids": [
+                "G0-X11"
+              ],
+              "formula": "Compare raw valid and prespecified year-specific outlier-sensitivity distributions; retain P99 threshold, flagged N and unchanged original values.",
+              "reader_explanation": "The sensitivity asks how much extreme observations influence the summary. It does not establish that the extreme values are errors."
+            }
+          ]
+        },
+        {
+          "title": "Working and verified export meanings",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "What does an export answer mean in each year?",
+              "exhibit_ids": [
+                "G0-X12"
+              ],
+              "formula": "Tabulate export-any and direct-export yes/no/unknown separately; known rate=100*yes/(yes+no); show verified and working mappings.",
+              "reader_explanation": "A factory can export through someone else. The report therefore keeps direct exporting separate from exporting at all."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "h1": "What changes under alternative choices?",
+      "lead_question": "Separate legitimate sensitivity from primary definition.",
+      "h2": [
+        {
+          "title": "R&D expense, activity and external funding",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Which R&D question is actually answered?",
+              "exhibit_ids": [
+                "G0-X13"
+              ],
+              "formula": "Show research expense distribution and separate activity/external-funding yes/no/unknown frequencies.",
+              "reader_explanation": "How much is spent, whether research occurs and whether someone else funds it answer different questions."
+            }
+          ]
+        },
+        {
+          "title": "Real identity acceptance",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Can records be linked across years?",
+              "exhibit_ids": [
+                "G0-X14"
+              ],
+              "formula": "Check authenticated ID uniqueness, cross-year continuity, duplicate resolution and frame evidence; count passed/failed/source-unavailable cases.",
+              "reader_explanation": "Following a factory over time requires proof that its records belong to the same factory. A row number cannot supply that proof."
+            }
+          ]
+        },
+        {
+          "title": "Annual industry/geography definitions",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Are codes comparable over time?",
+              "exhibit_ids": [
+                "G0-X15"
+              ],
+              "formula": "For each annual industry/geography field list vintage, source label, valid code, concordance evidence, ambiguity and verified-record coverage.",
+              "reader_explanation": "A changed code can reflect a new classification or boundary. It does not automatically mean the factory moved or changed activity."
+            }
+          ]
+        },
+        {
+          "title": "The actual WPI reference and gaps",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Which prices are available?",
+              "exhibit_ids": [
+                "G0-X16"
+              ],
+              "formula": "Plot each supported macro output-price series with base 2000=100; identify source segments, splice rule and actual missing years.",
+              "reader_explanation": "A price index separates changes in prices from changes in monetary amounts only for the economic concept it actually measures."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "h1": "What remains unavailable or uncertain?",
+      "lead_question": "Keep unsupported source branches and interpretation limits visible.",
+      "h2": [
+        {
+          "title": "Company-to-price match coverage",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Can each company use a defensible price index?",
+              "exhibit_ids": [
+                "G0-X17"
+              ],
+              "formula": "Count record-level output/input/capital price matches by unique valid, ambiguous, absent sector and absent year; match rate=N_unique_valid/N_source.",
+              "reader_explanation": "Finding a price file is not enough. Each factory-year must link to a price series that matches its activity and the amount being deflated."
+            }
+          ]
+        },
+        {
+          "title": "Nominal versus real definitions",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "What precisely changes when we deflate?",
+              "exhibit_ids": [
+                "G0-X18"
+              ],
+              "formula": "Output_real=output_nominal/(output_WPI/100); preferred real VA=output_real-inputs_real. VA/output-WPI is a separate named approximation; capital needs its own appropriate price series.",
+              "reader_explanation": "A real amount removes a specified price movement. Using an unrelated price index would change the number without establishing the intended economic meaning."
+            }
+          ]
+        },
+        {
+          "title": "Fuel quantity units and annual verification",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Can a tonne, litre and MMBTU be combined?",
+              "exhibit_ids": [
+                "G0-X19"
+              ],
+              "formula": "For each fuel-year convert native quantity using a source-proven unit factor; preserve native amount, unit, converted amount and verification status.",
+              "reader_explanation": "A thousand litres and a litre are not comparable until the unit conversion is proved."
+            }
+          ]
+        },
+        {
+          "title": "How much of fuel energy is observed?",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Is our number a subtotal or a complete total?",
+              "exhibit_ids": [
+                "G0-X20"
+              ],
+              "formula": "For each fixed fuel mask count observed verified components and required components; sum energy only as an observed subtotal unless all required components are known.",
+              "reader_explanation": "The subtotal shows measured fuel energy. Without all required components it cannot tell us total fuel use."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "h1": "Can another colleague reproduce and accept this row?",
+      "lead_question": "End with audit able source-to-result path and exact completion checks.",
+      "h2": [
+        {
+          "title": "Purchased electricity versus self-generation",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Are we counting the same energy twice?",
+              "exhibit_ids": [
+                "G0-X21"
+              ],
+              "formula": "Purchased energy GJ=(PLN_kWh+nonPLN_kWh)*0.0036 only when the required purchased components are known; retain own-generation, own-use and sold flows separately.",
+              "reader_explanation": "Electricity bought, generated and sold are different flows. The accounting keeps them separate so the same energy is not counted twice."
+            }
+          ]
+        },
+        {
+          "title": "Grid-factor evidence and carry assumptions",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "How much of the emissions change comes from an assumption?",
+              "exhibit_ids": [
+                "G0-X22"
+              ],
+              "formula": "Scope2_CO2_tonnes=purchased_kWh*grid_factor_tonnes_per_kWh; if a factor is in kg/kWh first divide it by 1000. Label carried or alternative factor scenarios.",
+              "reader_explanation": "The emissions estimate depends on both electricity use and the documented emissions factor; it is not a directly observed emissions measurement."
+            }
+          ]
+        },
+        {
+          "title": "Energy and cost reconciliation exceptions",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Which components fail to add up?",
+              "exhibit_ids": [
+                "G0-X23"
+              ],
+              "formula": "For like-defined monetary scopes compute reported_cost-sum(required component costs); show unknown components and no double-count identities separately.",
+              "reader_explanation": "A balance check can expose missing pieces or mismatched definitions. It must not declare success merely because unknown costs were treated as zero."
+            }
+          ]
+        },
+        {
+          "title": "G0 exact completion gate",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "What remains before the next row can run?",
+              "exhibit_ids": [
+                "G0-X24"
+              ],
+              "formula": "Required acceptance checks must all pass with source hashes, input/output controls, independent formula checks and reader review.",
+              "reader_explanation": "A readable report can document what is ready while the row itself remains incomplete if an essential source is still missing."
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "definition_of_done": {
+    "repository_minimum_checks": [
+      "Hash/schema/row counts for every input; reject unexplained duplicate provenance keys and many-to-many merges.",
+      "Real-ID uniqueness, linkage coverage, changing ownership/industry and suspiciously long gaps; fail real-panel mode on synthetic IDs.",
+      "Economic accounting identities, money units, 100-worker boundary, trade shares in range and unknown-status propagation.",
+      "Deflator key/base positivity and merge coverage; never relabel nominal money as real.",
+      "Fuel-component versus reported-total reconciliation, purchased electricity counted once, Scope 1+2 identity, generation double-count guard and missing fuel coverage.",
+      "Compare corrected versus preserved outputs and test explicit missing/zero/negative/boundary fixtures after approval.",
+      "Stable working and verified-only contracts, raw-value preservation, 2016 absence, real-ID/WPI gates and version hashes independently checked.",
+      "Integrate the 10 September registry fragments and revalidate the composite entrypoint when separately authorised; do not substitute the 9 September flattened release."
+    ],
+    "operational_checks": [
+      {
+        "id": "G0-Q01",
+        "criterion": "All original fields and requested annual canonical states preserved",
+        "evidence_artifact": "G0/schema_and_raw_preservation.csv",
+        "pass_rule": "Every source cell preserved in raw layer; canonical mapping collisions 0; expected grid exact; absent 2016 is metadata only.",
+        "blocking": true
+      },
+      {
+        "id": "G0-Q02",
+        "criterion": "An arbitrary annual schema enters only by explicit validated adapter",
+        "evidence_artifact": "G0/adapter_acceptance.csv",
+        "pass_rule": "Unknown/duplicate/type/decimal/code changes trigger informative failure; supported control led schema variations map to same canonical values.",
+        "blocking": true
+      },
+      {
+        "id": "G0-Q03",
+        "criterion": "Required panel/WPI/energy rows are substantively complete",
+        "evidence_artifact": "G0/exact_row0_acceptance.csv",
+        "pass_rule": "No mandatory source gate unresolved; schema-only/provisional/synthetic/partial cannot count as full pass.",
+        "blocking": true
+      },
+      {
+        "id": "G0-PLAN-GATE",
+        "criterion": "Global upfront planning freeze",
+        "evidence_artifact": "work/plans/FREEZE.json",
+        "pass_rule": "All 44 plans pass root validation and root records the freeze; no analytical execution before freeze.",
+        "blocking": true
+      },
+      {
+        "id": "G0-SOURCE-TEXT",
+        "criterion": "Original request versus manager additions clearly separated",
+        "evidence_artifact": "outputs/G0/source_to_exhibit.csv",
+        "pass_rule": "Exact source.request/strategy/notes/number/PIC/completion unchanged; repository minimum checks labelled repository-authored, not DOC X quotation.",
+        "blocking": true
+      },
+      {
+        "id": "G0-OFFLINE",
+        "criterion": "Independent row entrypoint with nested modules",
+        "evidence_artifact": "outputs/G0/offline_replication.json",
+        "pass_rule": "Runrows/G0/G0.do from clean configured local environment without master; same full precision numeric results; all local dependencies documented.",
+        "blocking": true
+      },
+      {
+        "id": "G0-READER",
+        "criterion": "Every required report section has meaning and formula",
+        "evidence_artifact": "outputs/G0/reader_review.md",
+        "pass_rule": "Every H 1/H 2/H 3 sectionstatesquestion, intuition, equation and symbols, visual/table, plain meaning and limit; reviewer can explain without code.",
+        "blocking": true
+      },
+      {
+        "id": "G0-WAVE-BOUNDARY",
+        "criterion": "All company analysis descends from the single published consolidated master.",
+        "evidence_artifact": "analysis-input-lineage.json",
+        "pass_rule": "Every company-data operand in analysis must be the single published consolidated master or a declared derivative whose entire company-data ancestry ends at that consolidated master. Direct annual-wave reads are prohibited in analysis; only the master builder may append annual waves. Raw/staged/legacy/cached final company files cannot be numerical analysis parents. A required field missing from the wave is an upstream preparation failure; never repair it by opening an external company file inside this row. Comparison-only validators may read older data but may not feed construction or estimates. External reference and metadata inputs retain explicit non-company roles.",
+        "blocking": true
+      },
+      {
+        "id": "G0-READABLE-EXECUTION",
+        "criterion": "Readable non-executable comments and verified live progress at every nesting level.",
+        "evidence_artifact": "code-comments-and-progress-review.json",
+        "pass_rule": "Meet code_readability_and_progress_contract without changing the statistical results or control flow.",
+        "blocking": true
+      }
+    ],
+    "reader_gate": "An intelligent lay reader can state the question, what was counted/compared, each equation symbol, finding and limit without consulting code. Each section follows intuition → formula with every symbol → visual/table → plain meaning → boundary.",
+    "visual_gate": "Use custom vector charts from saved full-precision Stata aggregates, professional restrained publication typography, direct labels, meaningful color, clear units, visible missing 2016 gap, robust legends and notes. No default Stata graph in final delivery. Inspect every PDF page at reading size for overlap/clipping and all captions/axis labels. Distribution intervals are never labelled confidence intervals.",
+    "numerical_gate": "Independently recompute control counts/formulas against frozen aggregates/source receipts, exact categorical reconciliations, finite domains, and displayed rounding. Every chart/table value has a source table key/hash. No analytic calculations in for matting Python.",
+    "source_scope_gate": "The exact DOCX row and every repository minimum check must be satisfied on the declared actual data scope. Source absence remains a blocker where necessary; a readable PDF, synthetic passing run or existing column does not waive real-panel/WPI/source requirements."
+  },
+  "current_blockers": [
+    {
+      "id": "G0-B01",
+      "blocks": "Real panel and full G0 DoD",
+      "reason": "No verified crosswave company identifier/crosswalk; latest identity OFF.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/HANDOFF.md",
+      "resolution": "Obtain authorized real linkage and frame evidence; validate without dummy fallback.",
+      "next_unblocked_action": "Complete source/nominal/coverage QA design and inventory already available evidence."
+    },
+    {
+      "id": "G0-B02",
+      "blocks": "Company deflation and full real-price branches",
+      "reason": "Actual WPI exists but annual company bridge and appropriate input/capital/wage prices unresolved.",
+      "evidence": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/wpi-classification-evidence.md",
+      "resolution": "Resolve annual classification/partial correspondences; obtain appropriate concept prices.",
+      "next_unblocked_action": "Audit codebook/concordance source provenance and plan explicit ambiguity rules."
+    },
+    {
+      "id": "G0-B03",
+      "blocks": "Complete energy/emissions",
+      "reason": "No complete-nine-fuel records; extra components/unit/factor evidence absent.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/HANDOFF.md",
+      "resolution": "Acquire missing component/questionnaire/factor evidence or owner explicitly revises required scope; do not quietly waive.",
+      "next_unblocked_action": "Plan partial diagnostics distinctly and verify existing arithmetic."
+    }
+  ],
+  "references": [
+    {
+      "title": "Exact Deasy source row",
+      "locator": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/requests/data/00-main-dataset/SOURCE.md",
+      "purpose": "Original request; blank completion and PIC preserved",
+      "verified_status": "read exact task.json/source fields"
+    },
+    {
+      "title": "Latest actual local G0",
+      "locator": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/HANDOFF.md",
+      "purpose": "Current 3, 824-column source boundary; supersedes historical 3, 793-column file",
+      "verified_status": "fresh exact DTA metadata/hash confirmed"
+    },
+    {
+      "title": "Annual variable mapping evidence",
+      "locator": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv",
+      "purpose": "Separate verified annual semantics from parsed/provisional mappings",
+      "verified_status": "read; completeness not asserted"
+    },
+    {
+      "title": "Full source authored minimum checks",
+      "locator": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/requests/data/00-main-dataset/task.json",
+      "purpose": "Repository definition of done is notan original Word quotation; preserved exactly in plan",
+      "verified_status": "read and copied exactly"
+    }
+  ],
+  "review": {
+    "planning_review": "root_independent_review_fixed; final_global_consistency_pending",
+    "execution_review": "not_started",
+    "numerical_review": "not_started",
+    "visual_review": "not_started",
+    "exhibit_review": "24 explicit G0 computation, unit, denominator and reader contracts; output execution and visual review not started.",
+    "final_independent_pass": "Narrow source/cardinality repairs applied; no empirical execution. See work/plans/reviews/G0-G7-final-review.json."
+  },
+  "rationale": "Every later result inherits errors in definitions, identities, prices and missing states.",
+  "scope": "Every original raw field; supplied 2010–2015/2017–2022; 2016 visibly absent. Full row remains blocked by required unsupported source branches.",
+  "unit_of_analysis": "Actual masked survey record; firm-year only after real-link gate.",
+  "target_estimands": [
+    {
+      "name": "Annual field coverage",
+      "formula": "C_{vy}=n^{observed}_{vy}/N_y",
+      "symbols": {
+        "v": "one named variable",
+        "y": "calendar year",
+        "n observed": "records with an observed valid value",
+        "N": "all supplied records in that year"
+      },
+      "interpretation": "How much of each annual source can support a variable?",
+      "limits": "Coverage is not semantic verification; zero is observed."
+    },
+    {
+      "name": "Per-worker quantity",
+      "formula": "R_{iy}=X_{iy}/L_{iy},\\quad L_{iy}>0",
+      "symbols": {
+        "i": "source record",
+        "y": "calendar year",
+        "X": "the named money or quantity numerator",
+        "L": "observed worker count"
+      },
+      "interpretation": "Divide a record’s output or capital by its positive worker count.",
+      "limits": "Nominal money remains nominal; stock is not additions."
+    },
+    {
+      "name": "Physical energy and CO2",
+      "formula": "E=\\sum_f q_f h_f+0.0036k;\\quad CO_2=\\sum_f q_f h_f e_f+k g_y",
+      "symbols": {
+        "q f": "fuel quantity in the verified unit",
+        "h f": "heat content in GJ per that unit",
+        "k": "purchased electricity in kWh",
+        "e f": "tonnes CO2 per GJ",
+        "g y": "annual electricity emissions factor"
+      },
+      "interpretation": "Convert observed fuel/electricity quantities once, using documented factors.",
+      "limits": "A subtotal with missing fuels is not complete energy or emissions; own generation is not added on top of its fuel."
+    }
+  ],
+  "preferred_price_contract": {
+    "base_year": 2000,
+    "nominal_unit": "Rp000",
+    "real_output": "output_nominal/(output_WPI/100)",
+    "real_va_preferred": "output_real - intermediate_inputs_real",
+    "real_va_single_deflator_sensitivity": "value_added_nominal/(output_WPI/100), labelled approximation",
+    "capital": "stock concept and appropriate capital-goods price index required",
+    "wages": "wage or consumption-price basis explicitly justified; output WPI not automatic",
+    "missing_prices": "No identity deflator; unsupported canonical fields remain missing."
+  },
+  "dataflow_protocol": {
+    "input_integrity": "Physical source data and source-definition evidence are separate declared inputs. Pin both before transforming a value.",
+    "join_keys": "Never merge by row order. Use declared keys and assert intended 1:1, m:1 or explicitly weighted 1:m cardinality; record unmatched and duplicate rows.",
+    "source_rows": "source_year/source_row identifies a row within the frozen canonical source family, not a longitudinal plant. If another source family is added, source_file_hash is part of the raw key until the canonical manifest proves uniqueness.",
+    "branch_status": "Each branch produces either a validated state or a typed unsupported receipt with the missing prerequisite. Unsupported receipts are not numeric datasets and cannot satisfy a required input gate.",
+    "missing_states": "Source absence, inapplicable questionnaire universe, parse failure, unknown unit, masked identifier, observed zero and valid positive/negative values remain distinguishable.",
+    "downstream_gate": "Only a passed input contract may unlock its dependent statistical branch. Publishing a diagnostic about a blocked branch does not complete the Word row."
+  },
+  "plan_revision": {
+    "id": "wave-foundation-v2",
+    "supersedes_boundary_of_sha256": "94908a727e82f2442e43654d466e53e255401436207ebaff63eca03143aad45f",
+    "scope": "Input boundary, readable code comments and hierarchical execution visibility; exact original Word request and statistical plan retained.",
+    "implementation_status": "This revision does not execute this assignment row."
+  },
+  "code_readability_and_progress_contract": {
+    "comments": "Non-executable Stata comments explain purpose, actual inputs, outputs and failure checks at file, block and subblock levels in simple Indonesian. Do not invent scientific interpretations.",
+    "runtime": "Every file, block, subblock, iteration and deepest step prints start, finish or explicit early/error outcome, x/X, percent, elapsed time and exact location; stream live and save the same log.",
+    "clock": "Date-aware native Stata wall clock, one-second resolution; preserve scientific timers and fail certification on backward clock.",
+    "semantics": "Original operative source remains exactly recoverable; verify r(), e(), _rc, conditional branches and early transfers with a constructed runtime fixture before company execution.",
+    "rerun": "A documented launcher must run the actual preparation with visible progress before declaring data prep ready."
+  },
+  "wave_input_contract": {
+    "rule": "Every company-data operand in analysis must be the single published consolidated master or a declared derivative whose entire company-data ancestry ends at that consolidated master. Direct annual-wave reads are prohibited in analysis; only the master builder may append annual waves. Raw/staged/legacy/cached final company files cannot be numerical analysis parents. A required field missing from the wave is an upstream preparation failure; never repair it by opening an external company file inside this row. Comparison-only validators may read older data but may not feed construction or estimates. External reference and metadata inputs retain explicit non-company roles.",
+    "boundary_role": "producer_and_diagnostics",
+    "release_root": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-wave-foundation-v2",
+    "annual_paths": [
+      "data/waves/wave_2010.dta",
+      "data/waves/wave_2011.dta",
+      "data/waves/wave_2012.dta",
+      "data/waves/wave_2013.dta",
+      "data/waves/wave_2014.dta",
+      "data/waves/wave_2015.dta",
+      "data/waves/wave_2017.dta",
+      "data/waves/wave_2018.dta",
+      "data/waves/wave_2019.dta",
+      "data/waves/wave_2020.dta",
+      "data/waves/wave_2021.dta",
+      "data/waves/wave_2022.dta"
+    ],
+    "master_path": "data/analysis/G0_analysis_ready.dta",
+    "wave_count": 12,
+    "key": [
+      "source_year",
+      "source_row"
+    ],
+    "expected_rows": 33049,
+    "expected_columns": 4593,
+    "original_projection_columns": 4591,
+    "new_columns": [
+      "rd17_own_token_class",
+      "rd17_external_token_class"
+    ],
+    "root_plan": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-wave-foundation-v2/PLAN.md",
+    "root_plan_sha256": "8cc95e89c9bbc68ac6ef417d8e60cadc97c2f266553376c3c6611b22ad1ec211",
+    "input_release_status": "Not certified until actual build, value comparisons and read-boundary checks pass.",
+    "scientific_gates": "All existing field-specific, identity, unit, price, scope and source gates remain binding.",
+    "producer_override": "For this repair, physical implementation order in PLAN.md and plans/foundation.md controls: per-variable files → intermediate annual merges → complete preparation/corrections → ready annual waves → single consolidated master → company diagnostics. Original broader G0 science requirements remain open."
+  },
+  "execution_input_policy": {
+    "authority": "work-items/G0.5/OWNER-REQUEST.md",
+    "effective_date": "2026-09-13",
+    "role": "actual_G0_producer",
+    "development_mode": "local_actual_preparation",
+    "development_input": "explicit local source inputs",
+    "adapter": null,
+    "finalisation_mode": "actual",
+    "finalisation_input": "explicit local accepted G0; exact parent checksum required",
+    "actual_parent_sha256": "d0438798e28d67f5ac4fce3ea6a07b46630be28d88fd6cb6f17c15dc99baca08",
+    "identity_workflow": "harness/g05/EXTERNAL-WORKFLOW.md",
+    "identity_preparation_independent_of_G0_execution": true,
+    "same_analysis_code_both_modes": true,
+    "recompute_all_results_for_finalisation": true,
+    "fallback_to_historical_actual_Git_data": false,
+    "supersedes_older_planned_company_input_for_development": false,
+    "historical_source_references_retained_for_provenance": true,
+    "panel_rule": "Development accepts declared synthetic_development psid with firm-year uniqueness; actual requires verified real linkage. obs_id and annual clusters are not firm keys.",
+    "row_specific_source_and_method_gates_still_apply": true,
+    "research_execution_authorized_by_this_registration": false
+  }
+}

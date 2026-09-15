@@ -1,0 +1,89 @@
+{
+  "base_sha256": "9fcd7b0dd463e03f6aaca3f8579af8244c4cd0f8b99f94719aba636a6072e421",
+  "insertions": [
+    {
+      "before_line": 27,
+      "text": "* WFDOC: Adapter ini menjalankan satu point fit per panggilan untuk cabang produksi nilai tambah yang dipatok; bukan estimasi empat metode sekaligus."
+    },
+    {
+      "before_line": 27,
+      "text": "* WFDOC: y, free, state, dan proxy adalah log variabel yang definisi serta mode ukurannya harus dibuktikan oleh receipt pemanggil; adapter sendiri hanya memeriksa format numerik."
+    },
+    {
+      "before_line": 27,
+      "text": "* WFDOC: id adalah perusahaan dan t tahun kalender aktual; wrapper G1 membentuk domain transisi t dengan t-1 kalender, sehingga celah tahun tidak menjadi lag satu tahun."
+    },
+    {
+      "before_line": 27,
+      "text": "* WFDOC: OP menerima probabilitas exit dari wrapper yang memasang model pada seluruh risk set terautentikasi sebelum filter produksi; baris terakhir sampel tidak dianggap sebagai penutupan."
+    },
+    {
+      "before_line": 27,
+      "text": "* WFDOC: Keluaran adalah koefisien point fit dan diagnostik; tidak ada kovarians bootstrap atau prediksi omega otomatis, dan kegagalan opsi, rank, atau konvergensi harus tetap terlihat."
+    },
+    {
+      "before_line": 109,
+      "text": "* WFDOC: Adapter memaksa reps(1); 999 bootstrap tanaman dijalankan terpisah atas sumber lengkap agar sampel ulang memasang kembali lag dan tahapan OP bila dipilih."
+    },
+    {
+      "before_line": 247,
+      "text": "* WFDOC: touse mencerminkan if/in dan kelengkapan variabel estimator, lalu file sementara hanya menyimpan domain koefisien; risk set OP sudah dinilai dan probabilitasnya dipasok wrapper sebelum penyempitan ini."
+    },
+    {
+      "before_line": 295,
+      "text": "* WFDOC: Polinomial proxy membentuk semua monomial unik k^a p^b dengan derajat total 1 sampai d; regresi memasukkan konstanta. ACF menambahkan tenaga kerja ke basis, tanpa mengulang kolom linear."
+    },
+    {
+      "before_line": 387,
+      "text": "* WFDOC: WRDG memakai sistem dua persamaan r1=y-beta_L*l-beta_K*k-a0-B_d(k_t,p_t)'theta dan r2=y-beta_L*l-beta_K*k-a0-e0-B_d(k_t-1,p_t-1)'theta dengan theta bersama."
+    },
+    {
+      "before_line": 387,
+      "text": "* WFDOC: Instrumen primer adalah Z1=[1,l_t,B_d(k_t,p_t)] dan Z2=[1,k_t,l_t-1,B_d(k_t-1,p_t-1)]; kode wrapper tidak menambah instrumen atau kontrol opsional."
+    },
+    {
+      "before_line": 562,
+      "text": "* WFDOC: Tahap pertama OP/LP meregresikan y pada l dan B_d(k,p), lalu mengurangi beta_L*l dari nilai prediksi; tahap pertama ACF memakai seluruh monomial l,k,p dan mempertahankan fit penuh phi."
+    },
+    {
+      "before_line": 598,
+      "text": "* WFDOC: Pada LP, omega=phi-beta_K*k diproyeksikan ke [1,omega_lag,omega_lag^2,omega_lag^3] dan beta_K meminimalkan jumlah kuadrat error produksi; LP primer tidak mengoreksi attrition."
+    },
+    {
+      "before_line": 598,
+      "text": "* WFDOC: OP memakai objective yang sama tetapi menambah cubic probabilitas exit terprediksi dan interaksinya dengan omega_lag; probabilitas berasal dari risk/exit terautentikasi, dan gagal fit tidak berubah menjadi OP tanpa koreksi."
+    },
+    {
+      "before_line": 633,
+      "text": "* WFDOC: ACF membentuk omega=phi-beta_L*l-beta_K*k, mengeluarkan inovasi xi setelah proyeksi kubik omega_lag, lalu meminimalkan (Z'xi)'W(Z'xi), Z=[lag(l),k], W=invsym(Z'Z)/N."
+    },
+    {
+      "before_line": 683,
+      "text": "* WFDOC: Paket vendor semula dapat mengulang fit dan melaporkan inferensi internal; cabang G1 menyimpan satu baris koefisien saja, sementara bootstrap penuh dan kovariansnya ditangani program eksternal."
+    },
+    {
+      "before_line": 688,
+      "text": "* WFDOC: Jika fsresiduals diminta, merge 1:1 memakai id dan t untuk menempelkan residu tahap pertama ke baris sumber; caller tetap menilai kecocokan kunci, dan fitur ini bukan prediksi omega."
+    },
+    {
+      "before_line": 707,
+      "text": "* WFDOC: e() menyimpan nama metode, variabel, model, optimizer, domain dan diagnostik; hasil point fit tidak menyediakan covariance yang dapat dipakai sebagai standar error."
+    },
+    {
+      "before_line": 775,
+      "text": "// WFDOC: Helper ACF mengembalikan momen sampel Z'xi/N untuk beta; Jacobian beda hingga di bawahnya adalah diagnostik rank lokal, bukan kovarians atau uji inferensial."
+    },
+    {
+      "before_line": 787,
+      "text": "// WFDOC: Untuk OP/LP, omega=phi-X*beta dan omega_lag=phi_lag-X_lag*beta; regresi bantu H memproyeksikan produktivitas pada polinomial lag, lalu objective adalah jumlah kuadrat error produksi."
+    },
+    {
+      "before_line": 809,
+      "text": "// WFDOC: Untuk ACF, bobot W=invsym(Z'Z)/N; setelah proyeksi omega pada polinomial lag, XI=omega-H*g dan objective menghukum momen Z'XI sesuai sumber."
+    },
+    {
+      "before_line": 832,
+      "text": "// WFDOC: Optimizer menerima hanya baris touse dengan beta awal eksplisit; hasil menyimpan convergence, objective, iterasi, ukuran sampel, rank instrumen/transisi, kondisi matriks dan Jacobian ACF."
+    }
+  ]
+}

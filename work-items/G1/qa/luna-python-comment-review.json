@@ -1,0 +1,190 @@
+{
+  "title": "Luna comment-only review of frozen G1 Python execution, validation and plotting sources",
+  "status": "PASS",
+  "runtime_assignment": {
+    "model": "gpt-5.6-luna",
+    "reasoning_effort": "max"
+  },
+  "timestamps_utc": {
+    "stage3_started": "2026-09-13T13:49:55Z",
+    "proof_and_AST_completed": "2026-09-13T13:49:56Z"
+  },
+  "scope": {
+    "source_files": 8,
+    "inserted_standalone_WFDOC_lines": 51,
+    "prefix": "# WFDOC:",
+    "exclusions": [
+      "publication/documentation builders outside the 8-file analytic freeze",
+      "Stata source files",
+      "estimator/method files"
+    ]
+  },
+  "proof_method": "For each source, current bytes matched the latest manifest and external snapshot before edits. SequenceMatcher (autojunk disabled) found only equal/insert opcodes; every inserted physical line was standalone # WFDOC. Removing only recorded inserted positions restored exact frozen bytes. Token checks found no insertion inside multiline strings, bracket continuations, or explicit backslash continuations; all eight sources parsed with Python AST.",
+  "validation": {
+    "all_frozen_hashes_matched": true,
+    "insertion_only": true,
+    "standalone_WFDOC_only": true,
+    "exact_byte_restoration_all_8": true,
+    "outside_multiline_strings": true,
+    "outside_continuations": true,
+    "ast_parse_all_8": "PASS",
+    "Stata_run_by_comment_agent": false
+  },
+  "files": [
+    {
+      "path": "work-items/G1/run.py",
+      "baseline_sha256": "229c3906f6cb36175ac62de3dd2cac89bb412ae48657cf414c9a9f3148133180",
+      "current_sha256": "d5d0c0b713f076925262e6cec53965bbea9f126133880f72a71f77bde4b31f7f",
+      "inserted_WFDOC_lines": 6,
+      "inserted_current_line_numbers": [
+        7,
+        51,
+        58,
+        62,
+        84,
+        95
+      ],
+      "diff_opcodes_only_equal_or_insert": true,
+      "standalone_comments_only": true,
+      "outside_multiline_strings_and_continuations": true,
+      "exact_frozen_byte_restoration": "PASS",
+      "AST_parse": "PASS"
+    },
+    {
+      "path": "work-items/G1/validate.py",
+      "baseline_sha256": "5d02a7890f6273a394809726fa2dd7b35d211ac738b0c9a0401ba6467b418c62",
+      "current_sha256": "bd65f9c0737e15ce7628dc2c7a82d21ee6eebb9b946ebedccf66f8915ddaa935",
+      "inserted_WFDOC_lines": 9,
+      "inserted_current_line_numbers": [
+        3,
+        12,
+        28,
+        39,
+        48,
+        78,
+        97,
+        116,
+        128
+      ],
+      "diff_opcodes_only_equal_or_insert": true,
+      "standalone_comments_only": true,
+      "outside_multiline_strings_and_continuations": true,
+      "exact_frozen_byte_restoration": "PASS",
+      "AST_parse": "PASS"
+    },
+    {
+      "path": "work-items/G1/validate_nominal.py",
+      "baseline_sha256": "4aeeeacf13c359986620060103312a3a270939213448dffe5d5b77ed0021fb22",
+      "current_sha256": "8414b7ebe22fd2b4abad1ec0323498fd724487c43f477ca38e817c07c737ec81",
+      "inserted_WFDOC_lines": 11,
+      "inserted_current_line_numbers": [
+        7,
+        55,
+        90,
+        120,
+        140,
+        157,
+        173,
+        193,
+        219,
+        257,
+        287
+      ],
+      "diff_opcodes_only_equal_or_insert": true,
+      "standalone_comments_only": true,
+      "outside_multiline_strings_and_continuations": true,
+      "exact_frozen_byte_restoration": "PASS",
+      "AST_parse": "PASS"
+    },
+    {
+      "path": "work-items/G1/validate_master.py",
+      "baseline_sha256": "d9fb55040aa7c3c84c31b5b86abbbf61bde3a4a3e323f695e49ecb427d3b56d8",
+      "current_sha256": "24223c508a2228f296ef750c73c8f06e916fa557267dcbc0b486567d274add1d",
+      "inserted_WFDOC_lines": 3,
+      "inserted_current_line_numbers": [
+        3,
+        11,
+        31
+      ],
+      "diff_opcodes_only_equal_or_insert": true,
+      "standalone_comments_only": true,
+      "outside_multiline_strings_and_continuations": true,
+      "exact_frozen_byte_restoration": "PASS",
+      "AST_parse": "PASS"
+    },
+    {
+      "path": "work-items/G1/plot.py",
+      "baseline_sha256": "e25216721819520fb6b2562caefd8e2b4e633e66503a27b70f34edf1ac1aa631",
+      "current_sha256": "ea81b05b3ac71d9ef81a5b7ee845ea72271e6c44c314f09e5a12ddbb7bbadc4b",
+      "inserted_WFDOC_lines": 6,
+      "inserted_current_line_numbers": [
+        3,
+        33,
+        47,
+        62,
+        76,
+        88
+      ],
+      "diff_opcodes_only_equal_or_insert": true,
+      "standalone_comments_only": true,
+      "outside_multiline_strings_and_continuations": true,
+      "exact_frozen_byte_restoration": "PASS",
+      "AST_parse": "PASS"
+    },
+    {
+      "path": "work-items/G1/plot_nominal.py",
+      "baseline_sha256": "5799c1b8915d284aa1f8c0f572440e493b6d2f23c187588d41e49964d94595de",
+      "current_sha256": "b0fdc5645215472fa9f2942f7a9d94487a7a05bd727ab4c19d713770fa31522e",
+      "inserted_WFDOC_lines": 3,
+      "inserted_current_line_numbers": [
+        3,
+        16,
+        18
+      ],
+      "diff_opcodes_only_equal_or_insert": true,
+      "standalone_comments_only": true,
+      "outside_multiline_strings_and_continuations": true,
+      "exact_frozen_byte_restoration": "PASS",
+      "AST_parse": "PASS"
+    },
+    {
+      "path": "work-items/G1/inspect_v3.py",
+      "baseline_sha256": "fb939ba1d1fb2dbd820b9239eb9e9870aca60a2d66056a325f1af168564cde8d",
+      "current_sha256": "933938a86cc8e25321fb0daa7afec666aecab0634efb917940c2bccc83bcfad2",
+      "inserted_WFDOC_lines": 5,
+      "inserted_current_line_numbers": [
+        3,
+        16,
+        25,
+        42,
+        75
+      ],
+      "diff_opcodes_only_equal_or_insert": true,
+      "standalone_comments_only": true,
+      "outside_multiline_strings_and_continuations": true,
+      "exact_frozen_byte_restoration": "PASS",
+      "AST_parse": "PASS"
+    },
+    {
+      "path": "work-items/G1/publication/plot_figures.py",
+      "baseline_sha256": "ff82a04d41912c232c3b651ab813e56a1e05ee62f64424b0397f1660e6bd97fa",
+      "current_sha256": "f27b84a11eae817cedda027f5c077ae938e69360e033d51a65208fcf46e0d906",
+      "inserted_WFDOC_lines": 8,
+      "inserted_current_line_numbers": [
+        3,
+        35,
+        44,
+        78,
+        99,
+        114,
+        131,
+        150
+      ],
+      "diff_opcodes_only_equal_or_insert": true,
+      "standalone_comments_only": true,
+      "outside_multiline_strings_and_continuations": true,
+      "exact_frozen_byte_restoration": "PASS",
+      "AST_parse": "PASS"
+    }
+  ]
+}

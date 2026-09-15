@@ -1,0 +1,47 @@
+{
+  "node_id": "G1_N02",
+  "branch": "nominal_development_compatibility",
+  "material_state_status": "implemented_final_run_receipt_pending",
+  "state": "Synthetic disappearance intervals",
+  "inputs": [
+    "nominal/N01_source.dta"
+  ],
+  "input_nodes": [
+    "G1_N01"
+  ],
+  "outputs_relative_to_external_run": [
+    "nominal/N02_source_and_risk.dta"
+  ],
+  "aggregate_outputs_relative_to_external_run": [],
+  "available_aggregate_receipts": [],
+  "available_private_artifacts": [],
+  "grain": "Original production observation or explicitly typed derivative interval endpoint",
+  "keys": [
+    "psid",
+    "source_year"
+  ],
+  "denominator": "One interval per source fictional firm at every adjacent supplied calendar-year pair, before production complete-case filtering; interval-only rows never count as source observations",
+  "units": {
+    "levels": "reported monetary candidate units; no verified conversion or deflation",
+    "logs_and_residuals": "natural-log points; nominal structural residual contains price/measurement/transitory components",
+    "coefficients": "dimensionless elasticities",
+    "counts": "source observations, derivative risk intervals, distinct synthetic firms and draws explicitly distinguished"
+  },
+  "calendar": "Source2010–2015/2017–2022; production2011–2015/2018–2022; dynamic2012–2015/2019–2022; actual delta1",
+  "decision": "Use official psid/predecessor linkage. Matched next-calendar-year assignment means simulated disappearance0; unmatched means1. Endpoint-only rows have no obs_id or invented output. This is not authenticated economic closure.",
+  "missingness": "Missing/zero/negative remain distinct; no imputation; unsupported statistical results remain missing and every skipped/failed obligation is retained",
+  "source_code": "work-items/G1/stata/nominal/N02_risk.do",
+  "source_code_sha256": "8f84239a12b0237cf39c4fab8d5d6b696fdd091bab6688bbb464e71095263ccd",
+  "executed_source_sha256": "19a472d5c8488728dd50050c580e7740f666651d4a65c033c37d504f4d25c90c",
+  "executed_source_or_proven_comment_only": true,
+  "specification_path": "work-items/G1/nominal-specification.json",
+  "specification_sha256": "b7d44ee476be421e158868783f6f31f1408d7f3b028230fecbc600083cebf8b5",
+  "aggregate_receipt_sha256": {},
+  "execution_evidence_root": "/Users/natanaelmassie/Downloads/deasy-g1-issue9-20260913/work-items/G1/release",
+  "primary_real_admission": false,
+  "panel_mode": "official synthetic_development; real linkage not required or claimed",
+  "plan": "releases/2026-09-13-data-foundation/stata-preparation/row-plans/G1.json",
+  "plan_sha256": "dd88cfa94af5f212a7b0a4b70f99fea1c0201f950cd19333357739b96b5da1ca",
+  "input_manifest": "data/g0-5-development/manifest.json",
+  "input_manifest_sha256": "060b0ee0a2158a9c94b0e7e68fcfba719eda37561422855471a99da6810ba260"
+}

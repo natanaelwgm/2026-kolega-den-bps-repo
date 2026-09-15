@@ -1,0 +1,57 @@
+{
+  "node_id": "G1_N05",
+  "branch": "nominal_development_compatibility",
+  "material_state_status": "implemented_aggregate_receipt_present_validation_separate",
+  "state": "Exploratory full-process bootstrap",
+  "inputs": [
+    "nominal/fit_results.dta",
+    "nominal/N03_frozen.dta"
+  ],
+  "input_nodes": [
+    "G1_N04"
+  ],
+  "outputs_relative_to_external_run": [
+    "nominal/bootstrap_summary.dta",
+    "nominal/bootstrap_<sector>_<method>_<sample>.*"
+  ],
+  "aggregate_outputs_relative_to_external_run": [
+    "outputs/nominal_bootstrap_summary.csv"
+  ],
+  "available_aggregate_receipts": [
+    "outputs/nominal_bootstrap_summary.csv"
+  ],
+  "available_private_artifacts": [],
+  "grain": "One successful primary cell summary and every requested synthetic-firm cluster draw",
+  "keys": [
+    "sector",
+    "method",
+    "sample_id",
+    "draw (draw table only)"
+  ],
+  "denominator": "99 requested complete-process draws per successful primary cell, separate original estimate; at least95 successes for exploratory percentile intervals; covariance divisor B_success−1",
+  "units": {
+    "levels": "reported monetary candidate units; no verified conversion or deflation",
+    "logs_and_residuals": "natural-log points; nominal structural residual contains price/measurement/transitory components",
+    "coefficients": "dimensionless elasticities",
+    "counts": "source observations, derivative risk intervals, distinct synthetic firms and draws explicitly distinguished"
+  },
+  "calendar": "Source2010–2015/2017–2022; production2011–2015/2018–2022; dynamic2012–2015/2019–2022; actual delta1",
+  "decision": "Resample complete synthetic-firm histories and interval rows with new draw IDs; reconstruct lags and rerun stages. Preserve failed draws. Seed9132026; inference conditional on frozen generator linkage, not population or999-draw primary acceptance.",
+  "missingness": "Missing/zero/negative remain distinct; no imputation; unsupported statistical results remain missing and every skipped/failed obligation is retained",
+  "source_code": "work-items/G1/stata/nominal/N05_bootstrap.do",
+  "source_code_sha256": "7c6b023cb420a3554eebabed1e56af9f471b69a09060a86d16a8184fed5c5878",
+  "executed_source_sha256": "3ca3f7ecf82fdc6e3d799edc85f3ffc7dd9c38f47809935e42c475f596738dae",
+  "executed_source_or_proven_comment_only": true,
+  "specification_path": "work-items/G1/nominal-specification.json",
+  "specification_sha256": "b7d44ee476be421e158868783f6f31f1408d7f3b028230fecbc600083cebf8b5",
+  "aggregate_receipt_sha256": {
+    "outputs/nominal_bootstrap_summary.csv": "850fe0908ffab175cd1eceaed1e8588c55d6ebe88ca162ce88d7b1e111f9d790"
+  },
+  "execution_evidence_root": "/Users/natanaelmassie/Downloads/deasy-g1-issue9-20260913/work-items/G1/release",
+  "primary_real_admission": false,
+  "panel_mode": "official synthetic_development; real linkage not required or claimed",
+  "plan": "releases/2026-09-13-data-foundation/stata-preparation/row-plans/G1.json",
+  "plan_sha256": "dd88cfa94af5f212a7b0a4b70f99fea1c0201f950cd19333357739b96b5da1ca",
+  "input_manifest": "data/g0-5-development/manifest.json",
+  "input_manifest_sha256": "060b0ee0a2158a9c94b0e7e68fcfba719eda37561422855471a99da6810ba260"
+}

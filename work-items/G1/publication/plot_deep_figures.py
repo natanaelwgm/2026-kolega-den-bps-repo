@@ -1,0 +1,300 @@
+#!/usr/bin/env python3
+"""Draw method-specific vector figures from validated Stata aggregate exports."""
+# WFDOC: No estimation or record-level data are used. Annotation operands retain exact CSV hashes, keys, values, formats and anchors.
+# WFDOC: Every successful method is eligible, including OP; pagination preserves legible labels across all supported sectors and years.
+from pathlib import Path
+import argparse
+import hashlib
+import json
+import numpy as np
+import pandas as pd
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+from matplotlib import font_manager
+from matplotlib.lines import Line2D
+from matplotlib.patches import Patch
+
+HERE = Path(__file__).resolve().parent
+FONT = Path('/System/Library/Fonts/Supplemental')
+FONTFILES = ['Times New Roman.ttf', 'Times New Roman Bold.ttf', 'Times New Roman Italic.ttf', 'Times New Roman Bold Italic.ttf']
+for name in FONTFILES:
+    assert (FONT / name).is_file()
+    font_manager.fontManager.addfont(str(FONT / name))
+assert Path(font_manager.findfont('Times New Roman')).name.startswith('Times New Roman')
+plt.rcParams.update({'font.family':'Times New Roman','font.size':10,'axes.labelsize':9,'axes.titlesize':10,
+                     'legend.fontsize':8,'axes.spines.top':False,'axes.spines.right':False,'axes.linewidth':.6,
+                     'xtick.major.width':.6,'ytick.major.width':.6,'svg.fonttype':'none','pdf.fonttype':42,'ps.fonttype':42,
+                     'savefig.facecolor':'white'})
+COLORS={'op':'#8B6E55','lp':'#264C66','acf':'#498276','wrdg':'#8C789C'}
+NAMES={'op':'Olley–Pakes','lp':'Levinsohn–Petrin','acf':'Ackerberg–Caves–Frazer','wrdg':'Wooldridge'}
+PROFILE_KEYS=['sector','method','sample_id','source_year','fit_scope','measure']
+PAIR_KEYS=['sector','method','sample_id','measure','year_from','year_to']
+
+
+def parts(values,n):
+    values=list(values)
+    return [values[i:i+n] for i in range(0,len(values),n)]
+
+
+def paged(base,page):
+    return base if page==0 else f'{base}_p{page+1}'
+
+
+def main():
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--base',type=Path,required=True)
+    parser.add_argument('--deep',type=Path)
+    args=parser.parse_args()
+    base=args.base/'outputs' if (args.base/'outputs').is_dir() else args.base
+    deep=args.deep
+    if deep is not None and (deep/'outputs').is_dir():deep=deep/'outputs'
+    figs=HERE/'figures';provenance=HERE/'provenance'
+    figs.mkdir(exist_ok=True);provenance.mkdir(exist_ok=True)
+    traces=[];inventory=[];source_paths={};source_hashes={}
+
+    def read(name,directory=base):
+        path=directory/name;source_paths[name]=path;source_hashes[name]=hashlib.sha256(path.read_bytes()).hexdigest()
+        return pd.read_csv(path,dtype={'sector':str},na_values=['.'])
+
+    def annotate(name,source,row,keys,field,anchor,scale=1,fmt='.3f',role='mark'):
+        value=float(row[field]);assert np.isfinite(value),(name,source,field)
+        printed=format(value*scale,fmt)
+        traces.append(dict(figure=name,source_file=source,source_sha256=source_hashes[source],
+                           row_key={k:str(row[k]) for k in keys},field=field,unrounded_value=value,display_scale=scale,
+                           decimal_format=fmt,printed_string=printed,plotting_anchor=[float(x) for x in anchor],role=role))
+        return printed
+
+    def save(fig,name,sources,legend,construction):
+        for ext in ('pdf','svg','png'):fig.savefig(figs/f'{name}.{ext}',dpi=180)
+        inventory.append(dict(figure=name,sources=[dict(file=n,sha256=hashlib.sha256(source_paths[n].read_bytes()).hexdigest()) for n in sources],
+                              visible_legend=legend,construction=construction,outputs=[dict(path=f'figures/{name}.{ext}',sha256=hashlib.sha256((figs/f'{name}.{ext}').read_bytes()).hexdigest()) for ext in ('pdf','svg','png')]))
+        plt.close(fig)
+
+    def histogram(ax,g,name,source,keys,method):
+        g=g.sort_values('bin_lower').reset_index(drop=True)
+        if not len(g):
+            ax.text(.5,.5,'No available predictions',ha='center',va='center',transform=ax.transAxes,fontsize=9)
+            return
+        assert int(g.N_bin.sum())==int(g.N_total.iloc[0])
+        ax.bar((g.bin_lower+g.bin_upper)/2,g.share*100,width=g.bin_upper-g.bin_lower,color=COLORS[method],edgecolor='white',linewidth=.2)
+        chosen=sorted(set([0,int(g.share.idxmax()),len(g)-1]))
+        positions=[(.02,.98,'left'),(.5,.80,'center'),(.98,.98,'right')]
+        for j,idx in enumerate(chosen):
+            row=g.iloc[idx];anchor=[(row.bin_lower+row.bin_upper)/2,row.share*100]
+            share=annotate(name,source,row,keys,'share',anchor,100,'.3f','selected_bin_share')
+            count=annotate(name,source,row,keys,'N_bin',anchor,1,'.0f','selected_bin_count')
+            px,py,ha=positions[j]
+            ax.annotate(f'{share}%\n(n={count})',anchor,xytext=(px,py),textcoords='axes fraction',ha=ha,va='top',fontsize=8,
+                        arrowprops={'arrowstyle':'-','lw':.5,'color':'black'})
+        ax.set_ylim(0,float(g.share.max())*180)
+        ax.tick_params(labelsize=8)
+
+    def quartile(ax,row,y,name,source,keys,method,change=False):
+        suffix='_change' if change else ''
+        fields=[f'p25{suffix}',f'p50{suffix}',f'p75{suffix}']
+        if not all(np.isfinite(row[f]) for f in fields):
+            ax.text(.5,y,'Unavailable' if row.get('N_pairs' if change else 'N',0)==0 else 'N < 5',transform=ax.get_yaxis_transform(),ha='center',va='center',fontsize=7.5,color='#777777')
+            return
+        ax.plot([row[fields[0]],row[fields[2]]],[y,y],color=COLORS[method],lw=1.2)
+        ax.plot(row[fields[1]],y,'o',color=COLORS[method],ms=3)
+        labels={}
+        # WFDOC: Coincident displayed values share one label; a coincident median keeps bold type. Every operand still has a trace.
+        for f in fields:
+            val=float(row[f]);label=annotate(name,source,row,keys,f,[val,y],fmt='.2f',role='all_quartiles')
+            labels.setdefault(label,[]).append((f,val))
+        for label,group in labels.items():
+            median=any(f==fields[1] for f,v in group)
+            f,val=next(((f,v) for f,v in group if f==fields[1]),group[0])
+            dx,dy,ha=(0,2,'center') if median else ((-3,-3,'right') if f==fields[0] else (3,-3,'left'))
+            ax.annotate(label,(val,y),xytext=(dx,dy),textcoords='offset points',ha=ha,va='bottom' if median else 'top',fontsize=7.3,fontweight='bold' if median else 'normal')
+
+    fits=read('nominal_coefficients.csv');boot=read('nominal_bootstrap_summary.csv');hist=read('nominal_histogram_bins.csv')
+    good=fits[fits.variant.eq('primary')&fits.status.eq('fit_success')&fits.sample_id.eq('own')]
+    methods=[m for m in COLORS if m in set(good.method)]
+    for method in methods:
+        sectors=sorted(good.loc[good.method.eq(method),'sector'].unique())
+        name=f'deep_{method}_histogram';fig,axes=plt.subplots(1,2,figsize=(6.5,3.3),sharey=True)
+        for ax,measure in zip(axes,['raw','centered']):
+            g=hist[hist.method.eq(method)&hist.sample_id.eq('own')&hist.sector.eq('ALL')&hist.measure.eq(measure)]
+            histogram(ax,g,name,'nominal_histogram_bins.csv',['sector','method','sample_id','measure','bin_lower'],method)
+            ax.set_title('Uncentered residuals' if measure=='raw' else 'Centered residuals')
+            ax.set_xlabel('Uncentered log residual' if measure=='raw' else 'Log residual relative to pooled fit mean')
+        axes[0].set_ylabel('Share of pooled fitted records (%)')
+        legend=[f'{NAMES[method]}: pooled dynamic fitted records','Leaders: first, modal and last occupied bins']
+        fig.legend(handles=[Patch(color=COLORS[method],label=legend[0]),Line2D([0],[0],color='black',lw=.5,label=legend[1])],loc='lower center',frameon=False,bbox_to_anchor=(.54,.005))
+        fig.subplots_adjust(left=.10,right=.985,bottom=.27,top=.90,wspace=.15)
+        save(fig,name,['nominal_histogram_bins.csv'],legend,'All occupied0.5-log-point bins from Stata; gaps remain visible; no trimming. Dynamic fit records pool all eligible years.')
+
+        for page,chunk in enumerate(parts(sectors,12)):
+            name=paged(f'deep_{method}_coefficients',page)
+            g=good[good.method.eq(method)&good.sector.isin(chunk)].sort_values('sector').reset_index(drop=True)
+            b=boot[boot.method.eq(method)&boot.sample_id.eq('own')].set_index('sector')
+            fig,axes=plt.subplots(1,2,figsize=(6.5,max(3.5,.27*len(g)+1.8)),sharey=True)
+            for ax,term in zip(axes,['L','K']):
+                for i,row in g.iterrows():
+                    value=float(row[f'beta_{term}'])
+                    if row.sector in b.index:
+                        bi=b.loc[row.sector]
+                        if bi.interval_admitted==1:ax.plot([bi[f'ci_{term}_lo'],bi[f'ci_{term}_hi']],[i,i],color='#777777',lw=1.3)
+                    ax.plot(value,i,'o',color=COLORS[method],ms=4)
+                    label=annotate(name,'nominal_coefficients.csv',row,['sector','method','sample_id','variant'],f'beta_{term}',[value,i],fmt='.3f' if term=='L' else '.4f')
+                    ax.text(1.02,i,label,transform=ax.get_yaxis_transform(),va='center',fontsize=8.5)
+                ax.axvline(0,color='#CCCCCC',lw=.7,zorder=0);ax.set_title('Labor elasticity' if term=='L' else 'Beginning-capital elasticity');ax.set_xlabel('Coefficient');ax.tick_params(labelsize=8.5);ax.margins(y=.10)
+            axes[0].set_yticks(range(len(g)),labels=g.sector);axes[0].set_ylabel('Reported two-digit sector');axes[0].invert_yaxis()
+            legend=['Point estimate (printed value)','95% cluster percentile interval, when admitted','Zero coefficient reference']
+            fig.legend(handles=[Line2D([0],[0],marker='o',ls='',color=COLORS[method],ms=4,label=legend[0]),Line2D([0],[0],color='#777777',lw=1.3,label=legend[1]),Line2D([0],[0],color='#CCCCCC',lw=.7,label=legend[2])],loc='lower center',frameon=False,bbox_to_anchor=(.55,.005))
+            fig.subplots_adjust(left=.10,right=.90,bottom=.25,top=.91,wspace=.50)
+            save(fig,name,['nominal_coefficients.csv','nominal_bootstrap_summary.csv'],legend,'Sector-specific primary slopes; intervals shown only when the frozen bootstrap success rule admits them.')
+
+        for page,chunk in enumerate(parts(sectors,6)):
+            name=paged(f'deep_{method}_sensitivity',page);variants=['primary','low_l','high_l','poly2']
+            g=fits[fits.method.eq(method)&fits.sample_id.eq('own')&fits.status.eq('fit_success')&fits.sector.isin(chunk)]
+            fig,axes=plt.subplots(3,1,figsize=(6.5,6.4))
+            for ax,field,title,fmt in zip(axes,['beta_L','beta_K','objective'],['Labor elasticity','Capital elasticity','Objective'],['.3f','.4f','.2e']):
+                vals=g.pivot(index='variant',columns='sector',values=field).reindex(index=variants,columns=chunk)
+                low,high=float(vals.min().min()),float(vals.max().max());im=ax.imshow(vals,cmap='Greys',aspect='auto',vmin=low,vmax=high)
+                for i,variant in enumerate(variants):
+                    for j,sector in enumerate(chunk):
+                        rows=g[g.variant.eq(variant)&g.sector.eq(sector)]
+                        if not len(rows) or not np.isfinite(rows.iloc[0][field]):
+                            ax.text(j,i,'—',ha='center',va='center',fontsize=9);continue
+                        row=rows.iloc[0];label=annotate(name,'nominal_coefficients.csv',row,['sector','method','sample_id','variant'],field,[j,i],fmt=fmt,role='all_declared_variants')
+                        shade=(float(row[field])-low)/(high-low) if high>low else 0
+                        ax.text(j,i,label,color='white' if shade>.6 else 'black',ha='center',va='center',fontsize=8.5)
+                ax.set_title(title);ax.set_xticks(range(len(chunk)),labels=chunk,fontsize=8);ax.set_yticks(range(4),labels=['Cubic: OLS','Cubic: low labor','Cubic: high labor','Quadratic: OLS'],fontsize=8);ax.tick_params(length=0)
+                cb=fig.colorbar(im,ax=ax,pad=.025,fraction=.025,ticks=[low,high],format='%.2g');cb.ax.tick_params(labelsize=7)
+            axes[-1].set_xlabel('Reported two-digit sector');legend=['Darker cells: larger values within each panel; —: unavailable fit']
+            fig.text(.57,.015,legend[0],ha='center',fontsize=8);fig.subplots_adjust(left=.20,right=.91,bottom=.09,top=.96,hspace=.40)
+            save(fig,name,['nominal_coefficients.csv'],legend,'All declared variants; objectives compare starts within an unchanged objective. Quadratic proxy changes the specification. No failed cell is filled.')
+
+    support=read('nominal_sample_support.csv');name='deep_op_support'
+    g=support[support.method.eq('op')&support.sample_id.eq('own')].sort_values('sector').reset_index(drop=True)
+    fields=['N_domain','N_dynamic','N_selection','N_disappearance'];thresholds=np.array([100,50,100,10]);ratios=g[fields].to_numpy(float)/thresholds
+    fig,ax=plt.subplots(figsize=(6.5,max(4.6,.22*len(g)+1.5)))
+    im=ax.imshow(np.minimum(ratios,1),vmin=0,vmax=1,cmap='Blues',aspect='auto')
+    for i,row in g.iterrows():
+        for j,field in enumerate(fields):
+            label=annotate(name,'nominal_sample_support.csv',row,['sector','method','sample_id'],field,[j,i],fmt='.0f',role='support_count')
+            ax.text(j,i,label,ha='center',va='center',fontsize=8,color='white' if ratios[i,j]>.6 else 'black')
+    ax.set_yticks(range(len(g)),labels=g.sector,fontsize=8);ax.set_xticks(range(4),labels=['Production sample\nminimum 100','Estimation sample\nminimum 50','Selection sample\nminimum 100','Disappearances\nminimum 10'],fontsize=8);ax.set_ylabel('Reported two-digit sector');ax.tick_params(length=0)
+    fig.subplots_adjust(left=.10,right=.99,bottom=.19,top=.99);cax=fig.add_axes([.29,.065,.51,.017]);cb=fig.colorbar(im,cax=cax,orientation='horizontal',ticks=[0,.5,1]);cb.ax.set_xticklabels(['0%','50%','100% or more'],fontsize=8);cb.set_label('Legend: count as a share of its required minimum',fontsize=9)
+    save(fig,name,['nominal_sample_support.csv'],['Darker blue: closer to or above minimum; numbers: observed counts'],'All observed sectors and four selected gates. Firm and continuer gates remain enforced separately.')
+
+    # WFDOC: Cabang deep hanya membaca dua belas CSV aggregate yang sudah hash-bound; source_year=0 dipakai untuk panel pooled, sedangkan panel tahunan memfilter tahun positif.
+    if deep is not None:
+        profiles=read('deep_prediction_profiles.csv',deep);paired=read('deep_paired_changes.csv',deep);phist=read('deep_paired_histograms.csv',deep)
+        for method in methods:
+            sectors=sorted(good.loc[good.method.eq(method),'sector'].unique())
+            annual=profiles[profiles.method.eq(method)&profiles.sample_id.eq('own')&profiles.fit_scope.eq('all')&profiles.measure.eq('centered')&profiles.sector.isin(sectors)&profiles.source_year.ne(0)]
+            years=sorted(y for y in annual.source_year.unique() if annual.loc[annual.source_year.eq(y),'N'].sum()>0)
+            # WFDOC: Four sector panels per page; every available annual quartile has its own numerical label.
+            for page,chunk in enumerate(parts(sectors,4)):
+                name=paged(f'deep_{method}_year_sector',page)
+                ncols=min(2,len(chunk));nrows=(len(chunk)+ncols-1)//ncols
+                fig,axes=plt.subplots(nrows,ncols,figsize=(6.5,7.2 if nrows==2 else 4.4),squeeze=False)
+                for ax,sector in zip(axes.flat,chunk):
+                    g=annual[annual.sector.eq(sector)].set_index('source_year')
+                    for i,year in enumerate(years):
+                        row=g.loc[year].copy();row['source_year']=year;quartile(ax,row,i,name,'deep_prediction_profiles.csv',PROFILE_KEYS,method)
+                    ax.set_yticks(range(len(years)),labels=[int(y) for y in years],fontsize=8);ax.set_ylim(len(years)-.35,-.65);ax.set_title(f'Sector {sector}');ax.set_xlabel('Centered log residual');ax.axvline(0,color='#CCCCCC',lw=.7,zorder=0);ax.margins(x=.30);ax.tick_params(axis='x',labelsize=8)
+                for ax in list(axes.flat)[len(chunk):]:ax.set_visible(False)
+                legend=['Median (bold number)','25th–75th percentile interval (endpoint numbers)','Pooled dynamic fit mean (zero reference)']
+                fig.legend(handles=[Line2D([0],[0],marker='o',ls='',color=COLORS[method],ms=3,label=legend[0]),Line2D([0],[0],color=COLORS[method],lw=1.2,label=legend[1]),Line2D([0],[0],color='#CCCCCC',lw=.7,label=legend[2])],loc='lower center',frameon=False,bbox_to_anchor=(.53,.003))
+                fig.subplots_adjust(left=.11,right=.98,bottom=.14 if nrows==2 else .24,top=.96,wspace=.38,hspace=.30)
+                save(fig,name,['deep_prediction_profiles.csv'],legend,'All annual positive-domain predictions; fixed sector-method-sample slopes and pooled dynamic centering. Source-year0 is excluded from annual panels. Missing2016 is never interpolated.')
+
+            # Pooled paired distribution first; its denominator is record-pair intervals rather than distinct firms.
+            page=0
+            for chunk in parts(sectors,12):
+                name=paged(f'deep_{method}_paired_change',page);page+=1
+                g=paired[paired.method.eq(method)&paired.sample_id.eq('own')&paired.measure.eq('centered')&paired.sector.isin(chunk)&paired.year_from.eq(0)&paired.year_to.eq(0)].sort_values('sector').reset_index(drop=True)
+                h=phist[phist.method.eq(method)&phist.sample_id.eq('own')&phist.measure.eq('centered')&phist.sector.eq('ALL')&phist.year_from.eq(0)&phist.year_to.eq(0)]
+                fig,axes=plt.subplots(1,2,figsize=(6.5,max(4.5,.30*len(g)+1.7)),gridspec_kw={'width_ratios':[1,1.15]})
+                for i,row in g.iterrows():quartile(axes[0],row,i,name,'deep_paired_changes.csv',PAIR_KEYS,method,True)
+                axes[0].set_yticks(range(len(g)),labels=g.sector,fontsize=8);axes[0].set_ylim(len(g)-.3,-.6);axes[0].set_ylabel('Reported sector');axes[0].set_title('Pooled adjacent-year changes');axes[0].set_xlabel('Change in centered log residual');axes[0].axvline(0,color='#CCCCCC',lw=.7,zorder=0);axes[0].margins(x=.35);axes[0].tick_params(axis='x',labelsize=8)
+                histogram(axes[1],h,name,'deep_paired_histograms.csv',PAIR_KEYS+['bin_lower'],method);axes[1].set_title('Pooled distribution');axes[1].set_xlabel('Change in centered log residual');axes[1].set_ylabel('Share of record-pair intervals (%)')
+                legend=['Median (bold) and quartile interval','Histogram: adjacent-year record-pair intervals','Leaders: first, modal and last occupied bins','No change (zero reference)']
+                fig.legend(handles=[Line2D([0],[0],color=COLORS[method],marker='o',ms=3,lw=1.2,label=legend[0]),Patch(color=COLORS[method],label=legend[1]),Line2D([0],[0],color='black',lw=.5,label=legend[2]),Line2D([0],[0],color='#CCCCCC',lw=.7,label=legend[3])],loc='lower center',frameon=False,bbox_to_anchor=(.54,.004))
+                fig.subplots_adjust(left=.10,right=.99,bottom=.25,top=.92,wspace=.50)
+                save(fig,name,['deep_paired_changes.csv','deep_paired_histograms.csv'],legend,'Same fictional company and sector in exact adjacent calendar years;0/0 pools intervals and can count a company more than once. Fixed slopes and normalizer; histogram bins0.25log points; no trimming.')
+            pairs=paired[paired.method.eq(method)&paired.sample_id.eq('own')&paired.measure.eq('centered')&paired.sector.isin(sectors)&paired.year_to.ne(0)]
+            intervals=sorted((int(a),int(b)) for a,b in pairs.loc[pairs.N_pairs.gt(0),['year_from','year_to']].drop_duplicates().itertuples(index=False,name=None))
+            for chunk in parts(sectors,4):
+                name=paged(f'deep_{method}_paired_change',page);page+=1
+                ncols=min(2,len(chunk));nrows=(len(chunk)+ncols-1)//ncols
+                fig,axes=plt.subplots(nrows,ncols,figsize=(6.5,7.2 if nrows==2 else 4.4),squeeze=False)
+                for ax,sector in zip(axes.flat,chunk):
+                    g=pairs[pairs.sector.eq(sector)].set_index(['year_from','year_to'])
+                    for i,(yf,yt) in enumerate(intervals):
+                        row=g.loc[(yf,yt)].copy();row['year_from']=yf;row['year_to']=yt;quartile(ax,row,i,name,'deep_paired_changes.csv',PAIR_KEYS,method,True)
+                    ax.set_yticks(range(len(intervals)),labels=[f'{a}–{b}' for a,b in intervals],fontsize=7.5);ax.set_ylim(len(intervals)-.35,-.65);ax.set_title(f'Sector {sector}');ax.set_xlabel('Change in centered log residual');ax.axvline(0,color='#CCCCCC',lw=.7,zorder=0);ax.margins(x=.35);ax.tick_params(axis='x',labelsize=8)
+                for ax in list(axes.flat)[len(chunk):]:ax.set_visible(False)
+                legend=['Median (bold number)','25th–75th percentile interval (endpoint numbers)','No change (zero reference)']
+                fig.legend(handles=[Line2D([0],[0],marker='o',ls='',color=COLORS[method],ms=3,label=legend[0]),Line2D([0],[0],color=COLORS[method],lw=1.2,label=legend[1]),Line2D([0],[0],color='#CCCCCC',lw=.7,label=legend[2])],loc='lower center',frameon=False,bbox_to_anchor=(.54,.003))
+                fig.subplots_adjust(left=.16,right=.98,bottom=.14 if nrows==2 else .24,top=.96,wspace=.50,hspace=.30)
+                save(fig,name,['deep_paired_changes.csv'],legend,'All usable exact adjacent production-year intervals by sector. Unavailable groups are named; the full ten-interval obligation grid including empty boundary pairs remains in the corresponding table.')
+
+        # WFDOC: Compare all four estimators on the same common dynamic records, using saved counts only.
+        common_hist=read('deep_prediction_histograms.csv',deep)
+        common=common_hist[common_hist.sector.eq('ALL')&common_hist.sample_id.eq('common')&common_hist.source_year.eq(0)&common_hist.fit_scope.eq('in_fit')&common_hist.measure.eq('centered')]
+        common_methods=[m for m in COLORS if m in set(common.method)]
+        if common_methods:
+            assert common_methods==list(COLORS), 'Four-method common distribution requires all four admitted fits'
+            totals=common.groupby('method').N_total.first()
+            assert totals.nunique()==1, 'Common dynamic sample denominators differ across methods'
+            name='deep_common_distribution';fig,axes=plt.subplots(2,2,figsize=(6.5,5.9),sharex=True,sharey=True)
+            xmax=float(common.bin_upper.max());xmin=float(common.bin_lower.min());ymax=float(common.share.max())*180
+            for ax,method in zip(axes.flat,common_methods):
+                g=common[common.method.eq(method)]
+                histogram(ax,g,name,'deep_prediction_histograms.csv',PROFILE_KEYS+['bin_lower'],method)
+                ax.set_title(NAMES[method]);ax.set_xlim(xmin-.25,xmax+.25);ax.set_ylim(0,ymax)
+                ax.set_xlabel('Centered log residual');ax.set_ylabel('Share of common fitted records (%)')
+            legend=[f'{NAMES[m]}: common dynamic fit' for m in common_methods]+['Leaders: first, modal and last occupied bins']
+            handles=[Patch(color=COLORS[m],label=legend[i]) for i,m in enumerate(common_methods)]
+            handles.append(Line2D([0],[0],color='black',lw=.5,label=legend[-1]))
+            fig.legend(handles=handles,loc='lower center',frameon=False,ncol=2,bbox_to_anchor=(.52,.003))
+            fig.subplots_adjust(left=.11,right=.985,bottom=.19,top=.945,wspace=.23,hspace=.36)
+            save(fig,name,['deep_prediction_histograms.csv'],legend,'All four methods use the same common-input pooled dynamic records. Method-specific slopes and pooled reference means remain distinct. Identical0.5-log-point bins and shared axes; every occupied bin retained; no density smoothing or trimming.')
+
+        inputs=read('deep_input_domains.csv',deep)
+        titles={'y':'Reported value added','l':'Workers','k_begin':'Beginning capital','k_end':'Assumed end-year capital','i':'Capital additions','m':'Raw/supporting materials'}
+        years=list(range(2010,2023))
+        for group,fields in [('core',['y','l','k_begin']),('proxy',['k_end','i','m'])]:
+            name=f'deep_input_availability_{group}';fig,axes=plt.subplots(1,3,figsize=(6.5,5.2),sharey=True)
+            for ax,field in zip(axes,fields):
+                g=inputs[inputs.input.eq(field)&inputs.source_year.ne(0)].set_index('source_year');maximum=float(g.N_source.max())
+                for i,year in enumerate(years):
+                    if year==2016:
+                        ax.axhspan(i-.43,i+.43,facecolor='#EEEEEE',hatch='///',edgecolor='#BBBBBB',lw=0);ax.text(maximum/2,i,'No annual file',ha='center',va='center',fontsize=7);continue
+                    row=g.loc[year].copy();row['source_year']=year;ax.barh(i,row.N_source,height=.70,color='#DDDDDD')
+                    if field=='k_begin' and year in (2010,2017):
+                        ax.barh(i,row.N_source,height=.70,color='#F3F3F3',hatch='...',edgecolor='#BBBBBB',linewidth=0)
+                        ax.text(maximum/2,i,'No preceding file',ha='center',va='center',fontsize=7)
+                    ax.barh(i,row.N_positive,height=.70,color='#264C66');pos=float(row.N_positive)
+                    label=annotate(name,'deep_input_domains.csv',row,['source_year','input'],'N_positive',[pos,i],fmt='.0f',role='positive_count')
+                    ax.annotate(label,(pos,i),xytext=(-3,0) if pos>maximum*.15 else (3,0),textcoords='offset points',ha='right' if pos>maximum*.15 else 'left',va='center',fontsize=7.3,color='white' if pos>maximum*.15 else 'black')
+                    label=annotate(name,'deep_input_domains.csv',row,['source_year','input'],'N_source',[row.N_source,i],fmt='.0f',role='full_source_count');ax.text(1.015,i,label,transform=ax.get_yaxis_transform(),va='center',fontsize=7.3)
+                ax.set_xlim(0,maximum*1.05);ax.set_title(titles[field],fontsize=9);ax.set_xlabel('Observations');ax.tick_params(axis='x',labelsize=7)
+            axes[0].set_yticks(range(len(years)),labels=years,fontsize=8);axes[0].invert_yaxis()
+            legend=['Positive reported/constructed value (bar label)','Full annual source (right-hand count)','No annual file']
+            handles=[Patch(color='#264C66',label=legend[0]),Patch(color='#DDDDDD',label=legend[1]),Patch(facecolor='#EEEEEE',edgecolor='#BBBBBB',hatch='///',label=legend[2])]
+            if group=='core':legend.append('Beginning capital: no preceding calendar-year file');handles.append(Patch(facecolor='#F3F3F3',edgecolor='#BBBBBB',hatch='...',label=legend[-1]))
+            fig.legend(handles=handles,loc='lower center',frameon=False,bbox_to_anchor=(.55,.005));fig.subplots_adjust(left=.09,right=.92,top=.91,bottom=.24,wspace=.45)
+            save(fig,name,['deep_input_domains.csv'],legend,'All source-year counts. Beginning capital uses the same fictional company in the previous calendar year under the maintained year-end-stock assumption. Documentary flags remain unchanged; no missing value is filled.')
+
+    # WFDOC: Remove only obsolete assets named by our prior manifest, so continuation discovery cannot pick up stale pages.
+    manifest_path=provenance/'deep-figure-manifest.json'
+    if manifest_path.exists():
+        previous=json.loads(manifest_path.read_text());current={x['figure'] for x in inventory}
+        for entry in previous.get('figures',[]):
+            if entry['figure'] not in current:
+                for ext in ('pdf','svg','png'):
+                    path=figs/f"{entry['figure']}.{ext}"
+                    if path.is_file():path.unlink()
+    (provenance/'deep-figure-annotations.json').write_text(json.dumps(traces,indent=2)+'\n')
+    manifest_path.write_text(json.dumps(dict(data_label='G0.5 DEVELOPMENT — nominal production residuals; not final empirical findings',font_mapping=[dict(file=str(FONT/n),sha256=hashlib.sha256((FONT/n).read_bytes()).hexdigest()) for n in FONTFILES],figures=inventory),indent=2)+'\n')
+    print(json.dumps(dict(figures=len(inventory),numeric_annotations=len(traces),font='Times New Roman')))
+
+
+if __name__=='__main__':main()

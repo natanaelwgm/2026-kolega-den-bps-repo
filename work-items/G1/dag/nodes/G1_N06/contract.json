@@ -1,0 +1,66 @@
+{
+  "node_id": "G1_N06",
+  "branch": "nominal_development_compatibility",
+  "material_state_status": "implemented_aggregate_receipt_present_validation_separate",
+  "state": "Distributions comparisons and sidecar",
+  "inputs": [
+    "nominal/N04_predictions.dta",
+    "nominal/N03_frozen.dta",
+    "S01_input.dta"
+  ],
+  "input_nodes": [
+    "G1_N05"
+  ],
+  "outputs_relative_to_external_run": [
+    "nominal/N06_selected_attached.dta"
+  ],
+  "aggregate_outputs_relative_to_external_run": [
+    "outputs/nominal_distribution_quantiles.csv",
+    "outputs/nominal_histogram_bins.csv",
+    "outputs/nominal_pairwise_comparisons.csv",
+    "outputs/nominal_rank_scatter_bins.csv"
+  ],
+  "available_aggregate_receipts": [
+    "outputs/nominal_distribution_quantiles.csv",
+    "outputs/nominal_histogram_bins.csv",
+    "outputs/nominal_pairwise_comparisons.csv",
+    "outputs/nominal_rank_scatter_bins.csv"
+  ],
+  "available_private_artifacts": [],
+  "grain": "Unique original-observation sidecar; separately keyed aggregate distribution/comparison cells",
+  "keys": [
+    "obs_id",
+    "source_year (sidecar)",
+    "sector/method/sample/measure (aggregates)",
+    "sector/sample/method-pair/comparison_scope (comparisons)"
+  ],
+  "denominator": "Primary own/common pooled dynamic fitted records for aggregates; all supported primary domain predictions for attachment; each pairwise intersection and four-method intersection distinguished. Full33049-row source denominator for selected-input attachment; interval rows excluded",
+  "units": {
+    "levels": "reported monetary candidate units; no verified conversion or deflation",
+    "logs_and_residuals": "natural-log points; nominal structural residual contains price/measurement/transitory components",
+    "coefficients": "dimensionless elasticities",
+    "counts": "source observations, derivative risk intervals, distinct synthetic firms and draws explicitly distinguished"
+  },
+  "calendar": "Source2010–2015/2017–2022; production2011–2015/2018–2022; dynamic2012–2015/2019–2022; actual delta1",
+  "decision": "Retain all finite tails, width0.5 log histogram bins, raw and sector-method-centered residuals. Pairwise ranks use exactly shared records; preserve empty four-method obligations. Release rank-bin means only when N_bin≥5; no firm scatter points.",
+  "missingness": "Missing/zero/negative remain distinct; no imputation; unsupported statistical results remain missing and every skipped/failed obligation is retained",
+  "source_code": "work-items/G1/stata/nominal/N06_outputs.do",
+  "source_code_sha256": "a2136c413263eb2bb18b9e31ec5e568ab3955d80126ca7ce625d59535ee6fe36",
+  "executed_source_sha256": "1a05f177eebc8ac19680573f6efe9418835dd4eefdd67ac8d9bc38c8d2a0092f",
+  "executed_source_or_proven_comment_only": true,
+  "specification_path": "work-items/G1/nominal-specification.json",
+  "specification_sha256": "b7d44ee476be421e158868783f6f31f1408d7f3b028230fecbc600083cebf8b5",
+  "aggregate_receipt_sha256": {
+    "outputs/nominal_distribution_quantiles.csv": "4f2a91fda32b168b910e3996d97d3cabb0532fdd270c012e50fbe35a0236658e",
+    "outputs/nominal_histogram_bins.csv": "0b173ad2c2970e353c0d4cc3d0015975fd3ad7f2b636a7f43a9cf455e472d71e",
+    "outputs/nominal_pairwise_comparisons.csv": "0a708e56c06bb849510a413e9e52f2dfa2e39b34c587e455560d764e8a13302b",
+    "outputs/nominal_rank_scatter_bins.csv": "9f1c0f298ae9384ce6205f7446d74ca2e1f4bb73333d75e273559c490beb970b"
+  },
+  "execution_evidence_root": "/Users/natanaelmassie/Downloads/deasy-g1-issue9-20260913/work-items/G1/release",
+  "primary_real_admission": false,
+  "panel_mode": "official synthetic_development; real linkage not required or claimed",
+  "plan": "releases/2026-09-13-data-foundation/stata-preparation/row-plans/G1.json",
+  "plan_sha256": "dd88cfa94af5f212a7b0a4b70f99fea1c0201f950cd19333357739b96b5da1ca",
+  "input_manifest": "data/g0-5-development/manifest.json",
+  "input_manifest_sha256": "060b0ee0a2158a9c94b0e7e68fcfba719eda37561422855471a99da6810ba260"
+}

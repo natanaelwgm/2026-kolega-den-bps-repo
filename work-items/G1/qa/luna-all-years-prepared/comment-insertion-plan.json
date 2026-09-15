@@ -1,0 +1,647 @@
+{
+  "status": "PASS_ALL_REVIEWED_SCIENTIFIC_SOURCES",
+  "review_id": "G1_LUNA_ALL_YEARS_COMMENT_PASS_20260914",
+  "created_at": "2026-09-14T03:21:32+07:00",
+  "runtime": {
+    "model": "gpt-5.6-luna",
+    "reasoning_effort": "max",
+    "runtime_label": "gpt-5.6-luna/max"
+  },
+  "project_root": "/Users/natanaelmassie/Downloads/deasy-g1-issue9-20260913",
+  "branch": "g1/issue-9-g05-20260913",
+  "head_at_review": "fec42876613808d7276f28547209c177ca77f880",
+  "source_state": {
+    "base_stata_run_active": false,
+    "sources_pinned": false,
+    "source_files_edited": true,
+    "stata_run": false,
+    "python_source_files_edited": true,
+    "commentary_only_when_applied": true,
+    "note": "All reviewed scientific, validator, runner and downstream-handoff comments are applied after root authorization and proven insertion-only. Publication-builder coverage is outside this receipt."
+  },
+  "specification_refs": {
+    "nominal_specification_id": "G05v3_nominal_assumedK_2010_2022",
+    "nominal_specification_sha256": "b7d44ee476be421e158868783f6f31f1408d7f3b028230fecbc600083cebf8b5",
+    "deep_contract_id": "G1_ASSUMED_CAPITAL_ALL_YEARS_DIAGNOSTICS_V2",
+    "deep_contract_sha256": "0447443beecd73db044abd6204e5472cb4a7b36d2619108467d0c8f1c2bcd641",
+    "input_manifest_sha256": "060b0ee0a2158a9c94b0e7e68fcfba719eda37561422855471a99da6810ba260"
+  },
+  "scope": {
+    "language": "Indonesian",
+    "style": "WFDOC comment lines only; precise, non-repetitive, source-bound, no publication claims",
+    "coverage": "all-years nominal inputs, exact-calendar samples, four-method fit grid, bootstrap, attachment, deep diagnostics, independent validators and downstream handoff",
+    "n13": "Reviewed. No new insertion proposed because the unchanged N13 path already states that it reads saved fits/draws and does not refit or resample."
+  },
+  "baseline_snapshot_root": "work-items/G1/qa/luna-all-years-prepared/baseline",
+  "reviewed_paths": [
+    {
+      "path": "work-items/G1/stata/nominal/N01_inputs.do",
+      "before_sha256": "382f13d1efa75ac4964b6785196c396d25a796918d184e14122d58493d9575ea",
+      "baseline_snapshot": "work-items/G1/qa/luna-all-years-prepared/baseline/01-stata-nominal-N01_inputs.do.txt",
+      "planned_insertions": [
+        {
+          "id": "N01-I01",
+          "before_line": 14,
+          "anchor": "gen byte nom_k_concept=!missing(L.source_year)",
+          "text": "* WFDOC: *_documented hanya merekam flag dokumenter dari sumber; *_concept dan *_assumed menerapkan konvensi hitung yang disahkan owner tanpa mengubah nilai input atau menyatakan verifikasi aktual."
+        },
+        {
+          "id": "N01-I02",
+          "before_line": 18,
+          "anchor": "gen double nom_y=ln(value_added_nominal) if value_added_nominal>0 & !missing(value_added_nominal)",
+          "text": "* WFDOC: Setiap ln hanya dibentuk untuk nilai finite yang positif; nol, negatif dan missing tetap terlihat sebagai tidak layak sehingga tidak menjadi angka pengganti."
+        },
+        {
+          "id": "N01-I03",
+          "before_line": 25,
+          "anchor": "gen byte nom_production=(inrange(source_year,2011,2015) | inrange(source_year,2018,2022)) & ustrregexm(industry_code,\"^[0-9]{5}$\") & inrange(nom_sector_num,10,33)",
+          "text": "* WFDOC: Production hanya mencakup tahun produksi yang dideklarasikan, kode industri tepat lima digit numerik, dan sektor dua digit 10–33; sesudahnya tiap metode memakai proxy domainnya sendiri."
+        },
+        {
+          "id": "N01-I04",
+          "before_line": 32,
+          "anchor": "gen str64 nom_capital_assumption=\"Reported source-year stock treated as December stock; unverified\"",
+          "text": "* WFDOC: Dua string asumsi disimpan bersama output agar caveat stok modal dan kandidat investasi terbaca downstream; metadata ini tidak memulihkan bukti supplier atau deflator."
+        }
+      ]
+    },
+    {
+      "path": "work-items/G1/stata/nominal/N02_risk.do",
+      "before_sha256": "19a472d5c8488728dd50050c580e7740f666651d4a65c033c37d504f4d25c90c",
+      "baseline_snapshot": "work-items/G1/qa/luna-all-years-prepared/baseline/02-stata-nominal-N02_risk.do.txt",
+      "planned_insertions": [
+        {
+          "id": "N02-I01",
+          "before_line": 4,
+          "anchor": "levelsof source_year, local(source_years)",
+          "text": "* WFDOC: Setiap baris sumber digeser ke endpoint t+1 dan hanya dipertahankan bila file kalender t+1 tersedia; karena itu tidak dibuat jembatan 2015→2017 atau endpoint setelah 2022."
+        },
+        {
+          "id": "N02-I02",
+          "before_line": 17,
+          "anchor": "merge 1:1 psid source_year using \"$G1_RUN/nominal/N01_source.dta\"",
+          "text": "* WFDOC: Merge membedakan interval-only (_merge==1) dari endpoint sumber yang benar-benar ada (_merge==3); using-only ditolak oleh assert dan kunci firm-year tetap satu-ke-satu."
+        },
+        {
+          "id": "N02-I03",
+          "before_line": 27,
+          "anchor": "foreach v in op lp acf wrdg common {",
+          "text": "* WFDOC: Interval-only tidak boleh masuk domain produksi; baris ini dipertahankan hanya untuk semesta risk/selection, tetap tanpa obs_id dan tidak dihitung sebagai observasi sumber."
+        }
+      ]
+    },
+    {
+      "path": "work-items/G1/stata/nominal/N03_samples.do",
+      "before_sha256": "6d509fd0eef9f4a4a2d2685b0a9c60fefe3ab5dc676e27f887a080ac88340a8a",
+      "baseline_snapshot": "work-items/G1/qa/luna-all-years-prepared/baseline/03-stata-nominal-N03_samples.do.txt",
+      "planned_insertions": [
+        {
+          "id": "N03-I01",
+          "before_line": 7,
+          "anchor": "gen byte nom_dynamic_`m'=nom_domain_`m'==1 & L.nom_domain_`m'==1 & nom_sector_num==L.nom_sector_num",
+          "text": "* WFDOC: nom_sector_num memeriksa sektor t dan t−1 sama; event interval dengan lag sektor berbeda tidak memenuhi dynamic."
+        },
+        {
+          "id": "N03-I02",
+          "before_line": 11,
+          "anchor": "gen byte nom_selection=nom_risk==1 & !missing(L.nom_k,L.nom_i) & nom_sector_num==L.nom_sector_num",
+          "text": "* WFDOC: Selection memakai interval risk dengan stok awal dan kandidat investasi lagged yang lengkap; interval event dapat mendukung OP tanpa menjadi baris produksi."
+        },
+        {
+          "id": "N03-I03",
+          "before_line": 14,
+          "anchor": "postfile `supp' str2 sector str8 method str8 sample_id",
+          "text": "* WFDOC: Support menyimpan denominator source, domain, dynamic dan selection secara terpisah per sektor×metode×sampel agar attrition tidak terbaca sebagai satu sampel."
+        }
+      ]
+    },
+    {
+      "path": "work-items/G1/stata/nominal/N04_fits.do",
+      "before_sha256": "550c4183a966af66d2f88a8ef79fd5a0fc84de6c6a0f9008bd5da8cd99be02e2",
+      "baseline_snapshot": "work-items/G1/qa/luna-all-years-prepared/baseline/04-stata-nominal-N04_fits.do.txt",
+      "planned_insertions": [
+        {
+          "id": "N04-I01",
+          "before_line": 74,
+          "anchor": "gen byte n04_dynamic=(`domain'==1 & L.`domain'==1)",
+          "text": "* WFDOC: Setelah dibatasi ke sektor dan cell sample, n04_dynamic hanya mengakui domain lengkap pada t dan t−1 kalender; n04_firm kemudian menghitung firm sintetis unik untuk cutoff dukungan."
+        },
+        {
+          "id": "N04-I02",
+          "before_line": 103,
+          "anchor": "local support_reason \"\"",
+          "text": "* WFDOC: support_reason mencatat gate pertama yang gagal dalam urutan tetap; semua variant tetap dicatat sehingga skip karena dukungan tidak tertukar dengan fit failure."
+        },
+        {
+          "id": "N04-I03",
+          "before_line": 116,
+          "anchor": "foreach coordinate in y l k p {",
+          "text": "* WFDOC: Median domain positif hanya dipakai untuk menstabilkan koordinat numerik estimator; residu dan normalizer sesudah fit dihitung kembali dari log nominal asli."
+        },
+        {
+          "id": "N04-I04",
+          "before_line": 148,
+          "anchor": "capture noisily g1_fit, method(`method') id(psid) time(source_year)",
+          "text": "* WFDOC: Risk/exit hanya diteruskan pada OP; selectionmode synthetic_disappearance menandai event panel fiktif development dan tidak menyebut penutupan perusahaan aktual."
+        },
+        {
+          "id": "N04-I05",
+          "before_line": 175,
+          "anchor": "gen byte in_fit=e(sample)",
+          "text": "* WFDOC: e(sample) menandai baris yang benar-benar masuk dynamic fit; sidecar tetap dibuat untuk seluruh baris domain current-year sehingga prediction di luar fit tidak hilang."
+        },
+        {
+          "id": "N04-I06",
+          "before_line": 217,
+          "anchor": "use \"$G1_RUN/nominal/fit_results.dta\", clear",
+          "text": "* WFDOC: Ringkasan fit_results mempertahankan sel success, failure dan support skip beserta tahun fit, rank serta normalizer pooled; tidak ada variant yang dipilih berdasarkan hasil."
+        }
+      ]
+    },
+    {
+      "path": "work-items/G1/stata/nominal/N05_bootstrap.do",
+      "before_sha256": "3ca3f7ecf82fdc6e3d799edc85f3ffc7dd9c38f47809935e42c475f596738dae",
+      "baseline_snapshot": "work-items/G1/qa/luna-all-years-prepared/baseline/05-stata-nominal-N05_bootstrap.do.txt",
+      "planned_insertions": [
+        {
+          "id": "N05-I01",
+          "before_line": 8,
+          "anchor": "keep if variant==\"primary\" & status==\"fit_success\"",
+          "text": "* WFDOC: Hanya primary fit_success yang membentuk cell resampling; variant sensitivitas dan primary yang gagal tidak dapat ditutup oleh bootstrap cell lain."
+        },
+        {
+          "id": "N05-I02",
+          "before_line": 36,
+          "anchor": "capture noisily g1_bootstrap, id(psid)",
+          "text": "* WFDOC: Opsi method, proxy, eligibility, kalender dan seed mengulang kontrak point fit pada setiap full-process draw; bootstrap ini eksploratif dan tetap bersyarat pada linkage fiktif."
+        },
+        {
+          "id": "N05-I03",
+          "before_line": 48,
+          "anchor": "copy \"$G1_RUN/nominal/bootstrap_`sector'_`method'_`sample'.csv\"",
+          "text": "* WFDOC: File draw hanya dipromosikan ke outputs setelah panggilan selesai dengan rc=0; ringkasan tetap mencatat rc dan jumlah sukses bila cell gagal."
+        }
+      ]
+    },
+    {
+      "path": "work-items/G1/stata/nominal/N06_outputs.do",
+      "before_sha256": "1a05f177eebc8ac19680573f6efe9418835dd4eefdd67ac8d9bc38c8d2a0092f",
+      "baseline_snapshot": "work-items/G1/qa/luna-all-years-prepared/baseline/06-stata-nominal-N06_outputs.do.txt",
+      "planned_insertions": [
+        {
+          "id": "N06-I01",
+          "before_line": 12,
+          "anchor": "use \"$G1_RUN/nominal/N04_predictions.dta\", clear",
+          "text": "* WFDOC: Dataset primary untuk distribusi hanya mengambil in_fit; attachment di bagian akhir sengaja membaca seluruh primary prediction agar baris domain di luar fit tetap dapat diaudit."
+        },
+        {
+          "id": "N06-I02",
+          "before_line": 32,
+          "anchor": "quietly summarize `value', detail",
+          "text": "* WFDOC: summarize, detail dan histogram memakai seluruh nilai finite dalam group yang sama; tidak ada trimming, dan n menjadi penyebut statistik maupun share bin."
+        },
+        {
+          "id": "N06-I03",
+          "before_line": 61,
+          "anchor": "use `primary', clear",
+          "text": "* WFDOC: Reshape memakai obs_id×source_year×sector×sample_id sehingga metode dibandingkan pada baris sumber yang sama; mask pairwise dan four_method tetap dua cakupan berbeda."
+        },
+        {
+          "id": "N06-I04",
+          "before_line": 154,
+          "anchor": "use \"$G1_RUN/nominal/N04_predictions.dta\", clear",
+          "text": "* WFDOC: Sidecar attachment mempertahankan semua primary prediction yang tersedia, bukan hanya in_fit; flag pred dan in_fit memisahkan ketersediaan residual dari keikutsertaan estimasi."
+        },
+        {
+          "id": "N06-I05",
+          "before_line": 199,
+          "anchor": "merge 1:1 obs_id source_year using `eligibility', assert(master match) nogen",
+          "text": "* WFDOC: Eligibility, pre-lag domain dan flag asumsi digabung satu-ke-satu ke seluruh master; missing hanya diubah menjadi nol pada indikator keluaran, bukan pada nilai sumber."
+        }
+      ]
+    },
+    {
+      "path": "work-items/G1/stata/nominal/N07_master.do",
+      "before_sha256": "73b200852bf21dcf411bd01433561265d9812c6cf15b0af0396578f607167fed",
+      "baseline_snapshot": "work-items/G1/qa/luna-all-years-prepared/baseline/07-stata-nominal-N07_master.do.txt",
+      "planned_insertions": [
+        {
+          "id": "N07-I01",
+          "before_line": 14,
+          "anchor": "merge 1:1 obs_id source_year using `sidecar', assert(match) nogen",
+          "text": "* WFDOC: Merge exact obs_id×source_year hanya dapat menambahkan sidecar yang sudah diaudit; assert(match) dan row count memastikan tidak ada observasi master yang hilang atau baru."
+        },
+        {
+          "id": "N07-I02",
+          "before_line": 23,
+          "anchor": "gen byte source_record=1",
+          "text": "* WFDOC: Rekap tahunan memakai seluruh row master sebagai N_source lalu menghitung prediction dan dynamic fit per metode; ini bukan jumlah perusahaan atau inferensi populasi."
+        }
+      ]
+    },
+    {
+      "path": "work-items/G1/stata/deep/G1_deep.do",
+      "before_sha256": "1935fb20ae5d36d08fbd8846ee16bb863de447bf3eb13277b685226ef5a44189",
+      "baseline_snapshot": "work-items/G1/qa/luna-all-years-prepared/baseline/08-stata-deep-G1_deep.do.txt",
+      "planned_insertions": [
+        {
+          "id": "DEEP-DRIVER-I01",
+          "before_line": 36,
+          "anchor": "* WFDOC: Urutan ini hanya merangkum domain/hasil yang sudah dibekukan",
+          "text": "* WFDOC: D_PAIR_TO hanya memuat endpoint yang memiliki t−1 aktual; pasangan 2015→2017 dan interval yang menyeberangi 2016 tidak pernah dibentuk."
+        },
+        {
+          "id": "DEEP-DRIVER-I02",
+          "before_line": 37,
+          "anchor": "foreach edge in N08_inputs N09_funnel N10_profiles N11_pairs N12_worked N13_existing_fits {",
+          "text": "* WFDOC: Stage membaca snapshot base secara berurutan dan hanya membuat agregat diagnostics; loop ini tidak refit koefisien, sedangkan sentinel akhir menjadi bukti semua edge kembali."
+        }
+      ]
+    },
+    {
+      "path": "work-items/G1/stata/deep/N08_inputs.do",
+      "before_sha256": "0bf130554cb76243c905e0ddc00957d1d0a3e24bc4a7ab7656ce44b3466a17cb",
+      "baseline_snapshot": "work-items/G1/qa/luna-all-years-prepared/baseline/09-stata-deep-N08_inputs.do.txt",
+      "planned_insertions": [
+        {
+          "id": "N08-I01",
+          "before_line": 24,
+          "anchor": "foreach year in $D_YEARS {",
+          "text": "* WFDOC: source_year=0 adalah pool seluruh source rows; tahun lain memakai exact source_year, sehingga 2016 tetap kosong dan tidak ada baris sintetis di antara 2015 dan 2017."
+        },
+        {
+          "id": "N08-I02",
+          "before_line": 39,
+          "anchor": "local flag \"1\"",
+          "text": "* WFDOC: nom_k_concept menandai adanya lag kalender dan nom_i_concept mengikuti asumsi candidate; concept_fail sengaja dipisahkan dari missing, nol dan negatif."
+        },
+        {
+          "id": "N08-I03",
+          "before_line": 48,
+          "anchor": "count if (`yr') & `v'>0 & !missing(`v') & (`flag')",
+          "text": "* WFDOC: N_log_usable hanya menghitung nilai positif yang lolos concept gate; tiga scale menjaga perbedaan native, positive dan log_positive terlihat tanpa deflasi."
+        }
+      ]
+    },
+    {
+      "path": "work-items/G1/stata/deep/N09_funnel.do",
+      "before_sha256": "8b0b29857687663bd020a917cd8595ea0b9f7be831911e85917bfb97526ad2e5",
+      "baseline_snapshot": "work-items/G1/qa/luna-all-years-prepared/baseline/10-stata-deep-N09_funnel.do.txt",
+      "planned_insertions": [
+        {
+          "id": "N09-I01",
+          "before_line": 25,
+          "anchor": "merge m:1 nom_sector using `cell', assert(3) nogen",
+          "text": "* WFDOC: Status admitted diikat ke sektor dan cell metode/sampel yang sama; assert(3) menolak sektor tanpa status primary agar tidak menjadi admitted=False secara diam-diam."
+        },
+        {
+          "id": "N09-I02",
+          "before_line": 39,
+          "anchor": "foreach stage in source_original production_valid_sector positive_output positive_labor positive_begin_capital positive_proxy sample_domain calendar_dynamic admitted_dynamic {",
+          "text": "* WFDOC: chain memulai dari N_source dan setiap tahap memakai N_previous dari tahap sebelumnya; prediction_branch di bawah kembali ke pre-lag domain karena prediction di luar dynamic fit tetap dilaporkan."
+        },
+        {
+          "id": "N09-I03",
+          "before_line": 65,
+          "anchor": "* WFDOC: OP intervals are grouped by endpoint source_year",
+          "text": "* WFDOC: OP risk memakai endpoint interval pada tahun yang sama; source_year=0 menggabungkan interval, bukan perusahaan unik, dan event partitions menjumlah dari selection lengkap."
+        }
+      ]
+    },
+    {
+      "path": "work-items/G1/stata/deep/N10_profiles.do",
+      "before_sha256": "b90bba562c5cc0c2492b2aa266573ef4f044314af4195d4197b7a892a39c5986",
+      "baseline_snapshot": "work-items/G1/qa/luna-all-years-prepared/baseline/11-stata-deep-N10_profiles.do.txt",
+      "planned_insertions": [
+        {
+          "id": "N10-I01",
+          "before_line": 14,
+          "anchor": "merge m:1 obs_id source_year using `logs', keep(3) assert(2 3) nogen",
+          "text": "* WFDOC: Merge m:1 hanya melampirkan y/l/k dari N01 ke primary prediction yang punya source row; assert dan keep(3) mencegah linkage prediction tanpa observasi sumber."
+        },
+        {
+          "id": "N10-I02",
+          "before_line": 18,
+          "anchor": "assert inlist(source_year,2012,2013,2014,2015,2019,2020,2021,2022) if in_fit",
+          "text": "* WFDOC: Batas tahun ini hanya diperiksa untuk baris in_fit; prediction di luar dynamic fit tetap boleh masuk profile annual bila berada pada production year yang tersedia."
+        },
+        {
+          "id": "N10-I03",
+          "before_line": 46,
+          "anchor": "local np=r(N)",
+          "text": "* WFDOC: N_source, N_domain, N_predicted, N_in_fit dan N_outside_fit memakai penyebut yang berbeda dan dicatat bersama; source_year=0 adalah kewajiban pooled, bukan tahun kalender."
+        },
+        {
+          "id": "N10-I04",
+          "before_line": 73,
+          "anchor": "deep_stats `measure' if `sc'",
+          "text": "* WFDOC: deep_stats menerima scope yang sedang dipilih; hitungan tail dihitung strict sebelum supresi statistik tepat, sehingga jumlah outlier tetap tersedia saat N<5."
+        }
+      ]
+    },
+    {
+      "path": "work-items/G1/stata/deep/N11_pairs.do",
+      "before_sha256": "8810536b56f93a3e20e6561df5a1e0a6b97dff0a923844cf4917e7428e290f2e",
+      "baseline_snapshot": "work-items/G1/qa/luna-all-years-prepared/baseline/12-stata-deep-N11_pairs.do.txt",
+      "planned_insertions": [
+        {
+          "id": "N11-I01",
+          "before_line": 23,
+          "anchor": "merge 1:1 psid sector method sample_id year_to using `dest', keep(3) nogen",
+          "text": "* WFDOC: Inner join satu-ke-satu mempertahankan hanya psid×sektor×metode×sampel yang memiliki kedua endpoint; syarat berikut menolak bridge kalender melalui 2016."
+        },
+        {
+          "id": "N11-I02",
+          "before_line": 37,
+          "anchor": "if `yt'==0 {",
+          "text": "* WFDOC: Baris pooled 0/0 menjumlahkan endpoint dari semua pasangan exact-calendar; satu firm-year dapat muncul pada dua interval dan denominator ini bukan jumlah perusahaan unik."
+        },
+        {
+          "id": "N11-I03",
+          "before_line": 62,
+          "anchor": "gen double change=`measure'_to-`measure'_from",
+          "text": "* WFDOC: change dihitung pada skala measure yang dipilih; ratio hanya digunakan untuk index dan hitungan arah memakai perubahan yang sama pada pasangan terpilih."
+        },
+        {
+          "id": "N11-I04",
+          "before_line": 79,
+          "anchor": "if `np'>=5 {",
+          "text": "* WFDOC: Mean, rasio dan korelasi tepat hanya dilepas saat N_pairs≥5; hitungan negatif/nol/positif dan bin tetap menjadi diagnostics agregat."
+        }
+      ]
+    },
+    {
+      "path": "work-items/G1/stata/deep/N12_worked.do",
+      "before_sha256": "71e587d6d219b035c05a7fa6a2bef890b8fbf8d07ba1d06a94bf1598115918e4",
+      "baseline_snapshot": "work-items/G1/qa/luna-all-years-prepared/baseline/13-stata-deep-N12_worked.do.txt",
+      "planned_insertions": [
+        {
+          "id": "N12-I01",
+          "before_line": 29,
+          "anchor": "if `n'>=5 {",
+          "text": "* WFDOC: Group means memakai log y/l/k pada kelompok prediction; identitas raw=mean_y−beta_L×mean_l−beta_K×mean_k diuji sebelum centering dengan normalizer pooled yang sama."
+        },
+        {
+          "id": "N12-I02",
+          "before_line": 46,
+          "anchor": "local raw=10-`bl'*3-`bk'*8",
+          "text": "* WFDOC: Baris illustrative_fixed_log_inputs memakai log yang dirancang dan slope cell tanpa N atau firm denominator; source_year=0 di sini adalah label contoh, bukan observed pooled group."
+        }
+      ]
+    },
+    {
+      "path": "work-items/G1/stata/deep/N13_existing_fits.do",
+      "before_sha256": "97abe56e7f0016c0375469c8fcc16ba24caa898199582cea880e0bc5b16fe67b",
+      "baseline_snapshot": "work-items/G1/qa/luna-all-years-prepared/baseline/14-stata-deep-N13_existing_fits.do.txt",
+      "planned_insertions": [],
+      "review_note": "No insertion required. Existing Indonesian headers explain same-cell primary comparison, no refit/resampling, suppression and privacy."
+    },
+    {
+      "path": "work-items/G1/stata/G1.do",
+      "before_sha256": "08a40ae7f0b355a60b33adf4fd1d15f338645af14ae3b6109d2038f6e0b26ec7",
+      "baseline_snapshot": "work-items/G1/qa/luna-all-years-prepared/baseline/00-stata-G1.do.txt",
+      "planned_insertions": [],
+      "review_note": "Reviewed at root authorization. Existing Indonesian dispatcher comments already explain source pinning, stage order, no-refit boundary and sentinels; no new insertion needed."
+    },
+    {
+      "path": "work-items/G1/stata/methods/g1_bootstrap.ado",
+      "before_sha256": "c0e9c516ec9bffafa68f61a7837b2fd6a36398f59ffa763eb2832ca9d2387ef1",
+      "baseline_snapshot": "work-items/G1/qa/luna-all-years-prepared/baseline/15-stata-methods-g1_bootstrap.ado.txt",
+      "planned_insertions": [
+        {
+          "id": "BOOT-I01",
+          "before_line": 4,
+          "anchor": "* WFDOC: Hasilnya ringkasan koefisien dan diagnostik per draw",
+          "text": "* WFDOC: Pada nominal_development, panelstatus synthetic_development dan ID resmi paket development boleh dipakai secara eksplisit; syarat ini tidak mengesahkan linkage aktual dan mode real tetap memerlukan ID terverifikasi."
+        }
+      ]
+    },
+    {
+      "path": "work-items/G1/validate_nominal.py",
+      "before_sha256": "a46e37889d7730156f63727be67db061a5d02915896a7c63a5269cde9ece3817",
+      "baseline_snapshot": "work-items/G1/qa/luna-all-years-prepared/baseline/16-validate_nominal.py.txt",
+      "planned_insertions": [
+        {
+          "id": "VN-I01",
+          "before_line": 57,
+          "anchor": "check(\"complete_declared_source_calendar\", set(source.source_year) == source_years)",
+          "text": "# WFDOC: production_years diturunkan dari ketersediaan t−1 source, sedangkan dynamic_years diturunkan lagi dari t−1 production; dua derivasi ini mempertahankan gap 2016."
+        },
+        {
+          "id": "VN-I02",
+          "before_line": 80,
+          "anchor": "for output, column in [(\"nom_y\", \"value_added_nominal\")",
+          "text": "# WFDOC: *_documented menyalin flag sumber; *_concept dan *_assumed merekam konvensi hitung yang disahkan owner, tanpa mengubah nilai input atau membuat pengamatan baru."
+        },
+        {
+          "id": "VN-I03",
+          "before_line": 86,
+          "anchor": "wanted[\"nom_production\"] = index.get_level_values(1).isin(spec[\"production_years\"])",
+          "text": "# WFDOC: Predicate ini harus sama dengan N01: tahun produksi, kode industri tepat lima digit numerik dan sektor 10–33; validasi membandingkan domain per baris setelahnya."
+        },
+        {
+          "id": "VN-I04",
+          "before_line": 102,
+          "anchor": "risk_keys = {(f, y + 1) for f, y in index if y + 1 in source_years}",
+          "text": "# WFDOC: risk_keys adalah union observasi sumber dengan endpoint interval t+1 yang benar-benar tersedia; interval-only tetap turunan sintetis dan tidak boleh menjadi source row."
+        },
+        {
+          "id": "VN-I05",
+          "before_line": 153,
+          "anchor": "local_selection = cell_z.nom_risk.eq(1).to_numpy()",
+          "text": "# WFDOC: local_selection memakai state modal dan investasi pada lag kalender untuk risk rows; cell sudah dibatasi sektor sehingga support OP tidak mengambil lag sektor lain."
+        },
+        {
+          "id": "VN-I06",
+          "before_line": 196,
+          "anchor": "primary = pred[pred.variant.eq(\"primary\") & pred.in_fit.eq(1)]",
+          "text": "# WFDOC: primary hanya baris dynamic yang benar-benar masuk fit, sedangkan all_primary adalah seluruh prediction production-domain yang dipakai untuk attachment."
+        },
+        {
+          "id": "VN-I07",
+          "before_line": 302,
+          "anchor": "# WFDOC: Audit bootstrap mempertahankan ID draw gagal",
+          "text": "# WFDOC: Pemeriksaan bootstrap mengikat jumlah draw dan seed, kesinambungan point estimate serta covariance n−1; ambang sukses dipisahkan dari status panggilan."
+        }
+      ]
+    },
+    {
+      "path": "work-items/G1/validate_master.py",
+      "before_sha256": "d7092f92d210d95c1938938cd2ae627243f323150ac05bad691447245573e1dd",
+      "baseline_snapshot": "work-items/G1/qa/luna-all-years-prepared/baseline/17-validate_master.py.txt",
+      "planned_insertions": [
+        {
+          "id": "VM-I01",
+          "before_line": 18,
+          "anchor": "for a in original:",
+          "text": "# WFDOC: Set key firm-year dan obs-year dikumpulkan lintas chunk; pemeriksaan di dalam chunk saja dapat melewatkan duplikasi tepat di batas potongan."
+        },
+        {
+          "id": "VM-I02",
+          "before_line": 40,
+          "anchor": "# WFDOC: Gerbang akhir mengunci cakupan 33.049 baris",
+          "text": "# WFDOC: Kedua key global dilaporkan terpisah karena firm-year menguji panel fiktif, sedangkan obs-year menguji identitas observasi yang dipakai attachment."
+        }
+      ]
+    },
+    {
+      "path": "work-items/G1/validate_deep.py",
+      "before_sha256": "ea5028c2ad0d923b3d98e4f64dd852c5c19e74c8cec5aa585a722f07b0454854",
+      "baseline_snapshot": "work-items/G1/qa/luna-all-years-prepared/baseline/18-validate_deep-contract-corrected.py.txt",
+      "planned_insertions": [
+        {
+          "id": "VD-I01",
+          "before_line": 70,
+          "anchor": "n1=pd.read_stata(base/'nominal/N01_source.dta'",
+          "text": "# WFDOC: Validator membaca snapshot base dan output aggregate secara read-only; prediksi primary dipakai untuk rekonstruksi, tanpa menjalankan Stata, refit atau resampling."
+        },
+        {
+          "id": "VD-I02",
+          "before_line": 76,
+          "anchor": "pair_years=[(year-1,year) for year in actual_years if year-1 in actual_years]",
+          "text": "# WFDOC: pair_years mencakup semua pasangan file kalender yang benar-benar berurutan, termasuk transisi history→production; coefficient_estimation_years diperiksa terpisah untuk dynamic fit."
+        },
+        {
+          "id": "VD-I03",
+          "before_line": 80,
+          "anchor": "pred=pred.merge(n1[['obs_id','source_year','nom_y','nom_l','nom_k']]",
+          "text": "# WFDOC: Merge many_to_one hanya mengambil koordinat y/l/k N01 berdasarkan obs_id-tahun; tiga identitas residual kemudian diuji kembali pada skala log native."
+        },
+        {
+          "id": "VD-I04",
+          "before_line": 96,
+          "anchor": "# N08 independently validates source preservation",
+          "text": "# WFDOC: Rekonstruksi N08 memisahkan nilai source dari flag lag/concept dan menghitung ulang domain input tanpa mengubah file perantara."
+        },
+        {
+          "id": "VD-I05",
+          "before_line": 122,
+          "anchor": "# N09: sequential production filters",
+          "text": "# WFDOC: Expected funnel memakai gate berurutan yang sama untuk setiap sektor×metode×sample; OP risk/selection dihitung pada denominator interval terpisah."
+        },
+        {
+          "id": "VD-I06",
+          "before_line": 144,
+          "anchor": "# N10: pooled and annual predictions",
+          "text": "# WFDOC: Expected N10 menjaga perbedaan source/domain/prediction/in-fit/outside-fit dan mempertahankan kewajiban pooled serta annual, termasuk cell kosong."
+        },
+        {
+          "id": "VD-I07",
+          "before_line": 167,
+          "anchor": "# N11: exact adjacent-year joins only",
+          "text": "# WFDOC: Expected N11 memakai join exact psid×sector×method×sample dan pooled endpoint counts; firm-year boleh muncul pada lebih dari satu interval, tanpa bridge 2016."
+        },
+        {
+          "id": "VD-I08",
+          "before_line": 216,
+          "anchor": "# WFDOC: Cocokkan semua kolom dan kunci unik",
+          "text": "# WFDOC: Perbandingan dilakukan setelah sort pada kunci kontrak; numeric memakai rtol/atol yang sama, teks harus identik dan hash tiap CSV masuk receipt."
+        }
+      ]
+    },
+    {
+      "path": "work-items/G1/run.py",
+      "before_sha256": "22280f6bf4878612186dbcc8d456276cb971eeb06d9718d8b66a8a7ca67f3837",
+      "baseline_snapshot": "work-items/G1/qa/luna-all-years-prepared/baseline/19-run.py.txt",
+      "planned_insertions": [
+        {
+          "id": "RUN-I01",
+          "before_line": 33,
+          "anchor": "def export_stata(frame, path):",
+          "text": "# WFDOC: attrs pandas dikosongkan hanya selama ekspor biner agar metadata tidak disalin berulang; blok finally memulihkannya sebelum receipt dan hash dibuat."
+        },
+        {
+          "id": "RUN-I02",
+          "before_line": 94,
+          "anchor": "# WFDOC: Satu proses Stata menjalankan G1.do",
+          "text": "# WFDOC: Sentinel dan exit code diperiksa sebelum validator/plot Python dipanggil; log gagal tetap disimpan di run baru untuk audit."
+        },
+        {
+          "id": "RUN-I03",
+          "before_line": 127,
+          "anchor": "assert code_pin == hashes(code_files), \"Code changed during run\"",
+          "text": "# WFDOC: Perbandingan code pin sesudah validasi menolak receipt bila sumber berubah selama run; publikasi hanya menyalin output setelah gerbang ini lolos."
+        }
+      ]
+    },
+    {
+      "path": "work-items/G1/write_downstream_handoff.py",
+      "before_sha256": "466907e047762cdf22a25705a62154053d95173d39ac8f5efac10e5719653a4b",
+      "baseline_snapshot": "work-items/G1/qa/luna-all-years-prepared/baseline/20-write_downstream_handoff.py.txt",
+      "planned_insertions": [
+        {
+          "id": "HANDOFF-I01",
+          "before_line": 29,
+          "anchor": "manifest = json.loads((run / 'run-manifest.json').read_text())",
+          "text": "# WFDOC: Handoff membaca manifest dan specification yang sudah hash-bound; tidak ada fallback ke release lama atau input dengan versi berbeda."
+        },
+        {
+          "id": "HANDOFF-I02",
+          "before_line": 35,
+          "anchor": "for name in ['numeric-validation.json', 'nominal-validation.json', 'full-master-validation.json']:",
+          "text": "# WFDOC: Ketiga receipt QA harus berstatus PASS sebelum handoff dibentuk; bukti parsial tidak boleh dinaikkan menjadi READY."
+        },
+        {
+          "id": "HANDOFF-I03",
+          "before_line": 47,
+          "anchor": "for name, relative in {",
+          "text": "# WFDOC: Handoff meng-hash file terpilih dan mencocokkan DTA dengan inventory private; record-level master tetap dibagi lewat path/hash, bukan disalin ke payload."
+        },
+        {
+          "id": "HANDOFF-I04",
+          "before_line": 110,
+          "anchor": "args.output.parent.mkdir(parents=True, exist_ok=True)",
+          "text": "# WFDOC: File handoff run-local hanya boleh ditulis sekali; penolakan bila sudah ada menjaga lineage receipt tetap immutable, sementara output tujuan menjadi salinan terpisah."
+        }
+      ]
+    }
+  ],
+  "proof_plan": {
+    "mode": "INSERTION_ONLY_COMMENT_PROOF",
+    "before_sha_rule": "Before applying, recompute every before_sha256 from the listed source path and stop if any differs. The retained baseline_snapshot is the byte-for-byte comparison source.",
+    "allowed_insertions": {
+      "stata": ["comment-only lines beginning with * or //", "blank lines only when explicitly present in the plan"],
+      "python": ["comment-only lines beginning with #", "blank lines only when explicitly present in the plan"]
+    },
+    "forbidden_changes": [
+      "deleting or altering any baseline executable line",
+      "altering an existing comment or docstring",
+      "inserting a Stata comment between a continued statement line ending /// and its continuation",
+      "changing whitespace on an existing non-comment line",
+      "running Stata or regenerating analytical outputs as part of the comment pass"
+    ],
+    "stata_proof": "Compare baseline snapshot and post-apply source with a line diff; every removed/modified line must be absent, every added line must match an approved comment text, and the normalized executable sequence must be byte-identical after removing comment-only/blank lines. Explicitly scan each insertion predecessor and reject a predecessor ending in ///.",
+    "python_proof": "Compare baseline snapshot and post-apply source with tokenize/AST checks. Require all added lines to be approved # comments, no baseline non-comment token deletion or alteration, and ast.dump(ast.parse(source), include_attributes=False) to match exactly. Keep shebang/docstrings as baseline tokens and do not rewrite them.",
+    "receipt_contract": {
+      "status": "PASS",
+      "files": "Each reviewed path with a planned insertion must record path, before_sha256, after_sha256, baseline_snapshot, insertions_only=true and executable_equal=true.",
+      "reviewed_source_hashes": "Map every reviewed repository-relative path, including N13, to its final post-apply SHA256.",
+      "runtime": "Keep model=gpt-5.6-luna and reasoning_effort=max in the final receipt.",
+    "specification_id": "G05v3_nominal_assumedK_2010_2022",
+    "intermediate_proof": "work-items/G1/qa/luna-all-years-prepared/nominal-deep-comment-apply-proof.json"
+    }
+  },
+  "scientific_concerns_for_root": [
+    {
+      "severity": "review_note",
+      "topic": "Nominal interpretation",
+      "note": "The code intentionally treats reported source-year capital as an assumed December stock and reported additions as a separate investment candidate. Documentary flags remain metadata; this is development compatibility, not source verification or real TFP."
+    },
+    {
+      "severity": "review_note",
+      "topic": "Synthetic panel and disappearance",
+      "note": "Risk intervals and disappearance indicators are generated from official synthetic_development assignments. They must remain labelled as development events, not observed firm closure or actual linkage."
+    },
+    {
+      "severity": "review_note",
+      "topic": "Pooled normalization",
+      "note": "The centered residual index uses one pooled dynamic mean per sector×method×sample across supported dynamic years; source_year=0 in deep outputs is a pooled label, not a calendar year."
+    }
+  ],
+  "pending_next_actions": [
+    "Run the final deep02 rerun from this frozen scientific/deep/validator source set; no Stata was run by the comment pass.",
+    "Root runs and validates final deep02 from the frozen scientific/deep/validator source set.",
+    "Root reconciles final coverage with separate publication Python builders; this receipt does not claim publication coverage.",
+    "Root must reconcile final coverage with other publication Python builders that remain under separate edit ownership."
+  ]
+}

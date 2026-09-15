@@ -1,0 +1,1289 @@
+{
+  "data_label": "G0.5 DEVELOPMENT \u2014 nominal production residuals; not final empirical findings",
+  "font_mapping": [
+    {
+      "file": "/System/Library/Fonts/Supplemental/Times New Roman.ttf",
+      "sha256": "f3b4ffff71c2a0c7227d37497683b2498fb2d0a4e8beae26f022e3ccfcaabfa3"
+    },
+    {
+      "file": "/System/Library/Fonts/Supplemental/Times New Roman Bold.ttf",
+      "sha256": "50f5b1f27b7d34621090e437e8b1dd4510a22d2823fc876b3286bed327b64bbb"
+    },
+    {
+      "file": "/System/Library/Fonts/Supplemental/Times New Roman Italic.ttf",
+      "sha256": "7bb99c3a67697fbce15ab66d806d9a2151432ce1dab2eaba4156e1251da486c0"
+    },
+    {
+      "file": "/System/Library/Fonts/Supplemental/Times New Roman Bold Italic.ttf",
+      "sha256": "906157e8294fdf168d83002eaabde01c2d30fc3f44977be89e33fa22f262002a"
+    }
+  ],
+  "figures": [
+    {
+      "figure": "deep_op_histogram",
+      "sources": [
+        {
+          "file": "nominal_histogram_bins.csv",
+          "sha256": "0b173ad2c2970e353c0d4cc3d0015975fd3ad7f2b636a7f43a9cf455e472d71e"
+        }
+      ],
+      "visible_legend": [
+        "Olley\u2013Pakes: pooled dynamic fitted records",
+        "Leaders: first, modal and last occupied bins"
+      ],
+      "construction": "All occupied0.5-log-point bins from Stata; gaps remain visible; no trimming. Dynamic fit records pool all eligible years.",
+      "outputs": [
+        {
+          "path": "figures/deep_op_histogram.pdf",
+          "sha256": "4fb90987f737cb6e2be1be685f1749160751b7ff60967dc1b1fb5defb805fd09"
+        },
+        {
+          "path": "figures/deep_op_histogram.svg",
+          "sha256": "cbff8e648e39fd561603fcee316af4150cd62943a66d9db0b6c1208caed13a50"
+        },
+        {
+          "path": "figures/deep_op_histogram.png",
+          "sha256": "d19fde07528792e805b642ee0b6ce7cc24a2ba1f232bf92d8fc7900978f8b0ee"
+        }
+      ]
+    },
+    {
+      "figure": "deep_op_coefficients",
+      "sources": [
+        {
+          "file": "nominal_coefficients.csv",
+          "sha256": "df624673679e47cdb1b03749670624aec6ac7cb0b20f050c4a4f4c7adc287a3a"
+        },
+        {
+          "file": "nominal_bootstrap_summary.csv",
+          "sha256": "850fe0908ffab175cd1eceaed1e8588c55d6ebe88ca162ce88d7b1e111f9d790"
+        }
+      ],
+      "visible_legend": [
+        "Point estimate (printed value)",
+        "95% cluster percentile interval, when admitted",
+        "Zero coefficient reference"
+      ],
+      "construction": "Sector-specific primary slopes; intervals shown only when the frozen bootstrap success rule admits them.",
+      "outputs": [
+        {
+          "path": "figures/deep_op_coefficients.pdf",
+          "sha256": "b4692dadb06ddb374c9a9d80e69f2cfb3022af9f417bc8141acc0aaf574861f2"
+        },
+        {
+          "path": "figures/deep_op_coefficients.svg",
+          "sha256": "413d6175b5dbc2f1191c7c25a8341ac8758843338d59f9b9eb072390c4ce9faf"
+        },
+        {
+          "path": "figures/deep_op_coefficients.png",
+          "sha256": "61464f412dbd8ce276f10c7fe2c5f0b9d24ee67b8cbd2212590a9c1efa9cbbf0"
+        }
+      ]
+    },
+    {
+      "figure": "deep_op_sensitivity",
+      "sources": [
+        {
+          "file": "nominal_coefficients.csv",
+          "sha256": "df624673679e47cdb1b03749670624aec6ac7cb0b20f050c4a4f4c7adc287a3a"
+        }
+      ],
+      "visible_legend": [
+        "Darker cells: larger values within each panel; \u2014: unavailable fit"
+      ],
+      "construction": "All declared variants; objectives compare starts within an unchanged objective. Quadratic proxy changes the specification. No failed cell is filled.",
+      "outputs": [
+        {
+          "path": "figures/deep_op_sensitivity.pdf",
+          "sha256": "466635494daf66a6a2abeed08018d0f0614ce7399824f536d5241c9214390cae"
+        },
+        {
+          "path": "figures/deep_op_sensitivity.svg",
+          "sha256": "e03066c6fc96f5066038aca3ef22479c123ce68d72f0edf5561ce33921980b09"
+        },
+        {
+          "path": "figures/deep_op_sensitivity.png",
+          "sha256": "fba8388106d8e6a1d0012e1c8e1ad752a8d11a0e25d145fa432f6978bc131a9c"
+        }
+      ]
+    },
+    {
+      "figure": "deep_lp_histogram",
+      "sources": [
+        {
+          "file": "nominal_histogram_bins.csv",
+          "sha256": "0b173ad2c2970e353c0d4cc3d0015975fd3ad7f2b636a7f43a9cf455e472d71e"
+        }
+      ],
+      "visible_legend": [
+        "Levinsohn\u2013Petrin: pooled dynamic fitted records",
+        "Leaders: first, modal and last occupied bins"
+      ],
+      "construction": "All occupied0.5-log-point bins from Stata; gaps remain visible; no trimming. Dynamic fit records pool all eligible years.",
+      "outputs": [
+        {
+          "path": "figures/deep_lp_histogram.pdf",
+          "sha256": "5e6e8aba54bc52f6ef5b751ea6fb9ad2c6d2621f48087dd84579f0b95f6a10fd"
+        },
+        {
+          "path": "figures/deep_lp_histogram.svg",
+          "sha256": "b49386f3464896197b9eade6f7e4fb74dcd996835376220ed9b703979ec1f2de"
+        },
+        {
+          "path": "figures/deep_lp_histogram.png",
+          "sha256": "fb64ec1fdff098fd62ebad79f3b74ffd00b148cb73f3a1b2690962095f059938"
+        }
+      ]
+    },
+    {
+      "figure": "deep_lp_coefficients",
+      "sources": [
+        {
+          "file": "nominal_coefficients.csv",
+          "sha256": "df624673679e47cdb1b03749670624aec6ac7cb0b20f050c4a4f4c7adc287a3a"
+        },
+        {
+          "file": "nominal_bootstrap_summary.csv",
+          "sha256": "850fe0908ffab175cd1eceaed1e8588c55d6ebe88ca162ce88d7b1e111f9d790"
+        }
+      ],
+      "visible_legend": [
+        "Point estimate (printed value)",
+        "95% cluster percentile interval, when admitted",
+        "Zero coefficient reference"
+      ],
+      "construction": "Sector-specific primary slopes; intervals shown only when the frozen bootstrap success rule admits them.",
+      "outputs": [
+        {
+          "path": "figures/deep_lp_coefficients.pdf",
+          "sha256": "a86a7c319cb72c48cfa5d2f10c72e5001d89be65c95b0641c7b0c6a52463251d"
+        },
+        {
+          "path": "figures/deep_lp_coefficients.svg",
+          "sha256": "a52a0b629434e972a8fc0ae272bb6effcab05bc97715f0b0e2242805c9594280"
+        },
+        {
+          "path": "figures/deep_lp_coefficients.png",
+          "sha256": "e77cb87eebaa799869ff9cfba89605bc39898bb87b1ab2e87d5189d654b87f52"
+        }
+      ]
+    },
+    {
+      "figure": "deep_lp_sensitivity",
+      "sources": [
+        {
+          "file": "nominal_coefficients.csv",
+          "sha256": "df624673679e47cdb1b03749670624aec6ac7cb0b20f050c4a4f4c7adc287a3a"
+        }
+      ],
+      "visible_legend": [
+        "Darker cells: larger values within each panel; \u2014: unavailable fit"
+      ],
+      "construction": "All declared variants; objectives compare starts within an unchanged objective. Quadratic proxy changes the specification. No failed cell is filled.",
+      "outputs": [
+        {
+          "path": "figures/deep_lp_sensitivity.pdf",
+          "sha256": "42c3a32d73816b756e5f60c25979d3ccd0c1287030de5781d767b68d50dc728a"
+        },
+        {
+          "path": "figures/deep_lp_sensitivity.svg",
+          "sha256": "016b128ada401dd48bfd7856767d2ed1451ccf70abf33c88ae37ee9f0c15845d"
+        },
+        {
+          "path": "figures/deep_lp_sensitivity.png",
+          "sha256": "d7c4f34e1497a49143d9ca2eed18564fcf458a7937b42b31451d69cbc9471b35"
+        }
+      ]
+    },
+    {
+      "figure": "deep_lp_sensitivity_p2",
+      "sources": [
+        {
+          "file": "nominal_coefficients.csv",
+          "sha256": "df624673679e47cdb1b03749670624aec6ac7cb0b20f050c4a4f4c7adc287a3a"
+        }
+      ],
+      "visible_legend": [
+        "Darker cells: larger values within each panel; \u2014: unavailable fit"
+      ],
+      "construction": "All declared variants; objectives compare starts within an unchanged objective. Quadratic proxy changes the specification. No failed cell is filled.",
+      "outputs": [
+        {
+          "path": "figures/deep_lp_sensitivity_p2.pdf",
+          "sha256": "6921abb05549dee69ca75eabb4451ddcd7faf3c15bdaf0855ff055c8e3ddf0c5"
+        },
+        {
+          "path": "figures/deep_lp_sensitivity_p2.svg",
+          "sha256": "e797a835f05b7266a5d6f6923a9488e18a2602c1f3dee8a335cb2620b335c77f"
+        },
+        {
+          "path": "figures/deep_lp_sensitivity_p2.png",
+          "sha256": "751996b0c2683db4933d5874d6c73fb3165c305aa988002ba084ed7e5143f7b4"
+        }
+      ]
+    },
+    {
+      "figure": "deep_acf_histogram",
+      "sources": [
+        {
+          "file": "nominal_histogram_bins.csv",
+          "sha256": "0b173ad2c2970e353c0d4cc3d0015975fd3ad7f2b636a7f43a9cf455e472d71e"
+        }
+      ],
+      "visible_legend": [
+        "Ackerberg\u2013Caves\u2013Frazer: pooled dynamic fitted records",
+        "Leaders: first, modal and last occupied bins"
+      ],
+      "construction": "All occupied0.5-log-point bins from Stata; gaps remain visible; no trimming. Dynamic fit records pool all eligible years.",
+      "outputs": [
+        {
+          "path": "figures/deep_acf_histogram.pdf",
+          "sha256": "660ba679f8b459df8e891d0953073d9a8d5fda8aefba2224815268b675f9ca9c"
+        },
+        {
+          "path": "figures/deep_acf_histogram.svg",
+          "sha256": "b32da31e0a11abbbd1c243b5cbd6c60eee4a71a35c2306b4e94824d03f6bd894"
+        },
+        {
+          "path": "figures/deep_acf_histogram.png",
+          "sha256": "86523c809dba507b6cbbe0c9b17fb9afebf688aedb9c0ac361092b0c614ef00a"
+        }
+      ]
+    },
+    {
+      "figure": "deep_acf_coefficients",
+      "sources": [
+        {
+          "file": "nominal_coefficients.csv",
+          "sha256": "df624673679e47cdb1b03749670624aec6ac7cb0b20f050c4a4f4c7adc287a3a"
+        },
+        {
+          "file": "nominal_bootstrap_summary.csv",
+          "sha256": "850fe0908ffab175cd1eceaed1e8588c55d6ebe88ca162ce88d7b1e111f9d790"
+        }
+      ],
+      "visible_legend": [
+        "Point estimate (printed value)",
+        "95% cluster percentile interval, when admitted",
+        "Zero coefficient reference"
+      ],
+      "construction": "Sector-specific primary slopes; intervals shown only when the frozen bootstrap success rule admits them.",
+      "outputs": [
+        {
+          "path": "figures/deep_acf_coefficients.pdf",
+          "sha256": "c31e98246f2a228ca10251403bf0e74f63def85197afaf29cab3f67ed6a5afa1"
+        },
+        {
+          "path": "figures/deep_acf_coefficients.svg",
+          "sha256": "565d84355749cadfdc4233019776e1e5386ad324ce8788229ccaf2c89e1f5cd7"
+        },
+        {
+          "path": "figures/deep_acf_coefficients.png",
+          "sha256": "57184a72195955b2b2e51a6ab8546e2fb76db681ef7ffd3d550f08170a4a062a"
+        }
+      ]
+    },
+    {
+      "figure": "deep_acf_sensitivity",
+      "sources": [
+        {
+          "file": "nominal_coefficients.csv",
+          "sha256": "df624673679e47cdb1b03749670624aec6ac7cb0b20f050c4a4f4c7adc287a3a"
+        }
+      ],
+      "visible_legend": [
+        "Darker cells: larger values within each panel; \u2014: unavailable fit"
+      ],
+      "construction": "All declared variants; objectives compare starts within an unchanged objective. Quadratic proxy changes the specification. No failed cell is filled.",
+      "outputs": [
+        {
+          "path": "figures/deep_acf_sensitivity.pdf",
+          "sha256": "df42d41348f288c977ed44714cd67d63ed745b2e70c2c518167ac0460f59ccd1"
+        },
+        {
+          "path": "figures/deep_acf_sensitivity.svg",
+          "sha256": "5a4c35839ae9c6ae53a5bb7e2f9956ba4ac61f9e56a9e2d90cccc7bfd768a5b4"
+        },
+        {
+          "path": "figures/deep_acf_sensitivity.png",
+          "sha256": "880f6b23ccb99da6d87d5cab08ad926ffcd83d6ce111b7f1a557458abd763cd3"
+        }
+      ]
+    },
+    {
+      "figure": "deep_acf_sensitivity_p2",
+      "sources": [
+        {
+          "file": "nominal_coefficients.csv",
+          "sha256": "df624673679e47cdb1b03749670624aec6ac7cb0b20f050c4a4f4c7adc287a3a"
+        }
+      ],
+      "visible_legend": [
+        "Darker cells: larger values within each panel; \u2014: unavailable fit"
+      ],
+      "construction": "All declared variants; objectives compare starts within an unchanged objective. Quadratic proxy changes the specification. No failed cell is filled.",
+      "outputs": [
+        {
+          "path": "figures/deep_acf_sensitivity_p2.pdf",
+          "sha256": "262cb8c4f5bc84818fd9a3f5369495d7f2778d2979283d57aac7dcfc7685965c"
+        },
+        {
+          "path": "figures/deep_acf_sensitivity_p2.svg",
+          "sha256": "5bfb4c2b1bec2d10982436432a5b95c5875d3483d94f2be90c0892b4d7ba28a1"
+        },
+        {
+          "path": "figures/deep_acf_sensitivity_p2.png",
+          "sha256": "b84f4d7ef67feb962b8a3d1c4b028c0018da681252505810f5604e7c46cc5724"
+        }
+      ]
+    },
+    {
+      "figure": "deep_wrdg_histogram",
+      "sources": [
+        {
+          "file": "nominal_histogram_bins.csv",
+          "sha256": "0b173ad2c2970e353c0d4cc3d0015975fd3ad7f2b636a7f43a9cf455e472d71e"
+        }
+      ],
+      "visible_legend": [
+        "Wooldridge: pooled dynamic fitted records",
+        "Leaders: first, modal and last occupied bins"
+      ],
+      "construction": "All occupied0.5-log-point bins from Stata; gaps remain visible; no trimming. Dynamic fit records pool all eligible years.",
+      "outputs": [
+        {
+          "path": "figures/deep_wrdg_histogram.pdf",
+          "sha256": "4d22a536e6d89e2b42586b2ef52b9d387233d46c2c1ba6892410ebd686ca0433"
+        },
+        {
+          "path": "figures/deep_wrdg_histogram.svg",
+          "sha256": "17bdb02f6d81d3b5e9f345e13a18abccc98cba06f9bf909485cb8449060c1a83"
+        },
+        {
+          "path": "figures/deep_wrdg_histogram.png",
+          "sha256": "37f512750bdfe480534aab83d226e4834153e1819bef6f77ab9b58e10fd317e2"
+        }
+      ]
+    },
+    {
+      "figure": "deep_wrdg_coefficients",
+      "sources": [
+        {
+          "file": "nominal_coefficients.csv",
+          "sha256": "df624673679e47cdb1b03749670624aec6ac7cb0b20f050c4a4f4c7adc287a3a"
+        },
+        {
+          "file": "nominal_bootstrap_summary.csv",
+          "sha256": "850fe0908ffab175cd1eceaed1e8588c55d6ebe88ca162ce88d7b1e111f9d790"
+        }
+      ],
+      "visible_legend": [
+        "Point estimate (printed value)",
+        "95% cluster percentile interval, when admitted",
+        "Zero coefficient reference"
+      ],
+      "construction": "Sector-specific primary slopes; intervals shown only when the frozen bootstrap success rule admits them.",
+      "outputs": [
+        {
+          "path": "figures/deep_wrdg_coefficients.pdf",
+          "sha256": "6dbd06d0f38eb80f47370190f93a47256bb4deb5ef47974b517280150d099aa9"
+        },
+        {
+          "path": "figures/deep_wrdg_coefficients.svg",
+          "sha256": "015cfc3603e4eea088f712db410131ca28fab1b1f2696f0bd99967b226251327"
+        },
+        {
+          "path": "figures/deep_wrdg_coefficients.png",
+          "sha256": "5ad0b68a9b391183528e00a3367e20942c16a02c47987e6ef851524b1e071763"
+        }
+      ]
+    },
+    {
+      "figure": "deep_wrdg_sensitivity",
+      "sources": [
+        {
+          "file": "nominal_coefficients.csv",
+          "sha256": "df624673679e47cdb1b03749670624aec6ac7cb0b20f050c4a4f4c7adc287a3a"
+        }
+      ],
+      "visible_legend": [
+        "Darker cells: larger values within each panel; \u2014: unavailable fit"
+      ],
+      "construction": "All declared variants; objectives compare starts within an unchanged objective. Quadratic proxy changes the specification. No failed cell is filled.",
+      "outputs": [
+        {
+          "path": "figures/deep_wrdg_sensitivity.pdf",
+          "sha256": "c703453c6685f18f82a35ab5a130bd78c159ff00c41c85898bc14578e0bcc338"
+        },
+        {
+          "path": "figures/deep_wrdg_sensitivity.svg",
+          "sha256": "65090b583581158e574fd1fc62dbc2064797290b425d4508cb1e01d138815799"
+        },
+        {
+          "path": "figures/deep_wrdg_sensitivity.png",
+          "sha256": "1aced09ed99f40a1fab268a11c4874aa347b77f29097276d90e819b2a8f30dc5"
+        }
+      ]
+    },
+    {
+      "figure": "deep_wrdg_sensitivity_p2",
+      "sources": [
+        {
+          "file": "nominal_coefficients.csv",
+          "sha256": "df624673679e47cdb1b03749670624aec6ac7cb0b20f050c4a4f4c7adc287a3a"
+        }
+      ],
+      "visible_legend": [
+        "Darker cells: larger values within each panel; \u2014: unavailable fit"
+      ],
+      "construction": "All declared variants; objectives compare starts within an unchanged objective. Quadratic proxy changes the specification. No failed cell is filled.",
+      "outputs": [
+        {
+          "path": "figures/deep_wrdg_sensitivity_p2.pdf",
+          "sha256": "27f7baa9422c519b82b7599bb13d87aee19090904c571d2fe9d827521fca2f2d"
+        },
+        {
+          "path": "figures/deep_wrdg_sensitivity_p2.svg",
+          "sha256": "cadc0ccbb6ff45ff8138ffd6cd3a06822d785378ceef9bd2d77aebdc8245f3e9"
+        },
+        {
+          "path": "figures/deep_wrdg_sensitivity_p2.png",
+          "sha256": "5e075103f6f0c58fbbbdc285952f545eac343863cee1e5c159c47a960c13e60b"
+        }
+      ]
+    },
+    {
+      "figure": "deep_op_support",
+      "sources": [
+        {
+          "file": "nominal_sample_support.csv",
+          "sha256": "e3b02a64a3bfae63f18e76362e18b94a04b652288b7ff41e6fc0b3d2281eeade"
+        }
+      ],
+      "visible_legend": [
+        "Darker blue: closer to or above minimum; numbers: observed counts"
+      ],
+      "construction": "All observed sectors and four selected gates. Firm and continuer gates remain enforced separately.",
+      "outputs": [
+        {
+          "path": "figures/deep_op_support.pdf",
+          "sha256": "3974ffa0a0084ae42d9984fda1ec30ab62f0fa215990aa0b542e5b3073d9337d"
+        },
+        {
+          "path": "figures/deep_op_support.svg",
+          "sha256": "1b22e7ef9a88e5ecbe7005862c152936acfe4d7ea45de8679b38b665608666f1"
+        },
+        {
+          "path": "figures/deep_op_support.png",
+          "sha256": "b759c21a3f9a32e2b31d88504bedce85b2e0e8ebeb812b7ca99bdb5ed144b24e"
+        }
+      ]
+    },
+    {
+      "figure": "deep_op_year_sector",
+      "sources": [
+        {
+          "file": "deep_prediction_profiles.csv",
+          "sha256": "c238c4fa07d1472983643e92cff0b9b329e0910b879b0489920dfd221b9b3299"
+        }
+      ],
+      "visible_legend": [
+        "Median (bold number)",
+        "25th\u201375th percentile interval (endpoint numbers)",
+        "Pooled dynamic fit mean (zero reference)"
+      ],
+      "construction": "All annual positive-domain predictions; fixed sector-method-sample slopes and pooled dynamic centering. Source-year0 is excluded from annual panels. Missing2016 is never interpolated.",
+      "outputs": [
+        {
+          "path": "figures/deep_op_year_sector.pdf",
+          "sha256": "c2fec18b97bdc4949a2a5db3bebfec0a883bf36e6420a4370f4d7ef6e577bc63"
+        },
+        {
+          "path": "figures/deep_op_year_sector.svg",
+          "sha256": "c1177da809f056b2f38d5634b2eecbd20f2d965caf7bc91c4681876f37afed0c"
+        },
+        {
+          "path": "figures/deep_op_year_sector.png",
+          "sha256": "84bc8ee574fc39fa168639554abd6c3021ff5937ac2be490b439926adfe1ba30"
+        }
+      ]
+    },
+    {
+      "figure": "deep_op_paired_change",
+      "sources": [
+        {
+          "file": "deep_paired_changes.csv",
+          "sha256": "e3f063b38652f04e0c462da3d875ddd1cd1265dd1c632198a2c0d338b6149888"
+        },
+        {
+          "file": "deep_paired_histograms.csv",
+          "sha256": "49622492c03daf81e292508f6b525878cd281a3a5f291b2264ac20e80336cb77"
+        }
+      ],
+      "visible_legend": [
+        "Median (bold) and quartile interval",
+        "Histogram: adjacent-year record-pair intervals",
+        "Leaders: first, modal and last occupied bins",
+        "No change (zero reference)"
+      ],
+      "construction": "Same fictional company and sector in exact adjacent calendar years;0/0 pools intervals and can count a company more than once. Fixed slopes and normalizer; histogram bins0.25log points; no trimming.",
+      "outputs": [
+        {
+          "path": "figures/deep_op_paired_change.pdf",
+          "sha256": "83127327e5bc5a35e79a3e90743212983c2099378eb1c15ef94478c91fecdc57"
+        },
+        {
+          "path": "figures/deep_op_paired_change.svg",
+          "sha256": "c1b79b7cee7ea6c08ee1c1b778216475edc7601d147f4bdeacf955f4dbc90bd6"
+        },
+        {
+          "path": "figures/deep_op_paired_change.png",
+          "sha256": "eeab20bd576bbe734b95a7e80840f6f64b36a7b826744b8a3da2729e623b9e57"
+        }
+      ]
+    },
+    {
+      "figure": "deep_op_paired_change_p2",
+      "sources": [
+        {
+          "file": "deep_paired_changes.csv",
+          "sha256": "e3f063b38652f04e0c462da3d875ddd1cd1265dd1c632198a2c0d338b6149888"
+        }
+      ],
+      "visible_legend": [
+        "Median (bold number)",
+        "25th\u201375th percentile interval (endpoint numbers)",
+        "No change (zero reference)"
+      ],
+      "construction": "All usable exact adjacent production-year intervals by sector. Unavailable groups are named; the full ten-interval obligation grid including empty boundary pairs remains in the corresponding table.",
+      "outputs": [
+        {
+          "path": "figures/deep_op_paired_change_p2.pdf",
+          "sha256": "3470cb7a6ec2fbef06a9be6a51ecbe2709990873ca87fe31f7d496e934e7dac2"
+        },
+        {
+          "path": "figures/deep_op_paired_change_p2.svg",
+          "sha256": "1a50b084914be2a14e19875ed2329c6ec27e578467a1f5fae90d1967fa508e22"
+        },
+        {
+          "path": "figures/deep_op_paired_change_p2.png",
+          "sha256": "3bbcfbe8dd88a1f6524c45e639afa0c8e6050d8151b9ab62ebac59f5a2c36acc"
+        }
+      ]
+    },
+    {
+      "figure": "deep_lp_year_sector",
+      "sources": [
+        {
+          "file": "deep_prediction_profiles.csv",
+          "sha256": "c238c4fa07d1472983643e92cff0b9b329e0910b879b0489920dfd221b9b3299"
+        }
+      ],
+      "visible_legend": [
+        "Median (bold number)",
+        "25th\u201375th percentile interval (endpoint numbers)",
+        "Pooled dynamic fit mean (zero reference)"
+      ],
+      "construction": "All annual positive-domain predictions; fixed sector-method-sample slopes and pooled dynamic centering. Source-year0 is excluded from annual panels. Missing2016 is never interpolated.",
+      "outputs": [
+        {
+          "path": "figures/deep_lp_year_sector.pdf",
+          "sha256": "8ef81e90d594471b5c9e26f40b472af0ce1f8b8197f3e3a7ad460ce8b04fdd11"
+        },
+        {
+          "path": "figures/deep_lp_year_sector.svg",
+          "sha256": "35b0cb6dac64749c0cff807ca1d1e232f7c90f33a9eaaeb466cf87b68e8ab255"
+        },
+        {
+          "path": "figures/deep_lp_year_sector.png",
+          "sha256": "7080791a24e850a44a1f3d7803757d2bf5669cca1dd2592b07e57488a2f696c2"
+        }
+      ]
+    },
+    {
+      "figure": "deep_lp_year_sector_p2",
+      "sources": [
+        {
+          "file": "deep_prediction_profiles.csv",
+          "sha256": "c238c4fa07d1472983643e92cff0b9b329e0910b879b0489920dfd221b9b3299"
+        }
+      ],
+      "visible_legend": [
+        "Median (bold number)",
+        "25th\u201375th percentile interval (endpoint numbers)",
+        "Pooled dynamic fit mean (zero reference)"
+      ],
+      "construction": "All annual positive-domain predictions; fixed sector-method-sample slopes and pooled dynamic centering. Source-year0 is excluded from annual panels. Missing2016 is never interpolated.",
+      "outputs": [
+        {
+          "path": "figures/deep_lp_year_sector_p2.pdf",
+          "sha256": "747c32d80d5ca6c3b3701563ed80dc747695ee7a843231c9a09462569da60665"
+        },
+        {
+          "path": "figures/deep_lp_year_sector_p2.svg",
+          "sha256": "c112719e658e1a8f0b5d4a440ef5e1ab01f0d9fe1ab062b5eea3d1a7b44cb5dd"
+        },
+        {
+          "path": "figures/deep_lp_year_sector_p2.png",
+          "sha256": "c4b595584ee3dd1c7f5260f2d919b058d0f0b85fbcbbf788eaca85c2c0c27416"
+        }
+      ]
+    },
+    {
+      "figure": "deep_lp_year_sector_p3",
+      "sources": [
+        {
+          "file": "deep_prediction_profiles.csv",
+          "sha256": "c238c4fa07d1472983643e92cff0b9b329e0910b879b0489920dfd221b9b3299"
+        }
+      ],
+      "visible_legend": [
+        "Median (bold number)",
+        "25th\u201375th percentile interval (endpoint numbers)",
+        "Pooled dynamic fit mean (zero reference)"
+      ],
+      "construction": "All annual positive-domain predictions; fixed sector-method-sample slopes and pooled dynamic centering. Source-year0 is excluded from annual panels. Missing2016 is never interpolated.",
+      "outputs": [
+        {
+          "path": "figures/deep_lp_year_sector_p3.pdf",
+          "sha256": "42ad8fbc731e42b6fcb90a1323f6d353a42fb9651816019e69581734675b6f08"
+        },
+        {
+          "path": "figures/deep_lp_year_sector_p3.svg",
+          "sha256": "ed09641908d421741f578a8f09bfa5d3a7189bea7f889ead53ff2b926955ed83"
+        },
+        {
+          "path": "figures/deep_lp_year_sector_p3.png",
+          "sha256": "71dc18b3b3db956328c2acb112061c8bcc6b7cc58ba171a7199f21cdbdfba21e"
+        }
+      ]
+    },
+    {
+      "figure": "deep_lp_paired_change",
+      "sources": [
+        {
+          "file": "deep_paired_changes.csv",
+          "sha256": "e3f063b38652f04e0c462da3d875ddd1cd1265dd1c632198a2c0d338b6149888"
+        },
+        {
+          "file": "deep_paired_histograms.csv",
+          "sha256": "49622492c03daf81e292508f6b525878cd281a3a5f291b2264ac20e80336cb77"
+        }
+      ],
+      "visible_legend": [
+        "Median (bold) and quartile interval",
+        "Histogram: adjacent-year record-pair intervals",
+        "Leaders: first, modal and last occupied bins",
+        "No change (zero reference)"
+      ],
+      "construction": "Same fictional company and sector in exact adjacent calendar years;0/0 pools intervals and can count a company more than once. Fixed slopes and normalizer; histogram bins0.25log points; no trimming.",
+      "outputs": [
+        {
+          "path": "figures/deep_lp_paired_change.pdf",
+          "sha256": "68435fbf48c86ff0b00413c21ca20f8e64121673134e268fc2d1763b64936126"
+        },
+        {
+          "path": "figures/deep_lp_paired_change.svg",
+          "sha256": "5120d7e1fa2ae75edf4bc954e4f8215894b51f57d8b569a0a42ac66447ee8114"
+        },
+        {
+          "path": "figures/deep_lp_paired_change.png",
+          "sha256": "a3a8dbc2cad57bb393e666d084df65920e253731120b08662b8ce3461d3501e7"
+        }
+      ]
+    },
+    {
+      "figure": "deep_lp_paired_change_p2",
+      "sources": [
+        {
+          "file": "deep_paired_changes.csv",
+          "sha256": "e3f063b38652f04e0c462da3d875ddd1cd1265dd1c632198a2c0d338b6149888"
+        }
+      ],
+      "visible_legend": [
+        "Median (bold number)",
+        "25th\u201375th percentile interval (endpoint numbers)",
+        "No change (zero reference)"
+      ],
+      "construction": "All usable exact adjacent production-year intervals by sector. Unavailable groups are named; the full ten-interval obligation grid including empty boundary pairs remains in the corresponding table.",
+      "outputs": [
+        {
+          "path": "figures/deep_lp_paired_change_p2.pdf",
+          "sha256": "9558118d620f8da3323915f80c383d62a98c496e37f0af4a429a2886d201f28c"
+        },
+        {
+          "path": "figures/deep_lp_paired_change_p2.svg",
+          "sha256": "74fd5dbc5ad05f3a0a216049eac2ade6c83f3b367ef624e04990a1d41183e1e2"
+        },
+        {
+          "path": "figures/deep_lp_paired_change_p2.png",
+          "sha256": "c2564a2d5885ac12ac08244e1cd15ade08d6358a802c0165da367fbc3788c6f7"
+        }
+      ]
+    },
+    {
+      "figure": "deep_lp_paired_change_p3",
+      "sources": [
+        {
+          "file": "deep_paired_changes.csv",
+          "sha256": "e3f063b38652f04e0c462da3d875ddd1cd1265dd1c632198a2c0d338b6149888"
+        }
+      ],
+      "visible_legend": [
+        "Median (bold number)",
+        "25th\u201375th percentile interval (endpoint numbers)",
+        "No change (zero reference)"
+      ],
+      "construction": "All usable exact adjacent production-year intervals by sector. Unavailable groups are named; the full ten-interval obligation grid including empty boundary pairs remains in the corresponding table.",
+      "outputs": [
+        {
+          "path": "figures/deep_lp_paired_change_p3.pdf",
+          "sha256": "10077dfdd96ca863b001afcf6530329cda43bf60429e3dcc6a14e007dbdd664c"
+        },
+        {
+          "path": "figures/deep_lp_paired_change_p3.svg",
+          "sha256": "0c3381ebf08a924c4773171a5e4dab4c729655f6ef54ed2d211641f11d74fa3c"
+        },
+        {
+          "path": "figures/deep_lp_paired_change_p3.png",
+          "sha256": "86f2f7a77bc97e73ebf4a1c0b8f8ccb09e0071d51933dd22f309bcbba9833247"
+        }
+      ]
+    },
+    {
+      "figure": "deep_lp_paired_change_p4",
+      "sources": [
+        {
+          "file": "deep_paired_changes.csv",
+          "sha256": "e3f063b38652f04e0c462da3d875ddd1cd1265dd1c632198a2c0d338b6149888"
+        }
+      ],
+      "visible_legend": [
+        "Median (bold number)",
+        "25th\u201375th percentile interval (endpoint numbers)",
+        "No change (zero reference)"
+      ],
+      "construction": "All usable exact adjacent production-year intervals by sector. Unavailable groups are named; the full ten-interval obligation grid including empty boundary pairs remains in the corresponding table.",
+      "outputs": [
+        {
+          "path": "figures/deep_lp_paired_change_p4.pdf",
+          "sha256": "bb0f6f7a7aef2f516573a3e151bbbd0ed0d2457b5f34265c154dfb2044424e3c"
+        },
+        {
+          "path": "figures/deep_lp_paired_change_p4.svg",
+          "sha256": "f8bbbee796cba70578b556783e03e23e7c826421b24ad75aeca63e1ade7ca40f"
+        },
+        {
+          "path": "figures/deep_lp_paired_change_p4.png",
+          "sha256": "012cbbac889f1d0e5cd11f38fd59eb7d4f97eda04c786e99bb01097053e6f794"
+        }
+      ]
+    },
+    {
+      "figure": "deep_acf_year_sector",
+      "sources": [
+        {
+          "file": "deep_prediction_profiles.csv",
+          "sha256": "c238c4fa07d1472983643e92cff0b9b329e0910b879b0489920dfd221b9b3299"
+        }
+      ],
+      "visible_legend": [
+        "Median (bold number)",
+        "25th\u201375th percentile interval (endpoint numbers)",
+        "Pooled dynamic fit mean (zero reference)"
+      ],
+      "construction": "All annual positive-domain predictions; fixed sector-method-sample slopes and pooled dynamic centering. Source-year0 is excluded from annual panels. Missing2016 is never interpolated.",
+      "outputs": [
+        {
+          "path": "figures/deep_acf_year_sector.pdf",
+          "sha256": "cbc9a7c6fe21a1d443194d58c60ff4905b7bef6625ee5baa2e29856baa3951de"
+        },
+        {
+          "path": "figures/deep_acf_year_sector.svg",
+          "sha256": "729dd9d89198862220fc028249a1f85fc4a09770cd50aaa31284521342d867bc"
+        },
+        {
+          "path": "figures/deep_acf_year_sector.png",
+          "sha256": "f082bbebe964ab460b2c8dd0076cf63c4c961258149d4c7e48aeb253809525d6"
+        }
+      ]
+    },
+    {
+      "figure": "deep_acf_year_sector_p2",
+      "sources": [
+        {
+          "file": "deep_prediction_profiles.csv",
+          "sha256": "c238c4fa07d1472983643e92cff0b9b329e0910b879b0489920dfd221b9b3299"
+        }
+      ],
+      "visible_legend": [
+        "Median (bold number)",
+        "25th\u201375th percentile interval (endpoint numbers)",
+        "Pooled dynamic fit mean (zero reference)"
+      ],
+      "construction": "All annual positive-domain predictions; fixed sector-method-sample slopes and pooled dynamic centering. Source-year0 is excluded from annual panels. Missing2016 is never interpolated.",
+      "outputs": [
+        {
+          "path": "figures/deep_acf_year_sector_p2.pdf",
+          "sha256": "14fdac30f5110b11946be4522690dc285d658be04088964cf6d9fc786f0c15a9"
+        },
+        {
+          "path": "figures/deep_acf_year_sector_p2.svg",
+          "sha256": "a0b637fc66fd9d57c1945b5e273e502abc300541d21cdd7921af681588e1807b"
+        },
+        {
+          "path": "figures/deep_acf_year_sector_p2.png",
+          "sha256": "6374660952858dfd09ed9648cf02cebf8e357bf87186817d140ebe68a62146a4"
+        }
+      ]
+    },
+    {
+      "figure": "deep_acf_year_sector_p3",
+      "sources": [
+        {
+          "file": "deep_prediction_profiles.csv",
+          "sha256": "c238c4fa07d1472983643e92cff0b9b329e0910b879b0489920dfd221b9b3299"
+        }
+      ],
+      "visible_legend": [
+        "Median (bold number)",
+        "25th\u201375th percentile interval (endpoint numbers)",
+        "Pooled dynamic fit mean (zero reference)"
+      ],
+      "construction": "All annual positive-domain predictions; fixed sector-method-sample slopes and pooled dynamic centering. Source-year0 is excluded from annual panels. Missing2016 is never interpolated.",
+      "outputs": [
+        {
+          "path": "figures/deep_acf_year_sector_p3.pdf",
+          "sha256": "56baa754aefa28b460334162195a29146890d5e06efa5af07ef2e743e8bc6438"
+        },
+        {
+          "path": "figures/deep_acf_year_sector_p3.svg",
+          "sha256": "45de45e150d0ccc9994534e97a218daa442731ce7fd2859648a15d6b64ffcd3c"
+        },
+        {
+          "path": "figures/deep_acf_year_sector_p3.png",
+          "sha256": "d96e0cfdea479d003546b6be2f43f6ed22db980316253cb552fa5edc924a05d6"
+        }
+      ]
+    },
+    {
+      "figure": "deep_acf_paired_change",
+      "sources": [
+        {
+          "file": "deep_paired_changes.csv",
+          "sha256": "e3f063b38652f04e0c462da3d875ddd1cd1265dd1c632198a2c0d338b6149888"
+        },
+        {
+          "file": "deep_paired_histograms.csv",
+          "sha256": "49622492c03daf81e292508f6b525878cd281a3a5f291b2264ac20e80336cb77"
+        }
+      ],
+      "visible_legend": [
+        "Median (bold) and quartile interval",
+        "Histogram: adjacent-year record-pair intervals",
+        "Leaders: first, modal and last occupied bins",
+        "No change (zero reference)"
+      ],
+      "construction": "Same fictional company and sector in exact adjacent calendar years;0/0 pools intervals and can count a company more than once. Fixed slopes and normalizer; histogram bins0.25log points; no trimming.",
+      "outputs": [
+        {
+          "path": "figures/deep_acf_paired_change.pdf",
+          "sha256": "a797e6cd3e36e9feef919b45ffad62bdaa9dcb7a2760ba495fff8b68ba60c065"
+        },
+        {
+          "path": "figures/deep_acf_paired_change.svg",
+          "sha256": "748160d597bd2f70004a553a7f0612bbd88dc9dceb7f423bbeda7e9e9b8fdf81"
+        },
+        {
+          "path": "figures/deep_acf_paired_change.png",
+          "sha256": "6ea78d373479ad25d39f966b94c0649f2a85a08d59084c40630495b85e494ad9"
+        }
+      ]
+    },
+    {
+      "figure": "deep_acf_paired_change_p2",
+      "sources": [
+        {
+          "file": "deep_paired_changes.csv",
+          "sha256": "e3f063b38652f04e0c462da3d875ddd1cd1265dd1c632198a2c0d338b6149888"
+        }
+      ],
+      "visible_legend": [
+        "Median (bold number)",
+        "25th\u201375th percentile interval (endpoint numbers)",
+        "No change (zero reference)"
+      ],
+      "construction": "All usable exact adjacent production-year intervals by sector. Unavailable groups are named; the full ten-interval obligation grid including empty boundary pairs remains in the corresponding table.",
+      "outputs": [
+        {
+          "path": "figures/deep_acf_paired_change_p2.pdf",
+          "sha256": "a0b9a66b45e9f0a93415e239dd72a59b1881f71128a7a141a8c327b8e5191636"
+        },
+        {
+          "path": "figures/deep_acf_paired_change_p2.svg",
+          "sha256": "1de8848682d1376630b641f0ee1cac41d36d44244840aca7beb8cc6e4b2ffced"
+        },
+        {
+          "path": "figures/deep_acf_paired_change_p2.png",
+          "sha256": "616b6ac96bf97641a01552e4f9c48e878a7e5a6a407c0f64b96dd36d16af18cf"
+        }
+      ]
+    },
+    {
+      "figure": "deep_acf_paired_change_p3",
+      "sources": [
+        {
+          "file": "deep_paired_changes.csv",
+          "sha256": "e3f063b38652f04e0c462da3d875ddd1cd1265dd1c632198a2c0d338b6149888"
+        }
+      ],
+      "visible_legend": [
+        "Median (bold number)",
+        "25th\u201375th percentile interval (endpoint numbers)",
+        "No change (zero reference)"
+      ],
+      "construction": "All usable exact adjacent production-year intervals by sector. Unavailable groups are named; the full ten-interval obligation grid including empty boundary pairs remains in the corresponding table.",
+      "outputs": [
+        {
+          "path": "figures/deep_acf_paired_change_p3.pdf",
+          "sha256": "c6a71633f053e0bb7d41dfdb6a6c6b9a76ad0cf60d20887d6de4ddd41ea9ccfd"
+        },
+        {
+          "path": "figures/deep_acf_paired_change_p3.svg",
+          "sha256": "dc940396b310fd35515bf24a5ec11a00e74cdf7702f2f854bc87e248d987632c"
+        },
+        {
+          "path": "figures/deep_acf_paired_change_p3.png",
+          "sha256": "cd4c56b8d8ada9e015b657124d0b4f8540af400a8b018160fa8f8da96297ce1a"
+        }
+      ]
+    },
+    {
+      "figure": "deep_acf_paired_change_p4",
+      "sources": [
+        {
+          "file": "deep_paired_changes.csv",
+          "sha256": "e3f063b38652f04e0c462da3d875ddd1cd1265dd1c632198a2c0d338b6149888"
+        }
+      ],
+      "visible_legend": [
+        "Median (bold number)",
+        "25th\u201375th percentile interval (endpoint numbers)",
+        "No change (zero reference)"
+      ],
+      "construction": "All usable exact adjacent production-year intervals by sector. Unavailable groups are named; the full ten-interval obligation grid including empty boundary pairs remains in the corresponding table.",
+      "outputs": [
+        {
+          "path": "figures/deep_acf_paired_change_p4.pdf",
+          "sha256": "1c25b90fda2f684e042a2e2182fd2ce9e36cb3457b4bde71017eb4b81354452f"
+        },
+        {
+          "path": "figures/deep_acf_paired_change_p4.svg",
+          "sha256": "5bf2111312dceccc00b45d5004712a92f0c4c55ee9a076a29cead8b542a4ba57"
+        },
+        {
+          "path": "figures/deep_acf_paired_change_p4.png",
+          "sha256": "3344a25689d94d67d75f88c45114f2d47af58a4b8c88d738e3e4c144e82cdfaf"
+        }
+      ]
+    },
+    {
+      "figure": "deep_wrdg_year_sector",
+      "sources": [
+        {
+          "file": "deep_prediction_profiles.csv",
+          "sha256": "c238c4fa07d1472983643e92cff0b9b329e0910b879b0489920dfd221b9b3299"
+        }
+      ],
+      "visible_legend": [
+        "Median (bold number)",
+        "25th\u201375th percentile interval (endpoint numbers)",
+        "Pooled dynamic fit mean (zero reference)"
+      ],
+      "construction": "All annual positive-domain predictions; fixed sector-method-sample slopes and pooled dynamic centering. Source-year0 is excluded from annual panels. Missing2016 is never interpolated.",
+      "outputs": [
+        {
+          "path": "figures/deep_wrdg_year_sector.pdf",
+          "sha256": "da3bc8ebb33419bcaea9416178eb047a43bad5c4ad774c305173352746c834d9"
+        },
+        {
+          "path": "figures/deep_wrdg_year_sector.svg",
+          "sha256": "29f11f9e671831571558dc7adc7e5de5bd8e09e8733cc587e8608f15ee24d895"
+        },
+        {
+          "path": "figures/deep_wrdg_year_sector.png",
+          "sha256": "35fbad46b92ac38e7f245f981586b81d61a1b2c4feed227deb96c9bf20c65fb2"
+        }
+      ]
+    },
+    {
+      "figure": "deep_wrdg_year_sector_p2",
+      "sources": [
+        {
+          "file": "deep_prediction_profiles.csv",
+          "sha256": "c238c4fa07d1472983643e92cff0b9b329e0910b879b0489920dfd221b9b3299"
+        }
+      ],
+      "visible_legend": [
+        "Median (bold number)",
+        "25th\u201375th percentile interval (endpoint numbers)",
+        "Pooled dynamic fit mean (zero reference)"
+      ],
+      "construction": "All annual positive-domain predictions; fixed sector-method-sample slopes and pooled dynamic centering. Source-year0 is excluded from annual panels. Missing2016 is never interpolated.",
+      "outputs": [
+        {
+          "path": "figures/deep_wrdg_year_sector_p2.pdf",
+          "sha256": "11d40977a26c7f92d25d5c5280c0d883e90b3c9c6b934de886fdffb316d68ab4"
+        },
+        {
+          "path": "figures/deep_wrdg_year_sector_p2.svg",
+          "sha256": "ef441bac8c034751de8dded6c3c62841b752cd52fcbc2dd2ea54b3fc3222d034"
+        },
+        {
+          "path": "figures/deep_wrdg_year_sector_p2.png",
+          "sha256": "072b7baa1da3ce9589990c93faed8f0de4fc910c3ff3f0d92c50f0c93d0e5edc"
+        }
+      ]
+    },
+    {
+      "figure": "deep_wrdg_year_sector_p3",
+      "sources": [
+        {
+          "file": "deep_prediction_profiles.csv",
+          "sha256": "c238c4fa07d1472983643e92cff0b9b329e0910b879b0489920dfd221b9b3299"
+        }
+      ],
+      "visible_legend": [
+        "Median (bold number)",
+        "25th\u201375th percentile interval (endpoint numbers)",
+        "Pooled dynamic fit mean (zero reference)"
+      ],
+      "construction": "All annual positive-domain predictions; fixed sector-method-sample slopes and pooled dynamic centering. Source-year0 is excluded from annual panels. Missing2016 is never interpolated.",
+      "outputs": [
+        {
+          "path": "figures/deep_wrdg_year_sector_p3.pdf",
+          "sha256": "718ee313e9fcbd38107d32a21ea218ff887fc1bae02e7da01f6f0e4903098f7b"
+        },
+        {
+          "path": "figures/deep_wrdg_year_sector_p3.svg",
+          "sha256": "7e6d514140f032b164314e35d3f5648956b307c6d5a563970a26b7307c9086e8"
+        },
+        {
+          "path": "figures/deep_wrdg_year_sector_p3.png",
+          "sha256": "a99bcaea4ecfc00eaf839cd3e661279b95c2306877b1ae6c9d7ef51f25398adc"
+        }
+      ]
+    },
+    {
+      "figure": "deep_wrdg_paired_change",
+      "sources": [
+        {
+          "file": "deep_paired_changes.csv",
+          "sha256": "e3f063b38652f04e0c462da3d875ddd1cd1265dd1c632198a2c0d338b6149888"
+        },
+        {
+          "file": "deep_paired_histograms.csv",
+          "sha256": "49622492c03daf81e292508f6b525878cd281a3a5f291b2264ac20e80336cb77"
+        }
+      ],
+      "visible_legend": [
+        "Median (bold) and quartile interval",
+        "Histogram: adjacent-year record-pair intervals",
+        "Leaders: first, modal and last occupied bins",
+        "No change (zero reference)"
+      ],
+      "construction": "Same fictional company and sector in exact adjacent calendar years;0/0 pools intervals and can count a company more than once. Fixed slopes and normalizer; histogram bins0.25log points; no trimming.",
+      "outputs": [
+        {
+          "path": "figures/deep_wrdg_paired_change.pdf",
+          "sha256": "a35c1a746036c65a2bccfe38902ee8a29a659ca3fce0fdb7c1b2cd0320869992"
+        },
+        {
+          "path": "figures/deep_wrdg_paired_change.svg",
+          "sha256": "fec720072a964b0ccad64a76dbcbe0feb2e53d0df7bf3a993dab85a8d8dbef00"
+        },
+        {
+          "path": "figures/deep_wrdg_paired_change.png",
+          "sha256": "269dfeae55f5136d0fb0644c04d814265ee483fa839ad44c8f5ba0d65a069a00"
+        }
+      ]
+    },
+    {
+      "figure": "deep_wrdg_paired_change_p2",
+      "sources": [
+        {
+          "file": "deep_paired_changes.csv",
+          "sha256": "e3f063b38652f04e0c462da3d875ddd1cd1265dd1c632198a2c0d338b6149888"
+        }
+      ],
+      "visible_legend": [
+        "Median (bold number)",
+        "25th\u201375th percentile interval (endpoint numbers)",
+        "No change (zero reference)"
+      ],
+      "construction": "All usable exact adjacent production-year intervals by sector. Unavailable groups are named; the full ten-interval obligation grid including empty boundary pairs remains in the corresponding table.",
+      "outputs": [
+        {
+          "path": "figures/deep_wrdg_paired_change_p2.pdf",
+          "sha256": "7f5c9b152f28c5470204640cb115ea6cd5c42ee88231c805142b393064e14b32"
+        },
+        {
+          "path": "figures/deep_wrdg_paired_change_p2.svg",
+          "sha256": "1d3b4e86b6072c3f65859eebd3075cf44c4913b70bbf8cc9fbb7f9f3d1dd1ea5"
+        },
+        {
+          "path": "figures/deep_wrdg_paired_change_p2.png",
+          "sha256": "ff42ce978ea46af39a22ca62216374ad474de585f205fabca2dfbef27f9b966c"
+        }
+      ]
+    },
+    {
+      "figure": "deep_wrdg_paired_change_p3",
+      "sources": [
+        {
+          "file": "deep_paired_changes.csv",
+          "sha256": "e3f063b38652f04e0c462da3d875ddd1cd1265dd1c632198a2c0d338b6149888"
+        }
+      ],
+      "visible_legend": [
+        "Median (bold number)",
+        "25th\u201375th percentile interval (endpoint numbers)",
+        "No change (zero reference)"
+      ],
+      "construction": "All usable exact adjacent production-year intervals by sector. Unavailable groups are named; the full ten-interval obligation grid including empty boundary pairs remains in the corresponding table.",
+      "outputs": [
+        {
+          "path": "figures/deep_wrdg_paired_change_p3.pdf",
+          "sha256": "214c347abe07f66330ffff33154b1bd1cc42cf5e9ec093991e2f7b3fa8578676"
+        },
+        {
+          "path": "figures/deep_wrdg_paired_change_p3.svg",
+          "sha256": "ffe7e76ed5fbc75c45197cd196a3a1f9b345c8a17c73ef4034c9a2943bfcf008"
+        },
+        {
+          "path": "figures/deep_wrdg_paired_change_p3.png",
+          "sha256": "5d2060f41c7c91ab7597965f87a2be08f52030da24414397cf5133a69b7b7805"
+        }
+      ]
+    },
+    {
+      "figure": "deep_wrdg_paired_change_p4",
+      "sources": [
+        {
+          "file": "deep_paired_changes.csv",
+          "sha256": "e3f063b38652f04e0c462da3d875ddd1cd1265dd1c632198a2c0d338b6149888"
+        }
+      ],
+      "visible_legend": [
+        "Median (bold number)",
+        "25th\u201375th percentile interval (endpoint numbers)",
+        "No change (zero reference)"
+      ],
+      "construction": "All usable exact adjacent production-year intervals by sector. Unavailable groups are named; the full ten-interval obligation grid including empty boundary pairs remains in the corresponding table.",
+      "outputs": [
+        {
+          "path": "figures/deep_wrdg_paired_change_p4.pdf",
+          "sha256": "b0e44566687866bf3eb9d8b365f873020e2b9384c93f7ad86edb6b9b5710655d"
+        },
+        {
+          "path": "figures/deep_wrdg_paired_change_p4.svg",
+          "sha256": "b5164ea9c93e63b85010ec210c772540cfbfdc3541bad782cb20dfd25355dbbb"
+        },
+        {
+          "path": "figures/deep_wrdg_paired_change_p4.png",
+          "sha256": "be39d966703c36765bf8be6ee177f7982b4ad937317de5887f67b67f81038c70"
+        }
+      ]
+    },
+    {
+      "figure": "deep_common_distribution",
+      "sources": [
+        {
+          "file": "deep_prediction_histograms.csv",
+          "sha256": "7d7bfc3296b06c3624f5c78e82248421f8fab29c0f449683040f3167eb3bf7fe"
+        }
+      ],
+      "visible_legend": [
+        "Olley\u2013Pakes: common dynamic fit",
+        "Levinsohn\u2013Petrin: common dynamic fit",
+        "Ackerberg\u2013Caves\u2013Frazer: common dynamic fit",
+        "Wooldridge: common dynamic fit",
+        "Leaders: first, modal and last occupied bins"
+      ],
+      "construction": "All four methods use the same common-input pooled dynamic records. Method-specific slopes and pooled reference means remain distinct. Identical0.5-log-point bins and shared axes; every occupied bin retained; no density smoothing or trimming.",
+      "outputs": [
+        {
+          "path": "figures/deep_common_distribution.pdf",
+          "sha256": "55561d5826b934a9475d684e7dad50fbd9f435847be77013006bc52eb8df8267"
+        },
+        {
+          "path": "figures/deep_common_distribution.svg",
+          "sha256": "30b8cefd552111f20da06ada8a795fa1a17d163ffc27bd8a4c950ca9d966e901"
+        },
+        {
+          "path": "figures/deep_common_distribution.png",
+          "sha256": "819be72b8321d1c8a0f95114111490e2ff02bdee28ae3199e72ef73d9ebc82e1"
+        }
+      ]
+    },
+    {
+      "figure": "deep_input_availability_core",
+      "sources": [
+        {
+          "file": "deep_input_domains.csv",
+          "sha256": "42a589367d23334701aea992c8d4d885fad2c4a92ea7eda1190576296c85bc5a"
+        }
+      ],
+      "visible_legend": [
+        "Positive reported/constructed value (bar label)",
+        "Full annual source (right-hand count)",
+        "No annual file",
+        "Beginning capital: no preceding calendar-year file"
+      ],
+      "construction": "All source-year counts. Beginning capital uses the same fictional company in the previous calendar year under the maintained year-end-stock assumption. Documentary flags remain unchanged; no missing value is filled.",
+      "outputs": [
+        {
+          "path": "figures/deep_input_availability_core.pdf",
+          "sha256": "bf5646cadb0f1a57f2b57ac5ed4098be6c06865a6f166b28f39cbc755226b7d8"
+        },
+        {
+          "path": "figures/deep_input_availability_core.svg",
+          "sha256": "3cd2f1d34a5891eba82bfec104135be3291e4d3bc20ae2da71c01f5c533dd5cc"
+        },
+        {
+          "path": "figures/deep_input_availability_core.png",
+          "sha256": "eff362bf6a162d6d586d3640bc3018e8d4ebbed651b3fa0c63bc7770ddff63f0"
+        }
+      ]
+    },
+    {
+      "figure": "deep_input_availability_proxy",
+      "sources": [
+        {
+          "file": "deep_input_domains.csv",
+          "sha256": "42a589367d23334701aea992c8d4d885fad2c4a92ea7eda1190576296c85bc5a"
+        }
+      ],
+      "visible_legend": [
+        "Positive reported/constructed value (bar label)",
+        "Full annual source (right-hand count)",
+        "No annual file"
+      ],
+      "construction": "All source-year counts. Beginning capital uses the same fictional company in the previous calendar year under the maintained year-end-stock assumption. Documentary flags remain unchanged; no missing value is filled.",
+      "outputs": [
+        {
+          "path": "figures/deep_input_availability_proxy.pdf",
+          "sha256": "c5eb45c4a6809a57357709108ef74da7de5b19a0846fe28a51603f63ea28d81a"
+        },
+        {
+          "path": "figures/deep_input_availability_proxy.svg",
+          "sha256": "823119d82a7a81fb6f34e46d92afbbe1840cbbb8627e7cd26342b47d38f637bd"
+        },
+        {
+          "path": "figures/deep_input_availability_proxy.png",
+          "sha256": "061d6407798e2647a602b3c26240ec583c9164cb83753e09f16ba9a2e5cfd5f5"
+        }
+      ]
+    }
+  ]
+}

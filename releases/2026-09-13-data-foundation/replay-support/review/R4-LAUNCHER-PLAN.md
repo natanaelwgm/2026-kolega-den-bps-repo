@@ -1,0 +1,9 @@
+# R4 and outer launcher: approved bounded plan before code
+
+Root approved implementation on 13 September 2026. The old core run is actually passed under seal 39e3a264…; the upcoming seal only changes injected comments and explicitly reviewed metadata. Keep old execution receipts immutable.
+
+Implement the existing proposed `storage_replay_continuity` field in current root static review. Require exact old/current manifest endpoints, exact passed final receipt and wave manifest hashes, complete root-reviewed delta, unchanged input_files and plan freeze, and unchanged code path set. Every changed do-file must have preserved old bytes and exactly equal non-WFDOC bytes after removing only whole `* ... WFDOC-INJECTED` comment lines. Metadata changes must be individually named in the root descriptor, not inferred from a broad suffix. This permits archiving the old certified bytes only; it does not mark current code as executed.
+
+Outer launcher is one separate Python file. Without `--run`, show a metadata dry run. With `--run`, validate expected helper/current seal, archive previous certified results, then invoke the unchanged guarded runner for each exact stage in registry order using --from-stage/--through. Inherit output. Before each invocation require a new UTC second/run directory, remember the prior stage latest receipt, and after return require a different, freshly started, passed/exited receipt for that exact stage/current seal plus byte-identical attempt receipt. Compact logs under the shared lock only after the stage's process exits. Show STARTING/FINISHED, index/total, percentage and elapsed wall time. H090 must leave the overall current final receipt passed. Save separate launcher progress/evidence outside foundation; no old success receipt can substitute for a new stage receipt.
+
+Only synthetic/mocked launcher tests and filesystem fixtures during authoring. No real archival or Stata run. Resource constants stay unchanged.

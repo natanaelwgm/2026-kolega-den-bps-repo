@@ -1,0 +1,82 @@
+{
+  "timestamp": "2026-09-14T03:01:38.766106+07:00",
+  "agent": "/root/numerical_review",
+  "status": "NEW_N01_N04_VALIDATED_BOOTSTRAP_AND_CLOSEOUT_PENDING",
+  "specification_id": "G05v3_nominal_assumedK_2010_2022",
+  "scope": "Independent N01\u2013N07 and validator review; wrappers read-only; no estimator execution by this agent",
+  "stata_fixes": [],
+  "validator_fixes": [
+    "Verify exact source, production, and dynamic year sets from preceding-calendar relations",
+    "Verify every risk interval carries the preceding assignment metadata",
+    "Verify fit/calendar metadata on failed and skipped cells as well as successful cells",
+    "Verify each prediction carries the same pooled normalization/calendar/slopes/specification metadata",
+    "Verify attached own/common pre-lag domains and separate stock/additions assumption/documentation flags",
+    "Independently reconcile annual original-row, prediction, and in-fit attachment totals",
+    "Verify seed/requested-draw/point-estimate metadata in every retained bootstrap draw",
+    "Verify original full-master company-year and observation-year uniqueness across chunks"
+  ],
+  "preserved_contracts": [
+    "Existing fictional IDs and every selected source value",
+    "Exact-calendar lag with absent2016 retained",
+    "Same-sector own/common dynamic domains and OP selection universes",
+    "Positive additions used separately as investment candidate, never stock differencing",
+    "Constant pooled sector-method slopes/control laws, no year fixed effects",
+    "One pooled dynamic mean per fit, fixed across prediction years",
+    "All primary-domain predictions attached with distinct in-fit flags",
+    "99 complete supplied sector-company-history bootstrap draws and95-success interval admission"
+  ],
+  "checks": {
+    "python_compile": "PASS",
+    "git_diff_check": "PASS",
+    "method_wrappers_changed": false,
+    "stata_launched_by_agent": false,
+    "new_result_validation": "N01\u2013N04 PASS; bootstrap/attachment/deep/publication pending",
+    "new_N01_N03_independent_reconciliation": "PASS_49_CHECKS",
+    "new_N01_N04_independent_reconciliation": "PASS_6962_CHECKS"
+  },
+  "pre_fit_arithmetic_scope": "Reconstructed from v3-final-01/S01_input.dta, using the same frozen G05v3 source package; not new estimates",
+  "pre_fit_calendar_findings": {
+    "lp_acf_wrdg_dynamic_candidate_years": [
+      2012,
+      2013,
+      2014,
+      2015,
+      2019,
+      2020,
+      2021,
+      2022
+    ],
+    "op_dynamic_candidate_years": [
+      2012,
+      2013,
+      2014,
+      2019,
+      2020,
+      2021,
+      2022
+    ],
+    "OP_2015_domain_N": 0,
+    "OP_2015_limit": "Positive reported additions unavailable; owner stock assumption does not create investment data"
+  },
+  "frozen_files": {
+    "work-items/G1/stata/nominal/N01_inputs.do": "382f13d1efa75ac4964b6785196c396d25a796918d184e14122d58493d9575ea",
+    "work-items/G1/stata/nominal/N02_risk.do": "19a472d5c8488728dd50050c580e7740f666651d4a65c033c37d504f4d25c90c",
+    "work-items/G1/stata/nominal/N03_samples.do": "6d509fd0eef9f4a4a2d2685b0a9c60fefe3ab5dc676e27f887a080ac88340a8a",
+    "work-items/G1/stata/nominal/N04_fits.do": "550c4183a966af66d2f88a8ef79fd5a0fc84de6c6a0f9008bd5da8cd99be02e2",
+    "work-items/G1/stata/nominal/N05_bootstrap.do": "3ca3f7ecf82fdc6e3d799edc85f3ffc7dd9c38f47809935e42c475f596738dae",
+    "work-items/G1/stata/nominal/N06_outputs.do": "1a05f177eebc8ac19680573f6efe9418835dd4eefdd67ac8d9bc38c8d2a0092f",
+    "work-items/G1/stata/nominal/N07_master.do": "73b200852bf21dcf411bd01433561265d9812c6cf15b0af0396578f607167fed",
+    "work-items/G1/validate_nominal.py": "a46e37889d7730156f63727be67db061a5d02915896a7c63a5269cde9ece3817",
+    "work-items/G1/validate_master.py": "d7092f92d210d95c1938938cd2ae627243f323150ac05bad691447245573e1dd"
+  },
+  "new_run_receipt": "../deasy-g1-issue9-20260913-g1-runs/v3-assumed-stock-all-years-02/qa/independent-nominal-N01-N03-validation.json",
+  "closeout_builder": {
+    "status": "IMPLEMENTED_NOT_EXECUTED",
+    "files": {
+      "work-items/G1/build_closeout.py": "b246d6d17b7396d9f2ace320d9807ccbaaa945aa1966f7ba8d7e362c53926b6c",
+      "work-items/G1/README.md": "553f55fe326aca00fdc515bd94e85001644e677a829aac0c88a9751f3630de19"
+    },
+    "py_compile": "PASS",
+    "git_diff_check": "PASS"
+  }
+}

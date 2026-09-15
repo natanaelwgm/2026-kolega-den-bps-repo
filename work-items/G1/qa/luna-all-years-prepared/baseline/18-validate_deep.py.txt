@@ -1,0 +1,248 @@
+#!/usr/bin/env python3
+"""Independent arithmetic audit of N08–N13; never creates analytical outputs.
+Reads narrow frozen inputs and recomputes expected aggregates solely for validation.
+No observation IDs or individual source values are written to the receipt.
+"""
+# WFDOC: CLI menerima run dasar read-only dan run deep terpisah; --receipt-tag menulis bukti baru tanpa menimpa receipt eksekusi awal.
+# WFDOC: Validator ini membaca DTA/CSV sempit, merekonstruksi 12 agregat, lalu membandingkan schema, kunci, jumlah baris, sel dan hash.
+# WFDOC: Identitas fiktif hanya berada di memori untuk join yang tepat; receipt mengandung ringkasan aggregate dan tidak mengekspor ID/baris individu.
+# WFDOC: Hasil ditulis ke RUN/qa/deep-validation[-TAG].json dan RUN/run-manifest[-TAG].json; kode/kontrak/input/output ikut di-hash.
+# WFDOC: Kegagalan assert menghentikan audit sebelum PASS; tidak ada Stata run, refit, imputasi, atau pembuatan CSV analitis di sini.
+from __future__ import annotations
+import argparse, hashlib, json, math
+from datetime import datetime, timezone
+from pathlib import Path
+import numpy as np
+import pandas as pd
+
+FIELDS=['N','mean','sd','min','p1','p5','p25','p50','p75','p95','p99','max','iqr','fence_lo15','fence_hi15','fence_lo3','fence_hi3','N_below15','N_above15','N_below3','N_above3','numeric_released']
+QUANT=[1,5,25,50,75,95,99]
+KEYS={
+'deep_input_domains':['source_year','input'],
+'deep_input_distributions':['source_year','input','scale'],
+'deep_method_funnel':['sector','method','sample_id','source_year','stage'],
+'deep_prediction_profiles':['sector','method','sample_id','source_year','fit_scope','measure'],
+'deep_prediction_tails':['sector','method','sample_id','source_year','fit_scope','measure'],
+'deep_prediction_histograms':['sector','method','sample_id','source_year','fit_scope','measure','bin_lower'],
+'deep_paired_changes':['sector','method','sample_id','measure','year_from','year_to'],
+'deep_paired_histograms':['sector','method','sample_id','measure','year_from','year_to','bin_lower'],
+'deep_worked_calculations':['sector','method','sample_id','source_year','example_type'],
+'deep_fit_sensitivities':['sector','method','sample_id','variant'],
+'deep_bootstrap_profiles':['sector','method','sample_id','measure'],
+'deep_bootstrap_histograms':['sector','method','sample_id','measure','bin_lower']}
+
+def stats(values):
+    # WFDOC: Hapus nilai nonfinite untuk penyebut statistik; N tetap terbuka dan exact summary hanya tersedia saat N≥5.
+    a=np.asarray(values,dtype=float); a=a[np.isfinite(a)]; n=len(a)
+    out=dict.fromkeys(FIELDS,float('nan'));out['N']=n;out['numeric_released']=int(n>=5)
+    if n:
+        # WFDOC: Kuantil memakai averaged inverse empirical CDF agar sesuai definisi yang dipatok; pagar IQR dihitung sebelum supresi.
+        q=np.quantile(a,np.array(QUANT)/100,method='averaged_inverted_cdf'); p=dict(zip(QUANT,q));iqr=p[75]-p[25]
+        lo15=p[25]-1.5*iqr;hi15=p[75]+1.5*iqr;lo3=p[25]-3*iqr;hi3=p[75]+3*iqr
+        out.update(N_below15=int((a<lo15).sum()),N_above15=int((a>hi15).sum()),N_below3=int((a<lo3).sum()),N_above3=int((a>hi3).sum()))
+        # WFDOC: Saat N<5 pagar/kuantil tepat tetap missing; hanya ukuran grup dan jumlah pelanggaran yang boleh divalidasi.
+        if n>=5:
+            out.update(mean=a.mean(),sd=a.std(ddof=1),min=a.min(),max=a.max(),iqr=iqr,fence_lo15=lo15,fence_hi15=hi15,fence_lo3=lo3,fence_hi3=hi3)
+            out.update({'p'+str(k):v for k,v in p.items()})
+    else:out.update(N_below15=0,N_above15=0,N_below3=0,N_above3=0)
+    return out
+
+def sha(path):
+    # WFDOC: Hash dihitung berblok untuk mengikat source dan output receipt tanpa menyalin nilai record ke bukti.
+    h=hashlib.sha256()
+    with path.open('rb') as f:
+        for block in iter(lambda:f.read(1024*1024),b''):h.update(block)
+    return h.hexdigest()
+
+def main():
+    # WFDOC: Semua sumber dibaca dari base/run eksplisit; path receipt ber-tag harus baru agar bukti lama tetap immutable.
+    ap=argparse.ArgumentParser();ap.add_argument('--base',type=Path,required=True);ap.add_argument('--run',type=Path,required=True);ap.add_argument('--receipt-tag',default='',help='Write separate tagged receipts; preserve original execution manifest');args=ap.parse_args()
+    root=Path(__file__).resolve().parents[2];work=Path(__file__).resolve().parent;base=args.base;run=args.run
+    assert base.resolve()!=run.resolve()
+    tag='-'+args.receipt_tag if args.receipt_tag else ''
+    assert all(c.isalnum() or c in '-_' for c in args.receipt_tag), 'Unsafe receipt tag'
+    validation_path=run/'qa'/f'deep-validation{tag}.json'
+    manifest_path=run/f'run-manifest{tag}.json'
+    if tag:assert not validation_path.exists() and not manifest_path.exists(), 'Tagged receipts are immutable'
+    contract=json.loads((work/'deep-diagnostics-contract.json').read_text())
+    exp={x.removesuffix('.csv'):[] for x in contract['outputs']};receipts=[]
+    def add(file,**row):exp[file].append(row)
+    n1=pd.read_stata(base/'nominal/N01_source.dta',convert_categoricals=False)
+    n3=pd.read_stata(base/'nominal/N03_frozen.dta',convert_categoricals=False)
+    preds=pd.read_stata(base/'nominal/N04_predictions.dta',convert_categoricals=False)
+    pred=preds.loc[preds.variant.eq('primary')].copy()
+    assert not pred.duplicated(['psid','source_year','sector','method','sample_id']).any()
+    actual_years=contract['source_years']; years=[0]+actual_years
+    pair_years=[(year-1,year) for year in actual_years if year-1 in actual_years]
+    assert len(pair_years)==10 and all(b-a==1 for a,b in pair_years)
+    assert pred.loc[pred.in_fit.eq(1),'source_year'].isin(contract['coefficient_estimation_years']).all()
+    assert pred.reference_scope.eq('pooled_dynamic').all() and pred.reference_year.isna().all()
+    pred=pred.merge(n1[['obs_id','source_year','nom_y','nom_l','nom_k']],on=['obs_id','source_year'],how='left',validate='many_to_one')
+    pred=pred.rename(columns={'raw_log_residual':'raw','normalized_log_residual':'centered','normalized_residual_index':'index'})
+    assert np.allclose(pred.raw,pred.nom_y-pred.labor*pred.nom_l-pred.capital*pred.nom_k,rtol=1e-12,atol=1e-12)
+    assert np.allclose(pred.centered,pred.raw-pred.residual_reference_mean,rtol=1e-12,atol=1e-12)
+    assert np.allclose(pred['index'],np.exp(pred.centered),rtol=1e-12,atol=1e-12)
+    for _,g in pred.groupby(['sector','method','sample_id']):
+        assert g.residual_reference_mean.nunique()==1
+        fit=g.loc[g.in_fit.eq(1)]
+        assert fit.source_year.isin(contract['coefficient_estimation_years']).all() and len(fit)>0
+        assert g.fit_year_min.eq(fit.source_year.min()).all()
+        assert g.fit_year_max.eq(fit.source_year.max()).all()
+        assert abs(fit.raw.mean()-g.residual_reference_mean.iloc[0])<1e-11
+    coef=pd.read_csv(base/'outputs/nominal_coefficients.csv',dtype={'sector':str},na_values=['.'])
+    primary=coef.loc[coef.variant.eq('primary')].set_index(['sector','method','sample_id'])
+    sectors=['ALL']+sorted(n3.loc[n3.nom_interval_only.eq(0),'nom_sector'].unique())
+    methods=['op','lp','acf','wrdg'];samples=['own','common']
+    # N08 independently validates source preservation and exact preceding-calendar capital.
+    cols=['obs_id','psid','source_year','value_added_nominal','workers','capital_stock_nominal','capital_additions_nominal','val_rtlvcu','capital_stock_verified','capital_additions_verified']
+    src=pd.read_stata(base/'S01_input.dta',columns=cols,convert_categoricals=False)
+    assert sorted(src.source_year.unique())==actual_years
+    prior=src[['psid','source_year','capital_stock_nominal','capital_stock_verified']].copy()
+    prior.source_year+=1
+    prior=prior.rename(columns={'capital_stock_nominal':'expected_begin','capital_stock_verified':'previous_documented'})
+    src=src.merge(prior,on=['psid','source_year'],how='left',validate='one_to_one',indicator=True)
+    src['expected_concept']=src['_merge'].eq('both').astype(int)
+    src=src.drop(columns='_merge').merge(n1[['obs_id','source_year','nom_k_begin','nom_k_concept','nom_i_concept','nom_k_documented','nom_i_documented']],on=['obs_id','source_year'],how='left',validate='one_to_one')
+    assert np.allclose(src.nom_k_begin,src.expected_begin,equal_nan=True)
+    assert src.nom_k_concept.eq(src.expected_concept).all() and src.nom_i_concept.eq(1).all()
+    assert src.nom_k_documented.eq(src.previous_documented.eq(1)).all()
+    assert src.nom_i_documented.eq(src.capital_additions_verified.eq(1)).all()
+    assert src.loc[src.source_year.isin([2010,2017]),'nom_k_begin'].isna().all()
+    mapping={'y':'value_added_nominal','l':'workers','k_end':'capital_stock_nominal','k_begin':'nom_k_begin','i':'capital_additions_nominal','m':'val_rtlvcu'}
+    for year in years:
+        g=src if year==0 else src.loc[src.source_year.eq(year)]
+        for inp,col in mapping.items():
+            v=g[col];flag=g.nom_k_concept.eq(1) if inp=='k_begin' else pd.Series(True,index=g.index)
+            scope={'k_end':'assumed_year_end_stock_all_source_years','k_begin':'exact_calendar_lag_of_assumed_year_end_stock','i':'assumed_reported_additions_investment_candidate'}.get(inp,'source_field_all_years')
+            add('deep_input_domains',source_year=year,input=inp,N_source=len(g),N_missing=v.isna().sum(),N_zero=v.eq(0).sum(),N_negative=v.lt(0).sum(),N_positive=v.gt(0).sum(),N_concept_fail=(~flag).sum() if inp in ['k_end','k_begin','i'] else np.nan,N_log_usable=(v.gt(0)&flag).sum(),production_year_supported=np.nan if year==0 else int(year in contract['production_years']),construction_scope=scope)
+            for scale in ['native','positive','log_positive']:
+                a=v if scale=='native' else v.loc[v.gt(0)]
+                if scale=='log_positive':a=np.log(a)
+                add('deep_input_distributions',source_year=year,input=inp,scale=scale,**stats(a))
+    # N09: sequential production filters and separate synthetic risk denominators.
+    for method in methods:
+        for sample in samples:
+            dom='common' if sample=='common' else method
+            admitted=n3.nom_sector.map({sec:primary.loc[(sec,method,sample),'status']=='fit_success' for sec in sectors[1:]}).fillna(False)
+            for sector in sectors:
+                sec=pd.Series(True,index=n3.index) if sector=='ALL' else n3.nom_sector.eq(sector)
+                for year in years:
+                    yr=pd.Series(True,index=n3.index) if year==0 else n3.source_year.eq(year)
+                    origin=n3.nom_interval_only.eq(0)&yr&sec;ns=int(origin.sum());chain=origin.copy();prev=ns
+                    filters=[('source_original',pd.Series(True,index=n3.index)),('production_valid_sector',n3.nom_production.eq(1)),('positive_output',n3.nom_y.notna()),('positive_labor',n3.nom_l.notna()),('positive_begin_capital',n3.nom_k.notna()),('positive_proxy',n3['nom_i' if method=='op' else 'nom_m'].notna()),('sample_domain',n3['nom_domain_'+dom].eq(1)),('calendar_dynamic',n3['nom_dynamic_'+dom].eq(1)),('admitted_dynamic',admitted)]
+                    for stage,f in filters:
+                        chain &= f;nr=int(chain.sum());add('deep_method_funnel',sector=sector,method=method,sample_id=sample,source_year=year,stage=stage,N_source=ns,N_previous=prev,N_retained=nr,N_lost=prev-nr,denominator_label='original_source_year_rows_sequential');prev=nr
+                    nd=int((origin&n3['nom_domain_'+dom].eq(1)).sum());nr=int((origin&n3['nom_domain_'+dom].eq(1)&admitted).sum())
+                    add('deep_method_funnel',sector=sector,method=method,sample_id=sample,source_year=year,stage='prediction_branch',N_source=ns,N_previous=nd,N_retained=nr,N_lost=nd-nr,denominator_label='sample_domain_rows_branch_not_dynamic_chain')
+                    if method=='op':
+                        risk=sec&yr
+                        ns=int((risk&n3.nom_risk.eq(1)).sum());nr=int((risk&n3.nom_selection.eq(1)).sum())
+                        entries=[('risk_all_intervals',ns,ns,'exact_calendar_synthetic_risk_intervals_endpoint_year'),('risk_complete_lag_K_I',ns,nr,'exact_calendar_synthetic_risk_intervals_endpoint_year')]
+                        entries += [(name,nr,int((risk&n3.nom_selection.eq(1)&n3.nom_disappearance.eq(ev)).sum()),'complete_lag_risk_intervals_event_partition') for ev,name in [(0,'risk_continuers'),(1,'risk_disappearances')]]
+                        for stage,npv,nret,den in entries:
+                            add('deep_method_funnel',sector=sector,method=method,sample_id=sample,source_year=year,stage=stage,N_source=ns,N_previous=npv,N_retained=nret,N_lost=npv-nret,denominator_label=den)
+    # N10: pooled and annual predictions; all scope counts refer to the exact named group.
+    for sector in sectors:
+        sec3=pd.Series(True,index=n3.index) if sector=='ALL' else n3.nom_sector.eq(sector)
+        for method in methods:
+            for sample in samples:
+                dom='common' if sample=='common' else method
+                for year in years:
+                    source_mask=sec3&n3.nom_interval_only.eq(0)
+                    if year!=0:source_mask &= n3.source_year.eq(year)
+                    ns=int(source_mask.sum());nd=int((source_mask&n3['nom_domain_'+dom].eq(1)).sum())
+                    g=pred.loc[pred.method.eq(method)&pred.sample_id.eq(sample)]
+                    if year!=0:g=g.loc[g.source_year.eq(year)]
+                    if sector!='ALL':g=g.loc[g.sector.eq(sector)]
+                    npred=len(g);ni=int(g.in_fit.eq(1).sum())
+                    for scope in ['all','in_fit','outside_fit']:
+                        a=g if scope=='all' else g.loc[g.in_fit.eq(1 if scope=='in_fit' else 0)]
+                        for measure in ['raw','centered','index']:
+                            key=dict(sector=sector,method=method,sample_id=sample,source_year=year,fit_scope=scope,measure=measure);st=stats(a[measure])
+                            add('deep_prediction_profiles',**key,**st,N_source=ns,N_domain=nd,N_predicted=npred,N_in_fit=ni,N_outside_fit=npred-ni,coefficient_year=np.nan,normalizer_year=np.nan,coefficient_year_min=g.fit_year_min.min(),coefficient_year_max=g.fit_year_max.max(),normalizer_scope='pooled_dynamic')
+                            add('deep_prediction_tails',**key,**{k:st[k] for k in ['N','N_below15','N_above15','N_below3','N_above3','numeric_released']},N_abs_gt2=a.centered.abs().gt(2).sum(),N_abs_gt3=a.centered.abs().gt(3).sum(),N_index_below_half=a['index'].lt(.5).sum(),N_index_above_two=a['index'].gt(2).sum())
+                            v=a.centered if measure=='index' else a[measure];bins=np.floor(v/.5)*.5
+                            for lo,n in bins.value_counts().items():
+                                isindex=measure=='index';add('deep_prediction_histograms',**key,bin_lower=math.exp(lo) if isindex else lo,bin_upper=math.exp(lo+.5) if isindex else lo+.5,log_bin_lower=lo if isindex else np.nan,log_bin_upper=lo+.5 if isindex else np.nan,N_bin=n,N_total=len(a),share=n/len(a),bin_scale='geometric_log_0_5' if isindex else 'linear')
+    # N11: exact adjacent-year joins only. Pooled denominators count interval endpoints, allowing a firm-year to enter adjacent intervals.
+    for sector in sectors:
+        for method in methods:
+            for sample in samples:
+                g=pred.loc[pred.method.eq(method)&pred.sample_id.eq(sample)]
+                if sector!='ALL':g=g.loc[g.sector.eq(sector)]
+                interval_data=[]
+                for year_from,year_to in pair_years:
+                    a=g.loc[g.source_year.eq(year_from)];b=g.loc[g.source_year.eq(year_to)]
+                    pair=a.merge(b,on=['psid','sector','method','sample_id'],suffixes=('_from','_to'),validate='one_to_one')
+                    interval_data.append((year_from,year_to,len(a),len(b),pair))
+                pooled=pd.concat([r[4] for r in interval_data],ignore_index=True)
+                assert (pooled.source_year_to-pooled.source_year_from).eq(1).all()
+                for year_from,year_to,nfrom,nto,pair in [(0,0,sum(r[2] for r in interval_data),sum(r[3] for r in interval_data),pooled)]+interval_data:
+                    npair=len(pair);nf=int(pair.in_fit_to.eq(1).sum())
+                    for measure in ['raw','centered','index']:
+                        x=pair[measure+'_from'];y=pair[measure+'_to'];delta=y-x;st=stats(delta)
+                        means={k:np.nan for k in ['mean_from','mean_to','pearson_levels','spearman_levels','mean_index_ratio']}
+                        if npair>=5:means=dict(mean_from=x.mean(),mean_to=y.mean(),pearson_levels=x.corr(y),spearman_levels=x.rank().corr(y.rank()),mean_index_ratio=(pair.index_to/pair.index_from).mean())
+                        key=dict(sector=sector,method=method,sample_id=sample,measure=measure,year_from=year_from,year_to=year_to)
+                        add('deep_paired_changes',**key,N_from=nfrom,N_to=nto,N_pairs=npair,N_to_in_fit=nf,N_to_outside_fit=npair-nf,**means,mean_change=st['mean'],sd_change=st['sd'],**{'p'+str(q)+'_change':st['p'+str(q)] for q in QUANT},N_negative=delta.lt(0).sum(),N_zero=delta.eq(0).sum(),N_positive=delta.gt(0).sum(),numeric_released=int(npair>=5))
+                        if measure=='centered':
+                            for lo,n in (np.floor(delta/.25)*.25).value_counts().items():add('deep_paired_histograms',**key,bin_lower=lo,bin_upper=lo+.25,N_bin=n,N_total=npair,share=n/npair)
+    # N12: all annual obligations within each cell with a primary estimate; no observed means from fewer than five records.
+    for (sector,method,sample),cell in pred.groupby(['sector','method','sample_id']):
+        assert cell.labor.nunique()==cell.capital.nunique()==cell.residual_reference_mean.nunique()==1
+        bl=cell.labor.iloc[0];bk=cell.capital.iloc[0];norm=cell.residual_reference_mean.iloc[0]
+        for year in years:
+            g=cell if year==0 else cell.loc[cell.source_year.eq(year)]
+            released=len(g)>=5
+            my=g.nom_y.mean() if released else np.nan;ml=g.nom_l.mean() if released else np.nan;mk=g.nom_k.mean() if released else np.nan
+            raw=my-bl*ml-bk*mk;cent=raw-norm
+            add('deep_worked_calculations',sector=sector,method=method,sample_id=sample,source_year=year,example_type='observed_group_means',N=len(g),mean_y=my,mean_l=ml,mean_k=mk,beta_L=bl,beta_K=bk,labor_product=bl*ml,capital_product=bk*mk,normalizer_value=norm,raw_residual=raw,centered_residual=cent,exp_centered=np.exp(cent),mean_index=g['index'].mean() if released else np.nan,numeric_released=int(released),normalizer_year=np.nan,normalizer_scope='pooled_dynamic')
+        raw=10-bl*3-bk*8;cent=raw-norm
+        add('deep_worked_calculations',sector=sector,method=method,sample_id=sample,source_year=0,example_type='illustrative_fixed_log_inputs',N=np.nan,mean_y=10,mean_l=3,mean_k=8,beta_L=bl,beta_K=bk,labor_product=bl*3,capital_product=bk*8,normalizer_value=norm,raw_residual=raw,centered_residual=cent,exp_centered=np.exp(cent),mean_index=np.nan,numeric_released=1,normalizer_year=np.nan,normalizer_scope='pooled_dynamic')
+    # WFDOC: N13 membandingkan variant hanya dengan primary pada sel sama dan merangkum draw sukses yang sudah ada; tidak mengestimasi atau resample ulang.
+    # N13. Objective comparison is only against same method/sector/sample primary.
+    for row in coef.to_dict('records'):
+        pr=primary.loc[(row['sector'],row['method'],row['sample_id'])]
+        out={k:row[k] for k in ['sector','method','sample_id','variant','status','beta_L','beta_K','objective','N']}
+        out.update(primary_beta_L=pr.beta_L,primary_beta_K=pr.beta_K,primary_objective=pr.objective,delta_L=row['beta_L']-pr.beta_L,delta_K=row['beta_K']-pr.beta_K,delta_objective=row['objective']-pr.objective,objective_below_primary=int(row['objective']<pr.objective) if np.isfinite(row['objective']) and np.isfinite(pr.objective) else np.nan)
+        add('deep_fit_sensitivities',**out)
+    for file in sorted((base/'outputs/bootstrap_draws').glob('nominal_*.csv')):
+        _,sector,method,sample=file.stem.split('_');draw=pd.read_csv(file,na_values=['.']);valid=draw.loc[draw.success.eq(1)]
+        assert draw.requested_draws.eq(len(draw)).all()
+        for measure in ['labor','capital','objective']:
+            add('deep_bootstrap_profiles',sector=sector,method=method,sample_id=sample,measure=measure,**stats(valid[measure]),N_requested=len(draw),N_successful=len(valid))
+            if measure!='objective':
+                for lo,n in (np.floor(valid[measure]/.1)*.1).value_counts().items():add('deep_bootstrap_histograms',sector=sector,method=method,sample_id=sample,measure=measure,bin_lower=lo,bin_upper=lo+.1,N_bin=n,N_total=len(valid),share=n/len(valid))
+    # WFDOC: Cocokkan semua kolom dan kunci unik; angka memakai rtol/atol 2e−10, teks harus sama, lalu hash CSV masuk receipt per-file.
+    # Exhaustive cell comparison; failed checks report only aggregate keys/fields.
+    total=0
+    for name,rows in exp.items():
+        file=run/'outputs'/f'{name}.csv';actual=pd.read_csv(file,dtype={'sector':str},na_values=['.']);expected=pd.DataFrame(rows,columns=contract['outputs'][name+'.csv']);keys=KEYS[name]
+        assert list(actual.columns)==list(expected.columns),(name,'schema')
+        assert len(actual)==len(expected),(name,'row_count',len(actual),len(expected))
+        assert not actual.duplicated(keys).any(),(name,'duplicate keys')
+        actual=actual.sort_values(keys).reset_index(drop=True);expected=expected.sort_values(keys).reset_index(drop=True)
+        largest=0.
+        for col in expected:
+            a=actual[col];e=expected[col]
+            if pd.api.types.is_numeric_dtype(e):
+                av=pd.to_numeric(a,errors='raise').to_numpy(dtype=float);ev=e.to_numpy(dtype=float)
+                ok=np.isclose(av,ev,rtol=2e-10,atol=2e-10,equal_nan=True)
+                if not ok.all():
+                    j=int(np.flatnonzero(~ok)[0]);raise AssertionError((name,col,'aggregate_key',actual.loc[j,keys].to_dict(),'actual',av[j],'expected',ev[j]))
+                finite=np.isfinite(av)&np.isfinite(ev)
+                if finite.any():largest=max(largest,float(np.max(np.abs(av[finite]-ev[finite])/(1+np.abs(ev[finite])))))
+            else:
+                assert a.fillna('').astype(str).tolist()==e.fillna('').astype(str).tolist(),(name,col,'text equality')
+            total+=len(actual)
+        receipts.append(dict(file=file.name,rows=len(actual),cells=len(actual)*len(actual.columns),sha256=sha(file),maximum_scaled_error=largest,status='PASS'))
+    # WFDOC: Sentinel memastikan enam tahap Stata selesai; PASS tetap hanya validasi aritmetika agregat, bukan penerimaan real atau refit.
+    assert 'DEEP_STATA_COMPLETE_NO_REFIT' in (run/'deep_execution.log').read_text()
+    receipt=dict(status='PASS',scope='Independent arithmetic validation of all twelve new Stata aggregate outputs; no full-master load or re-estimation.',utc=datetime.now(timezone.utc).isoformat(),base_run=str(base),run=str(run),contract_sha256=sha(work/'deep-diagnostics-contract.json'),aggregate_cells_compared=total,files=receipts,confidentiality='No record examples or IDs emitted; source identifiers used only for in-memory exact joins.')
+    validation_path.write_text(json.dumps(receipt,indent=2)+'\n')
+    inputs=[base/x for x in contract['source_files'] if '<' not in x]+sorted((base/'outputs/bootstrap_draws').glob('nominal_*.csv'))
+    codes=sorted((work/'stata/deep').glob('*.do'))+[Path(__file__),work/'deep-diagnostics-contract.json']
+    manifest=dict(status='VALIDATED',base_run=str(base),run=str(run),contract_id=contract['id'],input_manifest_sha256=contract['input_manifest_sha256'],sources=[dict(path=str(x),sha256=sha(x),bytes=x.stat().st_size) for x in inputs],code=[dict(path=str(x.relative_to(root)),sha256=sha(x)) for x in codes],outputs=receipts,validation_sha256=sha(validation_path),log_sha256=sha(run/'deep_execution.log'),utc=datetime.now(timezone.utc).isoformat(),no_refit=True)
+    manifest_path.write_text(json.dumps(manifest,indent=2)+'\n')
+    print(json.dumps({'status':'PASS','files':len(receipts),'aggregate_cells_compared':total,'receipt':str(validation_path)},indent=2))
+if __name__=='__main__':main()

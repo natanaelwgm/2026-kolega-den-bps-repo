@@ -1,0 +1,2643 @@
+{
+  "schema_version": 1,
+  "row_id": "G4",
+  "title": "All-variable statistics: levels/logs, pooled and annual",
+  "family": "descriptive",
+  "status": "planning_only",
+  "row_complete": false,
+  "source": {
+    "task_json": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/requests/descriptive/general/04-all-variables/task.json",
+    "docx_sha256": "027fbf675aa8001a50060561781930440ee4d9697cc790ba593452fe528edd92",
+    "locator": "word/document.xml table 1, row 8",
+    "number": "4",
+    "pic": "",
+    "completion_cell": "",
+    "request": "Semua variable stats (mean, sd, min, max, persentil) dalam original value dan dalam Ln: total pool, dan by year\n",
+    "strategy": "",
+    "notes": ""
+  },
+  "question": "What do all variables look like before and after taking logarithms?",
+  "dependencies": [
+    {
+      "id": "C_MAIN",
+      "required_for": "required source/method branch defined by exact row and graph",
+      "availability": "latest_actual_source_located_not_full_G0_DoD",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/dag/data/word_data/G0/G0_analysis_ready_ACTUAL_LOCAL.dta",
+      "gate": "Exact source hash 6fc70746e1e6a1257552d29f19885c3bf113b64c5bed7671ca8a23f5168e6a6c; G0 full acceptance before dependent execution. Every company-data operand in analysis must be the single published consolidated master or a declared derivative whose entire company-data ancestry ends at that consolidated master. Direct annual-wave reads are prohibited in analysis; only the master builder may append annual waves. Raw/staged/legacy/cached final company files cannot be numerical analysis parents. A required field missing from the wave is an upstream preparation failure; never repair it by opening an external company file inside this row. Comparison-only validators may read older data but may not feed construction or estimates. External reference and metadata inputs retain explicit non-company roles.",
+      "numerical_binding": "wave_input_contract.master_path or a declared derivative"
+    },
+    {
+      "id": "C_QA",
+      "required_for": "required source/method branch defined by exact row and graph",
+      "availability": "current_actual_G2_refresh_not_run",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/docs/CURRENT-STATE.md",
+      "gate": "G2 eligibility on exactly accepted G0; historical/synthetic receipts do not satisfy it."
+    },
+    {
+      "id": "G0",
+      "required_for": "required: accepted shared canonical dataset",
+      "availability": "planned_not_accepted",
+      "evidence": "work/plans/rows/G0.json",
+      "gate": "G0 DoD and input hash acceptance; never substitute synthetic/history output Every company-data operand in analysis must be the single published consolidated master or a declared derivative whose entire company-data ancestry ends at that consolidated master. Direct annual-wave reads are prohibited in analysis; only the master builder may append annual waves. Raw/staged/legacy/cached final company files cannot be numerical analysis parents. A required field missing from the wave is an upstream preparation failure; never repair it by opening an external company file inside this row. Comparison-only validators may read older data but may not feed construction or estimates. External reference and metadata inputs retain explicit non-company roles.",
+      "numerical_binding": "wave_input_contract.master_path or a declared derivative"
+    },
+    {
+      "id": "G2",
+      "required_for": "required: current variable-specific eligibility",
+      "availability": "planned_not_accepted",
+      "evidence": "work/plans/rows/G2.json",
+      "gate": "G2 DoD and input hash acceptance; never substitute synthetic/history output"
+    }
+  ],
+  "decisions": [
+    {
+      "id": "G4_D01",
+      "question": "Freeze exact source and variable universe",
+      "selected_rule": "All fields accounted for; do not compute mean ID or parse arbitrary raw strings as economic numbers.",
+      "rationale": "Read accepted G0/G2 and the complete canonical dictionary, including numeric values, indicators, derived fields, status/raw metadata; classify every field as numeric descriptive, categorical frequency, identifier or unavailable.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G4_D02",
+      "question": "Expand the complete requested specification grid",
+      "selected_rule": "No silently omitted variables/groups or top-ten substitute; tuple-level manifest controls coverage.",
+      "rationale": "Cross variables×levels/ln×pooled/year×statistics; include actual 2010–2022 calendar, absent 2016 and explicit unsupported cells.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G4_D03",
+      "question": "Freeze unit and semantic availability per cell",
+      "selected_rule": "Real-money cells blocked until appropriate price input; binary means shares only with known response universe.",
+      "rationale": "Retain nominal money, verified/provisional values and source question differences; merely existing column not usable value.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G4_D04",
+      "question": "Define level sample and nonnumeric dispositions",
+      "selected_rule": "No blanket positive filter for levels; invalid money/count domain not conflated with missing.",
+      "rationale": "Levels retain valid-domain zeros and negatives only where concept allows; source invalid states and unsupported string/ID fields remain explicit.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G4_D05",
+      "question": "Define log sample separately",
+      "selected_rule": "No+1/tiny constant; levels and logs report different N and nonpositive losses.",
+      "rationale": "Compute ln only strict positive eligible continuous values; binary log has no meaningful distribution and is marked not applicable rather than artificial all-zero values.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G4_D06",
+      "question": "Compute exhaustive annual level statistics",
+      "selected_rule": "2016 statistics blank with an unsupplied status; no joined line or calendar compression.",
+      "rationale": "Run Stata N, source/eligible counts, mean, SD, min/max and p1,p5,p25,p50,p75,p95, p99 on the frozen level domain for each actual year and required group.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G4_D07",
+      "question": "Compute exhaustive annual log statistics",
+      "selected_rule": "No assumption log N=level N; binary/ID not applicable status retained.",
+      "rationale": "Reuse the same grid but positive log domain; record each loss from levels to supported logs.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G4_D08",
+      "question": "Define pooled estimand and compute level/log statistics",
+      "selected_rule": "Do not call pool an average year or panel average; equal-year weighted pool is separate sensitivity, not primary.",
+      "rationale": "Primary pool is unweighted available-record distribution:each observed record one unit; show year composition. Pool only compatible variable definitions and sector class; monetary nominal pool labels mix prices.",
+      "alternatives": "Equal-year distribution with weights 1/N_yisoptionalcompositionsensitivity; not national weighting.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G4_D09",
+      "question": "Compute verified-only and working comparisons",
+      "selected_rule": "Working/provisional main and verified-only are both visible; differences may come from sample composition.",
+      "rationale": "For canonical variables with v_/vs_ companions, produce paired coverage and separate verified-only distributions; no forced common set unless explicitly defined.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G4_D10",
+      "question": "Inspect skewness, outliers and denominators before selecting main figures",
+      "selected_rule": "No chart selection based on significance or impressive coefficient; main few plots and full appendix serve different reading needs.",
+      "rationale": "Use predeclared family exhibits and complete grid to show median/IQR versus mean/tails, log domain losses, unknowns and sparse group coverage.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G4_D11",
+      "question": "Validate every grid cell and build reader-facing report",
+      "selected_rule": "Incomplete/unavailable cells stated; mandatory unresolved subrequest cannot be claimed full rowdone without owner scope change.",
+      "rationale": "Check expected tuple manifest against actual statistics, denominators, precision, source hashes; render custom charts and LaTeX, verify offline independent row execution.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "G4_INPUT_QUALITY",
+      "state": "Physical G2 record-variable quality masks",
+      "grain": "source record × year × variable × mask",
+      "keys": [
+        "source_year",
+        "source_row",
+        "variable_id",
+        "mask_id"
+      ],
+      "required_fields": [
+        "source_year",
+        "source_row",
+        "variable_id",
+        "mask_id",
+        "eligible",
+        "reason",
+        "verification_state"
+      ],
+      "units": "Boolean eligibility and categorical reasons",
+      "folder": "dag/nodes/G4/G4_INPUT_QUALITY",
+      "planning_status": "external_input_not_materialized_by_plan",
+      "input_receipt": "Accepted G2 record-level hash; a summary table is insufficient"
+    },
+    {
+      "id": "G4_INPUT_SEMANTICS",
+      "state": "Accepted G0 variable-year dictionary, source units and codebooks",
+      "grain": "variable × year",
+      "keys": [
+        "variable_id",
+        "source_year"
+      ],
+      "required_fields": [
+        "variable_id",
+        "source_year",
+        "source_field",
+        "source_unit",
+        "canonical_unit",
+        "universe",
+        "evidence_id",
+        "status"
+      ],
+      "units": "Definition metadata",
+      "folder": "dag/nodes/G4/G4_INPUT_SEMANTICS",
+      "planning_status": "external_input_not_materialized_by_plan",
+      "input_receipt": "G0 dictionary/rule hashes and exact source locators"
+    },
+    {
+      "id": "G4_INPUT_CANONICAL",
+      "state": "Physical accepted canonical G0 dataset with original values, companions and source states",
+      "grain": "source record × year",
+      "keys": [
+        "source_year",
+        "source_row"
+      ],
+      "required_fields": [
+        "source_year",
+        "source_row",
+        "canonical_values",
+        "verified_values",
+        "verification_states",
+        "source_presence",
+        "schema_version"
+      ],
+      "units": "Per-variable canonical dictionary; nominal and real fields remain distinct",
+      "folder": "dag/nodes/G4/G4_INPUT_CANONICAL",
+      "planning_status": "external_input_not_materialized_by_plan",
+      "input_receipt": "Require actual current wave release receipt plus this row-specific eligibility and field contracts.",
+      "numerical_binding": "wave_input_contract.master_path or a declared derivative"
+    },
+    {
+      "id": "G4_S00",
+      "state": "Frozen input manifest and available source bytes; not generated by this plan",
+      "grain": "input version manifest",
+      "keys": [
+        "source_path",
+        "sha256"
+      ],
+      "required_fields": [
+        "source_path",
+        "sha256",
+        "source_year",
+        "format",
+        "availability",
+        "privacy",
+        "definition_evidence"
+      ],
+      "units": {
+        "source_year": "calendar year",
+        "bytes": "bytes"
+      },
+      "folder": "dag/nodes/G4/G4_S00",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G4_S01",
+      "state": "Freeze exact source and variable universe — planned output state, not materialized",
+      "grain": "variable × year",
+      "keys": [
+        "variable_id",
+        "source_year"
+      ],
+      "required_fields": [
+        "variable_id",
+        "source_year",
+        "role",
+        "unit",
+        "canonical_status",
+        "source_hash",
+        "availability"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G4/G4_S01",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G4_S02",
+      "state": "Expand the complete requested specification grid — planned output state, not materialized",
+      "grain": "aggregate cell",
+      "keys": [
+        "cell_id"
+      ],
+      "required_fields": [
+        "cell_id",
+        "variable",
+        "transformation",
+        "period",
+        "statistic",
+        "group",
+        "expected_status"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G4/G4_S02",
+      "planning_status": "planning_only",
+      "cell_key_contract": "cell_id is the deterministic join of variable_id, transformation, period, grouping_id, group_value, verification_branch, price_scenario and weighting_rule. Save all components. Statistics are wide columns unless statistic is explicitly part of a long-table key."
+    },
+    {
+      "id": "G4_S03",
+      "state": "Freeze unit and semantic availability per cell — planned output state, not materialized",
+      "grain": "aggregate cell",
+      "keys": [
+        "cell_id"
+      ],
+      "required_fields": [
+        "cell_id",
+        "unit",
+        "price_basis",
+        "verified_status",
+        "question_universe",
+        "availability"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G4/G4_S03",
+      "planning_status": "planning_only",
+      "cell_key_contract": "cell_id is the deterministic join of variable_id, transformation, period, grouping_id, group_value, verification_branch, price_scenario and weighting_rule. Save all components. Statistics are wide columns unless statistic is explicitly part of a long-table key."
+    },
+    {
+      "id": "G4_S04",
+      "state": "Define level sample and nonnumeric dispositions — planned output state, not materialized",
+      "grain": "source record × year × variable × verification branch",
+      "keys": [
+        "source_year",
+        "source_row",
+        "variable_id",
+        "verification_branch"
+      ],
+      "required_fields": [
+        "source_year",
+        "source_row",
+        "variable_id",
+        "verification_branch",
+        "variable",
+        "level_value",
+        "level_eligible",
+        "exclusion_reason"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G4/G4_S04",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G4_S05",
+      "state": "Define log sample separately — planned output state, not materialized",
+      "grain": "source record × year × variable × verification branch",
+      "keys": [
+        "source_year",
+        "source_row",
+        "variable_id",
+        "verification_branch"
+      ],
+      "required_fields": [
+        "source_year",
+        "source_row",
+        "variable_id",
+        "verification_branch",
+        "variable",
+        "ln_value",
+        "log_eligible",
+        "zero",
+        "negative",
+        "missing"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G4/G4_S05",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G4_S06",
+      "state": "Compute exhaustive annual level statistics — planned output state, not materialized",
+      "grain": "aggregate cell",
+      "keys": [
+        "cell_id"
+      ],
+      "required_fields": [
+        "cell_id",
+        "year",
+        "Nsource",
+        "Neligible",
+        "zero",
+        "negative",
+        "missing",
+        "mean",
+        "sd",
+        "min",
+        "max",
+        "p1",
+        "p5",
+        "p25",
+        "p50",
+        "p75",
+        "p95",
+        "p99"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G4/G4_S06",
+      "planning_status": "planning_only",
+      "cell_key_contract": "cell_id is the deterministic join of variable_id, transformation, period, grouping_id, group_value, verification_branch, price_scenario and weighting_rule. Save all components. Statistics are wide columns unless statistic is explicitly part of a long-table key."
+    },
+    {
+      "id": "G4_S07",
+      "state": "Compute exhaustive annual log statistics — planned output state, not materialized",
+      "grain": "aggregate cell",
+      "keys": [
+        "cell_id"
+      ],
+      "required_fields": [
+        "cell_id",
+        "year",
+        "log_N",
+        "level_N",
+        "loss_reason",
+        "mean_ln",
+        "sd_ln",
+        "percentiles_ln"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G4/G4_S07",
+      "planning_status": "planning_only",
+      "cell_key_contract": "cell_id is the deterministic join of variable_id, transformation, period, grouping_id, group_value, verification_branch, price_scenario and weighting_rule. Save all components. Statistics are wide columns unless statistic is explicitly part of a long-table key."
+    },
+    {
+      "id": "G4_S08",
+      "state": "Define pooled estimand and compute level/log statistics — planned output state, not materialized",
+      "grain": "aggregate cell",
+      "keys": [
+        "cell_id"
+      ],
+      "required_fields": [
+        "cell_id",
+        "pooled_N",
+        "year_shares",
+        "transformation",
+        "statistic",
+        "compatibility"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G4/G4_S08",
+      "planning_status": "planning_only",
+      "cell_key_contract": "cell_id is the deterministic join of variable_id, transformation, period, grouping_id, group_value, verification_branch, price_scenario and weighting_rule. Save all components. Statistics are wide columns unless statistic is explicitly part of a long-table key."
+    },
+    {
+      "id": "G4_S09",
+      "state": "Compute verified-only and working comparisons — planned output state, not materialized",
+      "grain": "aggregate cell",
+      "keys": [
+        "cell_id"
+      ],
+      "required_fields": [
+        "cell_id",
+        "working_N",
+        "verified_N",
+        "provisional_N",
+        "paired_N",
+        "statistic",
+        "definition_status"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G4/G4_S09",
+      "planning_status": "planning_only",
+      "cell_key_contract": "cell_id is the deterministic join of variable_id, transformation, period, grouping_id, group_value, verification_branch, price_scenario and weighting_rule. Save all components. Statistics are wide columns unless statistic is explicitly part of a long-table key."
+    },
+    {
+      "id": "G4_S10",
+      "state": "Inspect skewness, outliers and denominators before selecting main figures — planned output state, not materialized",
+      "grain": "aggregate cell",
+      "keys": [
+        "cell_id"
+      ],
+      "required_fields": [
+        "cell_id",
+        "mean",
+        "median",
+        "IQR",
+        "tail_quantiles",
+        "N",
+        "missing",
+        "display_status"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G4/G4_S10",
+      "planning_status": "planning_only",
+      "cell_key_contract": "cell_id is the deterministic join of variable_id, transformation, period, grouping_id, group_value, verification_branch, price_scenario and weighting_rule. Save all components. Statistics are wide columns unless statistic is explicitly part of a long-table key."
+    },
+    {
+      "id": "G4_S11",
+      "state": "Validate every grid cell and build reader-facing report — planned output state, not materialized",
+      "grain": "aggregate cell",
+      "keys": [
+        "cell_id"
+      ],
+      "required_fields": [
+        "cell_id",
+        "spec_grid",
+        "actual_table_keys",
+        "missing_cells",
+        "duplicate_cells",
+        "numeric_controls",
+        "reader_review",
+        "acceptance"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G4/G4_S11",
+      "planning_status": "planning_only",
+      "cell_key_contract": "cell_id is the deterministic join of variable_id, transformation, period, grouping_id, group_value, verification_branch, price_scenario and weighting_rule. Save all components. Statistics are wide columns unless statistic is explicitly part of a long-table key."
+    }
+  ],
+  "edges": [
+    {
+      "id": "G4_E01",
+      "title": "Freeze exact source and variable universe",
+      "input_nodes": [
+        "G4_S00",
+        "G4_INPUT_CANONICAL",
+        "G4_INPUT_SEMANTICS",
+        "G4_INPUT_QUALITY"
+      ],
+      "output_nodes": [
+        "G4_S01"
+      ],
+      "depends_on": [],
+      "do_file": "rows/G4/edges/G4_E01.do",
+      "action": "Read accepted G0/G2 and the complete canonical dictionary, including numeric values, indicators, derived fields, status/raw metadata; classify every field as numeric descriptive, categorical frequency, identifier or unavailable.",
+      "decision_ids": [
+        "G4_D01"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G4_E02",
+      "title": "Expand the complete requested specification grid",
+      "input_nodes": [
+        "G4_S01"
+      ],
+      "output_nodes": [
+        "G4_S02"
+      ],
+      "depends_on": [
+        "G4_E01"
+      ],
+      "do_file": "rows/G4/edges/G4_E02.do",
+      "action": "Cross variables×levels/ln×pooled/year×statistics; include actual 2010–2022 calendar, absent 2016 and explicit unsupported cells.",
+      "decision_ids": [
+        "G4_D02"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G4_E03",
+      "title": "Freeze unit and semantic availability per cell",
+      "input_nodes": [
+        "G4_S02",
+        "G4_INPUT_SEMANTICS"
+      ],
+      "output_nodes": [
+        "G4_S03"
+      ],
+      "depends_on": [
+        "G4_E02"
+      ],
+      "do_file": "rows/G4/edges/G4_E03.do",
+      "action": "Retain nominal money, verified/provisional values and source question differences; merely existing column not usable value.",
+      "decision_ids": [
+        "G4_D03"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G4_E04",
+      "title": "Define level sample and nonnumeric dispositions",
+      "input_nodes": [
+        "G4_S03",
+        "G4_INPUT_CANONICAL",
+        "G4_INPUT_QUALITY"
+      ],
+      "output_nodes": [
+        "G4_S04"
+      ],
+      "depends_on": [
+        "G4_E03"
+      ],
+      "do_file": "rows/G4/edges/G4_E04.do",
+      "action": "Levels retain valid-domain zeros and negatives only where concept allows; source invalid states and unsupported string/ID fields remain explicit.",
+      "decision_ids": [
+        "G4_D04"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G4_E05",
+      "title": "Define log sample separately",
+      "input_nodes": [
+        "G4_S04"
+      ],
+      "output_nodes": [
+        "G4_S05"
+      ],
+      "depends_on": [
+        "G4_E04"
+      ],
+      "do_file": "rows/G4/edges/G4_E05.do",
+      "action": "Compute ln only strict positive eligible continuous values; binary log has no meaningful distribution and is marked not applicable rather than artificial all-zero values.",
+      "decision_ids": [
+        "G4_D05"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G4_E06",
+      "title": "Compute exhaustive annual level statistics",
+      "input_nodes": [
+        "G4_S04",
+        "G4_S02"
+      ],
+      "output_nodes": [
+        "G4_S06"
+      ],
+      "depends_on": [
+        "G4_E04",
+        "G4_E02"
+      ],
+      "do_file": "rows/G4/edges/G4_E06.do",
+      "action": "Run Stata N, source/eligible counts, mean, SD, min/max and p1,p5,p25,p50,p75,p95, p99 on the frozen level domain for each actual year and required group.",
+      "decision_ids": [
+        "G4_D06"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G4_E07",
+      "title": "Compute exhaustive annual log statistics",
+      "input_nodes": [
+        "G4_S05",
+        "G4_S02"
+      ],
+      "output_nodes": [
+        "G4_S07"
+      ],
+      "depends_on": [
+        "G4_E05",
+        "G4_E02"
+      ],
+      "do_file": "rows/G4/edges/G4_E07.do",
+      "action": "Reuse the same grid but positive log domain; record each loss from levels to supported logs.",
+      "decision_ids": [
+        "G4_D07"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G4_E08",
+      "title": "Define pooled estimand and compute level/log statistics",
+      "input_nodes": [
+        "G4_S04",
+        "G4_S05",
+        "G4_S02"
+      ],
+      "output_nodes": [
+        "G4_S08"
+      ],
+      "depends_on": [
+        "G4_E04",
+        "G4_E05",
+        "G4_E02"
+      ],
+      "do_file": "rows/G4/edges/G4_E08.do",
+      "action": "Primary pool is unweighted available-record distribution:each observed record one unit; show year composition. Pool only compatible variable definitions and sector class; monetary nominal pool labels mix prices.",
+      "decision_ids": [
+        "G4_D08"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G4_E09",
+      "title": "Compute verified-only and working comparisons",
+      "input_nodes": [
+        "G4_S06",
+        "G4_S07",
+        "G4_S08",
+        "G4_S01",
+        "G4_S03",
+        "G4_S04",
+        "G4_S05"
+      ],
+      "output_nodes": [
+        "G4_S09"
+      ],
+      "depends_on": [
+        "G4_E06",
+        "G4_E07",
+        "G4_E08",
+        "G4_E01",
+        "G4_E03",
+        "G4_E04",
+        "G4_E05"
+      ],
+      "do_file": "rows/G4/edges/G4_E09.do",
+      "action": "For canonical variables with v_/vs_ companions, produce paired coverage and separate verified-only distributions; no forced common set unless explicitly defined.",
+      "decision_ids": [
+        "G4_D09"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G4_E10",
+      "title": "Inspect skewness, outliers and denominators before selecting main figures",
+      "input_nodes": [
+        "G4_S09"
+      ],
+      "output_nodes": [
+        "G4_S10"
+      ],
+      "depends_on": [
+        "G4_E09"
+      ],
+      "do_file": "rows/G4/edges/G4_E10.do",
+      "action": "Use predeclared family exhibits and complete grid to show median/IQR versus mean/tails, log domain losses, unknowns and sparse group coverage.",
+      "decision_ids": [
+        "G4_D10"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G4_E11",
+      "title": "Validate every grid cell and build reader-facing report",
+      "input_nodes": [
+        "G4_S10"
+      ],
+      "output_nodes": [
+        "G4_S11"
+      ],
+      "depends_on": [
+        "G4_E10"
+      ],
+      "do_file": "rows/G4/edges/G4_E11.do",
+      "action": "Check expected tuple manifest against actual statistics, denominators, precision, source hashes; render custom charts and LaTeX, verify offline independent row execution.",
+      "decision_ids": [
+        "G4_D11"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    }
+  ],
+  "primary_do": "rows/G4/G4.do",
+  "execution_order": [
+    "G4_E01",
+    "G4_E02",
+    "G4_E03",
+    "G4_E04",
+    "G4_E05",
+    "G4_E06",
+    "G4_E07",
+    "G4_E08",
+    "G4_E09",
+    "G4_E10",
+    "G4_E11"
+  ],
+  "entrypoint_contract": {
+    "inputs": [
+      "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/dag/data/word_data/G0/G0_analysis_ready_ACTUAL_LOCAL.dta",
+      "frozen all 44-row plan registry",
+      "G4 input/source/variable contracts"
+    ],
+    "outputs": [
+      "outputs/G4/tables/",
+      "outputs/G4/figures/",
+      "outputs/G4/G4.tex",
+      "outputs/G4/G4.pdf",
+      "outputs/G4/acceptance.json"
+    ],
+    "logs": [
+      "dag/logs/G4/primary.log",
+      "dag/logs/G4/edge_id.log"
+    ],
+    "restart": "Resume only from a passed immutable node whose input/code/decision hashes still match. Keep failed attempts. Primary returns nonzero on a mandatory unfulfilled gate; diagnostic output never passes the row.",
+    "offline_dependencies": [
+      "Stata17+ with compatible maxvar",
+      "local input manifest",
+      "frozen local source dictionaries/concordances",
+      "vendored documented estimator ado only when needed",
+      "Python for validation/custom charts/LaTeX rendering only",
+      "XeLaTeX and local fonts; no network required by offline bundle"
+    ],
+    "estimated_cost_basis": "No timing promised from file names. Inventory rows/columns and RAM/free disk before launch; start one bounded validation path; one Stata worker unless manager coordinates resource-safe parallel work. Package-relative row entry point is primary interface; optional master never forces blocked rows."
+  },
+  "exhibits": [
+    {
+      "id": "G4-X01",
+      "kind": "table",
+      "priority": "core",
+      "title": "Complete variable role, unit and source dictionary",
+      "question": "Complete variable role, unit and source dictionary?",
+      "source_nodes": [
+        "G4_S01",
+        "G4_S02",
+        "G4_S03",
+        "G4_S04",
+        "G4_S05"
+      ],
+      "fields": [
+        "cell_id",
+        "source_year",
+        "N_source",
+        "N_eligible",
+        "result",
+        "unit",
+        "status"
+      ],
+      "formula_or_specification": "List native unit, canonical unit, price basis, conversion evidence and source-status rule for each variable-year.",
+      "units": "definition or acceptance status; no economic magnitude",
+      "sample_and_denominator": "Every named item in the frozen source/method/check registry, including unavailable items.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "Physical quantity, spending and a logarithm have different units and must not share an unexplained scale.",
+      "limits": "Observed sample distributions; nominal pooled money mixes prices, classification pooling needs verified bridge; no firm histories or causal interpretation.",
+      "prerequisites": "No execution until all 44 plans frozen and required rows accepted. Real/TFP/classification/location/complete-energy cells block if missing sources.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G4/exhibits/G4-X01.tex",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "Physical quantity, spending and a logarithm have different units and must not share an unexplained scale.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G4-X02",
+      "kind": "diagram",
+      "priority": "core",
+      "title": "How the full statistics grid is constructed",
+      "question": "How the full statistics grid is constructed?",
+      "source_nodes": [
+        "G4_S02",
+        "G4_S03",
+        "G4_S04",
+        "G4_S05"
+      ],
+      "fields": [
+        "cell_id",
+        "source_year",
+        "N_source",
+        "N_eligible",
+        "result",
+        "unit",
+        "status"
+      ],
+      "formula_or_specification": "Freeze variable × transform(level, positive ln) × period(all supplied years, compatible pooled) × grouping × verification branch × weighting rule, with a disposition for every tuple.",
+      "units": "definition or acceptance status; no economic magnitude",
+      "sample_and_denominator": "Every named item in the frozen source/method/check registry, including unavailable items.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "The registry makes the promised coverage checkable before any figure is selected.",
+      "limits": "Observed sample distributions; nominal pooled money mixes prices, classification pooling needs verified bridge; no firm histories or causal interpretation.",
+      "prerequisites": "No execution until all 44 plans frozen and required rows accepted. Real/TFP/classification/location/complete-energy cells block if missing sources.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G4/exhibits/G4-X02.pdf",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "The registry makes the promised coverage checkable before any figure is selected.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G4-X03",
+      "kind": "chart",
+      "priority": "core",
+      "title": "Annual observed variable coverage",
+      "question": "Annual observed variable coverage?",
+      "source_nodes": [
+        "G4_S06",
+        "G4_S02",
+        "G4_S03",
+        "G4_S04",
+        "G4_S05"
+      ],
+      "fields": [
+        "source_year",
+        "category",
+        "N_category",
+        "N_denominator",
+        "share_percent",
+        "status"
+      ],
+      "formula_or_specification": "N_observed/N_source*100 and N_verified/N_source*100, by variable/year/group",
+      "units": "records and percent",
+      "sample_and_denominator": "Each compatible year and pooled period within all observed records; variable-specific eligibility, verification branch and zero/negative/missing counts are explicit.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "Observed values and verified meanings are different kinds of coverage; both are needed to interpret a distribution.",
+      "limits": "Observed sample distributions; nominal pooled money mixes prices, classification pooling needs verified bridge; no firm histories or causal interpretation.",
+      "prerequisites": "No execution until all 44 plans frozen and required rows accepted. Real/TFP/classification/location/complete-energy cells block if missing sources.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G4/exhibits/G4-X03.pdf",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "Observed values and verified meanings are different kinds of coverage; both are needed to interpret a distribution.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G4-X04",
+      "kind": "table",
+      "priority": "core",
+      "title": "All pooled level statistics",
+      "question": "All pooled level statistics?",
+      "source_nodes": [
+        "G4_S08",
+        "G4_S02",
+        "G4_S03",
+        "G4_S04",
+        "G4_S05"
+      ],
+      "fields": [
+        "source_year",
+        "variable_id",
+        "grouping_id",
+        "group_value",
+        "N_source",
+        "N_eligible",
+        "mean",
+        "sd",
+        "min",
+        "p1",
+        "p5",
+        "p25",
+        "p50",
+        "p75",
+        "p95",
+        "p99",
+        "max",
+        "status"
+      ],
+      "formula_or_specification": "For every continuous canonical economic variable: N, mean=sum(x)/N, sample SD=sqrt(sum((x-mean)^2)/(N-1)), min, P1/P5/P25/P50/P75/P95/P99, max; retain zero/negative/missing counts.",
+      "units": "canonical variable unit, shown individually; nominal money Rp000",
+      "sample_and_denominator": "Each compatible year and pooled period within all observed records; variable-specific eligibility, verification branch and zero/negative/missing counts are explicit. Pooled-period table only.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "The full table preserves every requested cell, so the main figures cannot hide unavailable or inconvenient variables.",
+      "limits": "Observed sample distributions; nominal pooled money mixes prices, classification pooling needs verified bridge; no firm histories or causal interpretation.",
+      "prerequisites": "No execution until all 44 plans frozen and required rows accepted. Real/TFP/classification/location/complete-energy cells block if missing sources.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G4/exhibits/G4-X04.tex",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "The full table preserves every requested cell, so the main figures cannot hide unavailable or inconvenient variables.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G4-X05",
+      "kind": "table",
+      "priority": "core",
+      "title": "All pooled log statistics",
+      "question": "All pooled log statistics?",
+      "source_nodes": [
+        "G4_S08",
+        "G4_S02",
+        "G4_S03",
+        "G4_S04",
+        "G4_S05"
+      ],
+      "fields": [
+        "source_year",
+        "variable_id",
+        "grouping_id",
+        "group_value",
+        "N_source",
+        "N_eligible",
+        "mean",
+        "sd",
+        "min",
+        "p1",
+        "p5",
+        "p25",
+        "p50",
+        "p75",
+        "p95",
+        "p99",
+        "max",
+        "status"
+      ],
+      "formula_or_specification": "For ln(x) for every eligible continuous variable with x>0: N, mean=sum(x)/N, sample SD=sqrt(sum((x-mean)^2)/(N-1)), min, P1/P5/P25/P50/P75/P95/P99, max; retain zero/negative/missing counts.",
+      "units": "natural log of the stated canonical unit",
+      "sample_and_denominator": "Each compatible year and pooled period within all observed records; variable-specific eligibility, verification branch and zero/negative/missing counts are explicit. Positive-domain observations only; no log of IDs or arbitrary category codes. Pooled-period table only.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "The log compresses large values and describes proportional differences; it has a different sample when zeros or negative values are present.",
+      "limits": "Observed sample distributions; nominal pooled money mixes prices, classification pooling needs verified bridge; no firm histories or causal interpretation.",
+      "prerequisites": "No execution until all 44 plans frozen and required rows accepted. Real/TFP/classification/location/complete-energy cells block if missing sources.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G4/exhibits/G4-X05.tex",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "The log compresses large values and describes proportional differences; it has a different sample when zeros or negative values are present.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G4-X06",
+      "kind": "table",
+      "priority": "core",
+      "title": "All annual level statistics",
+      "question": "All annual level statistics?",
+      "source_nodes": [
+        "G4_S06",
+        "G4_S02",
+        "G4_S03",
+        "G4_S04",
+        "G4_S05"
+      ],
+      "fields": [
+        "source_year",
+        "variable_id",
+        "grouping_id",
+        "group_value",
+        "N_source",
+        "N_eligible",
+        "mean",
+        "sd",
+        "min",
+        "p1",
+        "p5",
+        "p25",
+        "p50",
+        "p75",
+        "p95",
+        "p99",
+        "max",
+        "status"
+      ],
+      "formula_or_specification": "For every continuous canonical economic variable: N, mean=sum(x)/N, sample SD=sqrt(sum((x-mean)^2)/(N-1)), min, P1/P5/P25/P50/P75/P95/P99, max; retain zero/negative/missing counts.",
+      "units": "canonical variable unit, shown individually; nominal money Rp000",
+      "sample_and_denominator": "Each compatible year and pooled period within all observed records; variable-specific eligibility, verification branch and zero/negative/missing counts are explicit. Separate annual table only.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "The full table preserves every requested cell, so the main figures cannot hide unavailable or inconvenient variables.",
+      "limits": "Observed sample distributions; nominal pooled money mixes prices, classification pooling needs verified bridge; no firm histories or causal interpretation.",
+      "prerequisites": "No execution until all 44 plans frozen and required rows accepted. Real/TFP/classification/location/complete-energy cells block if missing sources.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G4/exhibits/G4-X06.tex",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "The full table preserves every requested cell, so the main figures cannot hide unavailable or inconvenient variables.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G4-X07",
+      "kind": "table",
+      "priority": "core",
+      "title": "All annual log statistics",
+      "question": "All annual log statistics?",
+      "source_nodes": [
+        "G4_S07",
+        "G4_S02",
+        "G4_S03",
+        "G4_S04",
+        "G4_S05"
+      ],
+      "fields": [
+        "source_year",
+        "variable_id",
+        "grouping_id",
+        "group_value",
+        "N_source",
+        "N_eligible",
+        "mean",
+        "sd",
+        "min",
+        "p1",
+        "p5",
+        "p25",
+        "p50",
+        "p75",
+        "p95",
+        "p99",
+        "max",
+        "status"
+      ],
+      "formula_or_specification": "For ln(x) for every eligible continuous variable with x>0: N, mean=sum(x)/N, sample SD=sqrt(sum((x-mean)^2)/(N-1)), min, P1/P5/P25/P50/P75/P95/P99, max; retain zero/negative/missing counts.",
+      "units": "natural log of the stated canonical unit",
+      "sample_and_denominator": "Each compatible year and pooled period within all observed records; variable-specific eligibility, verification branch and zero/negative/missing counts are explicit. Positive-domain observations only; no log of IDs or arbitrary category codes. Separate annual table only.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "The log compresses large values and describes proportional differences; it has a different sample when zeros or negative values are present.",
+      "limits": "Observed sample distributions; nominal pooled money mixes prices, classification pooling needs verified bridge; no firm histories or causal interpretation.",
+      "prerequisites": "No execution until all 44 plans frozen and required rows accepted. Real/TFP/classification/location/complete-energy cells block if missing sources.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G4/exhibits/G4-X07.tex",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "The log compresses large values and describes proportional differences; it has a different sample when zeros or negative values are present.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G4-X08",
+      "kind": "chart",
+      "priority": "core",
+      "title": "Level versus log sample losses",
+      "question": "Level versus log sample losses?",
+      "source_nodes": [
+        "G4_S07",
+        "G4_S02",
+        "G4_S03",
+        "G4_S04",
+        "G4_S05"
+      ],
+      "fields": [
+        "source_year",
+        "category",
+        "N_category",
+        "N_denominator",
+        "share_percent",
+        "status"
+      ],
+      "formula_or_specification": "N_level=N_log_positive+N_zero+N_negative among valid level records; missing/invalid states are outside that identity and separately counted.",
+      "units": "records and percent",
+      "sample_and_denominator": "Each compatible year and pooled period within all observed records; variable-specific eligibility, verification branch and zero/negative/missing counts are explicit.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "Changing to logs can change which factories are represented, so the removed zeros and negative values stay visible.",
+      "limits": "Observed sample distributions; nominal pooled money mixes prices, classification pooling needs verified bridge; no firm histories or causal interpretation.",
+      "prerequisites": "No execution until all 44 plans frozen and required rows accepted. Real/TFP/classification/location/complete-energy cells block if missing sources.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G4/exhibits/G4-X08.pdf",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "Changing to logs can change which factories are represented, so the removed zeros and negative values stay visible.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G4-X09",
+      "kind": "chart",
+      "priority": "appendix",
+      "title": "Zeros, negatives and missing by family",
+      "question": "Zeros, negatives and missing by family?",
+      "source_nodes": [
+        "G4_S04",
+        "G4_S02",
+        "G4_S03",
+        "G4_S05"
+      ],
+      "fields": [
+        "source_year",
+        "category",
+        "N_category",
+        "N_denominator",
+        "share_percent",
+        "status"
+      ],
+      "formula_or_specification": "N_level=N_log_positive+N_zero+N_negative among valid level records; missing/invalid states are outside that identity and separately counted.",
+      "units": "records and percent",
+      "sample_and_denominator": "Each compatible year and pooled period within all observed records; variable-specific eligibility, verification branch and zero/negative/missing counts are explicit.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "Changing to logs can change which factories are represented, so the removed zeros and negative values stay visible.",
+      "limits": "Observed sample distributions; nominal pooled money mixes prices, classification pooling needs verified bridge; no firm histories or causal interpretation.",
+      "prerequisites": "No execution until all 44 plans frozen and required rows accepted. Real/TFP/classification/location/complete-energy cells block if missing sources.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G4/exhibits/G4-X09.pdf",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "Changing to logs can change which factories are represented, so the removed zeros and negative values stay visible.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G4-X10",
+      "kind": "chart",
+      "priority": "appendix",
+      "title": "Mean versus median across continuous variables",
+      "question": "Mean versus median across continuous variables?",
+      "source_nodes": [
+        "G4_S10",
+        "G4_S02",
+        "G4_S03",
+        "G4_S04",
+        "G4_S05"
+      ],
+      "fields": [
+        "cell_id",
+        "source_year",
+        "N_source",
+        "N_eligible",
+        "result",
+        "unit",
+        "status"
+      ],
+      "formula_or_specification": "Plot mean and P50 with P25–P75 interval for each continuous variable; separate unit scales; retain P95/P99 in appendix.",
+      "units": "each variable’s own unit",
+      "sample_and_denominator": "Same eligible records for mean and quantiles within each cell.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "The gap between mean and median shows how strongly large observations affect the average; the interval is distribution spread.",
+      "limits": "Observed sample distributions; nominal pooled money mixes prices, classification pooling needs verified bridge; no firm histories or causal interpretation.",
+      "prerequisites": "No execution until all 44 plans frozen and required rows accepted. Real/TFP/classification/location/complete-energy cells block if missing sources.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G4/exhibits/G4-X10.pdf",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "The gap between mean and median shows how strongly large observations affect the average; the interval is distribution spread.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G4-X11",
+      "kind": "chart",
+      "priority": "appendix",
+      "title": "Worker distribution and tails",
+      "question": "Worker distribution and tails?",
+      "source_nodes": [
+        "G4_S10",
+        "G4_S02",
+        "G4_S03",
+        "G4_S04",
+        "G4_S05"
+      ],
+      "fields": [
+        "source_year",
+        "variable_id",
+        "grouping_id",
+        "group_value",
+        "N_source",
+        "N_eligible",
+        "mean",
+        "sd",
+        "min",
+        "p1",
+        "p5",
+        "p25",
+        "p50",
+        "p75",
+        "p95",
+        "p99",
+        "max",
+        "status"
+      ],
+      "formula_or_specification": "For workers: N, mean=sum(x)/N, sample SD=sqrt(sum((x-mean)^2)/(N-1)), min, P1/P5/P25/P50/P75/P95/P99, max; retain zero/negative/missing counts.",
+      "units": "persons",
+      "sample_and_denominator": "Each compatible year and pooled period within all observed records; variable-specific eligibility, verification branch and zero/negative/missing counts are explicit.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "The median locates a typical observed factory; the interquartile range contains the middle half and the upper quantiles expose the long tail.",
+      "limits": "Observed sample distributions; nominal pooled money mixes prices, classification pooling needs verified bridge; no firm histories or causal interpretation.",
+      "prerequisites": "No execution until all 44 plans frozen and required rows accepted. Real/TFP/classification/location/complete-energy cells block if missing sources.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G4/exhibits/G4-X11.pdf",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "The median locates a typical observed factory; the interquartile range contains the middle half and the upper quantiles expose the long tail.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G4-X12",
+      "kind": "chart",
+      "priority": "appendix",
+      "title": "Nominal output distribution and tails",
+      "question": "Nominal output distribution and tails?",
+      "source_nodes": [
+        "G4_S10",
+        "G4_S02",
+        "G4_S03",
+        "G4_S04",
+        "G4_S05"
+      ],
+      "fields": [
+        "source_year",
+        "variable_id",
+        "grouping_id",
+        "group_value",
+        "N_source",
+        "N_eligible",
+        "mean",
+        "sd",
+        "min",
+        "p1",
+        "p5",
+        "p25",
+        "p50",
+        "p75",
+        "p95",
+        "p99",
+        "max",
+        "status"
+      ],
+      "formula_or_specification": "For nominal output: N, mean=sum(x)/N, sample SD=sqrt(sum((x-mean)^2)/(N-1)), min, P1/P5/P25/P50/P75/P95/P99, max; retain zero/negative/missing counts.",
+      "units": "nominal Rp000",
+      "sample_and_denominator": "Each compatible year and pooled period within all observed records; variable-specific eligibility, verification branch and zero/negative/missing counts are explicit.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "Large amounts can pull the mean far above the median. Across years these nominal amounts also reflect price differences.",
+      "limits": "Observed sample distributions; nominal pooled money mixes prices, classification pooling needs verified bridge; no firm histories or causal interpretation.",
+      "prerequisites": "No execution until all 44 plans frozen and required rows accepted. Real/TFP/classification/location/complete-energy cells block if missing sources.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G4/exhibits/G4-X12.pdf",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "Large amounts can pull the mean far above the median. Across years these nominal amounts also reflect price differences.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G4-X13",
+      "kind": "chart",
+      "priority": "appendix",
+      "title": "Nominal value-added distribution and tails",
+      "question": "Nominal value-added distribution and tails?",
+      "source_nodes": [
+        "G4_S10",
+        "G4_S02",
+        "G4_S03",
+        "G4_S04",
+        "G4_S05"
+      ],
+      "fields": [
+        "source_year",
+        "variable_id",
+        "grouping_id",
+        "group_value",
+        "N_source",
+        "N_eligible",
+        "mean",
+        "sd",
+        "min",
+        "p1",
+        "p5",
+        "p25",
+        "p50",
+        "p75",
+        "p95",
+        "p99",
+        "max",
+        "status"
+      ],
+      "formula_or_specification": "For nominal value added: N, mean=sum(x)/N, sample SD=sqrt(sum((x-mean)^2)/(N-1)), min, P1/P5/P25/P50/P75/P95/P99, max; retain zero/negative/missing counts.",
+      "units": "nominal Rp000",
+      "sample_and_denominator": "Each compatible year and pooled period within all observed records; variable-specific eligibility, verification branch and zero/negative/missing counts are explicit.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "Value added is what remains after intermediate inputs; admissible negative values stay in levels and cannot enter the positive-log summary.",
+      "limits": "Observed sample distributions; nominal pooled money mixes prices, classification pooling needs verified bridge; no firm histories or causal interpretation.",
+      "prerequisites": "No execution until all 44 plans frozen and required rows accepted. Real/TFP/classification/location/complete-energy cells block if missing sources.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G4/exhibits/G4-X13.pdf",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "Value added is what remains after intermediate inputs; admissible negative values stay in levels and cannot enter the positive-log summary.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G4-X14",
+      "kind": "chart",
+      "priority": "appendix",
+      "title": "Separate capital stock and addition distributions",
+      "question": "Separate capital stock and addition distributions?",
+      "source_nodes": [
+        "G4_S10",
+        "G4_S02",
+        "G4_S03",
+        "G4_S04",
+        "G4_S05"
+      ],
+      "fields": [
+        "source_year",
+        "variable_id",
+        "grouping_id",
+        "group_value",
+        "N_source",
+        "N_eligible",
+        "mean",
+        "sd",
+        "min",
+        "p1",
+        "p5",
+        "p25",
+        "p50",
+        "p75",
+        "p95",
+        "p99",
+        "max",
+        "status"
+      ],
+      "formula_or_specification": "For capital stock and capital additions, in separate panels: N, mean=sum(x)/N, sample SD=sqrt(sum((x-mean)^2)/(N-1)), min, P1/P5/P25/P50/P75/P95/P99, max; retain zero/negative/missing counts.",
+      "units": "nominal Rp000",
+      "sample_and_denominator": "Each compatible year and pooled period within all observed records; variable-specific eligibility, verification branch and zero/negative/missing counts are explicit.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "The stock is what the factory owns; additions describe a flow during the year. They are never merged into one variable.",
+      "limits": "Observed sample distributions; nominal pooled money mixes prices, classification pooling needs verified bridge; no firm histories or causal interpretation.",
+      "prerequisites": "No execution until all 44 plans frozen and required rows accepted. Real/TFP/classification/location/complete-energy cells block if missing sources.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G4/exhibits/G4-X14.pdf",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "The stock is what the factory owns; additions describe a flow during the year. They are never merged into one variable.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G4-X15",
+      "kind": "chart",
+      "priority": "appendix",
+      "title": "Per-worker denominators and distributions",
+      "question": "Per-worker denominators and distributions?",
+      "source_nodes": [
+        "G4_S10",
+        "G4_S02",
+        "G4_S03",
+        "G4_S04",
+        "G4_S05"
+      ],
+      "fields": [
+        "source_year",
+        "variable_id",
+        "grouping_id",
+        "group_value",
+        "N_source",
+        "N_eligible",
+        "mean",
+        "sd",
+        "min",
+        "p1",
+        "p5",
+        "p25",
+        "p50",
+        "p75",
+        "p95",
+        "p99",
+        "max",
+        "status"
+      ],
+      "formula_or_specification": "For output/workers, value_added/workers and capital_stock/workers, separately: N, mean=sum(x)/N, sample SD=sqrt(sum((x-mean)^2)/(N-1)), min, P1/P5/P25/P50/P75/P95/P99, max; retain zero/negative/missing counts.",
+      "units": "nominal Rp000 per person; real companions in constant-base Rp000 per person",
+      "sample_and_denominator": "Each compatible year and pooled period within all observed records; variable-specific eligibility, verification branch and zero/negative/missing counts are explicit. Denominator workers must be observed and strictly positive.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "A per-worker amount divides by measured workers; it does not account for hours, worker skills or causal labor productivity.",
+      "limits": "Observed sample distributions; nominal pooled money mixes prices, classification pooling needs verified bridge; no firm histories or causal interpretation.",
+      "prerequisites": "No execution until all 44 plans frozen and required rows accepted. Real/TFP/classification/location/complete-energy cells block if missing sources.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G4/exhibits/G4-X15.pdf",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "A per-worker amount divides by measured workers; it does not account for hours, worker skills or causal labor productivity.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G4-X16",
+      "kind": "chart",
+      "priority": "appendix",
+      "title": "Energy costs versus physical quantity units",
+      "question": "Energy costs versus physical quantity units?",
+      "source_nodes": [
+        "G4_S03",
+        "G4_S02",
+        "G4_S04",
+        "G4_S05"
+      ],
+      "fields": [
+        "cell_id",
+        "source_year",
+        "N_source",
+        "N_eligible",
+        "result",
+        "unit",
+        "status"
+      ],
+      "formula_or_specification": "List native unit, canonical unit, price basis, conversion evidence and source-status rule for each variable-year.",
+      "units": "definition or acceptance status; no economic magnitude",
+      "sample_and_denominator": "Every named item in the frozen source/method/check registry, including unavailable items.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "Physical quantity, spending and a logarithm have different units and must not share an unexplained scale.",
+      "limits": "Observed sample distributions; nominal pooled money mixes prices, classification pooling needs verified bridge; no firm histories or causal interpretation.",
+      "prerequisites": "No execution until all 44 plans frozen and required rows accepted. Real/TFP/classification/location/complete-energy cells block if missing sources.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G4/exhibits/G4-X16.pdf",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "Physical quantity, spending and a logarithm have different units and must not share an unexplained scale.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G4-X17",
+      "kind": "table",
+      "priority": "appendix",
+      "title": "Binary shares and categorical frequencies",
+      "question": "Binary shares and categorical frequencies?",
+      "source_nodes": [
+        "G4_S03",
+        "G4_S02",
+        "G4_S04",
+        "G4_S05"
+      ],
+      "fields": [
+        "source_year",
+        "category",
+        "N_category",
+        "N_denominator",
+        "share_percent",
+        "status"
+      ],
+      "formula_or_specification": "For every binary concept report yes, no, unknown, yes/(yes+no); for categorical concepts count every valid code and unknown category.",
+      "units": "records and percent",
+      "sample_and_denominator": "Each compatible year and pooled period within all observed records; variable-specific eligibility, verification branch and zero/negative/missing counts are explicit.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "A frequency table describes the meaning of a response; the mean of arbitrary category numbers would not.",
+      "limits": "Observed sample distributions; nominal pooled money mixes prices, classification pooling needs verified bridge; no firm histories or causal interpretation.",
+      "prerequisites": "No execution until all 44 plans frozen and required rows accepted. Real/TFP/classification/location/complete-energy cells block if missing sources.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G4/exhibits/G4-X17.tex",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "A frequency table describes the meaning of a response; the mean of arbitrary category numbers would not.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G4-X18",
+      "kind": "chart",
+      "priority": "appendix",
+      "title": "Working versus verified-only coverage",
+      "question": "Working versus verified-only coverage?",
+      "source_nodes": [
+        "G4_S09",
+        "G4_S02",
+        "G4_S03",
+        "G4_S04",
+        "G4_S05"
+      ],
+      "fields": [
+        "source_year",
+        "category",
+        "N_category",
+        "N_denominator",
+        "share_percent",
+        "status"
+      ],
+      "formula_or_specification": "Count working, verified, provisional and missing states; compute working and verified-only distributions from their own records.",
+      "units": "records and percent",
+      "sample_and_denominator": "Each compatible year and pooled period within all observed records; variable-specific eligibility, verification branch and zero/negative/missing counts are explicit.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "A difference between working and verified-only summaries combines changes in which values are accepted and which observations remain.",
+      "limits": "Observed sample distributions; nominal pooled money mixes prices, classification pooling needs verified bridge; no firm histories or causal interpretation.",
+      "prerequisites": "No execution until all 44 plans frozen and required rows accepted. Real/TFP/classification/location/complete-energy cells block if missing sources.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G4/exhibits/G4-X18.pdf",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "A difference between working and verified-only summaries combines changes in which values are accepted and which observations remain.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G4-X19",
+      "kind": "table",
+      "priority": "appendix",
+      "title": "Variable definition breaks across years",
+      "question": "Variable definition breaks across years?",
+      "source_nodes": [
+        "G4_S03",
+        "G4_S02",
+        "G4_S04",
+        "G4_S05"
+      ],
+      "fields": [
+        "cell_id",
+        "source_year",
+        "N_source",
+        "N_eligible",
+        "result",
+        "unit",
+        "status"
+      ],
+      "formula_or_specification": "Mark every documented change in question, universe, unit, classification and verification status at its actual calendar year.",
+      "units": "definition or acceptance status; no economic magnitude",
+      "sample_and_denominator": "Every named item in the frozen source/method/check registry, including unavailable items.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "A break in a graph is not automatically an economic change; the definition may have changed.",
+      "limits": "Observed sample distributions; nominal pooled money mixes prices, classification pooling needs verified bridge; no firm histories or causal interpretation.",
+      "prerequisites": "No execution until all 44 plans frozen and required rows accepted. Real/TFP/classification/location/complete-energy cells block if missing sources.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G4/exhibits/G4-X19.tex",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "A break in a graph is not automatically an economic change; the definition may have changed.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G4-X20",
+      "kind": "chart",
+      "priority": "appendix",
+      "title": "Each year’s contribution to the pooled sample",
+      "question": "Each year’s contribution to the pooled sample?",
+      "source_nodes": [
+        "G4_S08",
+        "G4_S02",
+        "G4_S03",
+        "G4_S04",
+        "G4_S05"
+      ],
+      "fields": [
+        "source_year",
+        "category",
+        "N_category",
+        "N_denominator",
+        "share_percent",
+        "status"
+      ],
+      "formula_or_specification": "year_weight=N_eligible_year/sum_years(N_eligible_year)*100",
+      "units": "records and percent",
+      "sample_and_denominator": "Each compatible year and pooled period within all observed records; variable-specific eligibility, verification branch and zero/negative/missing counts are explicit. Pooling includes only compatible definitions.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "A pooled summary gives more weight to years with more usable records unless an equal-year rule is explicitly used.",
+      "limits": "Observed sample distributions; nominal pooled money mixes prices, classification pooling needs verified bridge; no firm histories or causal interpretation.",
+      "prerequisites": "No execution until all 44 plans frozen and required rows accepted. Real/TFP/classification/location/complete-energy cells block if missing sources.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G4/exhibits/G4-X20.pdf",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "A pooled summary gives more weight to years with more usable records unless an equal-year rule is explicitly used.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G4-X21",
+      "kind": "table",
+      "priority": "appendix",
+      "title": "Equal-year pooled sensitivity contract",
+      "question": "Equal-year pooled sensitivity contract?",
+      "source_nodes": [
+        "G4_S08",
+        "G4_S02",
+        "G4_S03",
+        "G4_S04",
+        "G4_S05"
+      ],
+      "fields": [
+        "cell_id",
+        "source_year",
+        "N_source",
+        "N_eligible",
+        "result",
+        "unit",
+        "status"
+      ],
+      "formula_or_specification": "For each supported year assign record weight w_i=1/N_y; compute weighted mean=sum(w_i*x_i)/sum(w_i), and weighted CDF quantiles using the same frozen weighted definition.",
+      "units": "variable-specific level or log units",
+      "sample_and_denominator": "The same compatible variable-year cells as pooled primary; each supported year receives equal total weight.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "This sensitivity gives each year equal influence. It is not the average of annual medians.",
+      "limits": "Observed sample distributions; nominal pooled money mixes prices, classification pooling needs verified bridge; no firm histories or causal interpretation.",
+      "prerequisites": "No execution until all 44 plans frozen and required rows accepted. Real/TFP/classification/location/complete-energy cells block if missing sources.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G4/exhibits/G4-X21.tex",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "This sensitivity gives each year equal influence. It is not the average of annual medians.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G4-X22",
+      "kind": "table",
+      "priority": "appendix",
+      "title": "Raw/status/identifier fields not described as amounts",
+      "question": "Raw/status/identifier fields not described as amounts?",
+      "source_nodes": [
+        "G4_S01",
+        "G4_S02",
+        "G4_S03",
+        "G4_S04",
+        "G4_S05"
+      ],
+      "fields": [
+        "cell_id",
+        "source_year",
+        "N_source",
+        "N_eligible",
+        "result",
+        "unit",
+        "status"
+      ],
+      "formula_or_specification": "Enumerate every code with its source vintage, label, validity and documented comparison universe.",
+      "units": "definition or acceptance status; no economic magnitude",
+      "sample_and_denominator": "Every named item in the frozen source/method/check registry, including unavailable items.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "A code is a label for an activity or place; arithmetic on the label does not describe economic magnitude.",
+      "limits": "Observed sample distributions; nominal pooled money mixes prices, classification pooling needs verified bridge; no firm histories or causal interpretation.",
+      "prerequisites": "No execution until all 44 plans frozen and required rows accepted. Real/TFP/classification/location/complete-energy cells block if missing sources.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G4/exhibits/G4-X22.tex",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "A code is a label for an activity or place; arithmetic on the label does not describe economic magnitude.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G4-X23",
+      "kind": "table",
+      "priority": "appendix",
+      "title": "All structurally absent or unsupported cells",
+      "question": "All structurally absent or unsupported cells?",
+      "source_nodes": [
+        "G4_S02",
+        "G4_S03",
+        "G4_S04",
+        "G4_S05"
+      ],
+      "fields": [
+        "source_year",
+        "category",
+        "N_category",
+        "N_denominator",
+        "share_percent",
+        "status"
+      ],
+      "formula_or_specification": "Count and retain every expected variable × transform × period × group × branch cell; label absent source, no eligible record, low N or unsupported definition.",
+      "units": "records and percent",
+      "sample_and_denominator": "The entire frozen specification grid, including cells with N=0.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "An empty cell remains part of the report, with a reason that distinguishes no observations from no source information.",
+      "limits": "Observed sample distributions; nominal pooled money mixes prices, classification pooling needs verified bridge; no firm histories or causal interpretation.",
+      "prerequisites": "No execution until all 44 plans frozen and required rows accepted. Real/TFP/classification/location/complete-energy cells block if missing sources.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G4/exhibits/G4-X23.tex",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "An empty cell remains part of the report, with a reason that distinguishes no observations from no source information.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G4-X24",
+      "kind": "table",
+      "priority": "appendix",
+      "title": "Completeness, reproducibility and completion checks",
+      "question": "Completeness, reproducibility and completion checks?",
+      "source_nodes": [
+        "G4_S11",
+        "G4_S02",
+        "G4_S03",
+        "G4_S04",
+        "G4_S05"
+      ],
+      "fields": [
+        "cell_id",
+        "source_year",
+        "N_source",
+        "N_eligible",
+        "result",
+        "unit",
+        "status"
+      ],
+      "formula_or_specification": "Expected grid keys equal delivered keys; duplicate keys zero; formulas and denominator controls pass; unresolved mandatory cells keep row incomplete.",
+      "units": "definition or acceptance status; no economic magnitude",
+      "sample_and_denominator": "Every named item in the frozen source/method/check registry, including unavailable items.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "A polished report is accepted only when its requested analytical coverage and its numbers also pass review.",
+      "limits": "Observed sample distributions; nominal pooled money mixes prices, classification pooling needs verified bridge; no firm histories or causal interpretation.",
+      "prerequisites": "No execution until all 44 plans frozen and required rows accepted. Real/TFP/classification/location/complete-energy cells block if missing sources.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G4/exhibits/G4-X24.tex",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "A polished report is accepted only when its requested analytical coverage and its numbers also pass review.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    }
+  ],
+  "latex_outline": [
+    {
+      "h1": "What are we trying to learn?",
+      "lead_question": "Start with the actual question and the data we can observe.",
+      "h2": [
+        {
+          "title": "Complete variable role, unit and source dictionary",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Complete variable role, unit and source dictionary?",
+              "exhibit_ids": [
+                "G4-X01"
+              ],
+              "formula": "List native unit, canonical unit, price basis, conversion evidence and source-status rule for each variable-year.",
+              "reader_explanation": "Physical quantity, spending and a logarithm have different units and must not share an unexplained scale."
+            }
+          ]
+        },
+        {
+          "title": "How the full statistics grid is constructed",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "How the full statistics grid is constructed?",
+              "exhibit_ids": [
+                "G4-X02"
+              ],
+              "formula": "Freeze variable × transform(level, positive ln) × period(all supplied years, compatible pooled) × grouping × verification branch × weighting rule, with a disposition for every tuple.",
+              "reader_explanation": "The registry makes the promised coverage checkable before any figure is selected."
+            }
+          ]
+        },
+        {
+          "title": "Annual observed variable coverage",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Annual observed variable coverage?",
+              "exhibit_ids": [
+                "G4-X03"
+              ],
+              "formula": "N_observed/N_source*100 and N_verified/N_source*100, by variable/year/group",
+              "reader_explanation": "Observed values and verified meanings are different kinds of coverage; both are needed to interpret a distribution."
+            }
+          ]
+        },
+        {
+          "title": "All pooled level statistics",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "All pooled level statistics?",
+              "exhibit_ids": [
+                "G4-X04"
+              ],
+              "formula": "For every continuous canonical economic variable: N, mean=sum(x)/N, sample SD=sqrt(sum((x-mean)^2)/(N-1)), min, P1/P5/P25/P50/P75/P95/P99, max; retain zero/negative/missing counts.",
+              "reader_explanation": "The full table preserves every requested cell, so the main figures cannot hide unavailable or inconvenient variables."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "h1": "What can the data support?",
+      "lead_question": "Show coverage, definitions and denominators before comparisons.",
+      "h2": [
+        {
+          "title": "All pooled log statistics",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "All pooled log statistics?",
+              "exhibit_ids": [
+                "G4-X05"
+              ],
+              "formula": "For ln(x) for every eligible continuous variable with x>0: N, mean=sum(x)/N, sample SD=sqrt(sum((x-mean)^2)/(N-1)), min, P1/P5/P25/P50/P75/P95/P99, max; retain zero/negative/missing counts.",
+              "reader_explanation": "The log compresses large values and describes proportional differences; it has a different sample when zeros or negative values are present."
+            }
+          ]
+        },
+        {
+          "title": "All annual level statistics",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "All annual level statistics?",
+              "exhibit_ids": [
+                "G4-X06"
+              ],
+              "formula": "For every continuous canonical economic variable: N, mean=sum(x)/N, sample SD=sqrt(sum((x-mean)^2)/(N-1)), min, P1/P5/P25/P50/P75/P95/P99, max; retain zero/negative/missing counts.",
+              "reader_explanation": "The full table preserves every requested cell, so the main figures cannot hide unavailable or inconvenient variables."
+            }
+          ]
+        },
+        {
+          "title": "All annual log statistics",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "All annual log statistics?",
+              "exhibit_ids": [
+                "G4-X07"
+              ],
+              "formula": "For ln(x) for every eligible continuous variable with x>0: N, mean=sum(x)/N, sample SD=sqrt(sum((x-mean)^2)/(N-1)), min, P1/P5/P25/P50/P75/P95/P99, max; retain zero/negative/missing counts.",
+              "reader_explanation": "The log compresses large values and describes proportional differences; it has a different sample when zeros or negative values are present."
+            }
+          ]
+        },
+        {
+          "title": "Level versus log sample losses",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Level versus log sample losses?",
+              "exhibit_ids": [
+                "G4-X08"
+              ],
+              "formula": "N_level=N_log_positive+N_zero+N_negative among valid level records; missing/invalid states are outside that identity and separately counted.",
+              "reader_explanation": "Changing to logs can change which factories are represented, so the removed zeros and negative values stay visible."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "h1": "What do the main results mean?",
+      "lead_question": "Explain the results in plain language after valid execution.",
+      "h2": [
+        {
+          "title": "Zeros, negatives and missing by family",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Zeros, negatives and missing by family?",
+              "exhibit_ids": [
+                "G4-X09"
+              ],
+              "formula": "N_level=N_log_positive+N_zero+N_negative among valid level records; missing/invalid states are outside that identity and separately counted.",
+              "reader_explanation": "Changing to logs can change which factories are represented, so the removed zeros and negative values stay visible."
+            }
+          ]
+        },
+        {
+          "title": "Mean versus median across continuous variables",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Mean versus median across continuous variables?",
+              "exhibit_ids": [
+                "G4-X10"
+              ],
+              "formula": "Plot mean and P50 with P25–P75 interval for each continuous variable; separate unit scales; retain P95/P99 in appendix.",
+              "reader_explanation": "The gap between mean and median shows how strongly large observations affect the average; the interval is distribution spread."
+            }
+          ]
+        },
+        {
+          "title": "Worker distribution and tails",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Worker distribution and tails?",
+              "exhibit_ids": [
+                "G4-X11"
+              ],
+              "formula": "For workers: N, mean=sum(x)/N, sample SD=sqrt(sum((x-mean)^2)/(N-1)), min, P1/P5/P25/P50/P75/P95/P99, max; retain zero/negative/missing counts.",
+              "reader_explanation": "The median locates a typical observed factory; the interquartile range contains the middle half and the upper quantiles expose the long tail."
+            }
+          ]
+        },
+        {
+          "title": "Nominal output distribution and tails",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Nominal output distribution and tails?",
+              "exhibit_ids": [
+                "G4-X12"
+              ],
+              "formula": "For nominal output: N, mean=sum(x)/N, sample SD=sqrt(sum((x-mean)^2)/(N-1)), min, P1/P5/P25/P50/P75/P95/P99, max; retain zero/negative/missing counts.",
+              "reader_explanation": "Large amounts can pull the mean far above the median. Across years these nominal amounts also reflect price differences."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "h1": "What changes under alternative choices?",
+      "lead_question": "Separate legitimate sensitivity from primary definition.",
+      "h2": [
+        {
+          "title": "Nominal value-added distribution and tails",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Nominal value-added distribution and tails?",
+              "exhibit_ids": [
+                "G4-X13"
+              ],
+              "formula": "For nominal value added: N, mean=sum(x)/N, sample SD=sqrt(sum((x-mean)^2)/(N-1)), min, P1/P5/P25/P50/P75/P95/P99, max; retain zero/negative/missing counts.",
+              "reader_explanation": "Value added is what remains after intermediate inputs; admissible negative values stay in levels and cannot enter the positive-log summary."
+            }
+          ]
+        },
+        {
+          "title": "Separate capital stock and addition distributions",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Separate capital stock and addition distributions?",
+              "exhibit_ids": [
+                "G4-X14"
+              ],
+              "formula": "For capital stock and capital additions, in separate panels: N, mean=sum(x)/N, sample SD=sqrt(sum((x-mean)^2)/(N-1)), min, P1/P5/P25/P50/P75/P95/P99, max; retain zero/negative/missing counts.",
+              "reader_explanation": "The stock is what the factory owns; additions describe a flow during the year. They are never merged into one variable."
+            }
+          ]
+        },
+        {
+          "title": "Per-worker denominators and distributions",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Per-worker denominators and distributions?",
+              "exhibit_ids": [
+                "G4-X15"
+              ],
+              "formula": "For output/workers, value_added/workers and capital_stock/workers, separately: N, mean=sum(x)/N, sample SD=sqrt(sum((x-mean)^2)/(N-1)), min, P1/P5/P25/P50/P75/P95/P99, max; retain zero/negative/missing counts.",
+              "reader_explanation": "A per-worker amount divides by measured workers; it does not account for hours, worker skills or causal labor productivity."
+            }
+          ]
+        },
+        {
+          "title": "Energy costs versus physical quantity units",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Energy costs versus physical quantity units?",
+              "exhibit_ids": [
+                "G4-X16"
+              ],
+              "formula": "List native unit, canonical unit, price basis, conversion evidence and source-status rule for each variable-year.",
+              "reader_explanation": "Physical quantity, spending and a logarithm have different units and must not share an unexplained scale."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "h1": "What remains unavailable or uncertain?",
+      "lead_question": "Keep unsupported source branches and interpretation limits visible.",
+      "h2": [
+        {
+          "title": "Binary shares and categorical frequencies",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Binary shares and categorical frequencies?",
+              "exhibit_ids": [
+                "G4-X17"
+              ],
+              "formula": "For every binary concept report yes, no, unknown, yes/(yes+no); for categorical concepts count every valid code and unknown category.",
+              "reader_explanation": "A frequency table describes the meaning of a response; the mean of arbitrary category numbers would not."
+            }
+          ]
+        },
+        {
+          "title": "Working versus verified-only coverage",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Working versus verified-only coverage?",
+              "exhibit_ids": [
+                "G4-X18"
+              ],
+              "formula": "Count working, verified, provisional and missing states; compute working and verified-only distributions from their own records.",
+              "reader_explanation": "A difference between working and verified-only summaries combines changes in which values are accepted and which observations remain."
+            }
+          ]
+        },
+        {
+          "title": "Variable definition breaks across years",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Variable definition breaks across years?",
+              "exhibit_ids": [
+                "G4-X19"
+              ],
+              "formula": "Mark every documented change in question, universe, unit, classification and verification status at its actual calendar year.",
+              "reader_explanation": "A break in a graph is not automatically an economic change; the definition may have changed."
+            }
+          ]
+        },
+        {
+          "title": "Each year’s contribution to the pooled sample",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Each year’s contribution to the pooled sample?",
+              "exhibit_ids": [
+                "G4-X20"
+              ],
+              "formula": "year_weight=N_eligible_year/sum_years(N_eligible_year)*100",
+              "reader_explanation": "A pooled summary gives more weight to years with more usable records unless an equal-year rule is explicitly used."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "h1": "Can another colleague reproduce and accept this row?",
+      "lead_question": "End with audit able source-to-result path and exact completion checks.",
+      "h2": [
+        {
+          "title": "Equal-year pooled sensitivity contract",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Equal-year pooled sensitivity contract?",
+              "exhibit_ids": [
+                "G4-X21"
+              ],
+              "formula": "For each supported year assign record weight w_i=1/N_y; compute weighted mean=sum(w_i*x_i)/sum(w_i), and weighted CDF quantiles using the same frozen weighted definition.",
+              "reader_explanation": "This sensitivity gives each year equal influence. It is not the average of annual medians."
+            }
+          ]
+        },
+        {
+          "title": "Raw/status/identifier fields not described as amounts",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Raw/status/identifier fields not described as amounts?",
+              "exhibit_ids": [
+                "G4-X22"
+              ],
+              "formula": "Enumerate every code with its source vintage, label, validity and documented comparison universe.",
+              "reader_explanation": "A code is a label for an activity or place; arithmetic on the label does not describe economic magnitude."
+            }
+          ]
+        },
+        {
+          "title": "All structurally absent or unsupported cells",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "All structurally absent or unsupported cells?",
+              "exhibit_ids": [
+                "G4-X23"
+              ],
+              "formula": "Count and retain every expected variable × transform × period × group × branch cell; label absent source, no eligible record, low N or unsupported definition.",
+              "reader_explanation": "An empty cell remains part of the report, with a reason that distinguishes no observations from no source information."
+            }
+          ]
+        },
+        {
+          "title": "Completeness, reproducibility and completion checks",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Completeness, reproducibility and completion checks?",
+              "exhibit_ids": [
+                "G4-X24"
+              ],
+              "formula": "Expected grid keys equal delivered keys; duplicate keys zero; formulas and denominator controls pass; unresolved mandatory cells keep row incomplete.",
+              "reader_explanation": "A polished report is accepted only when its requested analytical coverage and its numbers also pass review."
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "definition_of_done": {
+    "repository_minimum_checks": [
+      "Every combination requested in the exact Word text has a numeric output or an explicit unavailable/unsupported status; no silent omission.",
+      "Counts, grouping, units, price basis, zero/negative/missing rules and eligible denominators are shown and reconcile to the named input version.",
+      "Every table and chart is reproducible from the row primary; figures read its saved tables. Real panel, population and source-code gates are respected.",
+      "Working/provisional values and verified-only sensitivity are distinguished; sample statistics are not labelled national BPS findings."
+    ],
+    "operational_checks": [
+      {
+        "id": "G4-Q01",
+        "criterion": "Exhaustive exact Word grid",
+        "evidence_artifact": "outputs/G4/grid_coverage.csv",
+        "pass_rule": "Expected tuples=output tuples; duplicates 0; every nonnumeric/unavailable cell has explicit reason; no top-ten omission.",
+        "blocking": true
+      },
+      {
+        "id": "G4-Q02",
+        "criterion": "Levels/logs/pooled/year/group denominators",
+        "evidence_artifact": "outputs/G4/denominator_controls.csv",
+        "pass_rule": "Every denominator and loss reconciles; pooled year composition explicit; 2016 absent metadata only; working verified separate.",
+        "blocking": true
+      },
+      {
+        "id": "G4-PLAN-GATE",
+        "criterion": "Global upfront planning freeze",
+        "evidence_artifact": "work/plans/FREEZE.json",
+        "pass_rule": "All 44 plans pass root validation and root records the freeze; no analytical execution before freeze.",
+        "blocking": true
+      },
+      {
+        "id": "G4-SOURCE-TEXT",
+        "criterion": "Original request versus manager additions clearly separated",
+        "evidence_artifact": "outputs/G4/source_to_exhibit.csv",
+        "pass_rule": "Exact source.request/strategy/notes/number/PIC/completion unchanged; repository minimum checks labelled repository-authored, not DOC X quotation.",
+        "blocking": true
+      },
+      {
+        "id": "G4-OFFLINE",
+        "criterion": "Independent row entrypoint with nested modules",
+        "evidence_artifact": "outputs/G4/offline_replication.json",
+        "pass_rule": "Runrows/G4/G4.do from clean configured local environment without master; same full precision numeric results; all local dependencies documented.",
+        "blocking": true
+      },
+      {
+        "id": "G4-READER",
+        "criterion": "Every required report section has meaning and formula",
+        "evidence_artifact": "outputs/G4/reader_review.md",
+        "pass_rule": "Every H 1/H 2/H 3 sectionstatesquestion, intuition, equation and symbols, visual/table, plain meaning and limit; reviewer can explain without code.",
+        "blocking": true
+      },
+      {
+        "id": "G4-WAVE-BOUNDARY",
+        "criterion": "All company analysis descends from the single published consolidated master.",
+        "evidence_artifact": "analysis-input-lineage.json",
+        "pass_rule": "Every company-data operand in analysis must be the single published consolidated master or a declared derivative whose entire company-data ancestry ends at that consolidated master. Direct annual-wave reads are prohibited in analysis; only the master builder may append annual waves. Raw/staged/legacy/cached final company files cannot be numerical analysis parents. A required field missing from the wave is an upstream preparation failure; never repair it by opening an external company file inside this row. Comparison-only validators may read older data but may not feed construction or estimates. External reference and metadata inputs retain explicit non-company roles.",
+        "blocking": true
+      },
+      {
+        "id": "G4-READABLE-EXECUTION",
+        "criterion": "Readable non-executable comments and verified live progress at every nesting level.",
+        "evidence_artifact": "code-comments-and-progress-review.json",
+        "pass_rule": "Meet code_readability_and_progress_contract without changing the statistical results or control flow.",
+        "blocking": true
+      }
+    ],
+    "reader_gate": "An intelligent lay reader can state the question, what was counted/compared, each equation symbol, finding and limit without consulting code. Each section follows intuition → formula with every symbol → visual/table → plain meaning → boundary.",
+    "visual_gate": "Use custom vector charts from saved full-precision Stata aggregates, professional restrained publication typography, direct labels, meaningful color, clear units, visible missing 2016 gap, robust legends and notes. No default Stata graph in final delivery. Inspect every PDF page at reading size for overlap/clipping and all captions/axis labels. Distribution intervals are never labelled confidence intervals.",
+    "numerical_gate": "Independently recompute control counts/formulas against frozen aggregates/source receipts, exact categorical reconciliations, finite domains, and displayed rounding. Every chart/table value has a source table key/hash. No analytic calculations in for matting Python.",
+    "source_scope_gate": "The exact DOCX row and every repository minimum check must be satisfied on the declared actual data scope. Source absence remains a blocker where necessary; a readable PDF, synthetic passing run or existing column does not waive real-panel/WPI/source requirements."
+  },
+  "current_blockers": [
+    {
+      "id": "G4-B01",
+      "blocks": "Dependent execution",
+      "reason": "G0 andcurrentactual G2 notacceptedfull DoD.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/HANDOFF.md",
+      "resolution": "Finish G0 mandatorygatesand G2 currenthash QA.",
+      "next_unblocked_action": "Freeze complete variable/transformation/period/group registry without computing results."
+    }
+  ],
+  "references": [
+    {
+      "title": "Exact Deasy source row",
+      "locator": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/requests/descriptive/general/04-all-variables/SOURCE.md",
+      "purpose": "Original request; blank completion and PIC preserved",
+      "verified_status": "read exact task.json/source fields"
+    },
+    {
+      "title": "Latest actual local G0",
+      "locator": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/HANDOFF.md",
+      "purpose": "Current 3, 824-column source boundary; supersedes historical 3, 793-column file",
+      "verified_status": "fresh exact DTA metadata/hash confirmed"
+    },
+    {
+      "title": "Annual variable mapping evidence",
+      "locator": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv",
+      "purpose": "Separate verified annual semantics from parsed/provisional mappings",
+      "verified_status": "read; completeness not asserted"
+    },
+    {
+      "title": "Full source authored minimum checks",
+      "locator": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/requests/descriptive/general/04-all-variables/task.json",
+      "purpose": "Repository definition of done is notan original Word quotation; preserved exactly in plan",
+      "verified_status": "read and copied exactly"
+    }
+  ],
+  "review": {
+    "planning_review": "root_independent_review_fixed; final_global_consistency_pending",
+    "execution_review": "not_started",
+    "numerical_review": "not_started",
+    "visual_review": "not_started",
+    "exhibit_review": "Each of 24 exhibits now has a computation, unit, denominator, uncertainty rule and substantive reader explanation. Numerical and visual output review still required after execution."
+  },
+  "rationale": "A complete catalogue prevents interesting examples from replacing the full requested comparison.",
+  "scope": "All requested variables, levels/logs, pooled/year; exact source coverage and unsupported cells visible.",
+  "unit_of_analysis": "Source-record distribution; entire observed sample",
+  "target_estimands": [
+    {
+      "name": "Sample mean and spread",
+      "formula": "\\bar X_c=\\frac{1}{n_c}\\sum_{i\\in c}X_i;\\quad SD_c=\\sqrt{\\frac{\\sum_{i\\in c}(X_i-\\bar X_c)^2}{n_c-1}}",
+      "symbols": {
+        "c": "named year/group/transformation cell",
+        "X": "observed valid value in its stated unit",
+        "n": "observed eligible count",
+        "barX": "sample mean",
+        "SD": "sample dispersion"
+      },
+      "interpretation": "The mean is the average; SD and percentiles describe how different observations are.",
+      "limits": "No assumed survey representativeness; SD/IQR not confidence interval."
+    },
+    {
+      "name": "Positive domain log distribution",
+      "formula": "Z_i=\\ln X_i\\quad\\mathrm{only}\\ X_i>0",
+      "symbols": {
+        "X": "original observed value",
+        "Z": "natural logarithm",
+        "ln": "log scale that turns multiplicative differences into additive ones"
+      },
+      "interpretation": "Log plots make large and small positive values readable on same page.",
+      "limits": "Zero negative not eligible for logarithms; log sample differs from level sample; no+1 replacement."
+    }
+  ],
+  "summary_protocol": {
+    "quantiles": "Stata default percentile definition recorded with command/version, applied identically in all cells; do not mix percentile algorithms across display/validation",
+    "dispersion": "Sample SD with n-1 denominator when n>=2, missing when n<2; IQR=P75-P25",
+    "zero_and_negative": "Include only where valid for the named level concept; positive-only log sample is separately counted; never add1 silently",
+    "pooled_primary": "Each eligible observed record receives weight1; keep year composition visible. Pool only compatible definitions and price basis, with nominal pooled amounts explicitly labelled mixed-current-price distributions.",
+    "pooled_equal_year_sensitivity": "Each observation in year y gets weight1/n_y so each supported year contributes equal total weight; weighted statistic definition/quantile implementation is explicit, not arithmetic averaging of annual medians",
+    "categorical": "Frequency and known-response share tables, not means of arbitrary code labels; metadata/IDs receive source-role inventory rather than economic statistics",
+    "sparse_cells": "Retain every tuple in CSV; n<2 gives unavailable SD; chart unavailable/low-N labels are separate from complete numeric registry. No hidden top-ten substitution."
+  },
+  "dataflow_protocol": {
+    "input_integrity": "Physical source data and source-definition evidence are separate declared inputs. Pin both before transforming a value.",
+    "join_keys": "Never merge by row order. Use declared keys and assert intended 1:1, m:1 or explicitly weighted 1:m cardinality; record unmatched and duplicate rows.",
+    "source_rows": "source_year/source_row identifies a row within the frozen canonical source family, not a longitudinal plant. If another source family is added, source_file_hash is part of the raw key until the canonical manifest proves uniqueness.",
+    "branch_status": "Each branch produces either a validated state or a typed unsupported receipt with the missing prerequisite. Unsupported receipts are not numeric datasets and cannot satisfy a required input gate.",
+    "missing_states": "Source absence, inapplicable questionnaire universe, parse failure, unknown unit, masked identifier, observed zero and valid positive/negative values remain distinguishable.",
+    "downstream_gate": "Only a passed input contract may unlock its dependent statistical branch. Publishing a diagnostic about a blocked branch does not complete the Word row."
+  },
+  "plan_revision": {
+    "id": "wave-foundation-v2",
+    "supersedes_boundary_of_sha256": "8d9315dfa093db395315d2064c9f54b12f33cd0faa4cef7c5e61681d02af33d3",
+    "scope": "Input boundary, readable code comments and hierarchical execution visibility; exact original Word request and statistical plan retained.",
+    "implementation_status": "This revision does not execute this assignment row."
+  },
+  "code_readability_and_progress_contract": {
+    "comments": "Non-executable Stata comments explain purpose, actual inputs, outputs and failure checks at file, block and subblock levels in simple Indonesian. Do not invent scientific interpretations.",
+    "runtime": "Every file, block, subblock, iteration and deepest step prints start, finish or explicit early/error outcome, x/X, percent, elapsed time and exact location; stream live and save the same log.",
+    "clock": "Date-aware native Stata wall clock, one-second resolution; preserve scientific timers and fail certification on backward clock.",
+    "semantics": "Original operative source remains exactly recoverable; verify r(), e(), _rc, conditional branches and early transfers with a constructed runtime fixture before company execution.",
+    "rerun": "A documented launcher must run the actual preparation with visible progress before declaring data prep ready."
+  },
+  "wave_input_contract": {
+    "rule": "Every company-data operand in analysis must be the single published consolidated master or a declared derivative whose entire company-data ancestry ends at that consolidated master. Direct annual-wave reads are prohibited in analysis; only the master builder may append annual waves. Raw/staged/legacy/cached final company files cannot be numerical analysis parents. A required field missing from the wave is an upstream preparation failure; never repair it by opening an external company file inside this row. Comparison-only validators may read older data but may not feed construction or estimates. External reference and metadata inputs retain explicit non-company roles.",
+    "boundary_role": "consumer",
+    "release_root": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-wave-foundation-v2",
+    "annual_paths": [
+      "data/waves/wave_2010.dta",
+      "data/waves/wave_2011.dta",
+      "data/waves/wave_2012.dta",
+      "data/waves/wave_2013.dta",
+      "data/waves/wave_2014.dta",
+      "data/waves/wave_2015.dta",
+      "data/waves/wave_2017.dta",
+      "data/waves/wave_2018.dta",
+      "data/waves/wave_2019.dta",
+      "data/waves/wave_2020.dta",
+      "data/waves/wave_2021.dta",
+      "data/waves/wave_2022.dta"
+    ],
+    "master_path": "data/analysis/G0_analysis_ready.dta",
+    "wave_count": 12,
+    "key": [
+      "source_year",
+      "source_row"
+    ],
+    "expected_rows": 33049,
+    "expected_columns": 4593,
+    "original_projection_columns": 4591,
+    "new_columns": [
+      "rd17_own_token_class",
+      "rd17_external_token_class"
+    ],
+    "root_plan": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-wave-foundation-v2/PLAN.md",
+    "root_plan_sha256": "8cc95e89c9bbc68ac6ef417d8e60cadc97c2f266553376c3c6611b22ad1ec211",
+    "input_release_status": "Not certified until actual build, value comparisons and read-boundary checks pass.",
+    "scientific_gates": "All existing field-specific, identity, unit, price, scope and source gates remain binding."
+  },
+  "execution_input_policy": {
+    "authority": "work-items/G0.5/OWNER-REQUEST.md",
+    "effective_date": "2026-09-13",
+    "role": "downstream_consumer",
+    "development_mode": "development",
+    "development_input": "data/g0-5-development/manifest.json",
+    "adapter": "harness.data_source.load_data",
+    "finalisation_mode": "actual",
+    "finalisation_input": "explicit local accepted G0; exact parent checksum required",
+    "actual_parent_sha256": "d0438798e28d67f5ac4fce3ea6a07b46630be28d88fd6cb6f17c15dc99baca08",
+    "identity_workflow": "harness/g05/EXTERNAL-WORKFLOW.md",
+    "identity_preparation_independent_of_G0_execution": true,
+    "same_analysis_code_both_modes": true,
+    "recompute_all_results_for_finalisation": true,
+    "fallback_to_historical_actual_Git_data": false,
+    "supersedes_older_planned_company_input_for_development": true,
+    "historical_source_references_retained_for_provenance": true,
+    "panel_rule": "Development accepts declared synthetic_development psid with firm-year uniqueness; actual requires verified real linkage. obs_id and annual clusters are not firm keys.",
+    "row_specific_source_and_method_gates_still_apply": true,
+    "research_execution_authorized_by_this_registration": false
+  }
+}

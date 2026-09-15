@@ -1,0 +1,38 @@
+* WFDOC: One fictional continuation interval for each observed assignment with a next calendar source file.
+* WFDOC: No risk interval into absent 2016 or beyond the final 2022 source file; absence is not actual company closure.
+use "$G1_RUN/nominal/N01_source.dta", clear
+levelsof source_year, local(source_years)
+keep psid source_year nom_sector dev_panel_stratum psid_status
+rename nom_sector nom_risk_sector
+rename dev_panel_stratum nom_risk_stratum
+rename psid_status nom_risk_panel_status
+replace source_year=source_year+1
+gen byte nom_next_file=0
+foreach year of local source_years {
+    replace nom_next_file=1 if source_year==`year'
+}
+keep if nom_next_file
+drop nom_next_file
+gen byte nom_risk=1
+merge 1:1 psid source_year using "$G1_RUN/nominal/N01_source.dta"
+gen byte nom_interval_only=_merge==1
+gen byte nom_disappearance=(_merge==1) if nom_risk==1
+replace nom_risk=0 if missing(nom_risk)
+* Keep current source-sector values; event-only rows retain the preceding assignment sector.
+replace nom_sector=nom_risk_sector if nom_interval_only
+replace nom_sector_num=real(nom_sector) if nom_interval_only
+replace dev_panel_stratum=nom_risk_stratum if nom_interval_only
+replace psid_status=nom_risk_panel_status if nom_interval_only
+drop _merge
+foreach v in op lp acf wrdg common {
+    replace nom_domain_`v'=0 if nom_interval_only
+}
+assert missing(obs_id) if nom_interval_only
+assert !missing(obs_id) if !nom_interval_only
+assert nom_risk==1 & nom_disappearance==0 if !nom_interval_only & !missing(dev_prev_year) & dev_prev_year==source_year-1
+assert !inlist(source_year,2016,2023)
+* The source row supplies all its original fields; prior risk metadata have separate names.
+assert psid_status=="synthetic_development"
+isid psid source_year
+xtset psid source_year, delta(1)
+save "$G1_RUN/nominal/N02_source_and_risk.dta", replace

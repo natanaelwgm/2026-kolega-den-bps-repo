@@ -1,0 +1,84 @@
+{
+  "scope": "Preserved REAL PRIMARY specification; separate nominal-specification.json and nominal branch evidence do not relax these gates",
+  "source_plan": "releases/2026-09-13-data-foundation/stata-preparation/row-plans/G1.json",
+  "source_plan_sha256": "dd88cfa94af5f212a7b0a4b70f99fea1c0201f950cd19333357739b96b5da1ca",
+  "contract": {
+    "version": "Installed prodest 1.2.2, source header 30 July 2018; pinned for reproducibility, not claimed latest",
+    "files": [
+      {
+        "source": "/Users/natanaelmassie/Library/Application Support/Stata/ado/plus/p/prodest.ado",
+        "file": "prodest.ado",
+        "sha256": "2e9786201189f6eafd90475b72b11d2d68eab8815b3740bd6054ddfb5dc34fae",
+        "bytes": 35618
+      },
+      {
+        "source": "/Users/natanaelmassie/Library/Application Support/Stata/ado/plus/p/prodest.sthlp",
+        "file": "prodest.sthlp",
+        "sha256": "6e2833706f5b73776c5237bc14a51a20f7024c804fa820ff195513bd75c4ac52",
+        "bytes": 28178
+      },
+      {
+        "source": "/Users/natanaelmassie/Library/Application Support/Stata/ado/plus/p/prodest_p.ado",
+        "file": "prodest_p.ado",
+        "sha256": "1b249fd602f74f292f87617c6ef64c534c70da3ed25618cd106d377df103c93f",
+        "bytes": 10093
+      }
+    ],
+    "variables": {
+      "y": "ln(preferred real value added)",
+      "l": "ln(workers)",
+      "k": "ln(verified real capital stock)",
+      "p_OP": "ln(verified positive real investment)",
+      "p_other": "ln(verified positive real intermediate-input proxy)"
+    },
+    "common_basis": "B_d(k,p) contains all monomials k^a p^b with 1<=a+b<=d; an intercept is included by regression. d=3 primary, d=2 sensitivity. ACF uses all monomials in l,k,p of total degree 1..d. Do not duplicate linear labor columns.",
+    "calendar_controls": "Primary: no extra control() variables, within verified two-digit technology pools; this maintains an explicit common proxy/Markov specification across supplied years. Calendar composition is displayed. A year-control extension is not in the required execution grid and requires a separately frozen timing/normalization specification before fitting.",
+    "OP": {
+      "first_stage": "Regress y on l and [1,B_d(k,p_OP)]; beta_L is the partially linear first-stage coefficient; phi_hat=fitted_y-beta_L*l.",
+      "second_stage": "For candidate beta_K, omega=phi_hat-beta_K*k. Regress omega on [1,omega_lag,omega_lag^2,omega_lag^3] and, for the required selection branch, the full cubic terms of authenticated predicted exit probability and its interactions with lagged omega. Minimize sum[(y-beta_L*l)-beta_K*k-g_hat]^2 on exact-calendar supported transitions.",
+      "selection": "Required selection probability is estimated from independently authenticated risk/exit data, using the declared lagged B_d(k,p_OP) on the observed risk set. Selection outcome must not be inferred from the last row of the estimator-filtered sample. Unknown closure/risk status is excluded with a reason. If the selection model cannot be estimated, do not silently switch to an uncorrected OP result. Fit and resample the selection model on the authenticated risk/exit universe before imposing positive-investment coefficient-estimation eligibility. Keep selection-sample and production-sample receipts distinct; risk/exit records outside the coefficient sample must remain available."
+    },
+    "LP": {
+      "first_stage": "Regress y on l and [1,B_d(k,p_other)]; retain beta_L and phi_hat=fitted_y-beta_L*l.",
+      "second_stage": "Use omega=phi_hat-beta_K*k and cubic Markov projection in lagged omega; minimize sum[(y-beta_L*l)-beta_K*k-g_hat]^2. No attrition correction in the primary LP branch. This is the pinned package’s two-stage nonlinear least-squares implementation, not a claim to estimate an unspecified GMM system."
+    },
+    "ACF": {
+      "first_stage": "Regress y on the complete degree-d polynomial in l,k,p_other (with only one copy of each monomial); fitted value is phi_hat.",
+      "second_stage": "For beta=(beta_L,beta_K), omega=phi_hat-beta_L*l-beta_K*k; project omega on [1,omega_lag,omega_lag^2,omega_lag^3]; innovation xi is the residual. Minimize (Z'xi)' W (Z'xi), Z=[lag(l),k], W=invsym(Z'Z)/N, as in the pinned source. No extra overidentification instruments.",
+      "timing": "k is predetermined and l is selected before the current innovation in the maintained ACF timing; lag(l) and current k must satisfy their moments. The data alone do not verify this assumption."
+    },
+    "Wooldridge": {
+      "selection": "Use explicit method(wrdg) gmm; the package’s default without gmm is a stacked linear IV branch and is not silently substituted for the requested system.",
+      "equation1": "r1=y-beta_L*l-beta_K*k-a0-c_t'theta, c_t=B_d(k_t,p_t).",
+      "equation2": "r2=y-beta_L*l-beta_K*k-a0-e0-c_(t-1)'theta. The installed source shares theta between equations; this restriction is documented and must be retained if this exact version is used.",
+      "instruments": "Z1=[1,l_t,c_t]; Z2=[1,k_t,l_(t-1),c_(t-1)]. No optional overidentification expansion. Require full estimable rank and disclose columns removed for exact collinearity.",
+      "weighting": "Pinned two-step Stata gmm behavior with winitial(unadjusted, independent), method(wrdg) gmm, optimizer gn, maxiter 10000; save effective tolerances and convergence diagnostics."
+    },
+    "numeric_settings": {
+      "OP_LP_ACF": "Nelder–Mead, evaluator d0, maximum 10000 iterations, nrtol 1e-5, simplex delta 1e-5; DFP is the one supported alternative optimizer diagnostic.",
+      "starts": "Use deterministic OLS coefficient start supplied explicitly, not the package default randomized perturbation. Registered diagnostic starts (0.3,0.7) and (0.7,0.3) for labor/capital. In non-ACF OP/LP only the capital component initializes the second stage.",
+      "Markov_polynomial": "The installed OP/LP/ACF code uses cubic lagged productivity even when poly(2) is selected. The degree-2 sensitivity therefore changes the first-stage proxy polynomial only; no claim that all nuisance stages become quadratic."
+    },
+    "bootstrap": "999 external full-process real-plant cluster draws plus the original point estimate; resample from the frozen eligible source universe, assign new bootstrap plant IDs, reconstruct exact calendar lags and refit all selected stages including OP selection. Save each draw’s parameters, prediction summaries, return code and convergence. No use of the package default five repetitions; its first loop is the original fit, so reps(999) would not mean 999 random draws. The OP cluster resample includes the authenticated risk/exit universe, including eligible risk observations outside the positive-investment production sample, and then reconstructs both samples.",
+    "required_adapter_changes": [
+      "Accept authenticated OP exit/risk evidence instead of deriving exit from the last sample observation.",
+      "Abort instead of silently disabling the required OP selection correction when the selection fit fails.",
+      "Expose a single-point-estimate path for external bootstrap and return objective/convergence/parameter/draw records.",
+      "Retain source observation membership and prediction domain; never identify plants from dummy IDs.",
+      "Assert explicit valueadded model for every method and exact method/gmm options.",
+      "Export common structural residuals separately from any proxy-based latent-productivity companions; never use unsupported Wooldridge predict,omega.",
+      "Preserve the full authenticated OP selection universe when forming estimation samples and resampling.",
+      "Record and test the effective Stata compatibility version: prodest invokes its GMM under version min(max(10,current),14.0), even on newer Stata.",
+      "Correctly bind Wooldridge starting values to the actual GMM parameter names; do not reuse the suspicious stock xb_variable from() construction without a matching parameter-map check.",
+      "Compute full-process bootstrap covariance from the saved successful draw vectors with B_success-1 denominator; verify the point estimate and interval independently instead of accepting the stock covariance summary."
+    ],
+    "implementation_gate": "The exact adapter changes above must be reviewed against this pinned source and pass meaningful arithmetic/simulation checks before any actual fit. This document pins the method; it does not claim that the adapter has been built or that the scientific inputs exist.",
+    "source_audit_finding": "Installed prodest derives exit as the final observed row before maxDate, silently drops attrition correction on selection-model failure, randomizes default starts, and counts the original fit inside reps. These behaviors are incompatible with blindly launching the previous generic G1 plan.",
+    "required_command_options": "All four commands explicitly specify valueadded, free(log_workers), state(log_real_capital), the method-specific proxy, real id() and actual t(). Assert e(model)==valueadded. Use method(op), method(lp), method(lp) acf, and method(wrdg) gmm respectively. Never rely on the package gross-output default. The required OP selection branch explicitly uses attrition; the adapter forces the selection path and asserts a successful authenticated selection receipt. Failure cannot fall through to an uncorrected fit.",
+    "prediction_contract": {
+      "common_four_method_output": "r_it=y_it-beta_L*l_it-beta_K*k_it is the common four-method log value-added production residual. It contains latent productivity plus transitory measurement/output error under the maintained model, and is labelled accordingly. Retain raw and separately centered versions; do not call it directly observed technical efficiency.",
+      "proxy_latent_companion": "A separately named proxy-based omega may be exported only where its first-stage definition is supported. For OP/LP phi is already net of beta_L*l, so omega_proxy=phi-beta_K*k; for ACF omega_proxy=phi-beta_L*l-beta_K*k. The source predict,omega path requires saved first-stage residuals and cannot be assumed available for Wooldridge, whose branch rejects fsresiduals. No fake four-method latent-omega attachment.",
+      "attachment": "Keep tfp_OP/tfp_LP/tfp_ACF/tfp_W as documented common residual aliases if required by the inherited schema, with an explicit measure_type=structural_log_VA_residual metadata field; use distinct names for supported proxy-omega companions."
+    }
+  }
+}

@@ -1,0 +1,92 @@
+* WFDOC: N09 menghitung alur attrition dari N03 serta status fit utama dari nominal_coefficients; tidak memperbarui koefisien.
+* WFDOC: Baris keyed sector×method×sample_id×tahun×stage; hitungan berurutan mulai dari baris sumber tahun-sektor, sementara prediction_branch kembali ke domain PRE-LAG.
+* WFDOC: Input ialah N03_frozen.dta dan nominal_coefficients.csv; deep_method_funnel.csv mencakup all source years plus pooled source_year0 and all exact-calendar risk intervals.
+* WFDOC: nom_domain_own/common mewakili eligible() PRE-LAG; nom_dynamic menambah transisi kalender tepat yang dibentuk wrapper/N03, sehingga celah 2016 tidak dikompresi.
+* WFDOC: OP memakai semesta interval risk sintetis N03 yang terpisah dari produksi/investasi positif; status hilang atau nol bukan bukti closure nyata.
+* WFDOC: Setiap tahap memakai hitungan sebelumnya sebagai N_previous; dukungan kosong tetap N=0, dan kegagalan merge/assert menghentikan ekspor.
+tempname f
+postfile `f' str4 sector str8 method str8 sample_id double source_year str40 stage double N_source double N_previous double N_retained double N_lost str100 denominator_label using "$G1_DEEP/intermediate/deep_method_funnel.dta", replace
+* WFDOC: Lookup hanya memilih variant primary; admitted berarti status fit_success pada sel sektor-metode-sampel yang sama.
+import delimited using "$G1_BASE/outputs/nominal_coefficients.csv", clear varnames(1) stringcols(1)
+keep if variant=="primary"
+keep sector method sample_id status
+rename sector nom_sector
+gen byte admitted=status=="fit_success"
+tempfile admission
+save `admission'
+foreach method in op lp acf wrdg {
+    foreach sample in own common {
+        use `admission', clear
+        keep if method=="`method'" & sample_id=="`sample'"
+        keep nom_sector admitted
+        tempfile cell
+        save `cell', replace
+        use "$G1_BASE/nominal/N03_frozen.dta", clear
+        merge m:1 nom_sector using `cell', assert(3) nogen
+        local domain `method'
+        if "`sample'"=="common" local domain common
+        gen byte chain=!nom_interval_only
+        foreach sector in $D_SECTORS {
+            local sec "1"
+            if "`sector'"!="ALL" local sec `"nom_sector=="`sector'""'
+            foreach year in $D_YEARS {
+                local yr "source_year==`year'"
+                if `year'==0 local yr "1"
+                replace chain=!nom_interval_only & (`yr') & (`sec')
+                count if chain
+                local ns=r(N)
+                local previous=`ns'
+                foreach stage in source_original production_valid_sector positive_output positive_labor positive_begin_capital positive_proxy sample_domain calendar_dynamic admitted_dynamic {
+                    * WFDOC: Filter mengikuti urutan produksi, koordinat positif, domain, transisi kalender, lalu fit sukses; tidak menafsirkan missing sebagai nol.
+                    local test "1"
+                    if "`stage'"=="production_valid_sector" local test "nom_production==1"
+                    if "`stage'"=="positive_output" local test "!missing(nom_y)"
+                    if "`stage'"=="positive_labor" local test "!missing(nom_l)"
+                    if "`stage'"=="positive_begin_capital" local test "!missing(nom_k)"
+                    if "`stage'"=="positive_proxy" {
+                        local test "!missing(nom_m)"
+                        if "`method'"=="op" local test "!missing(nom_i)"
+                    }
+                    if "`stage'"=="sample_domain" local test "nom_domain_`domain'==1"
+                    if "`stage'"=="calendar_dynamic" local test "nom_dynamic_`domain'==1"
+                    if "`stage'"=="admitted_dynamic" local test "admitted==1"
+                    replace chain=chain & (`test')
+                    count if chain
+                    local nr=r(N)
+                    post `f' ("`sector'") ("`method'") ("`sample'") (`year') ("`stage'") (`ns') (`previous') (`nr') (`previous'-`nr') ("original_source_year_rows_sequential")
+                    local previous=`nr'
+                }
+                * WFDOC: Prediksi adalah cabang dari domain pra-lag dengan koefisien sukses, bukan kelanjutan rantai dynamic-fit.
+                count if !nom_interval_only & (`yr') & (`sec') & nom_domain_`domain'==1
+                local nd=r(N)
+                count if !nom_interval_only & (`yr') & (`sec') & nom_domain_`domain'==1 & admitted==1
+                post `f' ("`sector'") ("`method'") ("`sample'") (`year') ("prediction_branch") (`ns') (`nd') (r(N)) (`nd'-r(N)) ("sample_domain_rows_branch_not_dynamic_chain")
+            }
+            * WFDOC: OP intervals are grouped by endpoint source_year, with source_year0 pooling intervals (not distinct firms).
+            if "`method'"=="op" {
+                foreach year in $D_YEARS {
+                    local yr "source_year==`year'"
+                    if `year'==0 local yr "1"
+                    count if (`sec') & (`yr') & nom_risk==1
+                    local ns=r(N)
+                    count if (`sec') & (`yr') & nom_selection==1
+                    local nr=r(N)
+                    post `f' ("`sector'") ("`method'") ("`sample'") (`year') ("risk_all_intervals") (`ns') (`ns') (`ns') (0) ("exact_calendar_synthetic_risk_intervals_endpoint_year")
+                    post `f' ("`sector'") ("`method'") ("`sample'") (`year') ("risk_complete_lag_K_I") (`ns') (`ns') (`nr') (`ns'-`nr') ("exact_calendar_synthetic_risk_intervals_endpoint_year")
+                    foreach event in 0 1 {
+                        count if (`sec') & (`yr') & nom_selection==1 & nom_disappearance==`event'
+                        local name risk_continuers
+                        if `event'==1 local name risk_disappearances
+                        post `f' ("`sector'") ("`method'") ("`sample'") (`year') ("`name'") (`ns') (`nr') (r(N)) (`nr'-r(N)) ("complete_lag_risk_intervals_event_partition")
+                    }
+                }
+            }
+        }
+    }
+}
+* WFDOC: Satu CSV mempertahankan label denominator per baris agar source-year production dan OP risk interval tidak tercampur.
+postclose `f'
+use "$G1_DEEP/intermediate/deep_method_funnel.dta", clear
+ds, has(type numeric)
+format `r(varlist)' %24.17g
+export delimited using "$G1_DEEP/outputs/deep_method_funnel.csv", replace

@@ -1,0 +1,64 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{g1-appendix}[2026/09/13 Portable production-function appendix]
+\RequirePackage{booktabs,array,tabularx,longtable,graphicx,caption,float,amsmath,hyperref,etoolbox}
+% Backport longtable v4.25's finite footer shrink (LaTeX issue 1907).
+% The repair runs within the appendix group and leaves the host routine intact.
+% Upstream source: latex3/latex2e required/tools/longtable.dtx, 2025-12-23.
+\newcommand{\GOne@finiteLongtableGlue}{%
+  \@ifpackagelater{longtable}{2025/12/22}{}{%
+    \patchcmd{\LT@output}{\vss}{\vskip\z@\@plus1fil\@minus\normalbaselineskip}{}%
+      {\PackageError{g1-appendix}{Cannot repair first longtable footer glue}{Use longtable v4.25 or newer.}}%
+    \patchcmd{\LT@output}{\vss}{\vskip\z@\@plus1fil\@minus\normalbaselineskip}{}%
+      {\PackageError{g1-appendix}{Cannot repair second longtable footer glue}{Use longtable v4.25 or newer.}}%
+  }%
+}
+\providecommand{\makecell}[1]{\shortstack{#1}}
+% The host chooses fonts, margins, page numbering, appendix mode and ancestor
+% counters. Root level 1 gives a section; root level 2 gives a subsection.
+\newcommand{\GOneBasePath}{.}
+\newcommand{\GOneRootLevel}{1}
+\newcommand{\GOneNamespace}{g1}
+\newcommand{\GOneExhibitSeparator}{.}
+\newcommand{\GOneInput}[1]{\input{\GOneBasePath/#1}}
+\newcommand{\GOne@counter}[1]{\ifcase\numexpr#1\relax\or section\or subsection\or subsubsection\or paragraph\or subparagraph\fi}
+\newcommand{\GOneHeading}[2]{\csname\GOne@counter{#1}\endcsname{#2}}
+\newcommand{\GOneSection}[1]{%
+  \GOneHeading{\GOneRootLevel}{#1}%
+  \edef\GOneNumber{\csname the\GOne@counter{\GOneRootLevel}\endcsname}%
+  \setcounter{figure}{0}\setcounter{table}{0}\setcounter{equation}{0}%
+  \renewcommand{\thefigure}{\GOneNumber\GOneExhibitSeparator\arabic{figure}}%
+  \renewcommand{\thetable}{\GOneNumber\GOneExhibitSeparator\arabic{table}}%
+  \renewcommand{\theequation}{\GOneNumber\GOneExhibitSeparator\arabic{equation}}%
+  \renewcommand{\theHfigure}{\GOneNamespace.\GOneNumber.\arabic{figure}}%
+  \renewcommand{\theHtable}{\GOneNamespace.\GOneNumber.\arabic{table}}%
+  \renewcommand{\theHequation}{\GOneNamespace.\GOneNumber.\arabic{equation}}%
+}
+\newcommand{\GOneSubsection}[1]{\GOneHeading{\GOneRootLevel+1}{#1}}
+\newcommand{\GOneSubsubsection}[1]{\GOneHeading{\GOneRootLevel+2}{#1}}
+\newcommand{\GOneDetail}[1]{\GOneHeading{\GOneRootLevel+3}{#1}}
+% Semantic helpers retain the native caption/amsmath label hooks.
+\newcommand{\GOneLabel}[1]{\label{\GOneNamespace:#1}}
+\newcommand{\GOneRef}[1]{\ref{\GOneNamespace:#1}}
+\newcommand{\GOneEqref}[1]{\eqref{\GOneNamespace:#1}}
+\newcommand{\GOnePageref}[1]{\pageref{\GOneNamespace:#1}}
+\newcommand{\GOneBegin}{%
+  \clearpage\begingroup
+  \GOne@finiteLongtableGlue
+  \ifnum\GOneRootLevel<1 \PackageError{g1-appendix}{Root level must be 1 or 2}{}\fi
+  \ifnum\GOneRootLevel>2 \PackageError{g1-appendix}{Root level must be 1 or 2}{}\fi
+  \edef\GOne@savedFigure{\arabic{figure}}%
+  \edef\GOne@savedTable{\arabic{table}}%
+  \edef\GOne@savedEquation{\arabic{equation}}%
+  \edef\GOne@savedSecnumdepth{\arabic{secnumdepth}}%
+  \setcounter{secnumdepth}{\numexpr\GOneRootLevel+3\relax}%
+  \graphicspath{{\GOneBasePath/}}%
+  \def\appnotes##1##2{\par\vspace{5pt}\noindent\begin{minipage}{\linewidth}\fontsize{9.2}{11}\selectfont\textit{Notes:} ##1\par\smallskip\textit{Source:} ##2\end{minipage}\par}%
+}
+\newcommand{\GOneEnd}{%
+  \clearpage
+  \setcounter{figure}{\GOne@savedFigure}%
+  \setcounter{table}{\GOne@savedTable}%
+  \setcounter{equation}{\GOne@savedEquation}%
+  \setcounter{secnumdepth}{\GOne@savedSecnumdepth}%
+  \endgroup
+}

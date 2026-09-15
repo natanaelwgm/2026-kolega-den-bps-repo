@@ -1,0 +1,99 @@
+"""Native method-specific data and coefficient tables from released Stata rows."""
+from deep_publication import METHOD,INPUT
+
+def build(data,one,cell,val,table,declared,sectors):
+    out={}
+    source_years=sorted(int(y) for y in data['deep_input_domains'].source_year.unique() if y>0)
+    production_years=sorted(int(y) for y in data['deep_input_domains'].loc[data['deep_input_domains'].production_year_supported.eq(1),'source_year'].unique() if y>0)
+    admitted=data['nominal_coefficients'].query("sample_id == 'own' and variant == 'primary' and status == 'fit_success'")
+    for m in ['lp','op','acf','wrdg']:
+        label=METHOD.get(m,'OP');proxy='i' if m=='op' else 'm';prefix='method-data:'+m
+        method_sectors=sorted(admitted.loc[admitted.method.eq(m),'sector'].unique())
+        display_sectors=method_sectors or sectors
+        definitions=[('$y$','outcome',r'value\_added\_nominal',r'$y_t=\ln(\mathrm{value\ added}_t)$; positive reported nominal amount'),('$l$','labor','workers',r'$l_t=\ln(\mathrm{workers}_t)$; positive reported worker count'),('$k$','capital',r'capital\_stock\_nominal',r'$k_t=\ln(K^{\mathrm{December}}_{t-1})$; positive stock from the exact prior year, assuming year-end timing'),('$'+proxy+'$','op_proxy' if m=='op' else 'lp_acf_wrdg_proxy',r'capital\_additions\_nominal' if m=='op' else r'val\_rtlvcu',r'$i_t=\ln(\mathrm{additions}_t)$; positive reported amount, assuming investment meaning' if m=='op' else r'$m_t=\ln(\mathrm{materials}_t)$; positive reported raw/supporting materials')]
+        rows=[]
+        for symbol,field,source,formula in definitions:
+            rows.append([declared(prefix+':'+field+':symbol',field,symbol),declared(prefix+':'+field+':source',field,source),declared(prefix+':'+field+':formula',field,formula)])
+        table(f'deep_{m}_mapping.tex',label+': variable definitions','deep-'+m+'-mapping',r'l>{\raggedright\arraybackslash}p{4.6cm}>{\raggedright\arraybackslash}p{7.0cm}',['Log variable','Source field(s)','Construction and condition'],rows,'We retain reported monetary scales and worker counts. We assume that the reported capital stock is a year-end stock and reported additions measure investment in every available year. The separate documentary flags retain their original meaning; they do not verify these assumptions for every year and no longer exclude a positive amount under this specification. Investment uses reported additions, not the difference between successive stocks. The source fields do not authenticate the fictional company links.')
+        name='deep_input_domains';rows=[]
+        for year in source_years:
+            for inp in ['y','l','k_begin',proxy]:
+                r=one(name,source_year=year,input=inp)
+                rows.append([cell(name,r,'source_year',prefix+f':states:{year}:{inp}:year',',.0f'),cell(name,r,'input',prefix+f':states:{year}:{inp}:input',display=INPUT[inp]),*[cell(name,r,f,prefix+f':states:{year}:{inp}:{f}',',.0f') for f in ['N_missing','N_zero','N_negative','N_positive','N_log_usable']]])
+        table(f'deep_{m}_input_states.tex',label+': input availability by year','deep-'+m+'-input-states','llrrrrr',['Year','Input','Missing','Zero','Negative','Positive','Usable log'],rows,'We count each input separately in the full annual sample, before requiring all inputs together or applying the minimum sector sample sizes. Beginning capital uses a positive reported stock from the immediately preceding calendar year under the year-end assumption. We do not fill a missing source year or replace its missing stock with a more distant observation. Documentary support remains separately recorded; the current specification does not require its flag to be positive.')
+        name='deep_method_funnel';rows=[]
+        for s in display_sectors:
+            for year in production_years:
+                base=one(name,sector=s,method=m,sample_id='own',source_year=year,stage='source_original')
+                row=[cell(name,base,'sector',prefix+f':loss:{s}:{year}:sector',display=s),cell(name,base,'source_year',prefix+f':loss:{s}:{year}:year',',.0f'),cell(name,base,'N_retained',prefix+f':loss:{s}:{year}:source',',.0f')]
+                for stage in ['sample_domain','calendar_dynamic','admitted_dynamic','prediction_branch']:
+                    r=one(name,sector=s,method=m,sample_id='own',source_year=year,stage=stage)
+                    row.append(cell(name,r,'N_retained',prefix+f':loss:{s}:{year}:{stage}',',.0f'))
+                rows.append(row)
+        table(f'deep_{m}_sample.tex',label+': sample construction by sector and year','deep-'+m+'-sample','llrrrrr',['Code','Year','Source',r'\makecell{Eligible\\inputs}',r'\makecell{Consecutive\\pairs}',r'\makecell{Accepted\\pairs}','Residuals'],rows,'Source counts include records before input restrictions. Eligible inputs requires the positive measurements for this method. Consecutive pairs additionally requires an eligible record in the immediately preceding year. Accepted pairs applies the fixed sector sample requirements after pooling these calendar pairs across years. Residuals counts eligible records in a sector with estimated coefficients, including records outside the dynamic stage. We use one set of sector coefficients and one pooled dynamic-sample reference mean across all years. OP requires a separate sample for its continuation calculation.')
+        prose=f'''\\GOneDetail{{Source variables}}
+\\GOneLabel{{sec:{m}-source-variables}}
+We check the fields in Table~\\GOneRef{{tab:deep-{m}-mapping}} against the requirements for {label} estimation. The table links each variable in the equations to its source field and states the condition a record must meet before we take its logarithm.
+\\GOneInput{{tables/deep_{m}_mapping.tex}}
+The outcome measures reported value added at reported prices. We measure labor by the number of workers, without information about their hours or skills. For capital, we assume that the preceding year's reported stock describes the assets available at the start of the production year. This assumption extends the calculation to the available years without establishing that their source definitions are equivalent. A stock also does not directly measure how intensively a company uses its assets. These choices affect both the estimated input contributions and the remainder we compare.
+
+\\GOneDetail{{Year coverage}}
+\\GOneLabel{{sec:{m}-year-coverage}}
+For production in year $t$, we obtain beginning capital from the stock reported in calendar year $t-1$, treating that amount as its year-end stock. Materials or investment comes from year $t$ itself. The dynamic stage also needs the preceding production observation; its beginning capital consequently draws on year $t-2$. We preserve every calendar gap instead of treating the next observed year as the next calendar year. Table~\\GOneRef{{tab:deep-{m}-input-states}} reports each input's availability before we require them together.
+\\GOneInput{{tables/deep_{m}_input_states.tex}}
+The positive observations for one input need not be the same observations as those for another. We retain a record only when it supplies all the quantities that its estimation step requires. A missing response does not show zero production, and we cannot take the log of a recorded zero. Beginning capital also requires the immediately preceding stock. The year-end and investment assumptions admit positive reported amounts without changing the documentary flags; those flags continue to show where the source evidence is narrower than the assumption.
+
+\\GOneDetail{{Transformations and sample restrictions}}
+\\GOneLabel{{sec:{m}-transformations}}
+We check positivity before taking logs. We use the available production years and sectors, match each record to the immediately preceding calendar year, and apply the minimum sample sizes to the pooled sector sample. For the polynomial calculations, we then subtract the relevant sample median from each logged variable; this changes its numerical reference point while keeping the eligible records fixed. We estimate one coefficient vector and control relationship per sector over the pooled years, without adding year effects. Table~\\GOneRef{{tab:deep-{m}-sample}} traces the sample by sector and year.
+\\GOneInput{{tables/deep_{m}_sample.tex}}
+The estimation steps use these records in different ways. An earlier observation can supply the preceding-year inputs for a later calendar pair. The estimators with a separate first stage can also use eligible records outside the accepted pairs in that first-stage calculation. Once a sector has estimated coefficients, we calculate a residual for each record with the required current inputs, including one without an eligible predecessor. Calculating that residual does not add a new pair or re-estimate the coefficients. An observation outside the dynamic-stage sample can therefore contribute to the first stage, receive a residual, or do both.
+'''
+        out[m+'data_tables']=prose
+        if m=='op':
+            name='nominal_coefficients'; rows=[]
+            for _,r in data[name][(data[name].method=='op')&(data[name].sample_id=='own')&(data[name].variant=='primary')].sort_values('sector').iterrows():
+                s=r.sector
+                rows.append([cell(name,r,'sector',f'op:all-support:{s}:sector',display=s),*[cell(name,r,f,f'op:all-support:{s}:{f}',',.0f') for f in ['N_domain','N_dynamic','N_firms','N_selection','N_disappearance','N_continuer']]])
+            table('deep_op_all_support.tex','OP: sample requirements by sector','deep-op-all-support','lrrrrrr',['Code',r'\makecell{Eligible\\inputs}',r'\makecell{Consecutive\\pairs}','Firms','Risk sample','Disappearances','Continuers'],rows,'We report every observed sector, including zero counts. Eligible inputs and consecutive pairs refer to production records. The risk sample separately counts valid calendar intervals used to examine continuation of the fictional assignments, before applying the production restrictions. A disappearance records an assignment that does not continue; it does not establish an actual company closure. Estimation also requires the fixed sample thresholds, numerical rank conditions and a successful selection equation.')
+            result=('The sectors with accepted OP estimates are '+', '.join(method_sectors)+'. We report their coefficients and uncertainty below. A positive reported investment amount alone is not sufficient: the pooled production sample, continuation sample and numerical requirements must also be met.' if method_sectors else 'No observed sector yields an accepted OP estimate under the fixed sample and estimation requirements. We retain the sample counts and do not replace the unavailable coefficients or standard errors with zeros.')
+            out['opall_support']='We examine every observed sector in Table~\\GOneRef{tab:deep-op-all-support}. This separates the availability of production inputs from the information needed to model continuation.\n\\GOneInput{tables/deep_op_all_support.tex}\n'+result+'\n'
+        name='nominal_coefficients'
+        method_attempts=data[name].query("method == @m and variant == 'primary'").sort_values(['sample_id','sector'])
+        rows=[]
+        for _,r in method_attempts.iterrows():
+            anchor=f'{m}:attempt:{r.sample_id}:{r.sector}'
+            status={'fit_success':'Estimated','skipped_support':'Insufficient sample','fit_failed':'Estimation failed'}.get(r.status,str(r.status).replace('_',' '))
+            rows.append([cell(name,r,'sample_id',anchor+':sample',display=r.sample_id.capitalize()),cell(name,r,'sector',anchor+':sector',display=r.sector),cell(name,r,'status',anchor+':status',display=status),*[cell(name,r,field,anchor+':'+field,',.0f') for field in ['N_domain','N_dynamic','N_firms']]])
+        table(f'deep_{m}_attempts.tex',label+': primary estimation outcomes','deep-'+m+'-attempts','lllrrr',['Sample','Code','Outcome',r'\makecell{Eligible\\inputs}',r'\makecell{Consecutive\\pairs}','Firms'],rows,'We retain every predeclared sector under both the own-input and four-method-common-input rules. Insufficient sample denotes failure of a fixed count requirement before estimation; estimation failed denotes a numerical or rank failure after an attempt. Neither is an estimated zero coefficient. The displayed firms are distinct fictional assignments in the dynamic sample; observations can recur across years.')
+        attempt_prose=f'We record the primary outcome for every sector and both input-sample definitions in Table~\\GOneRef{{tab:deep-{m}-attempts}}. This keeps the absence of a fit separate from a coefficient estimated near zero.\n\\GOneInput{{tables/deep_{m}_attempts.tex}}\nOnly estimated cells supply coefficients and derived residuals. A count requirement and a numerical failure have different meanings: the former prevents the declared calculation from being attempted, while the latter prevents an attempted calculation from supplying an accepted estimate.\n'
+        if not method_sectors:
+            out[m+'regression']=attempt_prose+'No accepted own-sample coefficient estimate is available under the current specification.\n'
+            continue
+        inclusions=[]
+        for sample in ['own','common']:
+            sample_fits=data[name].query("method == @m and sample_id == @sample and variant == 'primary' and status == 'fit_success'")
+            sample_sectors=sorted(sample_fits.sector.unique())
+            br={sector:one('nominal_bootstrap_summary',sector=sector,method=m,sample_id=sample) for sector in sample_sectors}
+            cr={sector:one(name,sector=sector,method=m,sample_id=sample,variant='primary') for sector in sample_sectors}
+            for start in range(0,len(sample_sectors),5):
+                shown=sample_sectors[start:start+5];rows=[]
+                suffix=('' if sample=='own' else '-common')+('' if start==0 else '-'+str(start//5+1))
+                for field,title,se,lo,hi in [('beta_L',r'Labor $\widehat\beta_L$','se_L','ci_L_lo','ci_L_hi'),('beta_K',r'Capital $\widehat\beta_K$','se_K','ci_K_lo','ci_K_hi'),('returns_to_scale',r'Coefficient sum $\widehat\beta_L+\widehat\beta_K$','se_RTS',None,None)]:
+                    rows.append([title,*[cell(name,cr[sector],field,f'{m}:{sample}:reg:{sector}:{field}','.4f') for sector in shown]])
+                    rows.append(['(Bootstrap SE)',*['('+cell('nominal_bootstrap_summary',br[sector],se,f'{m}:{sample}:reg:{sector}:{se}','.4f')+')' for sector in shown]])
+                    if lo:
+                        rows.append([r'95\% percentile interval',*[r'\makecell{['+cell('nominal_bootstrap_summary',br[sector],lo,f'{m}:{sample}:reg:{sector}:{lo}','.4f')+r',\\'+cell('nominal_bootstrap_summary',br[sector],hi,f'{m}:{sample}:reg:{sector}:{hi}','.4f')+']}' for sector in shown]])
+                for field,title,fmt in [('N_dynamic','Consecutive-year observations',',.0f'),('N_firms','Fictional firms in fit',',.0f'),('N_domain','Records with eligible inputs',',.0f'),('fit_year_min','First fitted endpoint','.0f'),('fit_year_max','Last fitted endpoint','.0f'),('N_fit_years','Distinct fitted years',',.0f'),('poly','Proxy polynomial degree',',.0f'),('initial_l','Initial labor coefficient','.4f'),('initial_k','Initial capital coefficient','.4f'),('objective','Objective value','.3e')]:
+                    rows.append([title,*[cell(name,cr[sector],field,f'{m}:{sample}:reg:{sector}:{field}',fmt) for sector in shown]])
+                rows.append(['Successful bootstrap draws',*[cell('nominal_bootstrap_summary',br[sector],'successful',f'{m}:{sample}:reg:{sector}:successful',',.0f') for sector in shown]])
+                filename=f'deep_{m}_regression{suffix}.tex'
+                table(filename,label+': '+sample+'-sample production estimates','deep-'+m+'-regression'+suffix,r'p{4.1cm}*{'+str(len(shown))+r'}{>{\centering\arraybackslash}p{1.85cm}}',['Dependent variable: log value added',*shown],rows,'Each column pools eligible calendar observations in one sector with one coefficient vector and no added year effects. The own sample requires this method\'s inputs; the common sample separately requires all four methods\' inputs before exact lagging. Parentheses show whole-history bootstrap standard errors; the coefficient-sum error includes labor-capital covariance. Brackets show admitted 95 percent percentile intervals. A dash denotes unavailable inference. The first and last years bound the observed endpoints but do not fill intervening calendar gaps; the distinct-year count records actual coverage. Primary polynomial and starting rules are fixed before results.')
+                inclusions.append(r'\GOneInput{tables/'+filename+'}')
+        rows=[]
+        for _,r in data[name].query("method == @m and variant == 'primary' and status == 'fit_success'").sort_values(['sample_id','sector']).iterrows():
+            anchor=f'{m}:numeric:{r.sample_id}:{r.sector}'
+            rows.append([cell(name,r,'sample_id',anchor+':sample',display=r.sample_id.capitalize()),cell(name,r,'sector',anchor+':sector',display=r.sector),*[cell(name,r,field,anchor+':'+field,',.0f' if 'condition' not in field else '.2e') for field in ['first_stage_rank','transition_rank','transition_columns','instrument_rank','instrument_columns','moment_jacobian_rank','iterations']]])
+        table(f'deep_{m}_numerics.tex',label+': rank and optimization diagnostics','deep-'+m+'-numerics','llrrrrrrr',['Sample','Code',r'\makecell{First-stage\\rank}',r'\makecell{Transition\\rank}',r'\makecell{Transition\\columns}',r'\makecell{Instrument\\rank}',r'\makecell{Instrument\\columns}',r'\makecell{Moment\\Jacobian rank}','Iterations'],rows,'Each row is a successful primary fit. Rank is the number of independent columns in the corresponding matrix. Transition and instrument column counts show the dimension against which to read the reported rank. The moment Jacobian measures local changes in the moments as parameters change. A dash denotes a diagnostic not applicable to that estimator. These numerical checks do not test whether the assumed instruments, proxy rule or fictional continuation represent actual company behavior.')
+        out[m+'regression']=attempt_prose+f'We report the estimated coefficients beginning with Table~\\GOneRef{{tab:deep-{m}-regression}}. The own and common samples have separate columns and fits. To describe uncertainty, we resample whole fictional company histories and repeat every estimation step. Standard errors measure the spread of these repeated estimates; percentile intervals give their admitted lower and upper quantiles.\n'+'\n'.join(inclusions)+'\nThe uncertainty in the coefficient sum depends on how labor and capital estimates move together across resamples. Adding their separate standard errors would ignore that covariance. Fitted year coverage is pooled, and a separate first stage can use more records than the dynamic sample. These counts describe distinct roles in the same estimation.\n'+f'\nTable~\\GOneRef{{tab:deep-{m}-numerics}} reports the rank and optimization diagnostics for the successful primary fits. We compare numerical rank with the dimension of the relevant matrix because returning a coefficient is not enough to show that the stated calculation had the required independent information.\n\\GOneInput{{tables/deep_{m}_numerics.tex}}\nThe diagnostics describe the numerical problem at the reported solution. They do not establish valid economic timing or a unique global optimum; the alternative-start comparison examines a separate aspect of that uncertainty.\n'
+    return out

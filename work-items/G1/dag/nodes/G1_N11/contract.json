@@ -1,0 +1,300 @@
+{
+  "node_id": "G1_N11",
+  "branch": "nominal_development_deep_diagnostics",
+  "material_state_status": "validated_aggregate_receipt_validator_revision_documented_primary_dispatch_replay_pass_no_refit",
+  "state": "Balanced fictional-panel paired changes and ranks",
+  "input_nodes": [
+    "G1_N03",
+    "G1_N10"
+  ],
+  "direct_input_artifacts": [
+    {
+      "artifact": "nominal/N03_frozen.dta",
+      "scope": "read-only base-run input",
+      "path": "/Users/natanaelmassie/Downloads/deasy-g1-issue9-20260913-g1-runs/v3-assumed-stock-all-years-02/nominal/N03_frozen.dta",
+      "sha256": "1e3744974eb3e492aa7cacd08fa0b3e8c499ad9f0ab8a7b90d9ad4eda997e59b",
+      "bytes": 34002594,
+      "receipt_sha256": "1e3744974eb3e492aa7cacd08fa0b3e8c499ad9f0ab8a7b90d9ad4eda997e59b",
+      "current_hash_matches_receipt": null,
+      "exists": true,
+      "public": false
+    },
+    {
+      "artifact": "intermediate/primary_predictions.dta",
+      "scope": "private deep-run intermediate produced by a preceding deep stage",
+      "path": "/Users/natanaelmassie/Downloads/deasy-g1-issue9-20260913-g1-runs/v3-assumed-stock-all-years-02-deep02/intermediate/primary_predictions.dta",
+      "sha256": "e356e74f0b632c038c34da5c063dcf3060ff30d7cff77cce9facd2cd829a3cee",
+      "exists": true,
+      "public": false
+    }
+  ],
+  "source_code": "work-items/G1/stata/deep/N11_pairs.do",
+  "source_code_sha256": "c9851e979c91df74fd27bfd0aee39067cb4ed9658a9ac45eaec479f28995a30d",
+  "source_code_matches_original_run_manifest": true,
+  "runner_entry_point": {
+    "primary_do": "work-items/G1/stata/G1.do",
+    "primary_do_sha256": "08a40ae7f0b355a60b33adf4fd1d15f338645af14ae3b6109d2038f6e0b26ec7",
+    "diagnostics_child_driver": "work-items/G1/stata/deep/G1_deep.do",
+    "diagnostics_child_driver_sha256": "18e7841c4e37cf78684744b87ece680bfb9776e598d7c415b52b167b5a17469d",
+    "dispatch_revision_receipt": "qa/deep-primary-dispatch-source-revision.json",
+    "dispatch_source_revision_verified": true,
+    "execution_status": "Routed primary G1.do execution PASS; exit0, completion sentinel, exact output/contract/source hashes and independent numeric validation. Historical replay and fresh all-years runs retain their distinct receipt kinds.",
+    "final_execution_receipt": "work-items/G1/qa/deep-final-execution.json",
+    "final_execution_receipt_sha256": "e2e0cc27e036f7ea1abfc16b3542c725ace29caa2f5c003ceead0ef3d7c721ae",
+    "final_execution_status": "PASS",
+    "final_execution_verified": true,
+    "final_execution_checks": {
+      "successful_execution": true,
+      "completion_sentinel": true,
+      "exact_manifest": true,
+      "exact_validation": true,
+      "source_code": true,
+      "contract": true,
+      "source_run": true,
+      "primary_route": true,
+      "primary_dispatch_source": true,
+      "complete_output_grid": true,
+      "exact_output_files": true
+    }
+  },
+  "executed_code_receipt": {
+    "manifest_path": "deep-release/run-manifest.json",
+    "manifest_sha256": "481731a8155cb004c502c013fa74f59dc47402f1351ace9fa4e3dd6da37cd469",
+    "code": [
+      {
+        "path": "work-items/G1/stata/deep/G1_deep.do",
+        "sha256": "18e7841c4e37cf78684744b87ece680bfb9776e598d7c415b52b167b5a17469d",
+        "current_sha256": "18e7841c4e37cf78684744b87ece680bfb9776e598d7c415b52b167b5a17469d",
+        "current_hash_matches_receipt": true
+      },
+      {
+        "path": "work-items/G1/stata/deep/N08_inputs.do",
+        "sha256": "f669e8a9475d01c7602ee4d244e629978a787af0d540cb6a3d37495a933601fb",
+        "current_sha256": "f669e8a9475d01c7602ee4d244e629978a787af0d540cb6a3d37495a933601fb",
+        "current_hash_matches_receipt": true
+      },
+      {
+        "path": "work-items/G1/stata/deep/N09_funnel.do",
+        "sha256": "ad6c5e43e571e095207825fbb1db4aee8ae7719c5387abdc996ef3d3a9481b69",
+        "current_sha256": "ad6c5e43e571e095207825fbb1db4aee8ae7719c5387abdc996ef3d3a9481b69",
+        "current_hash_matches_receipt": true
+      },
+      {
+        "path": "work-items/G1/stata/deep/N10_profiles.do",
+        "sha256": "0ced63439de72d4fbfa5ebdf4befab78ec1a962f0d0c804fc788879c0ea88003",
+        "current_sha256": "0ced63439de72d4fbfa5ebdf4befab78ec1a962f0d0c804fc788879c0ea88003",
+        "current_hash_matches_receipt": true
+      },
+      {
+        "path": "work-items/G1/stata/deep/N11_pairs.do",
+        "sha256": "c9851e979c91df74fd27bfd0aee39067cb4ed9658a9ac45eaec479f28995a30d",
+        "current_sha256": "c9851e979c91df74fd27bfd0aee39067cb4ed9658a9ac45eaec479f28995a30d",
+        "current_hash_matches_receipt": true
+      },
+      {
+        "path": "work-items/G1/stata/deep/N12_worked.do",
+        "sha256": "e97691c92bf6c6a41e641532a9bcfc1e8c3186ef0852149c66603aece772ca82",
+        "current_sha256": "e97691c92bf6c6a41e641532a9bcfc1e8c3186ef0852149c66603aece772ca82",
+        "current_hash_matches_receipt": true
+      },
+      {
+        "path": "work-items/G1/stata/deep/N13_existing_fits.do",
+        "sha256": "97abe56e7f0016c0375469c8fcc16ba24caa898199582cea880e0bc5b16fe67b",
+        "current_sha256": "97abe56e7f0016c0375469c8fcc16ba24caa898199582cea880e0bc5b16fe67b",
+        "current_hash_matches_receipt": true
+      },
+      {
+        "path": "work-items/G1/stata/deep/helpers.do",
+        "sha256": "6915264050ac78be449eaf058d4c9ee645b1749bafddce58a65a83ef9accb0dd",
+        "current_sha256": "6915264050ac78be449eaf058d4c9ee645b1749bafddce58a65a83ef9accb0dd",
+        "current_hash_matches_receipt": true
+      },
+      {
+        "path": "work-items/G1/validate_deep.py",
+        "sha256": "3cb8ab9fea21ca44f032dd3e95a5c9c7979474398f4597216c2e6f967a200808",
+        "current_sha256": "3cb8ab9fea21ca44f032dd3e95a5c9c7979474398f4597216c2e6f967a200808",
+        "current_hash_matches_receipt": true
+      },
+      {
+        "path": "work-items/G1/deep-diagnostics-contract.json",
+        "sha256": "0447443beecd73db044abd6204e5472cb4a7b36d2619108467d0c8f1c2bcd641",
+        "current_sha256": "0447443beecd73db044abd6204e5472cb4a7b36d2619108467d0c8f1c2bcd641",
+        "current_hash_matches_receipt": true
+      }
+    ],
+    "validator_revision_status": "current source matches executed validator",
+    "validator_source_revision_receipt": "qa/deep-validator-source-revision.json",
+    "final_routed_execution_receipt": "work-items/G1/qa/deep-final-execution.json",
+    "final_routed_execution_receipt_sha256": "e2e0cc27e036f7ea1abfc16b3542c725ace29caa2f5c003ceead0ef3d7c721ae",
+    "final_routed_execution_status": "PASS",
+    "final_routed_execution_verified": true
+  },
+  "specification_path": "work-items/G1/deep-diagnostics-contract.json",
+  "specification_sha256": "0447443beecd73db044abd6204e5472cb4a7b36d2619108467d0c8f1c2bcd641",
+  "base_run": "/Users/natanaelmassie/Downloads/deasy-g1-issue9-20260913-g1-runs/v3-assumed-stock-all-years-02",
+  "deep_run": "/Users/natanaelmassie/Downloads/deasy-g1-issue9-20260913-g1-runs/v3-assumed-stock-all-years-02-deep02",
+  "base_run_input_manifest_sha256": "060b0ee0a2158a9c94b0e7e68fcfba719eda37561422855471a99da6810ba260",
+  "no_new_coefficient_fits": true,
+  "grain": "Sector × method × sample × measure × year_from × year_to for exact same-psid, same-sector adjacent-calendar pairs;0/0 marks pooled intervals; histogram rows additionally key the 0.25-log-point change bin.",
+  "keys_by_output": {
+    "deep_paired_changes.csv": [
+      "sector",
+      "method",
+      "sample_id",
+      "measure",
+      "year_from",
+      "year_to"
+    ],
+    "deep_paired_histograms.csv": [
+      "sector",
+      "method",
+      "sample_id",
+      "measure",
+      "year_from",
+      "year_to",
+      "bin_lower"
+    ]
+  },
+  "output_contracts": [
+    {
+      "path": "deep-release/outputs/deep_paired_changes.csv",
+      "schema": [
+        "sector",
+        "method",
+        "sample_id",
+        "measure",
+        "N_from",
+        "N_to",
+        "N_pairs",
+        "N_to_in_fit",
+        "N_to_outside_fit",
+        "mean_from",
+        "mean_to",
+        "mean_change",
+        "sd_change",
+        "p1_change",
+        "p5_change",
+        "p25_change",
+        "p50_change",
+        "p75_change",
+        "p95_change",
+        "p99_change",
+        "N_negative",
+        "N_zero",
+        "N_positive",
+        "pearson_levels",
+        "spearman_levels",
+        "mean_index_ratio",
+        "numeric_released",
+        "year_from",
+        "year_to"
+      ],
+      "keys": [
+        "sector",
+        "method",
+        "sample_id",
+        "measure",
+        "year_from",
+        "year_to"
+      ],
+      "grain": "Sector × method × sample × measure × year_from × year_to for exact same-psid, same-sector adjacent-calendar pairs;0/0 marks pooled intervals; histogram rows additionally key the 0.25-log-point change bin.",
+      "denominator": "N_from and N_to count supported predictions in the paired endpoint years; N_pairs requires both values for the exact same fictional psid, sector, method, and sample. Preserve N_to in-fit and outside-fit counts.",
+      "units": {
+        "raw_and_centered_change": "later-year minus prior-year natural-log residual points",
+        "index_change": "change in exp(centered), dimensionless",
+        "mean_index_ratio": "mean index_to/index_from",
+        "correlations": "dimensionless Pearson/Spearman correlations on exact pairs",
+        "histogram": "0.25-log-point centered-change bins; count and pair share"
+      },
+      "sha256": "e3f063b38652f04e0c462da3d875ddd1cd1265dd1c632198a2c0d338b6149888",
+      "rows": 6600,
+      "cells_validated": 191400,
+      "maximum_scaled_error": 2.1611993949014305e-15,
+      "status": "PASS",
+      "hash_matches_release_and_validation": true
+    },
+    {
+      "path": "deep-release/outputs/deep_paired_histograms.csv",
+      "schema": [
+        "sector",
+        "method",
+        "sample_id",
+        "measure",
+        "bin_lower",
+        "bin_upper",
+        "N_bin",
+        "N_total",
+        "share",
+        "year_from",
+        "year_to"
+      ],
+      "keys": [
+        "sector",
+        "method",
+        "sample_id",
+        "measure",
+        "year_from",
+        "year_to",
+        "bin_lower"
+      ],
+      "grain": "Sector × method × sample × measure × year_from × year_to for exact same-psid, same-sector adjacent-calendar pairs;0/0 marks pooled intervals; histogram rows additionally key the 0.25-log-point change bin.",
+      "denominator": "N_from and N_to count supported predictions in the paired endpoint years; N_pairs requires both values for the exact same fictional psid, sector, method, and sample. Preserve N_to in-fit and outside-fit counts.",
+      "units": {
+        "raw_and_centered_change": "later-year minus prior-year natural-log residual points",
+        "index_change": "change in exp(centered), dimensionless",
+        "mean_index_ratio": "mean index_to/index_from",
+        "correlations": "dimensionless Pearson/Spearman correlations on exact pairs",
+        "histogram": "0.25-log-point centered-change bins; count and pair share"
+      },
+      "sha256": "49622492c03daf81e292508f6b525878cd281a3a5f291b2264ac20e80336cb77",
+      "rows": 6506,
+      "cells_validated": 71566,
+      "maximum_scaled_error": 5.2107165542548624e-17,
+      "status": "PASS",
+      "hash_matches_release_and_validation": true
+    }
+  ],
+  "private_intermediates": [
+    {
+      "path_relative_to_external_run": "intermediate/paired_predictions.dta",
+      "sha256_at_contract_build": "33e6ae04042b251c3ff21f9309582d9e259baa3bcf84a04251383eb0dd093c09",
+      "exists": true,
+      "publication": "private/local; not copied to deep-release"
+    }
+  ],
+  "calendar": "Every supported exact adjacent-year prediction pair; no bridge across2016. Same pooled coefficients and pooled dynamic fit normalizer across endpoints.",
+  "units": {
+    "raw_and_centered_change": "later-year minus prior-year natural-log residual points",
+    "index_change": "change in exp(centered), dimensionless",
+    "mean_index_ratio": "mean index_to/index_from",
+    "correlations": "dimensionless Pearson/Spearman correlations on exact pairs",
+    "histogram": "0.25-log-point centered-change bins; count and pair share"
+  },
+  "denominator": "N_from and N_to count supported predictions in the paired endpoint years; N_pairs requires both values for the exact same fictional psid, sector, method, and sample. Preserve N_to in-fit and outside-fit counts.",
+  "missingness": "Pairs missing either year are excluded only from paired summaries; annual supported counts and pair exclusions remain explicit. All exact-pair changes are retained; no trimming and no causal or real-growth interpretation.",
+  "suppression": "Retain N values, direction counts, and fixed-bin counts. Suppress exact means, quantiles, SDs, correlations, and mean index ratios where N_pairs<5. No identifiers are exported.",
+  "decision": "Describe within-fictional-panel changes under pooled coefficients and fixed pooled normalization; do not describe them as real firm growth or causal effects.",
+  "figure_scope": "Paired changes and 0.25-log-point histogram bins from deep_paired_changes.csv and deep_paired_histograms.csv; exact same fictional psid and sector in both years.",
+  "validation": {
+    "status": "PASS",
+    "scope": "Independent arithmetic validation of all twelve new Stata aggregate outputs; no full-master load or re-estimation.",
+    "aggregate_cells_compared": 2588035,
+    "receipt_path": "deep-release/qa/deep-validation.json",
+    "receipt_sha256": "1b38990abdc2e11839b28d60063dc111bbd3e117be3b5544379cde23e01eb463",
+    "validator_source_hash_matches_manifest": true,
+    "validator_source_revision_status": "current source matches executed validator",
+    "output_hashes_match_both_receipts": true,
+    "routed_primary_execution_receipt_path": "work-items/G1/qa/deep-final-execution.json",
+    "routed_primary_execution_receipt_sha256": "e2e0cc27e036f7ea1abfc16b3542c725ace29caa2f5c003ceead0ef3d7c721ae",
+    "routed_primary_execution_status": "PASS",
+    "routed_primary_execution_verified": true
+  },
+  "release_root": "deep-release/ (separate from release/; aggregate evidence only)",
+  "primary_real_admission": false,
+  "interpretation_limit": "G0.5 nominal-development diagnostics on the official fictional panel. They do not establish real-valued productivity. Unsupported sector cells retain their recorded missing state; N11 is descriptive, not causal.",
+  "numerical_output_privacy": "Only aggregate outputs are in deep-release. obs_id/psid are used for exact internal joins and remain in private external-run intermediates.",
+  "plan": "releases/2026-09-13-data-foundation/stata-preparation/row-plans/G1.json",
+  "plan_sha256": "dd88cfa94af5f212a7b0a4b70f99fea1c0201f950cd19333357739b96b5da1ca",
+  "input_manifest": "data/g0-5-development/manifest.json",
+  "input_manifest_sha256": "060b0ee0a2158a9c94b0e7e68fcfba719eda37561422855471a99da6810ba260"
+}

@@ -1,0 +1,3351 @@
+{
+  "schema_version": 1,
+  "row_id": "G1",
+  "title": "TFP: Olley–Pakes, Levinsohn–Petrin, ACF, Wooldridge",
+  "family": "data",
+  "status": "planning_only",
+  "row_complete": false,
+  "source": {
+    "task_json": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/requests/data/01-tfp/task.json",
+    "docx_sha256": "027fbf675aa8001a50060561781930440ee4d9697cc790ba593452fe528edd92",
+    "locator": "word/document.xml table 1, row 4",
+    "number": "1",
+    "pic": "",
+    "completion_cell": "",
+    "request": "Hitung TFP dan masukkan ke dataset utama\nOlley Pakes\nLevinsohn Petrin\nACF\nWooldridge\n",
+    "strategy": "",
+    "notes": ""
+  },
+  "question": "How much value added remains unexplained by measured workers and capital under each of the four requested productivity methods?",
+  "dependencies": [
+    {
+      "id": "C_MAIN",
+      "required_for": "required source/method branch defined by exact row and graph",
+      "availability": "latest_actual_source_located_not_full_G0_DoD",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/dag/data/word_data/G0/G0_analysis_ready_ACTUAL_LOCAL.dta",
+      "gate": "Exact source hash 6fc70746e1e6a1257552d29f19885c3bf113b64c5bed7671ca8a23f5168e6a6c; G0 full acceptance before dependent execution. Every company-data operand in analysis must be the single published consolidated master or a declared derivative whose entire company-data ancestry ends at that consolidated master. Direct annual-wave reads are prohibited in analysis; only the master builder may append annual waves. Raw/staged/legacy/cached final company files cannot be numerical analysis parents. A required field missing from the wave is an upstream preparation failure; never repair it by opening an external company file inside this row. Comparison-only validators may read older data but may not feed construction or estimates. External reference and metadata inputs retain explicit non-company roles.",
+      "numerical_binding": "wave_input_contract.master_path or a declared derivative"
+    },
+    {
+      "id": "C_QA",
+      "required_for": "required source/method branch defined by exact row and graph",
+      "availability": "current_actual_G2_refresh_not_run",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/docs/CURRENT-STATE.md",
+      "gate": "G2 eligibility on exactly accepted G0; historical/synthetic receipts do not satisfy it."
+    },
+    {
+      "id": "C_REAL_PANEL",
+      "required_for": "required source/method branch defined by exact row and graph",
+      "availability": "not_connected",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/HANDOFF.md",
+      "gate": "Reject dummy/row-order links; prove stable identity and actual calendar continuity."
+    },
+    {
+      "id": "C_WPI",
+      "required_for": "required source/method branch defined by exact row and graph",
+      "availability": "actual_macro_reference_available_company_bridge_unverified",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/synthetic-development/g0-pipeline/references/toar-wpi-20260910",
+      "gate": "Verify annual company-classification bridge, proper price concept, index base/splice and merge cardinality. Input/capital/wage prices still missing."
+    },
+    {
+      "id": "G0",
+      "required_for": "required: accepted canonical actual dataset and required real identity/prices",
+      "availability": "planned_not_accepted",
+      "evidence": "work/plans/rows/G0.json",
+      "gate": "G0 DoD and input hash acceptance; never substitute synthetic/history output Every company-data operand in analysis must be the single published consolidated master or a declared derivative whose entire company-data ancestry ends at that consolidated master. Direct annual-wave reads are prohibited in analysis; only the master builder may append annual waves. Raw/staged/legacy/cached final company files cannot be numerical analysis parents. A required field missing from the wave is an upstream preparation failure; never repair it by opening an external company file inside this row. Comparison-only validators may read older data but may not feed construction or estimates. External reference and metadata inputs retain explicit non-company roles.",
+      "numerical_binding": "wave_input_contract.master_path or a declared derivative"
+    },
+    {
+      "id": "G2",
+      "required_for": "required: current source eligibility; run G2 before G1 despite Word numbering",
+      "availability": "planned_not_accepted",
+      "evidence": "work/plans/rows/G2.json",
+      "gate": "G2 DoD and input hash acceptance; never substitute synthetic/history output"
+    }
+  ],
+  "decisions": [
+    {
+      "id": "G1_D01",
+      "question": "Freeze accepted G0/G2 and predecessor specification",
+      "selected_rule": "No historical OLS demonstration or synthetic truth coefficients substituted.",
+      "rationale": "Review C850 and July paper technology, timing, price, sample and normalization choices; pin exact actual inputs and ado sources.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G1_D02",
+      "question": "Choose production concept and technology cells",
+      "selected_rule": "VA and gross-output have different proxy/input requirements; do not pool unrelated industries to force convergence.",
+      "rationale": "Predefine VA versus gross-output branch, industry technology pools and minimum support using input definitions before outcomes.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G1_D03",
+      "question": "Prove genuine firm-year and calendar lags",
+      "selected_rule": "No compressed year index or fake 2016; absence not exit.",
+      "rationale": "Validate true ID/year, t−1/t−2 and observation-spell continuity; 2015→2017 remains a two-year gap.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G1_D04",
+      "question": "Create concept-specific input eligibility",
+      "selected_rule": "A positive nominal mixed-capital field cannot satisfy real-stock gate.",
+      "rationale": "Apply G2 masks for positive real Y/L/K, materials/investment proxies, stock definition and appropriate deflators.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G1_D05",
+      "question": "Define OP investment and selection support",
+      "selected_rule": "Zero investment exclusions and downstream lag losses explicit; no exit mechanism inferred from survey gaps.",
+      "rationale": "Create OP-positive-investment sample and credible exit-selection design only where inversion/selection variables exist.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G1_D06",
+      "question": "Define LP intermediate-input support",
+      "selected_rule": "No automatic expenditure-as-material-quantity interpretation.",
+      "rationale": "Choose suitable flexible input proxy and timing/monotonicity restrictions; distinguish materials from total IINPUT.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G1_D07",
+      "question": "Define ACF timing and identification moments",
+      "selected_rule": "ACF must be its own estimator, not renamed L Presidual.",
+      "rationale": "Specify labor/capital/proxy timing, first stage, moments and instruments explicitly, with gross-output identification cautions.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G1_D08",
+      "question": "Define Wooldridge system moments",
+      "selected_rule": "Pin package/patch versions; do not hide inherited numerical source fixes.",
+      "rationale": "Specify single-step GMM equations, current/lagged nuisance polynomial and valid instruments.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G1_D09",
+      "question": "Freeze method-specific and common-support samples",
+      "selected_rule": "Own-domain/common-domain estimates and predictions remain separately labelled.",
+      "rationale": "Intersect valid dynamic samples separately from first-stage domain; store samples before coefficient inspection.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G1_D10",
+      "question": "Estimate OP on frozen samples",
+      "selected_rule": "No OLS fallback; no coefficient editing or unsupported inference from rc 0.",
+      "rationale": "Run actual OP estimator on method-specific and common support, with predeclared polynomial, moments, starts and convergence rule; retain failed cells.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G1_D11",
+      "question": "Estimate LP on frozen samples",
+      "selected_rule": "No OLS fallback; no coefficient editing or unsupported inference from rc 0.",
+      "rationale": "Run actual LP estimator on method-specific and common support, with predeclared polynomial, moments, starts and convergence rule; retain failed cells.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G1_D12",
+      "question": "Estimate ACF on frozen samples",
+      "selected_rule": "No OLS fallback; no coefficient editing or unsupported inference from rc 0.",
+      "rationale": "Run actual ACF estimator on method-specific and common support, with predeclared polynomial, moments, starts and convergence rule; retain failed cells.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G1_D13",
+      "question": "Estimate Wooldridge on frozen samples",
+      "selected_rule": "No OLS fallback; no coefficient editing or unsupported inference from rc 0.",
+      "rationale": "Run actual Wooldridge estimator on method-specific and common support, with predeclared polynomial, moments, starts and convergence rule; retain failed cells.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G1_D14",
+      "question": "Inspect instrument rank and numerical sensitivity",
+      "selected_rule": "Select stable result by frozen numerical rule, never economic convenience/significance.",
+      "rationale": "Check moments/instrument rank, boundary solutions, convergence, starts and method-relevant optimizer variants; preserve every predeclared cell.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G1_D15",
+      "question": "Predict method-specific TFP and normalize transparently",
+      "selected_rule": "No predictions pasted into excluded years/records; centering choice explicit.",
+      "rationale": "Predict only supported dynamic records; store estimator/spec/sample/normalization IDs; distinguish coefficient estimation from prediction coverage.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G1_D16",
+      "question": "Resample the full estimation process",
+      "selected_rule": "Pilot 50 draws is numerical smoke only; final target 499 valid draws with Monte Carlo stability assessment and budget receipt, no false final S E if not feasible.",
+      "rationale": "Predeclare firm-cluster resampling only after genuine ID validated; refit all stages and method eligibility, report draw failures and seed.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G1_D17",
+      "question": "Compare methods on the same prediction intersection",
+      "selected_rule": "Do not attribute sample-composition differences solely to estimator.",
+      "rationale": "Compute pairwise ranks/distributions, elasticity/returns-to-scale, prediction coverage and own-versus-common gaps using shared records.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G1_D18",
+      "question": "Attach all four TFP outputs to shared dataset",
+      "selected_rule": "Assert predictions on source_year/source_row/method/sample_id/specification_id and normalization_id, then reshape under a saved column-alias registry. The four primary raw-log aliases tfp_OP/tfp_LP/tfp_ACF/tfp_W refer to each method-specific eligible sample, degree-3 primary specification and its accepted default optimizer. Save mean-centered companions separately and keep common-sample, degree-2 and numerical alternatives in explicitly suffixed columns and the original long prediction table. Merge only the resulting unique wide table 1:1 on source_year/source_row into accepted G0; keep all original rows and unsupported predictions missing. Real firm ID is a verified model prerequisite, not a substitute for source lineage.",
+      "rationale": "Merge 1:1 on validated ID/year with method-specific flags; preserve all G0 rows and missing unsupported predictions.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G1_D19",
+      "question": "Validate replication and explain TFP for readers",
+      "selected_rule": "Synthetic method scenarios remain separate evidence; no empirical completion until actual required methods pass.",
+      "rationale": "Run independent numerical checks and offline row entrypoint replication; LaTeX explains inputs/proxy intuitions/assumptions before coefficients.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "G1_INPUT_ESTIMATOR",
+      "state": "Audited four-method Stata source and exact method specification",
+      "grain": "method × implementation version",
+      "keys": [
+        "method",
+        "implementation_hash"
+      ],
+      "required_fields": [
+        "method",
+        "implementation_hash",
+        "ado_path",
+        "help_path",
+        "timing",
+        "moments",
+        "polynomial_basis",
+        "optimizer_settings"
+      ],
+      "units": "Source code and equations",
+      "folder": "dag/nodes/G1/G1_INPUT_ESTIMATOR",
+      "planning_status": "external_input_not_materialized_by_plan",
+      "input_receipt": "Pinned local prodest source hashes in method-sources/G1/contract.json. Required adapter changes explicitly planned; adapter implementation gate remains open."
+    },
+    {
+      "id": "G1_INPUT_QUALITY",
+      "state": "Physical G2 record-level eligibility masks",
+      "grain": "source record × year × eligibility contract",
+      "keys": [
+        "source_year",
+        "source_row",
+        "eligibility_id"
+      ],
+      "required_fields": [
+        "source_year",
+        "source_row",
+        "eligibility_id",
+        "eligible",
+        "reason",
+        "rule_version"
+      ],
+      "units": "Boolean and reason codes",
+      "folder": "dag/nodes/G1/G1_INPUT_QUALITY",
+      "planning_status": "external_input_not_materialized_by_plan",
+      "input_receipt": "G2 mask hash and validated input contract"
+    },
+    {
+      "id": "G1_INPUT_SEMANTICS",
+      "state": "Accepted G0 variable-year dictionary, source units and codebooks",
+      "grain": "variable × year",
+      "keys": [
+        "variable_id",
+        "source_year"
+      ],
+      "required_fields": [
+        "variable_id",
+        "source_year",
+        "source_field",
+        "source_unit",
+        "canonical_unit",
+        "universe",
+        "evidence_id",
+        "status"
+      ],
+      "units": "Definition metadata",
+      "folder": "dag/nodes/G1/G1_INPUT_SEMANTICS",
+      "planning_status": "external_input_not_materialized_by_plan",
+      "input_receipt": "G0 dictionary/rule hashes and exact source locators"
+    },
+    {
+      "id": "G1_INPUT_CANONICAL",
+      "state": "Physical accepted canonical G0 dataset with original values, companions and source states",
+      "grain": "source record × year",
+      "keys": [
+        "source_year",
+        "source_row"
+      ],
+      "required_fields": [
+        "source_year",
+        "source_row",
+        "canonical_values",
+        "verified_values",
+        "verification_states",
+        "source_presence",
+        "schema_version"
+      ],
+      "units": "Per-variable canonical dictionary; nominal and real fields remain distinct",
+      "folder": "dag/nodes/G1/G1_INPUT_CANONICAL",
+      "planning_status": "external_input_not_materialized_by_plan",
+      "input_receipt": "Require actual current wave release receipt plus this row-specific eligibility and field contracts.",
+      "numerical_binding": "wave_input_contract.master_path or a declared derivative"
+    },
+    {
+      "id": "G1_S00",
+      "state": "Frozen input manifest and available source bytes; not generated by this plan",
+      "grain": "input version manifest",
+      "keys": [
+        "source_path",
+        "sha256"
+      ],
+      "required_fields": [
+        "source_path",
+        "sha256",
+        "source_year",
+        "format",
+        "availability",
+        "privacy",
+        "definition_evidence"
+      ],
+      "units": {
+        "source_year": "calendar year",
+        "bytes": "bytes"
+      },
+      "folder": "dag/nodes/G1/G1_S00",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G1_S01",
+      "state": "Freeze accepted G0/G2 and predecessor specification — planned output state, not materialized",
+      "grain": "method × specification manifest",
+      "keys": [
+        "method",
+        "specification_id"
+      ],
+      "required_fields": [
+        "method",
+        "specification_id",
+        "source_hash",
+        "G2_masks",
+        "predecessor_spec",
+        "ado_hash"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G1/G1_S01",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G1_S02",
+      "state": "Choose production concept and technology cells — planned output state, not materialized",
+      "grain": "source record × year",
+      "keys": [
+        "source_year",
+        "source_row"
+      ],
+      "required_fields": [
+        "source_year",
+        "source_row",
+        "technology",
+        "production_concept",
+        "Y",
+        "L",
+        "K",
+        "materials",
+        "investment",
+        "price_concept"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G1/G1_S02",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G1_S03",
+      "state": "Prove genuine firm-year and calendar lags — planned output state, not materialized",
+      "grain": "source record × year",
+      "keys": [
+        "source_year",
+        "source_row"
+      ],
+      "required_fields": [
+        "source_year",
+        "source_row",
+        "firm_id",
+        "year",
+        "lag1_available",
+        "lag2_available",
+        "frame_exit_status"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G1/G1_S03",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G1_S04",
+      "state": "Create concept-specific input eligibility — planned output state, not materialized",
+      "grain": "source record × year × method × sample",
+      "keys": [
+        "source_year",
+        "source_row",
+        "method",
+        "sample_id"
+      ],
+      "required_fields": [
+        "source_year",
+        "source_row",
+        "method",
+        "sample_id",
+        "eligible",
+        "reason",
+        "Y",
+        "L",
+        "K",
+        "M",
+        "I",
+        "firm_id",
+        "year",
+        "technology",
+        "lag1_available",
+        "lag2_available",
+        "frame_exit_status",
+        "implementation_hash",
+        "moment_contract_hash"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G1/G1_S04",
+      "planning_status": "planning_only",
+      "record_field_retention": "Retain validated production primitives, genuine firm/year linkage and the exact dynamic lag fields from the incoming eligibility state. A support flag alone cannot replace the numeric design or source-verified method contract."
+    },
+    {
+      "id": "G1_S05",
+      "state": "Define OP investment and selection support — planned output state, not materialized",
+      "grain": "source record × year × method × sample",
+      "keys": [
+        "source_year",
+        "source_row",
+        "method",
+        "sample_id"
+      ],
+      "required_fields": [
+        "source_year",
+        "source_row",
+        "method",
+        "sample_id",
+        "op_domain",
+        "positive_investment",
+        "selection_eligible",
+        "lag_support",
+        "firm_id",
+        "year",
+        "technology",
+        "Y",
+        "L",
+        "K",
+        "M",
+        "I",
+        "lag1_available",
+        "lag2_available",
+        "frame_exit_status",
+        "implementation_hash",
+        "moment_contract_hash"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G1/G1_S05",
+      "planning_status": "planning_only",
+      "record_field_retention": "Retain validated production primitives, genuine firm/year linkage and the exact dynamic lag fields from the incoming eligibility state. A support flag alone cannot replace the numeric design or source-verified method contract."
+    },
+    {
+      "id": "G1_S06",
+      "state": "Define LP intermediate-input support — planned output state, not materialized",
+      "grain": "source record × year × method × sample",
+      "keys": [
+        "source_year",
+        "source_row",
+        "method",
+        "sample_id"
+      ],
+      "required_fields": [
+        "source_year",
+        "source_row",
+        "method",
+        "sample_id",
+        "lp_domain",
+        "proxy_definition",
+        "timing",
+        "lag_support",
+        "firm_id",
+        "year",
+        "technology",
+        "Y",
+        "L",
+        "K",
+        "M",
+        "I",
+        "lag1_available",
+        "lag2_available",
+        "frame_exit_status",
+        "implementation_hash",
+        "moment_contract_hash"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G1/G1_S06",
+      "planning_status": "planning_only",
+      "record_field_retention": "Retain validated production primitives, genuine firm/year linkage and the exact dynamic lag fields from the incoming eligibility state. A support flag alone cannot replace the numeric design or source-verified method contract."
+    },
+    {
+      "id": "G1_S07",
+      "state": "Define ACF timing and identification moments — planned output state, not materialized",
+      "grain": "source record × year × method × sample",
+      "keys": [
+        "source_year",
+        "source_row",
+        "method",
+        "sample_id"
+      ],
+      "required_fields": [
+        "source_year",
+        "source_row",
+        "method",
+        "sample_id",
+        "acf_domain",
+        "moment_equations",
+        "instrument_set",
+        "timing",
+        "firm_id",
+        "year",
+        "technology",
+        "Y",
+        "L",
+        "K",
+        "M",
+        "I",
+        "lag1_available",
+        "lag2_available",
+        "frame_exit_status",
+        "implementation_hash",
+        "moment_contract_hash"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G1/G1_S07",
+      "planning_status": "planning_only",
+      "record_field_retention": "Retain validated production primitives, genuine firm/year linkage and the exact dynamic lag fields from the incoming eligibility state. A support flag alone cannot replace the numeric design or source-verified method contract."
+    },
+    {
+      "id": "G1_S08",
+      "state": "Define Wooldridge system moments — planned output state, not materialized",
+      "grain": "source record × year × method × sample",
+      "keys": [
+        "source_year",
+        "source_row",
+        "method",
+        "sample_id"
+      ],
+      "required_fields": [
+        "source_year",
+        "source_row",
+        "method",
+        "sample_id",
+        "w_domain",
+        "system_equations",
+        "instrument_set",
+        "nuisance_basis",
+        "firm_id",
+        "year",
+        "technology",
+        "Y",
+        "L",
+        "K",
+        "M",
+        "I",
+        "lag1_available",
+        "lag2_available",
+        "frame_exit_status",
+        "implementation_hash",
+        "moment_contract_hash"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G1/G1_S08",
+      "planning_status": "planning_only",
+      "record_field_retention": "Retain validated production primitives, genuine firm/year linkage and the exact dynamic lag fields from the incoming eligibility state. A support flag alone cannot replace the numeric design or source-verified method contract."
+    },
+    {
+      "id": "G1_S09",
+      "state": "Freeze method-specific and common-support samples — planned output state, not materialized",
+      "grain": "source record × year × method × sample",
+      "keys": [
+        "source_year",
+        "source_row",
+        "method",
+        "sample_id"
+      ],
+      "required_fields": [
+        "source_year",
+        "source_row",
+        "method",
+        "sample_id",
+        "own_sample",
+        "common_sample",
+        "firststage_flag",
+        "prediction_flag",
+        "firm_id",
+        "year",
+        "technology",
+        "Y",
+        "L",
+        "K",
+        "M",
+        "I",
+        "lag1_available",
+        "lag2_available",
+        "frame_exit_status",
+        "implementation_hash",
+        "moment_contract_hash"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G1/G1_S09",
+      "planning_status": "planning_only",
+      "record_field_retention": "Retain validated production primitives, genuine firm/year linkage and the exact dynamic lag fields from the incoming eligibility state. A support flag alone cannot replace the numeric design or source-verified method contract."
+    },
+    {
+      "id": "G1_S10",
+      "state": "Estimate OP on frozen samples — planned output state, not materialized",
+      "grain": "method × technology × sample × specification, wide coefficients",
+      "keys": [
+        "method",
+        "technology",
+        "sample_id",
+        "specification_id"
+      ],
+      "required_fields": [
+        "method",
+        "technology",
+        "sample_id",
+        "specification_id",
+        "beta_L",
+        "beta_K",
+        "N",
+        "objective",
+        "rc",
+        "convergence"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G1/G1_S10",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G1_S11",
+      "state": "Estimate LP on frozen samples — planned output state, not materialized",
+      "grain": "method × technology × sample × specification, wide coefficients",
+      "keys": [
+        "method",
+        "technology",
+        "sample_id",
+        "specification_id"
+      ],
+      "required_fields": [
+        "method",
+        "technology",
+        "sample_id",
+        "specification_id",
+        "beta_L",
+        "beta_K",
+        "N",
+        "objective",
+        "rc",
+        "convergence"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G1/G1_S11",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G1_S12",
+      "state": "Estimate ACF on frozen samples — planned output state, not materialized",
+      "grain": "method × technology × sample × specification, wide coefficients",
+      "keys": [
+        "method",
+        "technology",
+        "sample_id",
+        "specification_id"
+      ],
+      "required_fields": [
+        "method",
+        "technology",
+        "sample_id",
+        "specification_id",
+        "beta_L",
+        "beta_K",
+        "N",
+        "objective",
+        "rc",
+        "convergence"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G1/G1_S12",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G1_S13",
+      "state": "Estimate Wooldridge on frozen samples — planned output state, not materialized",
+      "grain": "method × technology × sample × specification, wide coefficients",
+      "keys": [
+        "method",
+        "technology",
+        "sample_id",
+        "specification_id"
+      ],
+      "required_fields": [
+        "method",
+        "technology",
+        "sample_id",
+        "specification_id",
+        "beta_L",
+        "beta_K",
+        "N",
+        "objective",
+        "rc",
+        "convergence"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G1/G1_S13",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G1_S14",
+      "state": "Inspect instrument rank and numerical sensitivity — planned output state, not materialized",
+      "grain": "method × technology × sample × numerical diagnostic",
+      "keys": [
+        "method",
+        "technology",
+        "sample_id",
+        "specification_id",
+        "diagnostic_id"
+      ],
+      "required_fields": [
+        "method",
+        "technology",
+        "sample_id",
+        "specification_id",
+        "diagnostic_id",
+        "specification",
+        "rank",
+        "instrument_count",
+        "objective",
+        "start",
+        "optimizer",
+        "coefficients"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G1/G1_S14",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G1_S15",
+      "state": "Predict method-specific TFP and normalize transparently — planned output state, not materialized",
+      "grain": "source record × year × method × sample × specification",
+      "keys": [
+        "source_year",
+        "source_row",
+        "method",
+        "sample_id",
+        "specification_id",
+        "normalization_id"
+      ],
+      "required_fields": [
+        "source_year",
+        "source_row",
+        "method",
+        "sample_id",
+        "specification_id",
+        "firm_id",
+        "year",
+        "tfp_log",
+        "estimation_sample",
+        "prediction_sample",
+        "normalization",
+        "normalization_id",
+        "technology"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G1/G1_S15",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G1_S16",
+      "state": "Resample the full estimation process — planned output state, not materialized",
+      "grain": "bootstrap draw × method × technology × sample × parameter",
+      "keys": [
+        "draw",
+        "method",
+        "technology",
+        "sample_id",
+        "specification_id",
+        "parameter"
+      ],
+      "required_fields": [
+        "draw",
+        "method",
+        "technology",
+        "sample_id",
+        "specification_id",
+        "parameter",
+        "sample",
+        "beta",
+        "tfp_summary",
+        "rc",
+        "valid_draw"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G1/G1_S16",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G1_S17",
+      "state": "Compare methods on the same prediction intersection — planned output state, not materialized",
+      "grain": "method pair × technology × sample × comparison statistic",
+      "keys": [
+        "method_a",
+        "method_b",
+        "technology",
+        "sample_id",
+        "statistic",
+        "specification_a",
+        "specification_b",
+        "normalization_a",
+        "normalization_b",
+        "comparison_period"
+      ],
+      "required_fields": [
+        "method_a",
+        "method_b",
+        "technology",
+        "sample_id",
+        "statistic",
+        "method_pair",
+        "common_N",
+        "rank_correlation",
+        "distribution",
+        "own_common_gap",
+        "specification_a",
+        "specification_b",
+        "normalization_a",
+        "normalization_b",
+        "comparison_period"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G1/G1_S17",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G1_S18",
+      "state": "Attach all four TFP outputs to shared dataset — planned output state, not materialized",
+      "grain": "source record × year",
+      "keys": [
+        "source_year",
+        "source_row"
+      ],
+      "required_fields": [
+        "source_year",
+        "source_row",
+        "firm_id",
+        "year",
+        "tfp_OP",
+        "tfp_LP",
+        "tfp_ACF",
+        "tfp_W",
+        "method_reasons"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G1/G1_S18",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G1_S19",
+      "state": "Validate replication and explain TFP for readers — planned output state, not materialized",
+      "grain": "acceptance check × method",
+      "keys": [
+        "check_id",
+        "method"
+      ],
+      "required_fields": [
+        "check_id",
+        "method",
+        "replication_receipt",
+        "numeric_checks",
+        "exhibit_manifest",
+        "acceptance"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G1/G1_S19",
+      "planning_status": "planning_only"
+    }
+  ],
+  "edges": [
+    {
+      "id": "G1_E01",
+      "title": "Freeze accepted G0/G2 and predecessor specification",
+      "input_nodes": [
+        "G1_S00",
+        "G1_INPUT_CANONICAL",
+        "G1_INPUT_SEMANTICS",
+        "G1_INPUT_QUALITY",
+        "G1_INPUT_ESTIMATOR"
+      ],
+      "output_nodes": [
+        "G1_S01"
+      ],
+      "depends_on": [],
+      "do_file": "rows/G1/edges/G1_E01.do",
+      "action": "Review C850 and July paper technology, timing, price, sample and normalization choices; pin exact actual inputs and ado sources.",
+      "decision_ids": [
+        "G1_D01"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G1_E02",
+      "title": "Choose production concept and technology cells",
+      "input_nodes": [
+        "G1_S01",
+        "G1_INPUT_CANONICAL",
+        "G1_INPUT_QUALITY"
+      ],
+      "output_nodes": [
+        "G1_S02"
+      ],
+      "depends_on": [
+        "G1_E01"
+      ],
+      "do_file": "rows/G1/edges/G1_E02.do",
+      "action": "Freeze the required value-added Cobb–Douglas branch, two-digit technology pools and the complete method_protocol in this plan. Do not choose the production concept or support thresholds after inspecting coefficients.",
+      "decision_ids": [
+        "G1_D02"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G1_E03",
+      "title": "Prove genuine firm-year and calendar lags",
+      "input_nodes": [
+        "G1_S02",
+        "G1_INPUT_CANONICAL"
+      ],
+      "output_nodes": [
+        "G1_S03"
+      ],
+      "depends_on": [
+        "G1_E02"
+      ],
+      "do_file": "rows/G1/edges/G1_E03.do",
+      "action": "Validate true ID/year, t−1/t−2 and observation-spell continuity; 2015→2017 remains a two-year gap.",
+      "decision_ids": [
+        "G1_D03"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G1_E04",
+      "title": "Create concept-specific input eligibility",
+      "input_nodes": [
+        "G1_S03",
+        "G1_S02"
+      ],
+      "output_nodes": [
+        "G1_S04"
+      ],
+      "depends_on": [
+        "G1_E03",
+        "G1_E02"
+      ],
+      "do_file": "rows/G1/edges/G1_E04.do",
+      "action": "Apply G2 masks for positive real Y/L/K, materials/investment proxies, stock definition and appropriate deflators.",
+      "decision_ids": [
+        "G1_D04"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G1_E05",
+      "title": "Define OP investment and selection support",
+      "input_nodes": [
+        "G1_S04",
+        "G1_INPUT_ESTIMATOR"
+      ],
+      "output_nodes": [
+        "G1_S05"
+      ],
+      "depends_on": [
+        "G1_E04"
+      ],
+      "do_file": "rows/G1/edges/G1_E05.do",
+      "action": "Create OP-positive-investment sample and credible exit-selection design only where inversion/selection variables exist. Execute the exact equations, instruments, deterministic settings and adapter acceptance rules in pinned_method_contract; no stock-package attrition proxy or default five-draw inference.",
+      "decision_ids": [
+        "G1_D05"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes.",
+        "Estimator implementation, timing, monomial basis and moment/instrument columns must be pinned before fitting; an unprovided method contract blocks the fit."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G1_E06",
+      "title": "Define LP intermediate-input support",
+      "input_nodes": [
+        "G1_S04",
+        "G1_INPUT_ESTIMATOR"
+      ],
+      "output_nodes": [
+        "G1_S06"
+      ],
+      "depends_on": [
+        "G1_E04"
+      ],
+      "do_file": "rows/G1/edges/G1_E06.do",
+      "action": "Choose suitable flexible input proxy and timing/monotonicity restrictions; distinguish materials from total IINPUT. Execute the exact equations, instruments, deterministic settings and adapter acceptance rules in pinned_method_contract; no stock-package attrition proxy or default five-draw inference.",
+      "decision_ids": [
+        "G1_D06"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes.",
+        "Estimator implementation, timing, monomial basis and moment/instrument columns must be pinned before fitting; an unprovided method contract blocks the fit."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G1_E07",
+      "title": "Define ACF timing and identification moments",
+      "input_nodes": [
+        "G1_S04",
+        "G1_INPUT_ESTIMATOR"
+      ],
+      "output_nodes": [
+        "G1_S07"
+      ],
+      "depends_on": [
+        "G1_E04"
+      ],
+      "do_file": "rows/G1/edges/G1_E07.do",
+      "action": "Specify labor/capital/proxy timing, first stage, moments and instruments explicitly, with gross-output identification cautions. Execute the exact equations, instruments, deterministic settings and adapter acceptance rules in pinned_method_contract; no stock-package attrition proxy or default five-draw inference.",
+      "decision_ids": [
+        "G1_D07"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes.",
+        "Estimator implementation, timing, monomial basis and moment/instrument columns must be pinned before fitting; an unprovided method contract blocks the fit."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G1_E08",
+      "title": "Define Wooldridge system moments",
+      "input_nodes": [
+        "G1_S04",
+        "G1_INPUT_ESTIMATOR"
+      ],
+      "output_nodes": [
+        "G1_S08"
+      ],
+      "depends_on": [
+        "G1_E04"
+      ],
+      "do_file": "rows/G1/edges/G1_E08.do",
+      "action": "Specify single-step GMM equations, current/lagged nuisance polynomial and valid instruments. Execute the exact equations, instruments, deterministic settings and adapter acceptance rules in pinned_method_contract; no stock-package attrition proxy or default five-draw inference.",
+      "decision_ids": [
+        "G1_D08"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes.",
+        "Estimator implementation, timing, monomial basis and moment/instrument columns must be pinned before fitting; an unprovided method contract blocks the fit."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G1_E09",
+      "title": "Freeze method-specific and common-support samples",
+      "input_nodes": [
+        "G1_S05",
+        "G1_S06",
+        "G1_S07",
+        "G1_S08"
+      ],
+      "output_nodes": [
+        "G1_S09"
+      ],
+      "depends_on": [
+        "G1_E05",
+        "G1_E06",
+        "G1_E07",
+        "G1_E08"
+      ],
+      "do_file": "rows/G1/edges/G1_E09.do",
+      "action": "Intersect valid dynamic samples separately from first-stage domain; store samples before coefficient inspection.",
+      "decision_ids": [
+        "G1_D09"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G1_E10",
+      "title": "Estimate OP on frozen samples",
+      "input_nodes": [
+        "G1_S05",
+        "G1_S09",
+        "G1_INPUT_ESTIMATOR"
+      ],
+      "output_nodes": [
+        "G1_S10"
+      ],
+      "depends_on": [
+        "G1_E05",
+        "G1_E09"
+      ],
+      "do_file": "rows/G1/edges/G1_E10.do",
+      "action": "Run actual OP estimator on method-specific and common support, with predeclared polynomial, moments, starts and convergence rule; retain failed cells. Execute the exact equations, instruments, deterministic settings and adapter acceptance rules in pinned_method_contract; no stock-package attrition proxy or default five-draw inference.",
+      "decision_ids": [
+        "G1_D10"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G1_E11",
+      "title": "Estimate LP on frozen samples",
+      "input_nodes": [
+        "G1_S06",
+        "G1_S09",
+        "G1_INPUT_ESTIMATOR"
+      ],
+      "output_nodes": [
+        "G1_S11"
+      ],
+      "depends_on": [
+        "G1_E06",
+        "G1_E09"
+      ],
+      "do_file": "rows/G1/edges/G1_E11.do",
+      "action": "Run actual LP estimator on method-specific and common support, with predeclared polynomial, moments, starts and convergence rule; retain failed cells. Execute the exact equations, instruments, deterministic settings and adapter acceptance rules in pinned_method_contract; no stock-package attrition proxy or default five-draw inference.",
+      "decision_ids": [
+        "G1_D11"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G1_E12",
+      "title": "Estimate ACF on frozen samples",
+      "input_nodes": [
+        "G1_S07",
+        "G1_S09",
+        "G1_INPUT_ESTIMATOR"
+      ],
+      "output_nodes": [
+        "G1_S12"
+      ],
+      "depends_on": [
+        "G1_E07",
+        "G1_E09"
+      ],
+      "do_file": "rows/G1/edges/G1_E12.do",
+      "action": "Run actual ACF estimator on method-specific and common support, with predeclared polynomial, moments, starts and convergence rule; retain failed cells. Execute the exact equations, instruments, deterministic settings and adapter acceptance rules in pinned_method_contract; no stock-package attrition proxy or default five-draw inference.",
+      "decision_ids": [
+        "G1_D12"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G1_E13",
+      "title": "Estimate Wooldridge on frozen samples",
+      "input_nodes": [
+        "G1_S08",
+        "G1_S09",
+        "G1_INPUT_ESTIMATOR"
+      ],
+      "output_nodes": [
+        "G1_S13"
+      ],
+      "depends_on": [
+        "G1_E08",
+        "G1_E09"
+      ],
+      "do_file": "rows/G1/edges/G1_E13.do",
+      "action": "Run actual Wooldridge estimator on method-specific and common support, with predeclared polynomial, moments, starts and convergence rule; retain failed cells. Execute the exact equations, instruments, deterministic settings and adapter acceptance rules in pinned_method_contract; no stock-package attrition proxy or default five-draw inference.",
+      "decision_ids": [
+        "G1_D13"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G1_E14",
+      "title": "Inspect instrument rank and numerical sensitivity",
+      "input_nodes": [
+        "G1_S10",
+        "G1_S11",
+        "G1_S12",
+        "G1_S13",
+        "G1_S04",
+        "G1_INPUT_ESTIMATOR"
+      ],
+      "output_nodes": [
+        "G1_S14"
+      ],
+      "depends_on": [
+        "G1_E10",
+        "G1_E11",
+        "G1_E12",
+        "G1_E13",
+        "G1_E04"
+      ],
+      "do_file": "rows/G1/edges/G1_E14.do",
+      "action": "Check moments/instrument rank, boundary solutions, convergence, starts and method-relevant optimizer variants; preserve every predeclared cell.",
+      "decision_ids": [
+        "G1_D14"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G1_E15",
+      "title": "Predict method-specific TFP and normalize transparently",
+      "input_nodes": [
+        "G1_S04",
+        "G1_S09",
+        "G1_S10",
+        "G1_S11",
+        "G1_S12",
+        "G1_S13",
+        "G1_S14"
+      ],
+      "output_nodes": [
+        "G1_S15"
+      ],
+      "depends_on": [
+        "G1_E04",
+        "G1_E09",
+        "G1_E10",
+        "G1_E11",
+        "G1_E12",
+        "G1_E13",
+        "G1_E14"
+      ],
+      "do_file": "rows/G1/edges/G1_E15.do",
+      "action": "Predict only supported dynamic records; store estimator/spec/sample/normalization IDs; distinguish coefficient estimation from prediction coverage.",
+      "decision_ids": [
+        "G1_D15"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G1_E16",
+      "title": "Resample the full estimation process",
+      "input_nodes": [
+        "G1_S04",
+        "G1_S05",
+        "G1_S06",
+        "G1_S07",
+        "G1_S08",
+        "G1_S09",
+        "G1_S14",
+        "G1_INPUT_ESTIMATOR"
+      ],
+      "output_nodes": [
+        "G1_S16"
+      ],
+      "depends_on": [
+        "G1_E04",
+        "G1_E05",
+        "G1_E06",
+        "G1_E07",
+        "G1_E08",
+        "G1_E09",
+        "G1_E14"
+      ],
+      "do_file": "rows/G1/edges/G1_E16.do",
+      "action": "Predeclare firm-cluster resampling only after genuine ID validated; refit all stages and method eligibility, report draw failures and seed. Execute the exact equations, instruments, deterministic settings and adapter acceptance rules in pinned_method_contract; no stock-package attrition proxy or default five-draw inference.",
+      "decision_ids": [
+        "G1_D16"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G1_E17",
+      "title": "Compare methods on the same prediction intersection",
+      "input_nodes": [
+        "G1_S15",
+        "G1_S16",
+        "G1_S10",
+        "G1_S11",
+        "G1_S12",
+        "G1_S13"
+      ],
+      "output_nodes": [
+        "G1_S17"
+      ],
+      "depends_on": [
+        "G1_E15",
+        "G1_E16",
+        "G1_E10",
+        "G1_E11",
+        "G1_E12",
+        "G1_E13"
+      ],
+      "do_file": "rows/G1/edges/G1_E17.do",
+      "action": "Compute pairwise ranks/distributions, elasticity/returns-to-scale, prediction coverage and own-versus-common gaps using shared records.",
+      "decision_ids": [
+        "G1_D17"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G1_E18",
+      "title": "Attach all four TFP outputs to shared dataset",
+      "input_nodes": [
+        "G1_S17",
+        "G1_S15",
+        "G1_INPUT_CANONICAL"
+      ],
+      "output_nodes": [
+        "G1_S18"
+      ],
+      "depends_on": [
+        "G1_E17",
+        "G1_E15"
+      ],
+      "do_file": "rows/G1/edges/G1_E18.do",
+      "action": "Assert predictions on source_year/source_row/method/sample_id/specification_id and normalization_id, then reshape under a saved column-alias registry. The four primary raw-log aliases tfp_OP/tfp_LP/tfp_ACF/tfp_W refer to each method-specific eligible sample, degree-3 primary specification and its accepted default optimizer. Save mean-centered companions separately and keep common-sample, degree-2 and numerical alternatives in explicitly suffixed columns and the original long prediction table. Merge only the resulting unique wide table 1:1 on source_year/source_row into accepted G0; keep all original rows and unsupported predictions missing. Real firm ID is a verified model prerequisite, not a substitute for source lineage.",
+      "decision_ids": [
+        "G1_D18"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes.",
+        "Long prediction key unique before reshape; no alias collision; final source-row count equals accepted G0."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G1_E19",
+      "title": "Validate replication and explain TFP for readers",
+      "input_nodes": [
+        "G1_S18"
+      ],
+      "output_nodes": [
+        "G1_S19"
+      ],
+      "depends_on": [
+        "G1_E18"
+      ],
+      "do_file": "rows/G1/edges/G1_E19.do",
+      "action": "Run independent numerical checks and offline row entrypoint replication; LaTeX explains inputs/proxy intuitions/assumptions before coefficients.",
+      "decision_ids": [
+        "G1_D19"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    }
+  ],
+  "primary_do": "rows/G1/G1.do",
+  "execution_order": [
+    "G1_E01",
+    "G1_E02",
+    "G1_E03",
+    "G1_E04",
+    "G1_E05",
+    "G1_E06",
+    "G1_E07",
+    "G1_E08",
+    "G1_E09",
+    "G1_E10",
+    "G1_E11",
+    "G1_E12",
+    "G1_E13",
+    "G1_E14",
+    "G1_E15",
+    "G1_E16",
+    "G1_E17",
+    "G1_E18",
+    "G1_E19"
+  ],
+  "entrypoint_contract": {
+    "inputs": [
+      "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/dag/data/word_data/G0/G0_analysis_ready_ACTUAL_LOCAL.dta",
+      "frozen all 44-row plan registry",
+      "G1 input/source/variable contracts"
+    ],
+    "outputs": [
+      "outputs/G1/tables/",
+      "outputs/G1/figures/",
+      "outputs/G1/G1.tex",
+      "outputs/G1/G1.pdf",
+      "outputs/G1/acceptance.json"
+    ],
+    "logs": [
+      "dag/logs/G1/primary.log",
+      "dag/logs/G1/edge_id.log"
+    ],
+    "restart": "Resume only from a passed immutable node whose input/code/decision hashes still match. Keep failed attempts. Primary returns nonzero on a mandatory unfulfilled gate; diagnostic output never passes the row.",
+    "offline_dependencies": [
+      "Stata17+ with compatible maxvar",
+      "local input manifest",
+      "frozen local source dictionaries/concordances",
+      "vendored documented estimator ado only when needed",
+      "Python for validation/custom charts/LaTeX rendering only",
+      "XeLaTeX and local fonts; no network required by offline bundle"
+    ],
+    "estimated_cost_basis": "No timing promised from file names. Inventory rows/columns and RAM/free disk before launch; start one bounded validation path; one Stata worker unless manager coordinates resource-safe parallel work. Package-relative row entry point is primary interface; optional master never forces blocked rows."
+  },
+  "exhibits": [
+    {
+      "id": "G1-X01",
+      "kind": "diagram",
+      "priority": "core",
+      "title": "What each TFP method tries to remove",
+      "question": "What each TFP method tries to remove?",
+      "source_nodes": [
+        "G1_S01"
+      ],
+      "fields": [
+        "cell_id",
+        "source_year",
+        "N_source",
+        "N_eligible",
+        "result",
+        "unit",
+        "status"
+      ],
+      "formula_or_specification": "Compare OP investment inversion, LP intermediate-input inversion, ACF timing correction and Wooldridge system moments under the value-added Cobb–Douglas contract.",
+      "units": "definition or acceptance status; no economic magnitude",
+      "sample_and_denominator": "Every named item in the frozen source/method/check registry, including unavailable items.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "Each method makes a different assumption about what the factory knew when choosing inputs; agreement is evidence of sensitivity, not proof that any assumption is true.",
+      "limits": "Synthetic estimates are not empirical findings; residual TFP includes model error; identification assumptions not established by convergence.",
+      "prerequisites": "BLOCKED until actual G0/G2, real identity, appropriate input prices and method-specific proxy/timing gates pass.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G1/exhibits/G1-X01.pdf",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "Each method makes a different assumption about what the factory knew when choosing inputs; agreement is evidence of sensitivity, not proof that any assumption is true.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G1-X02",
+      "kind": "table",
+      "priority": "core",
+      "title": "Production-function and input definitions",
+      "question": "Production-function and input definitions?",
+      "source_nodes": [
+        "G1_S02"
+      ],
+      "fields": [
+        "cell_id",
+        "source_year",
+        "N_source",
+        "N_eligible",
+        "result",
+        "unit",
+        "status"
+      ],
+      "formula_or_specification": "ln(VA_real)=beta_L ln(workers)+beta_K ln(K_real)+omega+epsilon; VA_real, K_real and the proxy must have separately justified prices.",
+      "units": "definition or acceptance status; no economic magnitude",
+      "sample_and_denominator": "Every named item in the frozen source/method/check registry, including unavailable items.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "Productivity here is the part of measured value added not explained by workers and capital. Prices and measurement error can still enter it.",
+      "limits": "Synthetic estimates are not empirical findings; residual TFP includes model error; identification assumptions not established by convergence.",
+      "prerequisites": "BLOCKED until actual G0/G2, real identity, appropriate input prices and method-specific proxy/timing gates pass.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G1/exhibits/G1-X02.tex",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "Productivity here is the part of measured value added not explained by workers and capital. Prices and measurement error can still enter it.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G1-X03",
+      "kind": "chart",
+      "priority": "core",
+      "title": "Real input availability by year and technology",
+      "question": "Real input availability by year and technology?",
+      "source_nodes": [
+        "G1_S04"
+      ],
+      "fields": [
+        "source_year",
+        "category",
+        "N_category",
+        "N_denominator",
+        "share_percent",
+        "status"
+      ],
+      "formula_or_specification": "N_eligible(method,technology,year)/N_source(technology,year)*100",
+      "units": "records and percent",
+      "sample_and_denominator": "All actual source records in each verified technology-year; each method gate is evaluated separately.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "The bars show how much information is lost before estimation, rather than a change in productivity.",
+      "limits": "Synthetic estimates are not empirical findings; residual TFP includes model error; identification assumptions not established by convergence.",
+      "prerequisites": "BLOCKED until actual G0/G2, real identity, appropriate input prices and method-specific proxy/timing gates pass.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G1/exhibits/G1-X03.pdf",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "The bars show how much information is lost before estimation, rather than a change in productivity.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G1-X04",
+      "kind": "chart",
+      "priority": "core",
+      "title": "Actual calendar gaps and usable lags",
+      "question": "Actual calendar gaps and usable lags?",
+      "source_nodes": [
+        "G1_S03"
+      ],
+      "fields": [
+        "source_year",
+        "category",
+        "N_category",
+        "N_denominator",
+        "share_percent",
+        "status"
+      ],
+      "formula_or_specification": "Count exact calendar t-1 and t-2 links; report each observed year-gap length separately.",
+      "units": "records and percent",
+      "sample_and_denominator": "Authenticated plant-year records; denominator is all candidate current-year observations, including those without a valid lag.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "A two-year gap cannot supply a one-year lag. Missing 2016 therefore affects the usable 2017 histories.",
+      "limits": "Synthetic estimates are not empirical findings; residual TFP includes model error; identification assumptions not established by convergence.",
+      "prerequisites": "BLOCKED until actual G0/G2, real identity, appropriate input prices and method-specific proxy/timing gates pass.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G1/exhibits/G1-X04.pdf",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "A two-year gap cannot supply a one-year lag. Missing 2016 therefore affects the usable 2017 histories.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G1-X05",
+      "kind": "table",
+      "priority": "core",
+      "title": "OP investment and selection eligibility",
+      "question": "OP investment and selection eligibility?",
+      "source_nodes": [
+        "G1_S05"
+      ],
+      "fields": [
+        "source_year",
+        "category",
+        "N_category",
+        "N_denominator",
+        "share_percent",
+        "status"
+      ],
+      "formula_or_specification": "Sequential and marginal losses for real inputs, I_real>0, valid calendar lag and authenticated survival universe.",
+      "units": "records and percent",
+      "sample_and_denominator": "All candidates for the OP method in each technology, before OP restrictions.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "OP needs credible investment and selection information; factories excluded by these requirements may differ from those retained.",
+      "limits": "Synthetic estimates are not empirical findings; residual TFP includes model error; identification assumptions not established by convergence.",
+      "prerequisites": "BLOCKED until actual G0/G2, real identity, appropriate input prices and method-specific proxy/timing gates pass.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G1/exhibits/G1-X05.tex",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "OP needs credible investment and selection information; factories excluded by these requirements may differ from those retained.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G1-X06",
+      "kind": "table",
+      "priority": "core",
+      "title": "LP flexible-input proxy eligibility",
+      "question": "LP flexible-input proxy eligibility?",
+      "source_nodes": [
+        "G1_S06"
+      ],
+      "fields": [
+        "source_year",
+        "category",
+        "N_category",
+        "N_denominator",
+        "share_percent",
+        "status"
+      ],
+      "formula_or_specification": "Sequential and marginal losses for real inputs, M_real>0, valid lag and justified proxy timing.",
+      "units": "records and percent",
+      "sample_and_denominator": "All candidates for LP in each technology, before LP restrictions.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "A positive materials bill is necessary for the proxy but does not establish that the proxy assumption is correct.",
+      "limits": "Synthetic estimates are not empirical findings; residual TFP includes model error; identification assumptions not established by convergence.",
+      "prerequisites": "BLOCKED until actual G0/G2, real identity, appropriate input prices and method-specific proxy/timing gates pass.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G1/exhibits/G1-X06.tex",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "A positive materials bill is necessary for the proxy but does not establish that the proxy assumption is correct.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G1-X07",
+      "kind": "table",
+      "priority": "core",
+      "title": "ACF timing and moment contract",
+      "question": "ACF timing and moment contract?",
+      "source_nodes": [
+        "G1_S07"
+      ],
+      "fields": [
+        "cell_id",
+        "source_year",
+        "N_source",
+        "N_eligible",
+        "result",
+        "unit",
+        "status"
+      ],
+      "formula_or_specification": "List the audited ACF first-stage nuisance basis, labor timing, innovation moment and every instrument column before fitting.",
+      "units": "definition or acceptance status; no economic magnitude",
+      "sample_and_denominator": "Every named item in the frozen source/method/check registry, including unavailable items.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "The table shows which input choices are treated as predetermined and why. It is an assumption table, not an empirical test of those assumptions.",
+      "limits": "Synthetic estimates are not empirical findings; residual TFP includes model error; identification assumptions not established by convergence.",
+      "prerequisites": "BLOCKED until actual G0/G2, real identity, appropriate input prices and method-specific proxy/timing gates pass.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G1/exhibits/G1-X07.tex",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "The table shows which input choices are treated as predetermined and why. It is an assumption table, not an empirical test of those assumptions.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G1-X08",
+      "kind": "table",
+      "priority": "core",
+      "title": "Wooldridge moment and instrument contract",
+      "question": "Wooldridge moment and instrument contract?",
+      "source_nodes": [
+        "G1_S08"
+      ],
+      "fields": [
+        "cell_id",
+        "source_year",
+        "N_source",
+        "N_eligible",
+        "result",
+        "unit",
+        "status"
+      ],
+      "formula_or_specification": "List the audited Wooldridge equation system, equation-specific nuisance basis and instrument columns before fitting.",
+      "units": "definition or acceptance status; no economic magnitude",
+      "sample_and_denominator": "Every named item in the frozen source/method/check registry, including unavailable items.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "The method uses equations together; the reported instruments must correspond to the information assumed available at each date.",
+      "limits": "Synthetic estimates are not empirical findings; residual TFP includes model error; identification assumptions not established by convergence.",
+      "prerequisites": "BLOCKED until actual G0/G2, real identity, appropriate input prices and method-specific proxy/timing gates pass.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G1/exhibits/G1-X08.tex",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "The method uses equations together; the reported instruments must correspond to the information assumed available at each date.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G1-X09",
+      "kind": "chart",
+      "priority": "core",
+      "title": "Method-specific versus common sample attrition",
+      "question": "Method-specific versus common sample attrition?",
+      "source_nodes": [
+        "G1_S09"
+      ],
+      "fields": [
+        "source_year",
+        "category",
+        "N_category",
+        "N_denominator",
+        "share_percent",
+        "status"
+      ],
+      "formula_or_specification": "N_method and N_intersection; count set membership in all four method flags and prediction flags.",
+      "units": "records and percent",
+      "sample_and_denominator": "Real plant-year candidates, with unique observations counted once in the intersection.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "Comparing methods on the same factories separates method differences from differences in who can be estimated.",
+      "limits": "Synthetic estimates are not empirical findings; residual TFP includes model error; identification assumptions not established by convergence.",
+      "prerequisites": "BLOCKED until actual G0/G2, real identity, appropriate input prices and method-specific proxy/timing gates pass.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G1/exhibits/G1-X09.pdf",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "Comparing methods on the same factories separates method differences from differences in who can be estimated.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G1-X10",
+      "kind": "table",
+      "priority": "core",
+      "title": "OP elasticity estimates",
+      "question": "OP elasticity estimates?",
+      "source_nodes": [
+        "G1_S10",
+        "G1_S16"
+      ],
+      "fields": [
+        "method",
+        "technology",
+        "sample_id",
+        "beta_L",
+        "beta_K",
+        "N_records",
+        "N_plants",
+        "N_years",
+        "ci_low",
+        "ci_high",
+        "convergence"
+      ],
+      "formula_or_specification": "Olley–Pakes: estimate beta_L and beta_K in ln(VA_real)=beta_L ln(L)+beta_K ln(K_real)+omega+epsilon using the frozen method timing and sample grid.",
+      "units": "elasticities: percent change in value added associated with a 1% input change under the maintained model",
+      "sample_and_denominator": "Each supported technology × method-specific or four-method-common estimation sample; show records, real plants, years, proxy and lag losses.",
+      "uncertainty": "95% percentile interval from 999 full-process plant-cluster bootstrap draws, seed 20260913; require at least 95% successful draws and show failures. No interval if the required real identifiers or model gates fail.",
+      "interpretation": "The Olley–Pakes coefficient translates a 1% input difference into a model-implied percentage difference in value added, holding the other measured input fixed. It does not describe an experimentally assigned input change.",
+      "limits": "Synthetic estimates are not empirical findings; residual TFP includes model error; identification assumptions not established by convergence.",
+      "prerequisites": "BLOCKED until actual G0/G2, real identity, appropriate input prices and method-specific proxy/timing gates pass.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G1/exhibits/G1-X10.tex",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "The Olley–Pakes coefficient translates a 1% input difference into a model-implied percentage difference in value added, holding the other measured input fixed. It does not describe an experimentally assigned input change.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G1-X11",
+      "kind": "table",
+      "priority": "core",
+      "title": "LP elasticity estimates",
+      "question": "LP elasticity estimates?",
+      "source_nodes": [
+        "G1_S11",
+        "G1_S16"
+      ],
+      "fields": [
+        "method",
+        "technology",
+        "sample_id",
+        "beta_L",
+        "beta_K",
+        "N_records",
+        "N_plants",
+        "N_years",
+        "ci_low",
+        "ci_high",
+        "convergence"
+      ],
+      "formula_or_specification": "Levinsohn–Petrin: estimate beta_L and beta_K in ln(VA_real)=beta_L ln(L)+beta_K ln(K_real)+omega+epsilon using the frozen method timing and sample grid.",
+      "units": "elasticities: percent change in value added associated with a 1% input change under the maintained model",
+      "sample_and_denominator": "Each supported technology × method-specific or four-method-common estimation sample; show records, real plants, years, proxy and lag losses.",
+      "uncertainty": "95% percentile interval from 999 full-process plant-cluster bootstrap draws, seed 20260913; require at least 95% successful draws and show failures. No interval if the required real identifiers or model gates fail.",
+      "interpretation": "The Levinsohn–Petrin coefficient translates a 1% input difference into a model-implied percentage difference in value added, holding the other measured input fixed. It does not describe an experimentally assigned input change.",
+      "limits": "Synthetic estimates are not empirical findings; residual TFP includes model error; identification assumptions not established by convergence.",
+      "prerequisites": "BLOCKED until actual G0/G2, real identity, appropriate input prices and method-specific proxy/timing gates pass.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G1/exhibits/G1-X11.tex",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "The Levinsohn–Petrin coefficient translates a 1% input difference into a model-implied percentage difference in value added, holding the other measured input fixed. It does not describe an experimentally assigned input change.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G1-X12",
+      "kind": "table",
+      "priority": "core",
+      "title": "ACF elasticity estimates",
+      "question": "ACF elasticity estimates?",
+      "source_nodes": [
+        "G1_S12",
+        "G1_S16"
+      ],
+      "fields": [
+        "method",
+        "technology",
+        "sample_id",
+        "beta_L",
+        "beta_K",
+        "N_records",
+        "N_plants",
+        "N_years",
+        "ci_low",
+        "ci_high",
+        "convergence"
+      ],
+      "formula_or_specification": "Ackerberg–Caves–Frazer: estimate beta_L and beta_K in ln(VA_real)=beta_L ln(L)+beta_K ln(K_real)+omega+epsilon using the frozen method timing and sample grid.",
+      "units": "elasticities: percent change in value added associated with a 1% input change under the maintained model",
+      "sample_and_denominator": "Each supported technology × method-specific or four-method-common estimation sample; show records, real plants, years, proxy and lag losses.",
+      "uncertainty": "95% percentile interval from 999 full-process plant-cluster bootstrap draws, seed 20260913; require at least 95% successful draws and show failures. No interval if the required real identifiers or model gates fail.",
+      "interpretation": "The Ackerberg–Caves–Frazer coefficient translates a 1% input difference into a model-implied percentage difference in value added, holding the other measured input fixed. It does not describe an experimentally assigned input change.",
+      "limits": "Synthetic estimates are not empirical findings; residual TFP includes model error; identification assumptions not established by convergence.",
+      "prerequisites": "BLOCKED until actual G0/G2, real identity, appropriate input prices and method-specific proxy/timing gates pass.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G1/exhibits/G1-X12.tex",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "The Ackerberg–Caves–Frazer coefficient translates a 1% input difference into a model-implied percentage difference in value added, holding the other measured input fixed. It does not describe an experimentally assigned input change.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G1-X13",
+      "kind": "table",
+      "priority": "core",
+      "title": "Wooldridge elasticity estimates",
+      "question": "Wooldridge elasticity estimates?",
+      "source_nodes": [
+        "G1_S13",
+        "G1_S16"
+      ],
+      "fields": [
+        "method",
+        "technology",
+        "sample_id",
+        "beta_L",
+        "beta_K",
+        "N_records",
+        "N_plants",
+        "N_years",
+        "ci_low",
+        "ci_high",
+        "convergence"
+      ],
+      "formula_or_specification": "Wooldridge: estimate beta_L and beta_K in ln(VA_real)=beta_L ln(L)+beta_K ln(K_real)+omega+epsilon using the frozen method timing and sample grid.",
+      "units": "elasticities: percent change in value added associated with a 1% input change under the maintained model",
+      "sample_and_denominator": "Each supported technology × method-specific or four-method-common estimation sample; show records, real plants, years, proxy and lag losses.",
+      "uncertainty": "95% percentile interval from 999 full-process plant-cluster bootstrap draws, seed 20260913; require at least 95% successful draws and show failures. No interval if the required real identifiers or model gates fail.",
+      "interpretation": "The Wooldridge coefficient translates a 1% input difference into a model-implied percentage difference in value added, holding the other measured input fixed. It does not describe an experimentally assigned input change.",
+      "limits": "Synthetic estimates are not empirical findings; residual TFP includes model error; identification assumptions not established by convergence.",
+      "prerequisites": "BLOCKED until actual G0/G2, real identity, appropriate input prices and method-specific proxy/timing gates pass.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G1/exhibits/G1-X13.tex",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "The Wooldridge coefficient translates a 1% input difference into a model-implied percentage difference in value added, holding the other measured input fixed. It does not describe an experimentally assigned input change.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G1-X14",
+      "kind": "chart",
+      "priority": "core",
+      "title": "Elasticities and returns to scale across methods",
+      "question": "Elasticities and returns to scale across methods?",
+      "source_nodes": [
+        "G1_S10",
+        "G1_S11",
+        "G1_S12",
+        "G1_S13",
+        "G1_S16"
+      ],
+      "fields": [
+        "method",
+        "technology",
+        "sample_id",
+        "beta_L",
+        "beta_K",
+        "rts",
+        "ci_low",
+        "ci_high"
+      ],
+      "formula_or_specification": "RTS=beta_L+beta_K for each method and technology; compute each bootstrap draw sum before its interval.",
+      "units": "elasticity; RTS is dimensionless",
+      "sample_and_denominator": "Same method/technology/sample cells as the underlying accepted coefficients.",
+      "uncertainty": "95% percentile interval from 999 full-process plant-cluster bootstrap draws, seed 20260913; require at least 95% successful draws and show failures. No interval if the required real identifiers or model gates fail.",
+      "interpretation": "A sum of one means the fitted model predicts a 1% rise in value added when both measured inputs rise by 1%; this is conditional on the production specification.",
+      "limits": "Synthetic estimates are not empirical findings; residual TFP includes model error; identification assumptions not established by convergence.",
+      "prerequisites": "BLOCKED until actual G0/G2, real identity, appropriate input prices and method-specific proxy/timing gates pass.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G1/exhibits/G1-X14.pdf",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "A sum of one means the fitted model predicts a 1% rise in value added when both measured inputs rise by 1%; this is conditional on the production specification.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G1-X15",
+      "kind": "table",
+      "priority": "diagnostic",
+      "title": "Instrument counts and rank",
+      "question": "Instrument counts and rank?",
+      "source_nodes": [
+        "G1_S14"
+      ],
+      "fields": [
+        "cell_id",
+        "source_year",
+        "N_source",
+        "N_eligible",
+        "result",
+        "unit",
+        "status"
+      ],
+      "formula_or_specification": "Count instrument columns; compute design and moment-Jacobian rank using pinned numerical tolerance; report observations/instruments.",
+      "units": "columns, rank and records",
+      "sample_and_denominator": "Every attempted method-technology-sample specification, including rejected fits.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "More instruments do not automatically mean better identification. Rank failure is a reason to reject a fit.",
+      "limits": "Synthetic estimates are not empirical findings; residual TFP includes model error; identification assumptions not established by convergence.",
+      "prerequisites": "BLOCKED until actual G0/G2, real identity, appropriate input prices and method-specific proxy/timing gates pass.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G1/exhibits/G1-X15.tex",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "More instruments do not automatically mean better identification. Rank failure is a reason to reject a fit.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G1-X16",
+      "kind": "chart",
+      "priority": "diagnostic",
+      "title": "Sensitivity to starts and optimizers",
+      "question": "Sensitivity to starts and optimizers?",
+      "source_nodes": [
+        "G1_S14"
+      ],
+      "fields": [
+        "cell_id",
+        "source_year",
+        "N_source",
+        "N_eligible",
+        "result",
+        "unit",
+        "status"
+      ],
+      "formula_or_specification": "For each registered starting value and supported optimizer, save objective, return code, convergence and beta_L/beta_K; report max-min coefficient spread.",
+      "units": "objective-specific units, elasticities and return-code categories",
+      "sample_and_denominator": "All prespecified numerical variants for each otherwise eligible fit.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "Similar economic-looking coefficients are not enough; different starts should not produce unexplained conflicting solutions.",
+      "limits": "Synthetic estimates are not empirical findings; residual TFP includes model error; identification assumptions not established by convergence.",
+      "prerequisites": "BLOCKED until actual G0/G2, real identity, appropriate input prices and method-specific proxy/timing gates pass.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G1/exhibits/G1-X16.pdf",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "Similar economic-looking coefficients are not enough; different starts should not produce unexplained conflicting solutions.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G1-X17",
+      "kind": "table",
+      "priority": "diagnostic",
+      "title": "Failed and omitted estimation cells",
+      "question": "Failed and omitted estimation cells?",
+      "source_nodes": [
+        "G1_S14"
+      ],
+      "fields": [
+        "source_year",
+        "category",
+        "N_category",
+        "N_denominator",
+        "share_percent",
+        "status"
+      ],
+      "formula_or_specification": "Count every frozen specification by success, insufficient support, source block, rank failure and numerical failure.",
+      "units": "records and percent",
+      "sample_and_denominator": "The complete frozen method × technology × sample × polynomial grid, not only successful cells.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "Empty or failed cells remain visible so readers can see the reach of the method comparison.",
+      "limits": "Synthetic estimates are not empirical findings; residual TFP includes model error; identification assumptions not established by convergence.",
+      "prerequisites": "BLOCKED until actual G0/G2, real identity, appropriate input prices and method-specific proxy/timing gates pass.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G1/exhibits/G1-X17.tex",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "Empty or failed cells remain visible so readers can see the reach of the method comparison.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G1-X18",
+      "kind": "chart",
+      "priority": "diagnostic",
+      "title": "Full-process bootstrap uncertainty",
+      "question": "Full-process bootstrap uncertainty?",
+      "source_nodes": [
+        "G1_S16"
+      ],
+      "fields": [
+        "method",
+        "technology",
+        "sample_id",
+        "parameter",
+        "draws_attempted",
+        "draws_successful",
+        "ci_low",
+        "ci_high"
+      ],
+      "formula_or_specification": "For each parameter use the 2.5th and 97.5th percentiles of successful full-process bootstrap draws; publish successful/attempted count.",
+      "units": "parameter-specific elasticity or log-productivity units",
+      "sample_and_denominator": "999 attempted cluster resamples per required supported cell; failed draws are counted in the reliability gate.",
+      "uncertainty": "95% percentile interval from 999 full-process plant-cluster bootstrap draws, seed 20260913; require at least 95% successful draws and show failures. No interval if the required real identifiers or model gates fail.",
+      "interpretation": "The interval describes how much the estimate moves when whole factories are resampled and all estimation stages are repeated.",
+      "limits": "Synthetic estimates are not empirical findings; residual TFP includes model error; identification assumptions not established by convergence.",
+      "prerequisites": "BLOCKED until actual G0/G2, real identity, appropriate input prices and method-specific proxy/timing gates pass.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G1/exhibits/G1-X18.pdf",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "The interval describes how much the estimate moves when whole factories are resampled and all estimation stages are repeated.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G1-X19",
+      "kind": "chart",
+      "priority": "diagnostic",
+      "title": "TFP prediction coverage by year",
+      "question": "TFP prediction coverage by year?",
+      "source_nodes": [
+        "G1_S15"
+      ],
+      "fields": [
+        "source_year",
+        "category",
+        "N_category",
+        "N_denominator",
+        "share_percent",
+        "status"
+      ],
+      "formula_or_specification": "N_nonmissing_supported_prediction/N_source*100; partition coefficient-sample, prediction-only and unsupported records.",
+      "units": "records and percent",
+      "sample_and_denominator": "All canonical G0 records in each year, preserved even if no method can predict them.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "A missing productivity value means this method cannot support a prediction for that observation, not that productivity equals zero.",
+      "limits": "Synthetic estimates are not empirical findings; residual TFP includes model error; identification assumptions not established by convergence.",
+      "prerequisites": "BLOCKED until actual G0/G2, real identity, appropriate input prices and method-specific proxy/timing gates pass.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G1/exhibits/G1-X19.pdf",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "A missing productivity value means this method cannot support a prediction for that observation, not that productivity equals zero.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G1-X20",
+      "kind": "chart",
+      "priority": "diagnostic",
+      "title": "TFP distributions on common records",
+      "question": "TFP distributions on common records?",
+      "source_nodes": [
+        "G1_S17"
+      ],
+      "fields": [
+        "source_year",
+        "variable_id",
+        "grouping_id",
+        "group_value",
+        "N_source",
+        "N_eligible",
+        "mean",
+        "sd",
+        "min",
+        "p1",
+        "p5",
+        "p25",
+        "p50",
+        "p75",
+        "p95",
+        "p99",
+        "max",
+        "status"
+      ],
+      "formula_or_specification": "For raw omega and separately pooled-technology-centered omega for each method: N, mean=sum(x)/N, sample SD=sqrt(sum((x-mean)^2)/(N-1)), min, P1/P5/P25/P50/P75/P95/P99, max; retain zero/negative/missing counts.",
+      "units": "log productivity residual units",
+      "sample_and_denominator": "The identical prediction intersection in each technology; own-domain distributions appear only as a labelled sensitivity.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "A wider distribution means more dispersion in unexplained value added within the selected factories; it need not mean larger technical-efficiency differences.",
+      "limits": "Synthetic estimates are not empirical findings; residual TFP includes model error; identification assumptions not established by convergence.",
+      "prerequisites": "BLOCKED until actual G0/G2, real identity, appropriate input prices and method-specific proxy/timing gates pass.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G1/exhibits/G1-X20.pdf",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "A wider distribution means more dispersion in unexplained value added within the selected factories; it need not mean larger technical-efficiency differences.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G1-X21",
+      "kind": "table",
+      "priority": "diagnostic",
+      "title": "Pairwise TFP rank correlations",
+      "question": "Pairwise TFP rank correlations?",
+      "source_nodes": [
+        "G1_S17"
+      ],
+      "fields": [
+        "cell_id",
+        "source_year",
+        "N_source",
+        "N_eligible",
+        "result",
+        "unit",
+        "status"
+      ],
+      "formula_or_specification": "For each of six method pairs compute Spearman rho=correlation(average ranks of omega_a, average ranks of omega_b), with tied ranks averaged.",
+      "units": "rank correlation from -1 to 1",
+      "sample_and_denominator": "The same four-method prediction intersection; report pairwise available sample only in a separate sensitivity.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "A high correlation means the methods tend to rank the same factories similarly even if their productivity levels differ.",
+      "limits": "Synthetic estimates are not empirical findings; residual TFP includes model error; identification assumptions not established by convergence.",
+      "prerequisites": "BLOCKED until actual G0/G2, real identity, appropriate input prices and method-specific proxy/timing gates pass.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G1/exhibits/G1-X21.tex",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "A high correlation means the methods tend to rank the same factories similarly even if their productivity levels differ.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G1-X22",
+      "kind": "chart",
+      "priority": "diagnostic",
+      "title": "Own-domain versus common-domain estimates",
+      "question": "Own-domain versus common-domain estimates?",
+      "source_nodes": [
+        "G1_S17",
+        "G1_S16"
+      ],
+      "fields": [
+        "method",
+        "technology",
+        "parameter",
+        "own_estimate",
+        "common_estimate",
+        "difference",
+        "paired_N"
+      ],
+      "formula_or_specification": "For each method report beta_own-beta_common and matched-record omega_own-omega_common, retaining common normalization conventions.",
+      "units": "elasticity differences and log-productivity differences",
+      "sample_and_denominator": "Coefficients from each own-domain and common-domain fit; prediction differences on identical supported records.",
+      "uncertainty": "95% percentile interval from 999 full-process plant-cluster bootstrap draws, seed 20260913; require at least 95% successful draws and show failures. No interval if the required real identifiers or model gates fail.",
+      "interpretation": "The comparison shows how much the result changes when the set of usable factories is held constant.",
+      "limits": "Synthetic estimates are not empirical findings; residual TFP includes model error; identification assumptions not established by convergence.",
+      "prerequisites": "BLOCKED until actual G0/G2, real identity, appropriate input prices and method-specific proxy/timing gates pass.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G1/exhibits/G1-X22.pdf",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "The comparison shows how much the result changes when the set of usable factories is held constant.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G1-X23",
+      "kind": "table",
+      "priority": "diagnostic",
+      "title": "Exact four-method attachment and normalization",
+      "question": "Exact four-method attachment and normalization?",
+      "source_nodes": [
+        "G1_S18"
+      ],
+      "fields": [
+        "cell_id",
+        "source_year",
+        "N_source",
+        "N_eligible",
+        "result",
+        "unit",
+        "status"
+      ],
+      "formula_or_specification": "Merge wide tfp_OP/tfp_LP/tfp_ACF/tfp_W back by source_year/source_row with 1:1 cardinality; preserve row count and save centering constants.",
+      "units": "definition or acceptance status; no economic magnitude",
+      "sample_and_denominator": "Every named item in the frozen source/method/check registry, including unavailable items.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "Every original record remains in the shared dataset, with a separate reason whenever a requested productivity value is unavailable.",
+      "limits": "Synthetic estimates are not empirical findings; residual TFP includes model error; identification assumptions not established by convergence.",
+      "prerequisites": "BLOCKED until actual G0/G2, real identity, appropriate input prices and method-specific proxy/timing gates pass.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G1/exhibits/G1-X23.tex",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "Every original record remains in the shared dataset, with a separate reason whenever a requested productivity value is unavailable.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G1-X24",
+      "kind": "table",
+      "priority": "diagnostic",
+      "title": "Actual-data acceptance and replication gates",
+      "question": "Actual-data acceptance and replication gates?",
+      "source_nodes": [
+        "G1_S19"
+      ],
+      "fields": [
+        "cell_id",
+        "source_year",
+        "N_source",
+        "N_eligible",
+        "result",
+        "unit",
+        "status"
+      ],
+      "formula_or_specification": "All required method/input/replication checks must pass; failed required methods keep G1 incomplete.",
+      "units": "definition or acceptance status; no economic magnitude",
+      "sample_and_denominator": "Every named item in the frozen source/method/check registry, including unavailable items.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "A successful software demonstration is not an actual-data productivity result, and a complete plan is not a completed row.",
+      "limits": "Synthetic estimates are not empirical findings; residual TFP includes model error; identification assumptions not established by convergence.",
+      "prerequisites": "BLOCKED until actual G0/G2, real identity, appropriate input prices and method-specific proxy/timing gates pass.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G1/exhibits/G1-X24.tex",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "A successful software demonstration is not an actual-data productivity result, and a complete plan is not a completed row.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    }
+  ],
+  "latex_outline": [
+    {
+      "h1": "What are we trying to learn?",
+      "lead_question": "Start with the actual question and the data we can observe.",
+      "h2": [
+        {
+          "title": "What each TFP method tries to remove",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "What each TFP method tries to remove?",
+              "exhibit_ids": [
+                "G1-X01"
+              ],
+              "formula": "Compare OP investment inversion, LP intermediate-input inversion, ACF timing correction and Wooldridge system moments under the value-added Cobb–Douglas contract.",
+              "reader_explanation": "Each method makes a different assumption about what the factory knew when choosing inputs; agreement is evidence of sensitivity, not proof that any assumption is true."
+            }
+          ]
+        },
+        {
+          "title": "Production-function and input definitions",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Production-function and input definitions?",
+              "exhibit_ids": [
+                "G1-X02"
+              ],
+              "formula": "ln(VA_real)=beta_L ln(workers)+beta_K ln(K_real)+omega+epsilon; VA_real, K_real and the proxy must have separately justified prices.",
+              "reader_explanation": "Productivity here is the part of measured value added not explained by workers and capital. Prices and measurement error can still enter it."
+            }
+          ]
+        },
+        {
+          "title": "Real input availability by year and technology",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Real input availability by year and technology?",
+              "exhibit_ids": [
+                "G1-X03"
+              ],
+              "formula": "N_eligible(method,technology,year)/N_source(technology,year)*100",
+              "reader_explanation": "The bars show how much information is lost before estimation, rather than a change in productivity."
+            }
+          ]
+        },
+        {
+          "title": "Actual calendar gaps and usable lags",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Actual calendar gaps and usable lags?",
+              "exhibit_ids": [
+                "G1-X04"
+              ],
+              "formula": "Count exact calendar t-1 and t-2 links; report each observed year-gap length separately.",
+              "reader_explanation": "A two-year gap cannot supply a one-year lag. Missing 2016 therefore affects the usable 2017 histories."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "h1": "What can the data support?",
+      "lead_question": "Show coverage, definitions and denominators before comparisons.",
+      "h2": [
+        {
+          "title": "OP investment and selection eligibility",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "OP investment and selection eligibility?",
+              "exhibit_ids": [
+                "G1-X05"
+              ],
+              "formula": "Sequential and marginal losses for real inputs, I_real>0, valid calendar lag and authenticated survival universe.",
+              "reader_explanation": "OP needs credible investment and selection information; factories excluded by these requirements may differ from those retained."
+            }
+          ]
+        },
+        {
+          "title": "LP flexible-input proxy eligibility",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "LP flexible-input proxy eligibility?",
+              "exhibit_ids": [
+                "G1-X06"
+              ],
+              "formula": "Sequential and marginal losses for real inputs, M_real>0, valid lag and justified proxy timing.",
+              "reader_explanation": "A positive materials bill is necessary for the proxy but does not establish that the proxy assumption is correct."
+            }
+          ]
+        },
+        {
+          "title": "ACF timing and moment contract",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "ACF timing and moment contract?",
+              "exhibit_ids": [
+                "G1-X07"
+              ],
+              "formula": "List the audited ACF first-stage nuisance basis, labor timing, innovation moment and every instrument column before fitting.",
+              "reader_explanation": "The table shows which input choices are treated as predetermined and why. It is an assumption table, not an empirical test of those assumptions."
+            }
+          ]
+        },
+        {
+          "title": "Wooldridge moment and instrument contract",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Wooldridge moment and instrument contract?",
+              "exhibit_ids": [
+                "G1-X08"
+              ],
+              "formula": "List the audited Wooldridge equation system, equation-specific nuisance basis and instrument columns before fitting.",
+              "reader_explanation": "The method uses equations together; the reported instruments must correspond to the information assumed available at each date."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "h1": "What do the main results mean?",
+      "lead_question": "Explain the results in plain language after valid execution.",
+      "h2": [
+        {
+          "title": "Method-specific versus common sample attrition",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Method-specific versus common sample attrition?",
+              "exhibit_ids": [
+                "G1-X09"
+              ],
+              "formula": "N_method and N_intersection; count set membership in all four method flags and prediction flags.",
+              "reader_explanation": "Comparing methods on the same factories separates method differences from differences in who can be estimated."
+            }
+          ]
+        },
+        {
+          "title": "OP elasticity estimates",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "OP elasticity estimates?",
+              "exhibit_ids": [
+                "G1-X10"
+              ],
+              "formula": "Olley–Pakes: estimate beta_L and beta_K in ln(VA_real)=beta_L ln(L)+beta_K ln(K_real)+omega+epsilon using the frozen method timing and sample grid.",
+              "reader_explanation": "The Olley–Pakes coefficient translates a 1% input difference into a model-implied percentage difference in value added, holding the other measured input fixed. It does not describe an experimentally assigned input change."
+            }
+          ]
+        },
+        {
+          "title": "LP elasticity estimates",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "LP elasticity estimates?",
+              "exhibit_ids": [
+                "G1-X11"
+              ],
+              "formula": "Levinsohn–Petrin: estimate beta_L and beta_K in ln(VA_real)=beta_L ln(L)+beta_K ln(K_real)+omega+epsilon using the frozen method timing and sample grid.",
+              "reader_explanation": "The Levinsohn–Petrin coefficient translates a 1% input difference into a model-implied percentage difference in value added, holding the other measured input fixed. It does not describe an experimentally assigned input change."
+            }
+          ]
+        },
+        {
+          "title": "ACF elasticity estimates",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "ACF elasticity estimates?",
+              "exhibit_ids": [
+                "G1-X12"
+              ],
+              "formula": "Ackerberg–Caves–Frazer: estimate beta_L and beta_K in ln(VA_real)=beta_L ln(L)+beta_K ln(K_real)+omega+epsilon using the frozen method timing and sample grid.",
+              "reader_explanation": "The Ackerberg–Caves–Frazer coefficient translates a 1% input difference into a model-implied percentage difference in value added, holding the other measured input fixed. It does not describe an experimentally assigned input change."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "h1": "What changes under alternative choices?",
+      "lead_question": "Separate legitimate sensitivity from primary definition.",
+      "h2": [
+        {
+          "title": "Wooldridge elasticity estimates",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Wooldridge elasticity estimates?",
+              "exhibit_ids": [
+                "G1-X13"
+              ],
+              "formula": "Wooldridge: estimate beta_L and beta_K in ln(VA_real)=beta_L ln(L)+beta_K ln(K_real)+omega+epsilon using the frozen method timing and sample grid.",
+              "reader_explanation": "The Wooldridge coefficient translates a 1% input difference into a model-implied percentage difference in value added, holding the other measured input fixed. It does not describe an experimentally assigned input change."
+            }
+          ]
+        },
+        {
+          "title": "Elasticities and returns to scale across methods",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Elasticities and returns to scale across methods?",
+              "exhibit_ids": [
+                "G1-X14"
+              ],
+              "formula": "RTS=beta_L+beta_K for each method and technology; compute each bootstrap draw sum before its interval.",
+              "reader_explanation": "A sum of one means the fitted model predicts a 1% rise in value added when both measured inputs rise by 1%; this is conditional on the production specification."
+            }
+          ]
+        },
+        {
+          "title": "Instrument counts and rank",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Instrument counts and rank?",
+              "exhibit_ids": [
+                "G1-X15"
+              ],
+              "formula": "Count instrument columns; compute design and moment-Jacobian rank using pinned numerical tolerance; report observations/instruments.",
+              "reader_explanation": "More instruments do not automatically mean better identification. Rank failure is a reason to reject a fit."
+            }
+          ]
+        },
+        {
+          "title": "Sensitivity to starts and optimizers",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Sensitivity to starts and optimizers?",
+              "exhibit_ids": [
+                "G1-X16"
+              ],
+              "formula": "For each registered starting value and supported optimizer, save objective, return code, convergence and beta_L/beta_K; report max-min coefficient spread.",
+              "reader_explanation": "Similar economic-looking coefficients are not enough; different starts should not produce unexplained conflicting solutions."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "h1": "What remains unavailable or uncertain?",
+      "lead_question": "Keep unsupported source branches and interpretation limits visible.",
+      "h2": [
+        {
+          "title": "Failed and omitted estimation cells",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Failed and omitted estimation cells?",
+              "exhibit_ids": [
+                "G1-X17"
+              ],
+              "formula": "Count every frozen specification by success, insufficient support, source block, rank failure and numerical failure.",
+              "reader_explanation": "Empty or failed cells remain visible so readers can see the reach of the method comparison."
+            }
+          ]
+        },
+        {
+          "title": "Full-process bootstrap uncertainty",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Full-process bootstrap uncertainty?",
+              "exhibit_ids": [
+                "G1-X18"
+              ],
+              "formula": "For each parameter use the 2.5th and 97.5th percentiles of successful full-process bootstrap draws; publish successful/attempted count.",
+              "reader_explanation": "The interval describes how much the estimate moves when whole factories are resampled and all estimation stages are repeated."
+            }
+          ]
+        },
+        {
+          "title": "TFP prediction coverage by year",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "TFP prediction coverage by year?",
+              "exhibit_ids": [
+                "G1-X19"
+              ],
+              "formula": "N_nonmissing_supported_prediction/N_source*100; partition coefficient-sample, prediction-only and unsupported records.",
+              "reader_explanation": "A missing productivity value means this method cannot support a prediction for that observation, not that productivity equals zero."
+            }
+          ]
+        },
+        {
+          "title": "TFP distributions on common records",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "TFP distributions on common records?",
+              "exhibit_ids": [
+                "G1-X20"
+              ],
+              "formula": "For raw omega and separately pooled-technology-centered omega for each method: N, mean=sum(x)/N, sample SD=sqrt(sum((x-mean)^2)/(N-1)), min, P1/P5/P25/P50/P75/P95/P99, max; retain zero/negative/missing counts.",
+              "reader_explanation": "A wider distribution means more dispersion in unexplained value added within the selected factories; it need not mean larger technical-efficiency differences."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "h1": "Can another colleague reproduce and accept this row?",
+      "lead_question": "End with audit able source-to-result path and exact completion checks.",
+      "h2": [
+        {
+          "title": "Pairwise TFP rank correlations",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Pairwise TFP rank correlations?",
+              "exhibit_ids": [
+                "G1-X21"
+              ],
+              "formula": "For each of six method pairs compute Spearman rho=correlation(average ranks of omega_a, average ranks of omega_b), with tied ranks averaged.",
+              "reader_explanation": "A high correlation means the methods tend to rank the same factories similarly even if their productivity levels differ."
+            }
+          ]
+        },
+        {
+          "title": "Own-domain versus common-domain estimates",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Own-domain versus common-domain estimates?",
+              "exhibit_ids": [
+                "G1-X22"
+              ],
+              "formula": "For each method report beta_own-beta_common and matched-record omega_own-omega_common, retaining common normalization conventions.",
+              "reader_explanation": "The comparison shows how much the result changes when the set of usable factories is held constant."
+            }
+          ]
+        },
+        {
+          "title": "Exact four-method attachment and normalization",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Exact four-method attachment and normalization?",
+              "exhibit_ids": [
+                "G1-X23"
+              ],
+              "formula": "Merge wide tfp_OP/tfp_LP/tfp_ACF/tfp_W back by source_year/source_row with 1:1 cardinality; preserve row count and save centering constants.",
+              "reader_explanation": "Every original record remains in the shared dataset, with a separate reason whenever a requested productivity value is unavailable."
+            }
+          ]
+        },
+        {
+          "title": "Actual-data acceptance and replication gates",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Actual-data acceptance and replication gates?",
+              "exhibit_ids": [
+                "G1-X24"
+              ],
+              "formula": "All required method/input/replication checks must pass; failed required methods keep G1 incomplete.",
+              "reader_explanation": "A successful software demonstration is not an actual-data productivity result, and a complete plan is not a completed row."
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "definition_of_done": {
+    "repository_minimum_checks": [
+      "No synthetic lags; verify t−1 and t−2 are actual calendar years and treat 2015→2017 as a gap.",
+      "Record positive-domain exclusions, investment/material support, instrument count/rank, moment criteria, convergence and sensitivity to starts.",
+      "Inspect elasticities and returns to scale without enforcing economically convenient coefficients after seeing results.",
+      "Compare method-specific versus common sample estimates, rank correlations and distribution tails; bootstrap the full estimation step where feasible.",
+      "Merge TFP measures one-to-one by validated ID/year; keep estimator, specification, sample and normalization identifiers."
+    ],
+    "operational_checks": [
+      {
+        "id": "G1-Q01",
+        "criterion": "Four scientifically distinct methods and supported actual inputs",
+        "evidence_artifact": "G1/method_acceptance.csv",
+        "pass_rule": "All requested methods execute on defensible domains; no disguised OLS or synthetic replacement.",
+        "blocking": true
+      },
+      {
+        "id": "G1-Q02",
+        "criterion": "Full coefficient/prediction and numerical evidence",
+        "evidence_artifact": "G1/specification_results.csv",
+        "pass_rule": "Every planned cell successful or explicitly failed; required failures block completion; actual calendar lags; own/common samples reconcile.",
+        "blocking": true
+      },
+      {
+        "id": "G1-PLAN-GATE",
+        "criterion": "Global upfront planning freeze",
+        "evidence_artifact": "work/plans/FREEZE.json",
+        "pass_rule": "All 44 plans pass root validation and root records the freeze; no analytical execution before freeze.",
+        "blocking": true
+      },
+      {
+        "id": "G1-SOURCE-TEXT",
+        "criterion": "Original request versus manager additions clearly separated",
+        "evidence_artifact": "outputs/G1/source_to_exhibit.csv",
+        "pass_rule": "Exact source.request/strategy/notes/number/PIC/completion unchanged; repository minimum checks labelled repository-authored, not DOC X quotation.",
+        "blocking": true
+      },
+      {
+        "id": "G1-OFFLINE",
+        "criterion": "Independent row entrypoint with nested modules",
+        "evidence_artifact": "outputs/G1/offline_replication.json",
+        "pass_rule": "Runrows/G1/G1.do from clean configured local environment without master; same full precision numeric results; all local dependencies documented.",
+        "blocking": true
+      },
+      {
+        "id": "G1-READER",
+        "criterion": "Every required report section has meaning and formula",
+        "evidence_artifact": "outputs/G1/reader_review.md",
+        "pass_rule": "Every H 1/H 2/H 3 sectionstatesquestion, intuition, equation and symbols, visual/table, plain meaning and limit; reviewer can explain without code.",
+        "blocking": true
+      },
+      {
+        "id": "G1-WAVE-BOUNDARY",
+        "criterion": "All company analysis descends from the single published consolidated master.",
+        "evidence_artifact": "analysis-input-lineage.json",
+        "pass_rule": "Every company-data operand in analysis must be the single published consolidated master or a declared derivative whose entire company-data ancestry ends at that consolidated master. Direct annual-wave reads are prohibited in analysis; only the master builder may append annual waves. Raw/staged/legacy/cached final company files cannot be numerical analysis parents. A required field missing from the wave is an upstream preparation failure; never repair it by opening an external company file inside this row. Comparison-only validators may read older data but may not feed construction or estimates. External reference and metadata inputs retain explicit non-company roles.",
+        "blocking": true
+      },
+      {
+        "id": "G1-READABLE-EXECUTION",
+        "criterion": "Readable non-executable comments and verified live progress at every nesting level.",
+        "evidence_artifact": "code-comments-and-progress-review.json",
+        "pass_rule": "Meet code_readability_and_progress_contract without changing the statistical results or control flow.",
+        "blocking": true
+      }
+    ],
+    "reader_gate": "An intelligent lay reader can state the question, what was counted/compared, each equation symbol, finding and limit without consulting code. Each section follows intuition → formula with every symbol → visual/table → plain meaning → boundary.",
+    "visual_gate": "Use custom vector charts from saved full-precision Stata aggregates, professional restrained publication typography, direct labels, meaningful color, clear units, visible missing 2016 gap, robust legends and notes. No default Stata graph in final delivery. Inspect every PDF page at reading size for overlap/clipping and all captions/axis labels. Distribution intervals are never labelled confidence intervals.",
+    "numerical_gate": "Independently recompute control counts/formulas against frozen aggregates/source receipts, exact categorical reconciliations, finite domains, and displayed rounding. Every chart/table value has a source table key/hash. No analytic calculations in for matting Python.",
+    "source_scope_gate": "The exact DOCX row and every repository minimum check must be satisfied on the declared actual data scope. Source absence remains a blocker where necessary; a readable PDF, synthetic passing run or existing column does not waive real-panel/WPI/source requirements."
+  },
+  "current_blockers": [
+    {
+      "id": "G1-B01",
+      "blocks": "All actual TFP estimates",
+      "reason": "Real panel, concept-specific real capital/material/investment and timing support unverified.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/HANDOFF.md",
+      "resolution": "Complete G0 and G2 input gates; obtain missing prices/proxies/identity.",
+      "next_unblocked_action": "Audit predecessor code and freeze all four method contracts without running estimators."
+    }
+  ],
+  "references": [
+    {
+      "title": "Exact Deasy source row",
+      "locator": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/requests/data/01-tfp/SOURCE.md",
+      "purpose": "Original request; blank completion and PIC preserved",
+      "verified_status": "read exact task.json/source fields"
+    },
+    {
+      "title": "Latest actual local G0",
+      "locator": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/HANDOFF.md",
+      "purpose": "Current 3, 824-column source boundary; supersedes historical 3, 793-column file",
+      "verified_status": "fresh exact DTA metadata/hash confirmed"
+    },
+    {
+      "title": "Annual variable mapping evidence",
+      "locator": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv",
+      "purpose": "Separate verified annual semantics from parsed/provisional mappings",
+      "verified_status": "read; completeness not asserted"
+    },
+    {
+      "title": "Full source authored minimum checks",
+      "locator": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/requests/data/01-tfp/task.json",
+      "purpose": "Repository definition of done is notan original Word quotation; preserved exactly in plan",
+      "verified_status": "read and copied exactly"
+    },
+    {
+      "title": "Rovigatti and Mollisi (2018), Theory and practice of total-factor productivity estimation",
+      "locator": "https://journals.sagepub.com/doi/10.1177/1536867X1801800307",
+      "purpose": "Implementation families, timing and numerical diagnostics; primary publisher source",
+      "verified_status": "primary source browsed13Sep2026"
+    },
+    {
+      "title": "Ackerberg, Caves and Frazer (2015), Identification properties of recent production function estimators",
+      "locator": "https://onlinelibrary.wiley.com/doi/pdf/10.3982/ECTA13408",
+      "purpose": "Functional-dependence and identification cautions; do not equate convergence with identification",
+      "verified_status": "primary source browsed13Sep2026"
+    },
+    {
+      "title": "prodest author-maintained source",
+      "locator": "https://github.com/GabrieleRovigatti/prodest",
+      "purpose": "Pin and inspect the actual Stata implementation before offline vendoring",
+      "verified_status": "author source browsed13Sep2026"
+    }
+  ],
+  "review": {
+    "planning_review": "root_independent_review_fixed; final_global_consistency_pending",
+    "execution_review": "not_started",
+    "numerical_review": "not_started",
+    "visual_review": "not_started",
+    "exhibit_review": "Each of 24 exhibits now has a computation, unit, denominator, uncertainty rule and substantive reader explanation. Numerical and visual output review still required after execution.",
+    "final_independent_pass": "Narrow source/cardinality repairs applied; no empirical execution. See work/plans/reviews/G0-G7-final-review.json.",
+    "pinned_method_source_review": "Independent recording-agent review PASS_FOR_PLANNING after explicit valueadded, residual-definition and authenticated selection-universe corrections; root added explicit attrition, compatibility, starting-map and external-covariance adapter gates. See reviews/G1-pinned-source-review.md."
+  },
+  "rationale": "A TFP label is credible only when production inputs, timing and firm continuity support the estimator.",
+  "scope": "Four requested methods on accepted actual data; legacy/simulated estimates only method evidence; no empirical result while inputs blocked.",
+  "unit_of_analysis": "Validated firm-year within an economically coherent technology group.",
+  "target_estimands": [
+    {
+      "name": "TFP residual",
+      "formula": "r_it=ln(VA_real_it)-beta_L*ln(L_it)-beta_K*ln(K_real_it)",
+      "symbols": {
+        "Y": "Preferred real value added for the required branch; never generic gross output in this two-input equation",
+        "L": "labor input",
+        "K": "real capital stock",
+        "beta L/beta K": "method-specific estimated elasticities",
+        "omega": "estimated log revenue-productivity residual; a plant-specific price or measurement component may remain",
+        "r": "common four-method log value-added production residual, including transitory measurement/output error; not a direct measure of pure technical efficiency"
+      },
+      "interpretation": "Compare four fitted production residuals on their own and identical prediction domains; proxy-based latent-productivity companions are distinct, method-specific outputs.",
+      "limits": "Residual may include measurement error; not pure technology or causal trade effect."
+    },
+    {
+      "name": "Production elasticities",
+      "formula": "ln(VA_real_it)=beta_L*ln(L_it)+beta_K*ln(K_real_it)+omega_it+epsilon_it",
+      "symbols": {
+        "Y,L,K": "real production outcome, labor, capital stock",
+        "omega": "productivity known to firm",
+        "epsilon": "unanticipated error"
+      },
+      "interpretation": "A labor elasticity tells the model’s percentage output difference associated with 1% more labor holding inputs fixed.",
+      "limits": "Input timing/proxy/selection assumptions differ by method; numerical convergence is not identification."
+    }
+  ],
+  "method_protocol": {
+    "required_production_concept": "Value-added Cobb–Douglas in real value added, workers and real capital stock. This is a modeling choice for the requested four-method comparison, conditional on a defensible value-added production specification.",
+    "gross_output_extension": "Not a substitute for the required branch. A separately registered future extension adds beta_M*ln(M_real) to the structural production function and must pass its own flexible-input identification/moment audit before execution.",
+    "technology_cells": "Verified harmonized two-digit manufacturing industries, pooled over actual supplied calendar years; no ad hoc industry pooling to force convergence.",
+    "minimum_support": "Operational screen: at least 50 distinct real plants, 250 eligible dynamic records and six observed calendar waves per technology-method cell, plus full required design/instrument rank. These thresholds are practical precision screens, not a proof of identification.",
+    "controls": "Primary: no extra control() variables, within verified two-digit technology pools; this maintains an explicit common proxy/Markov specification across supplied years. Calendar composition is displayed. A year-control extension is not in the required execution grid and requires a separately frozen timing/normalization specification before fitting.",
+    "polynomial": "B_d(k,p) contains all monomials k^a p^b with 1<=a+b<=d; an intercept is included by regression. d=3 primary, d=2 sensitivity. ACF uses all monomials in l,k,p of total degree 1..d. Do not duplicate linear labor columns. The installed OP/LP/ACF code uses cubic lagged productivity even when poly(2) is selected. The degree-2 sensitivity therefore changes the first-stage proxy polynomial only; no claim that all nuisance stages become quadratic.",
+    "timing": "Exact method-specific equations, instruments and timing are enumerated in pinned_method_contract. No additional instruments or controls are selected during fitting.",
+    "calendar": "Lags are exact t-1 or t-2 calendar lags; do not treat 2015 as the one-year lag of 2017. No conditioning on future long-lived plants to select the main sample.",
+    "OP_selection": "Required selection probability is estimated from independently authenticated risk/exit data, using the declared lagged B_d(k,p_OP) on the observed risk set. Selection outcome must not be inferred from the last row of the estimator-filtered sample. Unknown closure/risk status is excluded with a reason. If the selection model cannot be estimated, do not silently switch to an uncorrected OP result. Fit and resample the selection model on the authenticated risk/exit universe before imposing positive-investment coefficient-estimation eligibility. Keep selection-sample and production-sample receipts distinct; risk/exit records outside the coefficient sample must remain available.",
+    "sample_grid": [
+      "method-specific eligible sample",
+      "intersection of all four eligible dynamic samples"
+    ],
+    "primary_methods": [
+      "Olley–Pakes",
+      "Levinsohn–Petrin",
+      "Ackerberg–Caves–Frazer",
+      "Wooldridge"
+    ],
+    "normalization": "Retain raw predicted omega and a separate within-method, within-technology cell pooled mean-centered companion. Do not normalize by year, which would remove the annual pattern being studied. Save normalization constants.",
+    "inference": "999 external full-process real-plant cluster draws plus the original point estimate; resample from the frozen eligible source universe, assign new bootstrap plant IDs, reconstruct exact calendar lags and refit all selected stages including OP selection. Save each draw’s parameters, prediction summaries, return code and convergence. No use of the package default five repetitions; its first loop is the original fit, so reps(999) would not mean 999 random draws. The OP cluster resample includes the authenticated risk/exit universe, including eligible risk observations outside the positive-investment production sample, and then reconstructs both samples. At least95% of 999 draws must succeed before publishing bootstrap intervals.",
+    "optimizer": "{\"OP_LP_ACF\": \"Nelder–Mead, evaluator d0, maximum 10000 iterations, nrtol 1e-5, simplex delta 1e-5; DFP is the one supported alternative optimizer diagnostic.\", \"starts\": \"Use deterministic OLS coefficient start supplied explicitly, not the package default randomized perturbation. Registered diagnostic starts (0.3,0.7) and (0.7,0.3) for labor/capital. In non-ACF OP/LP only the capital component initializes the second stage.\", \"Markov_polynomial\": \"The installed OP/LP/ACF code uses cubic lagged productivity even when poly(2) is selected. The degree-2 sensitivity therefore changes the first-stage proxy polynomial only; no claim that all nuisance stages become quadratic.\"}",
+    "prediction": "r_it=y_it-beta_L*l_it-beta_K*k_it is the common four-method log value-added production residual. It contains latent productivity plus transitory measurement/output error under the maintained model, and is labelled accordingly. Retain raw and separately centered versions; do not call it directly observed technical efficiency. A separately named proxy-based omega may be exported only where its first-stage definition is supported. For OP/LP phi is already net of beta_L*l, so omega_proxy=phi-beta_K*k; for ACF omega_proxy=phi-beta_L*l-beta_K*k. The source predict,omega path requires saved first-stage residuals and cannot be assumed available for Wooldridge, whose branch rejects fsresiduals. No fake four-method latent-omega attachment.",
+    "source_gate": "Input-source and substantive method gates can block execution even when the numerical support screen passes."
+  },
+  "dataflow_protocol": {
+    "input_integrity": "Physical source data and source-definition evidence are separate declared inputs. Pin both before transforming a value.",
+    "join_keys": "Never merge by row order. Use declared keys and assert intended 1:1, m:1 or explicitly weighted 1:m cardinality; record unmatched and duplicate rows.",
+    "source_rows": "source_year/source_row identifies a row within the frozen canonical source family, not a longitudinal plant. If another source family is added, source_file_hash is part of the raw key until the canonical manifest proves uniqueness.",
+    "branch_status": "Each branch produces either a validated state or a typed unsupported receipt with the missing prerequisite. Unsupported receipts are not numeric datasets and cannot satisfy a required input gate.",
+    "missing_states": "Source absence, inapplicable questionnaire universe, parse failure, unknown unit, masked identifier, observed zero and valid positive/negative values remain distinguishable.",
+    "downstream_gate": "Only a passed input contract may unlock its dependent statistical branch. Publishing a diagnostic about a blocked branch does not complete the Word row."
+  },
+  "pinned_method_contract": {
+    "version": "Installed prodest 1.2.2, source header 30 July 2018; pinned for reproducibility, not claimed latest",
+    "files": [
+      {
+        "source": "/Users/natanaelmassie/Library/Application Support/Stata/ado/plus/p/prodest.ado",
+        "file": "prodest.ado",
+        "sha256": "2e9786201189f6eafd90475b72b11d2d68eab8815b3740bd6054ddfb5dc34fae",
+        "bytes": 35618
+      },
+      {
+        "source": "/Users/natanaelmassie/Library/Application Support/Stata/ado/plus/p/prodest.sthlp",
+        "file": "prodest.sthlp",
+        "sha256": "6e2833706f5b73776c5237bc14a51a20f7024c804fa820ff195513bd75c4ac52",
+        "bytes": 28178
+      },
+      {
+        "source": "/Users/natanaelmassie/Library/Application Support/Stata/ado/plus/p/prodest_p.ado",
+        "file": "prodest_p.ado",
+        "sha256": "1b249fd602f74f292f87617c6ef64c534c70da3ed25618cd106d377df103c93f",
+        "bytes": 10093
+      }
+    ],
+    "variables": {
+      "y": "ln(preferred real value added)",
+      "l": "ln(workers)",
+      "k": "ln(verified real capital stock)",
+      "p_OP": "ln(verified positive real investment)",
+      "p_other": "ln(verified positive real intermediate-input proxy)"
+    },
+    "common_basis": "B_d(k,p) contains all monomials k^a p^b with 1<=a+b<=d; an intercept is included by regression. d=3 primary, d=2 sensitivity. ACF uses all monomials in l,k,p of total degree 1..d. Do not duplicate linear labor columns.",
+    "calendar_controls": "Primary: no extra control() variables, within verified two-digit technology pools; this maintains an explicit common proxy/Markov specification across supplied years. Calendar composition is displayed. A year-control extension is not in the required execution grid and requires a separately frozen timing/normalization specification before fitting.",
+    "OP": {
+      "first_stage": "Regress y on l and [1,B_d(k,p_OP)]; beta_L is the partially linear first-stage coefficient; phi_hat=fitted_y-beta_L*l.",
+      "second_stage": "For candidate beta_K, omega=phi_hat-beta_K*k. Regress omega on [1,omega_lag,omega_lag^2,omega_lag^3] and, for the required selection branch, the full cubic terms of authenticated predicted exit probability and its interactions with lagged omega. Minimize sum[(y-beta_L*l)-beta_K*k-g_hat]^2 on exact-calendar supported transitions.",
+      "selection": "Required selection probability is estimated from independently authenticated risk/exit data, using the declared lagged B_d(k,p_OP) on the observed risk set. Selection outcome must not be inferred from the last row of the estimator-filtered sample. Unknown closure/risk status is excluded with a reason. If the selection model cannot be estimated, do not silently switch to an uncorrected OP result. Fit and resample the selection model on the authenticated risk/exit universe before imposing positive-investment coefficient-estimation eligibility. Keep selection-sample and production-sample receipts distinct; risk/exit records outside the coefficient sample must remain available."
+    },
+    "LP": {
+      "first_stage": "Regress y on l and [1,B_d(k,p_other)]; retain beta_L and phi_hat=fitted_y-beta_L*l.",
+      "second_stage": "Use omega=phi_hat-beta_K*k and cubic Markov projection in lagged omega; minimize sum[(y-beta_L*l)-beta_K*k-g_hat]^2. No attrition correction in the primary LP branch. This is the pinned package’s two-stage nonlinear least-squares implementation, not a claim to estimate an unspecified GMM system."
+    },
+    "ACF": {
+      "first_stage": "Regress y on the complete degree-d polynomial in l,k,p_other (with only one copy of each monomial); fitted value is phi_hat.",
+      "second_stage": "For beta=(beta_L,beta_K), omega=phi_hat-beta_L*l-beta_K*k; project omega on [1,omega_lag,omega_lag^2,omega_lag^3]; innovation xi is the residual. Minimize (Z'xi)' W (Z'xi), Z=[lag(l),k], W=invsym(Z'Z)/N, as in the pinned source. No extra overidentification instruments.",
+      "timing": "k is predetermined and l is selected before the current innovation in the maintained ACF timing; lag(l) and current k must satisfy their moments. The data alone do not verify this assumption."
+    },
+    "Wooldridge": {
+      "selection": "Use explicit method(wrdg) gmm; the package’s default without gmm is a stacked linear IV branch and is not silently substituted for the requested system.",
+      "equation1": "r1=y-beta_L*l-beta_K*k-a0-c_t'theta, c_t=B_d(k_t,p_t).",
+      "equation2": "r2=y-beta_L*l-beta_K*k-a0-e0-c_(t-1)'theta. The installed source shares theta between equations; this restriction is documented and must be retained if this exact version is used.",
+      "instruments": "Z1=[1,l_t,c_t]; Z2=[1,k_t,l_(t-1),c_(t-1)]. No optional overidentification expansion. Require full estimable rank and disclose columns removed for exact collinearity.",
+      "weighting": "Pinned two-step Stata gmm behavior with winitial(unadjusted, independent), method(wrdg) gmm, optimizer gn, maxiter 10000; save effective tolerances and convergence diagnostics."
+    },
+    "numeric_settings": {
+      "OP_LP_ACF": "Nelder–Mead, evaluator d0, maximum 10000 iterations, nrtol 1e-5, simplex delta 1e-5; DFP is the one supported alternative optimizer diagnostic.",
+      "starts": "Use deterministic OLS coefficient start supplied explicitly, not the package default randomized perturbation. Registered diagnostic starts (0.3,0.7) and (0.7,0.3) for labor/capital. In non-ACF OP/LP only the capital component initializes the second stage.",
+      "Markov_polynomial": "The installed OP/LP/ACF code uses cubic lagged productivity even when poly(2) is selected. The degree-2 sensitivity therefore changes the first-stage proxy polynomial only; no claim that all nuisance stages become quadratic."
+    },
+    "bootstrap": "999 external full-process real-plant cluster draws plus the original point estimate; resample from the frozen eligible source universe, assign new bootstrap plant IDs, reconstruct exact calendar lags and refit all selected stages including OP selection. Save each draw’s parameters, prediction summaries, return code and convergence. No use of the package default five repetitions; its first loop is the original fit, so reps(999) would not mean 999 random draws. The OP cluster resample includes the authenticated risk/exit universe, including eligible risk observations outside the positive-investment production sample, and then reconstructs both samples.",
+    "required_adapter_changes": [
+      "Accept authenticated OP exit/risk evidence instead of deriving exit from the last sample observation.",
+      "Abort instead of silently disabling the required OP selection correction when the selection fit fails.",
+      "Expose a single-point-estimate path for external bootstrap and return objective/convergence/parameter/draw records.",
+      "Retain source observation membership and prediction domain; never identify plants from dummy IDs.",
+      "Assert explicit valueadded model for every method and exact method/gmm options.",
+      "Export common structural residuals separately from any proxy-based latent-productivity companions; never use unsupported Wooldridge predict,omega.",
+      "Preserve the full authenticated OP selection universe when forming estimation samples and resampling.",
+      "Record and test the effective Stata compatibility version: prodest invokes its GMM under version min(max(10,current),14.0), even on newer Stata.",
+      "Correctly bind Wooldridge starting values to the actual GMM parameter names; do not reuse the suspicious stock xb_variable from() construction without a matching parameter-map check.",
+      "Compute full-process bootstrap covariance from the saved successful draw vectors with B_success-1 denominator; verify the point estimate and interval independently instead of accepting the stock covariance summary."
+    ],
+    "implementation_gate": "The exact adapter changes above must be reviewed against this pinned source and pass meaningful arithmetic/simulation checks before any actual fit. This document pins the method; it does not claim that the adapter has been built or that the scientific inputs exist.",
+    "source_audit_finding": "Installed prodest derives exit as the final observed row before maxDate, silently drops attrition correction on selection-model failure, randomizes default starts, and counts the original fit inside reps. These behaviors are incompatible with blindly launching the previous generic G1 plan.",
+    "required_command_options": "All four commands explicitly specify valueadded, free(log_workers), state(log_real_capital), the method-specific proxy, real id() and actual t(). Assert e(model)==valueadded. Use method(op), method(lp), method(lp) acf, and method(wrdg) gmm respectively. Never rely on the package gross-output default. The required OP selection branch explicitly uses attrition; the adapter forces the selection path and asserts a successful authenticated selection receipt. Failure cannot fall through to an uncorrected fit.",
+    "prediction_contract": {
+      "common_four_method_output": "r_it=y_it-beta_L*l_it-beta_K*k_it is the common four-method log value-added production residual. It contains latent productivity plus transitory measurement/output error under the maintained model, and is labelled accordingly. Retain raw and separately centered versions; do not call it directly observed technical efficiency.",
+      "proxy_latent_companion": "A separately named proxy-based omega may be exported only where its first-stage definition is supported. For OP/LP phi is already net of beta_L*l, so omega_proxy=phi-beta_K*k; for ACF omega_proxy=phi-beta_L*l-beta_K*k. The source predict,omega path requires saved first-stage residuals and cannot be assumed available for Wooldridge, whose branch rejects fsresiduals. No fake four-method latent-omega attachment.",
+      "attachment": "Keep tfp_OP/tfp_LP/tfp_ACF/tfp_W as documented common residual aliases if required by the inherited schema, with an explicit measure_type=structural_log_VA_residual metadata field; use distinct names for supported proxy-omega companions."
+    }
+  },
+  "plan_revision": {
+    "id": "wave-foundation-v2",
+    "supersedes_boundary_of_sha256": "2c7b1536db1b9a9c3918c54da44b87549e8802bec97f9761db314c7b74651de0",
+    "scope": "Input boundary, readable code comments and hierarchical execution visibility; exact original Word request and statistical plan retained.",
+    "implementation_status": "This revision does not execute this assignment row."
+  },
+  "code_readability_and_progress_contract": {
+    "comments": "Non-executable Stata comments explain purpose, actual inputs, outputs and failure checks at file, block and subblock levels in simple Indonesian. Do not invent scientific interpretations.",
+    "runtime": "Every file, block, subblock, iteration and deepest step prints start, finish or explicit early/error outcome, x/X, percent, elapsed time and exact location; stream live and save the same log.",
+    "clock": "Date-aware native Stata wall clock, one-second resolution; preserve scientific timers and fail certification on backward clock.",
+    "semantics": "Original operative source remains exactly recoverable; verify r(), e(), _rc, conditional branches and early transfers with a constructed runtime fixture before company execution.",
+    "rerun": "A documented launcher must run the actual preparation with visible progress before declaring data prep ready."
+  },
+  "wave_input_contract": {
+    "rule": "Every company-data operand in analysis must be the single published consolidated master or a declared derivative whose entire company-data ancestry ends at that consolidated master. Direct annual-wave reads are prohibited in analysis; only the master builder may append annual waves. Raw/staged/legacy/cached final company files cannot be numerical analysis parents. A required field missing from the wave is an upstream preparation failure; never repair it by opening an external company file inside this row. Comparison-only validators may read older data but may not feed construction or estimates. External reference and metadata inputs retain explicit non-company roles.",
+    "boundary_role": "consumer",
+    "release_root": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-wave-foundation-v2",
+    "annual_paths": [
+      "data/waves/wave_2010.dta",
+      "data/waves/wave_2011.dta",
+      "data/waves/wave_2012.dta",
+      "data/waves/wave_2013.dta",
+      "data/waves/wave_2014.dta",
+      "data/waves/wave_2015.dta",
+      "data/waves/wave_2017.dta",
+      "data/waves/wave_2018.dta",
+      "data/waves/wave_2019.dta",
+      "data/waves/wave_2020.dta",
+      "data/waves/wave_2021.dta",
+      "data/waves/wave_2022.dta"
+    ],
+    "master_path": "data/analysis/G0_analysis_ready.dta",
+    "wave_count": 12,
+    "key": [
+      "source_year",
+      "source_row"
+    ],
+    "expected_rows": 33049,
+    "expected_columns": 4593,
+    "original_projection_columns": 4591,
+    "new_columns": [
+      "rd17_own_token_class",
+      "rd17_external_token_class"
+    ],
+    "root_plan": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-wave-foundation-v2/PLAN.md",
+    "root_plan_sha256": "8cc95e89c9bbc68ac6ef417d8e60cadc97c2f266553376c3c6611b22ad1ec211",
+    "input_release_status": "Not certified until actual build, value comparisons and read-boundary checks pass.",
+    "scientific_gates": "All existing field-specific, identity, unit, price, scope and source gates remain binding."
+  },
+  "execution_input_policy": {
+    "authority": "work-items/G0.5/OWNER-REQUEST.md",
+    "effective_date": "2026-09-13",
+    "role": "downstream_consumer",
+    "development_mode": "development",
+    "development_input": "data/g0-5-development/manifest.json",
+    "adapter": "harness.data_source.load_data",
+    "finalisation_mode": "actual",
+    "finalisation_input": "explicit local accepted G0; exact parent checksum required",
+    "actual_parent_sha256": "d0438798e28d67f5ac4fce3ea6a07b46630be28d88fd6cb6f17c15dc99baca08",
+    "identity_workflow": "harness/g05/EXTERNAL-WORKFLOW.md",
+    "identity_preparation_independent_of_G0_execution": true,
+    "same_analysis_code_both_modes": true,
+    "recompute_all_results_for_finalisation": true,
+    "fallback_to_historical_actual_Git_data": false,
+    "supersedes_older_planned_company_input_for_development": true,
+    "historical_source_references_retained_for_provenance": true,
+    "panel_rule": "Development accepts declared synthetic_development psid with firm-year uniqueness; actual requires verified real linkage. obs_id and annual clusters are not firm keys.",
+    "row_specific_source_and_method_gates_still_apply": true,
+    "research_execution_authorized_by_this_registration": false
+  }
+}

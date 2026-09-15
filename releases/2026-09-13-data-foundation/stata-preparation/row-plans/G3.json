@@ -1,0 +1,2792 @@
+{
+  "schema_version": 1,
+  "row_id": "G3",
+  "title": "Compare new SI 2010–2015 with the older SI data",
+  "family": "data",
+  "status": "planning_only",
+  "row_complete": false,
+  "source": {
+    "task_json": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/requests/data/03-old-new-si/task.json",
+    "docx_sha256": "027fbf675aa8001a50060561781930440ee4d9697cc790ba593452fe528edd92",
+    "locator": "word/document.xml table 1, row 6",
+    "number": "3",
+    "pic": "",
+    "completion_cell": "",
+    "request": "Ngetes apakah data SI 2010-2015 yang dari BPS sekarang sama dengan data eksisting yg kita punya (berdasarkan desc stats nya)\n",
+    "strategy": "",
+    "notes": ""
+  },
+  "question": "Does the newly supplied 2010–2015 data agree with the older data we kept?",
+  "dependencies": [
+    {
+      "id": "C_MAIN",
+      "required_for": "required source/method branch defined by exact row and graph",
+      "availability": "latest_actual_source_located_not_full_G0_DoD",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/dag/data/word_data/G0/G0_analysis_ready_ACTUAL_LOCAL.dta",
+      "gate": "Exact source hash 6fc70746e1e6a1257552d29f19885c3bf113b64c5bed7671ca8a23f5168e6a6c; G0 full acceptance before dependent execution. Every company-data operand in analysis must be the single published consolidated master or a declared derivative whose entire company-data ancestry ends at that consolidated master. Direct annual-wave reads are prohibited in analysis; only the master builder may append annual waves. Raw/staged/legacy/cached final company files cannot be numerical analysis parents. A required field missing from the wave is an upstream preparation failure; never repair it by opening an external company file inside this row. Comparison-only validators may read older data but may not feed construction or estimates. External reference and metadata inputs retain explicit non-company roles.",
+      "numerical_binding": "wave_input_contract.master_path or a declared derivative"
+    },
+    {
+      "id": "C_QA",
+      "required_for": "required source/method branch defined by exact row and graph",
+      "availability": "current_actual_G2_refresh_not_run",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/docs/CURRENT-STATE.md",
+      "gate": "G2 eligibility on exactly accepted G0; historical/synthetic receipts do not satisfy it."
+    },
+    {
+      "id": "C_OLD_VINTAGES",
+      "required_for": "required source/method branch defined by exact row and graph",
+      "availability": "old2010_2014_located_old2015_not_verified",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/docs/DEPENDENCIES.md",
+      "gate": "Obtain actual comparable vintage/frame or retain explicit unavailable/noncomparable year-variable cells."
+    },
+    {
+      "id": "C_CLASSIFICATION",
+      "required_for": "required source/method branch defined by exact row and graph",
+      "availability": "partly_documented_annual_revisions_unresolved",
+      "evidence": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/wpi-classification-evidence.md",
+      "gate": "2013/2015 KLUI 2009 evidence; other years need exact vintage; partial correspondence cannot become arbitrary averaging."
+    },
+    {
+      "id": "C_CODEBOOK",
+      "required_for": "required source/method branch defined by exact row and graph",
+      "availability": "partly_verified",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv",
+      "gate": "Each annual field has exact definition/unit/code evidence or an explicit provisional/unknown state."
+    },
+    {
+      "id": "G0",
+      "required_for": "required: accepted newsource",
+      "availability": "planned_not_accepted",
+      "evidence": "work/plans/rows/G0.json",
+      "gate": "G0 DoD and input hash acceptance; never substitute synthetic/history output Every company-data operand in analysis must be the single published consolidated master or a declared derivative whose entire company-data ancestry ends at that consolidated master. Direct annual-wave reads are prohibited in analysis; only the master builder may append annual waves. Raw/staged/legacy/cached final company files cannot be numerical analysis parents. A required field missing from the wave is an upstream preparation failure; never repair it by opening an external company file inside this row. Comparison-only validators may read older data but may not feed construction or estimates. External reference and metadata inputs retain explicit non-company roles.",
+      "numerical_binding": "wave_input_contract.master_path or a declared derivative"
+    },
+    {
+      "id": "G2",
+      "required_for": "required: quality domains and unit diagnostics",
+      "availability": "planned_not_accepted",
+      "evidence": "work/plans/rows/G2.json",
+      "gate": "G2 DoD and input hash acceptance; never substitute synthetic/history output"
+    }
+  ],
+  "decisions": [
+    {
+      "id": "G3_D01",
+      "question": "Inventory actual old and new source pairs",
+      "selected_rule": "Fictional old fixtures not allowed as actual source; bounded search absence is not proof never existed.",
+      "rationale": "Locate and hash each old annual 2010–15 file and new canonical extract; retain unavailable old 2015 and sourcepaths.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G3_D02",
+      "question": "Establish source population and sampling design",
+      "selected_rule": "No 10×sample expansion; unknown sampling design cannot be claimed representative.",
+      "rationale": "Compare thresholds, sectors, geography, active/frame/nonresponse, weights and safe-sample construction before totals/gaps.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G3_D03",
+      "question": "Pair each variable definition and unit",
+      "selected_rule": "Same variable name or similar mean is not definition proof.",
+      "rationale": "Match workers, output, VA, inputs, import values, exports/FDI and extended required variables with annual source evidence.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G3_D04",
+      "question": "Apply only verified unit harmonization",
+      "selected_rule": "Nooutput/V Aorstock/additions substitution.",
+      "rationale": "Convert Rp/Rp000 and valid quantity units without changing raw values; uncertain old units remain withheld.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G3_D05",
+      "question": "Validate vintage industry classification alignment",
+      "selected_rule": "No automatic first digits bridge across revisions; within-vintage descriptive available separately.",
+      "rationale": "Retain raw vintage class and construct common sector only where correspondence verified.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G3_D06",
+      "question": "Validate genuine within-year comparison keys",
+      "selected_rule": "Absent valid keys means aggregate-only comparison; no forced record match es.",
+      "rationale": "Check both sources for authorized common firm/establishment key; test duplicate/missing cardinality without reverse engineering masked IDs.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G3_D07",
+      "question": "Separate matched, old-only and new-only records",
+      "selected_rule": "Invalid key branch skips record matching and instead reports unsupported.",
+      "rationale": "When keys valid, outerjoin 1:1 and save observation-spell/source-membership flags; matched subset does not establish full frame equality.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G3_D08",
+      "question": "Freeze exact, rounding and substantive comparison margins",
+      "selected_rule": "Never interpret nonsignificant difference as proof same; do not choose margins after results.",
+      "rationale": "Use exact paired equality plus numeric rounding tolerance max(1 e−6, 1 e−10×max|value|) only for computational precision; substantive equivalence margin requires predeclared unit-specific meaning.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G3_D09",
+      "question": "Compute each source distribution independently",
+      "selected_rule": "Actual source summary allowed without paired universe but comparison labels remain restricted.",
+      "rationale": "Produce N, missing, zero, mean, SD, min/max and p1,p5,p25,p50,p75,p95, p99 for each compatible or unmatched source cell.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G3_D10",
+      "question": "Compute only permitted harmonized-source gaps",
+      "selected_rule": "Incompatible/unavailable cells blank not zero; source-specific summaries retained.",
+      "rationale": "Apply universe/definition/unit gates before mean, quantile and rate gaps; percentgap undefined when old baseline zero.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G3_D11",
+      "question": "Reconcile matched-record numeric changes",
+      "selected_rule": "Summary agreement without keys is never record equality.",
+      "rationale": "For valid paired keys compare observed/missing patterns, absolute/relative change and rounding classification.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G3_D12",
+      "question": "Compare accepted within-sector source distributions",
+      "selected_rule": "Raw different vintage sectors cannot stand in for harmonized sectors.",
+      "rationale": "Use verified common sector and frame gates; separate composition shift from within sector distribution differences.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G3_D13",
+      "question": "Classify every discrepancy and six-year disposition",
+      "selected_rule": "All six years appear; different safe-sample/full universe never passes full equality.",
+      "rationale": "Assign source absence, frame, definition, unit, rounding, mapping, unresolved causes with evidence and required repair.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    },
+    {
+      "id": "G3_D14",
+      "question": "Validate exact comparison scope and readable report",
+      "selected_rule": "No G3 pass claim while the exact required year/source comparison unresolved without owner revising scope.",
+      "rationale": "Reconcile all paired counts/source hashes/gates; produce independently runnable row with six-year decision table, explanation and local offline inputs configuration.",
+      "alternatives": "Keep the alternative as separately named sensitivity only after its assumptions are explicit.",
+      "sensitivity": "No silent alternate; keep alternative ID, input/code hash, denominator and explicit scope. Freeze before result inspection.",
+      "reopen_rule": "New source evidence, source/code hash change, failed numerical validation or explicit owner correction.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "G3_INPUT_CLASSIFICATIONS",
+      "state": "Authoritative code dictionaries and vintage-to-vintage correspondence rows; external input, not generated findings",
+      "grain": "source vintage × source code × target vintage × target code",
+      "keys": [
+        "source_vintage",
+        "source_code",
+        "target_vintage",
+        "target_code"
+      ],
+      "required_fields": [
+        "source_vintage",
+        "source_code",
+        "target_vintage",
+        "target_code",
+        "source_label",
+        "target_label",
+        "mapping_weight",
+        "mapping_basis",
+        "effective_year",
+        "source_hash",
+        "evidence_locator",
+        "verification_status"
+      ],
+      "units": "Identifiers and definitions are categorical; a mapping weight is a dimensionless share and a TFP value is a method/specification-specific log index.",
+      "folder": "dag/nodes/G3/G3_INPUT_CLASSIFICATIONS",
+      "planning_status": "planning_only",
+      "physical_source_contract": "Bind exact source tables from the accepted G0 classification registry. Variable labels alone are not a code-domain dictionary or correspondence. Do not execute an unsupported mapping. A one-to-many correspondence needs evidence for any numerical allocation; otherwise preserve ambiguity."
+    },
+    {
+      "id": "G3_INPUT_OLD_DEFINITIONS",
+      "state": "Old-vintage questionnaire, units, frame and code evidence",
+      "grain": "source evidence item",
+      "keys": [
+        "evidence_id"
+      ],
+      "required_fields": [
+        "evidence_id",
+        "source_vintage",
+        "source_year",
+        "field",
+        "definition",
+        "units",
+        "universe"
+      ],
+      "units": "Source-definition metadata",
+      "folder": "dag/nodes/G3/G3_INPUT_OLD_DEFINITIONS",
+      "planning_status": "external_input_not_materialized_by_plan",
+      "input_receipt": "Original document and page/sheet locator required"
+    },
+    {
+      "id": "G3_INPUT_OLD",
+      "state": "Physical original old-vintage annual data files",
+      "grain": "source vintage × year × native record",
+      "keys": [
+        "source_vintage",
+        "source_year",
+        "source_file_hash",
+        "native_row"
+      ],
+      "required_fields": [
+        "source_vintage",
+        "source_year",
+        "source_file_hash",
+        "native_row",
+        "raw_fields",
+        "raw_values"
+      ],
+      "units": "Native old-source units",
+      "folder": "dag/nodes/G3/G3_INPUT_OLD",
+      "planning_status": "upstream_annual_adapter_required_before_analysis",
+      "input_receipt": "Exact old files for requested six years; absent 2015 remains absent",
+      "numerical_binding": "Separately versioned old-vintage consolidated master after its annual wave adapter, unavailable until upstream adapter and master publication pass."
+    },
+    {
+      "id": "G3_INPUT_SEMANTICS",
+      "state": "Accepted G0 variable-year dictionary, source units and codebooks",
+      "grain": "variable × year",
+      "keys": [
+        "variable_id",
+        "source_year"
+      ],
+      "required_fields": [
+        "variable_id",
+        "source_year",
+        "source_field",
+        "source_unit",
+        "canonical_unit",
+        "universe",
+        "evidence_id",
+        "status"
+      ],
+      "units": "Definition metadata",
+      "folder": "dag/nodes/G3/G3_INPUT_SEMANTICS",
+      "planning_status": "external_input_not_materialized_by_plan",
+      "input_receipt": "G0 dictionary/rule hashes and exact source locators"
+    },
+    {
+      "id": "G3_INPUT_CANONICAL",
+      "state": "Physical accepted canonical G0 dataset with original values, companions and source states",
+      "grain": "source record × year",
+      "keys": [
+        "source_year",
+        "source_row"
+      ],
+      "required_fields": [
+        "source_year",
+        "source_row",
+        "canonical_values",
+        "verified_values",
+        "verification_states",
+        "source_presence",
+        "schema_version"
+      ],
+      "units": "Per-variable canonical dictionary; nominal and real fields remain distinct",
+      "folder": "dag/nodes/G3/G3_INPUT_CANONICAL",
+      "planning_status": "external_input_not_materialized_by_plan",
+      "input_receipt": "Require actual current wave release receipt plus this row-specific eligibility and field contracts.",
+      "numerical_binding": "wave_input_contract.master_path or a declared derivative"
+    },
+    {
+      "id": "G3_S00",
+      "state": "Frozen input manifest and available source bytes; not generated by this plan",
+      "grain": "input version manifest",
+      "keys": [
+        "source_path",
+        "sha256"
+      ],
+      "required_fields": [
+        "source_path",
+        "sha256",
+        "source_year",
+        "format",
+        "availability",
+        "privacy",
+        "definition_evidence"
+      ],
+      "units": {
+        "source_year": "calendar year",
+        "bytes": "bytes"
+      },
+      "folder": "dag/nodes/G3/G3_S00",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G3_S01",
+      "state": "Inventory actual old and new source pairs — planned output state, not materialized",
+      "grain": "source vintage × year × file",
+      "keys": [
+        "source_vintage",
+        "source_year",
+        "source_file_hash"
+      ],
+      "required_fields": [
+        "source_vintage",
+        "source_year",
+        "source_file_hash",
+        "year",
+        "vintage",
+        "path",
+        "sha256",
+        "availability"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G3/G3_S01",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G3_S02",
+      "state": "Establish source population and sampling design — planned output state, not materialized",
+      "grain": "source pair × year",
+      "keys": [
+        "source_pair_id",
+        "source_year"
+      ],
+      "required_fields": [
+        "source_pair_id",
+        "source_year",
+        "source_pair",
+        "year",
+        "population",
+        "sample_design",
+        "weights",
+        "frame_comparable"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G3/G3_S02",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G3_S03",
+      "state": "Pair each variable definition and unit — planned output state, not materialized",
+      "grain": "source pair × year × variable",
+      "keys": [
+        "source_pair_id",
+        "source_year",
+        "variable_id"
+      ],
+      "required_fields": [
+        "source_pair_id",
+        "source_year",
+        "variable_id",
+        "variable",
+        "year",
+        "old_field",
+        "new_field",
+        "concept",
+        "units",
+        "compatibility"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G3/G3_S03",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G3_S04",
+      "state": "Apply only verified unit harmonization — planned output state, not materialized",
+      "grain": "source vintage × year × record × variable",
+      "keys": [
+        "source_vintage",
+        "source_year",
+        "record_id",
+        "variable_id"
+      ],
+      "required_fields": [
+        "source_vintage",
+        "source_year",
+        "record_id",
+        "variable_id",
+        "source_pair",
+        "year",
+        "variable",
+        "native_value",
+        "harmonized_value",
+        "factor",
+        "factor_evidence"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G3/G3_S04",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G3_S05",
+      "state": "Validate vintage industry classification alignment — planned output state, not materialized",
+      "grain": "source vintage × year × record",
+      "keys": [
+        "source_vintage",
+        "source_year",
+        "record_id"
+      ],
+      "required_fields": [
+        "source_vintage",
+        "source_year",
+        "record_id",
+        "vintage",
+        "year",
+        "industry_raw",
+        "vintage_code",
+        "common_sector",
+        "ambiguity"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G3/G3_S05",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G3_S06",
+      "state": "Validate genuine within-year comparison keys — planned output state, not materialized",
+      "grain": "source vintage × year × record",
+      "keys": [
+        "source_vintage",
+        "source_year",
+        "record_id"
+      ],
+      "required_fields": [
+        "source_vintage",
+        "source_year",
+        "record_id",
+        "year",
+        "record_key",
+        "key_available",
+        "duplicate",
+        "link_eligible"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G3/G3_S06",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G3_S07",
+      "state": "Separate matched, old-only and new-only records — planned output state, not materialized",
+      "grain": "source pair × year × authenticated comparison key",
+      "keys": [
+        "source_pair_id",
+        "source_year",
+        "comparison_key"
+      ],
+      "required_fields": [
+        "source_pair_id",
+        "source_year",
+        "comparison_key",
+        "year",
+        "record_key",
+        "membership",
+        "matched",
+        "old_only",
+        "new_only"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G3/G3_S07",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G3_S08",
+      "state": "Freeze exact, rounding and substantive comparison margins — planned output state, not materialized",
+      "grain": "source pair × year × variable",
+      "keys": [
+        "source_pair_id",
+        "source_year",
+        "variable_id"
+      ],
+      "required_fields": [
+        "source_pair_id",
+        "source_year",
+        "variable_id",
+        "variable",
+        "unit",
+        "exact_rule",
+        "rounding_tolerance",
+        "substantive_margin",
+        "margin_rationale"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G3/G3_S08",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G3_S09",
+      "state": "Compute each source distribution independently — planned output state, not materialized",
+      "grain": "source vintage × year × variable × sample",
+      "keys": [
+        "source_vintage",
+        "source_year",
+        "variable_id",
+        "sample_id"
+      ],
+      "required_fields": [
+        "source_vintage",
+        "source_year",
+        "variable_id",
+        "sample_id",
+        "vintage",
+        "year",
+        "variable",
+        "N",
+        "missing",
+        "mean",
+        "sd",
+        "quantiles",
+        "unit"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G3/G3_S09",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G3_S10",
+      "state": "Compute only permitted harmonized-source gaps — planned output state, not materialized",
+      "grain": "source pair × year × variable × statistic × sample",
+      "keys": [
+        "source_pair_id",
+        "source_year",
+        "variable_id",
+        "statistic",
+        "sample_id"
+      ],
+      "required_fields": [
+        "source_pair_id",
+        "source_year",
+        "variable_id",
+        "statistic",
+        "sample_id",
+        "year",
+        "variable",
+        "new_stat",
+        "old_stat",
+        "gap",
+        "pct_gap",
+        "comparability"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G3/G3_S10",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G3_S11",
+      "state": "Reconcile matched-record numeric changes — planned output state, not materialized",
+      "grain": "source pair × year × variable × change category",
+      "keys": [
+        "source_pair_id",
+        "source_year",
+        "variable_id",
+        "change_category"
+      ],
+      "required_fields": [
+        "source_pair_id",
+        "source_year",
+        "variable_id",
+        "change_category",
+        "year",
+        "variable",
+        "paired_N",
+        "changed_N",
+        "missingness_change",
+        "numeric_category"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G3/G3_S11",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G3_S12",
+      "state": "Compare accepted within-sector source distributions — planned output state, not materialized",
+      "grain": "source pair × year × sector × variable × statistic × sample",
+      "keys": [
+        "source_pair_id",
+        "source_year",
+        "sector",
+        "variable_id",
+        "statistic",
+        "sample_id"
+      ],
+      "required_fields": [
+        "source_pair_id",
+        "source_year",
+        "sector",
+        "variable_id",
+        "statistic",
+        "sample_id",
+        "year",
+        "variable",
+        "sourceN",
+        "comparison_status"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G3/G3_S12",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G3_S13",
+      "state": "Classify every discrepancy and six-year disposition — planned output state, not materialized",
+      "grain": "source pair × year × variable × issue",
+      "keys": [
+        "source_pair_id",
+        "source_year",
+        "variable_id",
+        "issue_id"
+      ],
+      "required_fields": [
+        "source_pair_id",
+        "source_year",
+        "variable_id",
+        "issue_id",
+        "year",
+        "variable",
+        "cause",
+        "evidence",
+        "disposition",
+        "next_action"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G3/G3_S13",
+      "planning_status": "planning_only"
+    },
+    {
+      "id": "G3_S14",
+      "state": "Validate exact comparison scope and readable report — planned output state, not materialized",
+      "grain": "source pair × year × acceptance check",
+      "keys": [
+        "source_pair_id",
+        "source_year",
+        "check_id"
+      ],
+      "required_fields": [
+        "source_pair_id",
+        "source_year",
+        "check_id",
+        "six_year_status",
+        "validation",
+        "source_scope",
+        "exhibit_manifest",
+        "acceptance"
+      ],
+      "units": {
+        "money": "nominal Rp000 unless verified concept-specific deflator applied",
+        "time": "actual calendar year",
+        "count": "source records, not national weights"
+      },
+      "folder": "dag/nodes/G3/G3_S14",
+      "planning_status": "planning_only"
+    }
+  ],
+  "edges": [
+    {
+      "id": "G3_E01",
+      "title": "Inventory actual old and new source pairs",
+      "input_nodes": [
+        "G3_S00",
+        "G3_INPUT_CANONICAL",
+        "G3_INPUT_SEMANTICS",
+        "G3_INPUT_OLD"
+      ],
+      "output_nodes": [
+        "G3_S01"
+      ],
+      "depends_on": [],
+      "do_file": "rows/G3/edges/G3_E01.do",
+      "action": "Locate and hash each old annual 2010–15 file and new canonical extract; retain unavailable old 2015 and sourcepaths.",
+      "decision_ids": [
+        "G3_D01"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G3_E02",
+      "title": "Establish source population and sampling design",
+      "input_nodes": [
+        "G3_S01",
+        "G3_INPUT_OLD_DEFINITIONS"
+      ],
+      "output_nodes": [
+        "G3_S02"
+      ],
+      "depends_on": [
+        "G3_E01"
+      ],
+      "do_file": "rows/G3/edges/G3_E02.do",
+      "action": "Compare thresholds, sectors, geography, active/frame/nonresponse, weights and safe-sample construction before totals/gaps.",
+      "decision_ids": [
+        "G3_D02"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G3_E03",
+      "title": "Pair each variable definition and unit",
+      "input_nodes": [
+        "G3_S02",
+        "G3_INPUT_OLD_DEFINITIONS",
+        "G3_INPUT_SEMANTICS"
+      ],
+      "output_nodes": [
+        "G3_S03"
+      ],
+      "depends_on": [
+        "G3_E02"
+      ],
+      "do_file": "rows/G3/edges/G3_E03.do",
+      "action": "Match workers, output, VA, inputs, import values, exports/FDI and extended required variables with annual source evidence.",
+      "decision_ids": [
+        "G3_D03"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G3_E04",
+      "title": "Apply only verified unit harmonization",
+      "input_nodes": [
+        "G3_S03",
+        "G3_INPUT_CANONICAL",
+        "G3_INPUT_OLD"
+      ],
+      "output_nodes": [
+        "G3_S04"
+      ],
+      "depends_on": [
+        "G3_E03"
+      ],
+      "do_file": "rows/G3/edges/G3_E04.do",
+      "action": "Convert Rp/Rp000 and valid quantity units without changing raw values; uncertain old units remain withheld.",
+      "decision_ids": [
+        "G3_D04"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G3_E05",
+      "title": "Validate vintage industry classification alignment",
+      "input_nodes": [
+        "G3_S03",
+        "G3_INPUT_CANONICAL",
+        "G3_INPUT_OLD",
+        "G3_INPUT_OLD_DEFINITIONS",
+        "G3_INPUT_SEMANTICS",
+        "G3_INPUT_CLASSIFICATIONS"
+      ],
+      "output_nodes": [
+        "G3_S05"
+      ],
+      "depends_on": [
+        "G3_E03"
+      ],
+      "do_file": "rows/G3/edges/G3_E05.do",
+      "action": "Retain raw vintage class and construct common sector only where correspondence verified.",
+      "decision_ids": [
+        "G3_D05"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G3_E06",
+      "title": "Validate genuine within-year comparison keys",
+      "input_nodes": [
+        "G3_S02",
+        "G3_INPUT_CANONICAL",
+        "G3_INPUT_OLD"
+      ],
+      "output_nodes": [
+        "G3_S06"
+      ],
+      "depends_on": [
+        "G3_E02"
+      ],
+      "do_file": "rows/G3/edges/G3_E06.do",
+      "action": "Check both sources for authorized common firm/establishment key; test duplicate/missing cardinality without reverse engineering masked IDs.",
+      "decision_ids": [
+        "G3_D06"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G3_E07",
+      "title": "Separate matched, old-only and new-only records",
+      "input_nodes": [
+        "G3_S06"
+      ],
+      "output_nodes": [
+        "G3_S07"
+      ],
+      "depends_on": [
+        "G3_E06"
+      ],
+      "do_file": "rows/G3/edges/G3_E07.do",
+      "action": "When keys valid, outerjoin 1:1 and save observation-spell/source-membership flags; matched subset does not establish full frame equality.",
+      "decision_ids": [
+        "G3_D07"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G3_E08",
+      "title": "Freeze exact, rounding and substantive comparison margins",
+      "input_nodes": [
+        "G3_S04"
+      ],
+      "output_nodes": [
+        "G3_S08"
+      ],
+      "depends_on": [
+        "G3_E04"
+      ],
+      "do_file": "rows/G3/edges/G3_E08.do",
+      "action": "Freeze computational equality checks using max(1e-6,1e-10*max(abs(old),abs(new))) only as numerical round-off tolerance. Primary substantive results are descriptive differences. Do not run an equivalence hypothesis without a pre-result plan amendment specifying a meaningful margin.",
+      "decision_ids": [
+        "G3_D08"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G3_E09",
+      "title": "Compute each source distribution independently",
+      "input_nodes": [
+        "G3_S04",
+        "G3_S08"
+      ],
+      "output_nodes": [
+        "G3_S09"
+      ],
+      "depends_on": [
+        "G3_E04",
+        "G3_E08"
+      ],
+      "do_file": "rows/G3/edges/G3_E09.do",
+      "action": "Produce N, missing, zero, mean, SD, min/max and p1,p5,p25,p50,p75,p95, p99 for each compatible or unmatched source cell.",
+      "decision_ids": [
+        "G3_D09"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G3_E10",
+      "title": "Compute only permitted harmonized-source gaps",
+      "input_nodes": [
+        "G3_S09",
+        "G3_S02"
+      ],
+      "output_nodes": [
+        "G3_S10"
+      ],
+      "depends_on": [
+        "G3_E09",
+        "G3_E02"
+      ],
+      "do_file": "rows/G3/edges/G3_E10.do",
+      "action": "Apply universe/definition/unit gates before mean, quantile and rate gaps; percentgap undefined when old baseline zero.",
+      "decision_ids": [
+        "G3_D10"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G3_E11",
+      "title": "Reconcile matched-record numeric changes",
+      "input_nodes": [
+        "G3_S07",
+        "G3_S04",
+        "G3_S08"
+      ],
+      "output_nodes": [
+        "G3_S11"
+      ],
+      "depends_on": [
+        "G3_E07",
+        "G3_E04",
+        "G3_E08"
+      ],
+      "do_file": "rows/G3/edges/G3_E11.do",
+      "action": "For valid paired keys compare observed/missing patterns, absolute/relative change and rounding classification.",
+      "decision_ids": [
+        "G3_D11"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G3_E12",
+      "title": "Compare accepted within-sector source distributions",
+      "input_nodes": [
+        "G3_S05",
+        "G3_S10",
+        "G3_S04",
+        "G3_S08"
+      ],
+      "output_nodes": [
+        "G3_S12"
+      ],
+      "depends_on": [
+        "G3_E05",
+        "G3_E10",
+        "G3_E04",
+        "G3_E08"
+      ],
+      "do_file": "rows/G3/edges/G3_E12.do",
+      "action": "Use verified common sector and frame gates; separate composition shift from within sector distribution differences. Recompute each within-sector distribution from harmonized micro-records and the accepted classification link; aggregate source-wide summaries cannot recover sector distributions.",
+      "decision_ids": [
+        "G3_D12"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G3_E13",
+      "title": "Classify every discrepancy and six-year disposition",
+      "input_nodes": [
+        "G3_S10",
+        "G3_S11",
+        "G3_S12"
+      ],
+      "output_nodes": [
+        "G3_S13"
+      ],
+      "depends_on": [
+        "G3_E10",
+        "G3_E11",
+        "G3_E12"
+      ],
+      "do_file": "rows/G3/edges/G3_E13.do",
+      "action": "Assign source absence, frame, definition, unit, rounding, mapping, unresolved causes with evidence and required repair.",
+      "decision_ids": [
+        "G3_D13"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    },
+    {
+      "id": "G3_E14",
+      "title": "Validate exact comparison scope and readable report",
+      "input_nodes": [
+        "G3_S13"
+      ],
+      "output_nodes": [
+        "G3_S14"
+      ],
+      "depends_on": [
+        "G3_E13"
+      ],
+      "do_file": "rows/G3/edges/G3_E14.do",
+      "action": "Reconcile all paired counts/source hashes/gates; produce independently runnable row with six-year decision table, explanation and local offline inputs configuration.",
+      "decision_ids": [
+        "G3_D14"
+      ],
+      "validation": [
+        "Key uniqueness/cardinality matches output grain; count losses reconciled to input.",
+        "No source overwrite; unit/domain/missing-state rules applied exactly; annual 2016 absence explicit.",
+        "Save input/code/decision hashes, Stata success marker and full-precision table receipt.",
+        "Assert the declared output key is unique; all declared key fields exist.",
+        "Save input/output hashes, source counts, units and branch status; a metadata receipt cannot replace numeric input bytes."
+      ],
+      "failure_behavior": "Return nonzero for required branch; preserve failed evidence and mark dependent states unavailable, never fill fabricated values.",
+      "input_boundary": "wave_input_contract"
+    }
+  ],
+  "primary_do": "rows/G3/G3.do",
+  "execution_order": [
+    "G3_E01",
+    "G3_E02",
+    "G3_E03",
+    "G3_E04",
+    "G3_E05",
+    "G3_E06",
+    "G3_E07",
+    "G3_E08",
+    "G3_E09",
+    "G3_E10",
+    "G3_E11",
+    "G3_E12",
+    "G3_E13",
+    "G3_E14"
+  ],
+  "entrypoint_contract": {
+    "inputs": [
+      "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/dag/data/word_data/G0/G0_analysis_ready_ACTUAL_LOCAL.dta",
+      "frozen all 44-row plan registry",
+      "G3 input/source/variable contracts"
+    ],
+    "outputs": [
+      "outputs/G3/tables/",
+      "outputs/G3/figures/",
+      "outputs/G3/G3.tex",
+      "outputs/G3/G3.pdf",
+      "outputs/G3/acceptance.json"
+    ],
+    "logs": [
+      "dag/logs/G3/primary.log",
+      "dag/logs/G3/edge_id.log"
+    ],
+    "restart": "Resume only from a passed immutable node whose input/code/decision hashes still match. Keep failed attempts. Primary returns nonzero on a mandatory unfulfilled gate; diagnostic output never passes the row.",
+    "offline_dependencies": [
+      "Stata17+ with compatible maxvar",
+      "local input manifest",
+      "frozen local source dictionaries/concordances",
+      "vendored documented estimator ado only when needed",
+      "Python for validation/custom charts/LaTeX rendering only",
+      "XeLaTeX and local fonts; no network required by offline bundle"
+    ],
+    "estimated_cost_basis": "No timing promised from file names. Inventory rows/columns and RAM/free disk before launch; start one bounded validation path; one Stata worker unless manager coordinates resource-safe parallel work. Package-relative row entry point is primary interface; optional master never forces blocked rows."
+  },
+  "exhibits": [
+    {
+      "id": "G3-X01",
+      "kind": "table",
+      "priority": "core",
+      "title": "Six years and their actual source availability",
+      "question": "Six years and their actual source availability?",
+      "source_nodes": [
+        "G3_S01"
+      ],
+      "fields": [
+        "source_year",
+        "category",
+        "N_category",
+        "N_denominator",
+        "share_percent",
+        "status"
+      ],
+      "formula_or_specification": "Count available and missing old/new source files for each of the six requested years.",
+      "units": "records and percent",
+      "sample_and_denominator": "The twelve required vintage-year source slots; additional files are listed but do not substitute for a missing slot.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "The comparison can cover only the years for which both required sources actually exist.",
+      "limits": "Old 2015 currentlyunverified; old full annual and new safe samples different universes; no 10×expansion or nonsignificance-as-equivalence.",
+      "prerequisites": "G0/G2 accepted; actual old source available; paired/universe/concept gates as named.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G3/exhibits/G3-X01.tex",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "The comparison can cover only the years for which both required sources actually exist.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G3-X02",
+      "kind": "table",
+      "priority": "core",
+      "title": "Old and new file hashes and vintages",
+      "question": "Old and new file hashes and vintages?",
+      "source_nodes": [
+        "G3_S01"
+      ],
+      "fields": [
+        "cell_id",
+        "source_year",
+        "N_source",
+        "N_eligible",
+        "result",
+        "unit",
+        "status"
+      ],
+      "formula_or_specification": "Record each old/new original file path, SHA256, byte size, year and supplied version.",
+      "units": "definition or acceptance status; no economic magnitude",
+      "sample_and_denominator": "Every named item in the frozen source/method/check registry, including unavailable items.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "File identity prevents an old result from being confused with a newer extract.",
+      "limits": "Old 2015 currentlyunverified; old full annual and new safe samples different universes; no 10×expansion or nonsignificance-as-equivalence.",
+      "prerequisites": "G0/G2 accepted; actual old source available; paired/universe/concept gates as named.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G3/exhibits/G3-X02.tex",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "File identity prevents an old result from being confused with a newer extract.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G3-X03",
+      "kind": "diagram",
+      "priority": "core",
+      "title": "When is a vintage comparison meaningful?",
+      "question": "When is a vintage comparison meaningful??",
+      "source_nodes": [
+        "G3_S02"
+      ],
+      "fields": [
+        "cell_id",
+        "source_year",
+        "N_source",
+        "N_eligible",
+        "result",
+        "unit",
+        "status"
+      ],
+      "formula_or_specification": "A comparison requires compatible economic concept, unit, population/frame and—when paired—authenticated record key.",
+      "units": "definition or acceptance status; no economic magnitude",
+      "sample_and_denominator": "Every named item in the frozen source/method/check registry, including unavailable items.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "A difference between two extracts is informative only after we know what each extract represents.",
+      "limits": "Old 2015 currentlyunverified; old full annual and new safe samples different universes; no 10×expansion or nonsignificance-as-equivalence.",
+      "prerequisites": "G0/G2 accepted; actual old source available; paired/universe/concept gates as named.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G3/exhibits/G3-X03.pdf",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "A difference between two extracts is informative only after we know what each extract represents.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G3-X04",
+      "kind": "table",
+      "priority": "core",
+      "title": "Sample, frame and coverage differences",
+      "question": "Sample, frame and coverage differences?",
+      "source_nodes": [
+        "G3_S02"
+      ],
+      "fields": [
+        "cell_id",
+        "source_year",
+        "N_source",
+        "N_eligible",
+        "result",
+        "unit",
+        "status"
+      ],
+      "formula_or_specification": "Compare survey universe, extract selection and verified weights by source-year; no tenfold expansion of the safe sample.",
+      "units": "definition or acceptance status; no economic magnitude",
+      "sample_and_denominator": "Every named item in the frozen source/method/check registry, including unavailable items.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "Different coverage can change a summary even if every overlapping factory has exactly the same value.",
+      "limits": "Old 2015 currentlyunverified; old full annual and new safe samples different universes; no 10×expansion or nonsignificance-as-equivalence.",
+      "prerequisites": "G0/G2 accepted; actual old source available; paired/universe/concept gates as named.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G3/exhibits/G3-X04.tex",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "Different coverage can change a summary even if every overlapping factory has exactly the same value.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G3-X05",
+      "kind": "chart",
+      "priority": "core",
+      "title": "Record counts by source and year",
+      "question": "Record counts by source and year?",
+      "source_nodes": [
+        "G3_S09"
+      ],
+      "fields": [
+        "source_year",
+        "category",
+        "N_category",
+        "N_denominator",
+        "share_percent",
+        "status"
+      ],
+      "formula_or_specification": "Count distinct source records independently by vintage and year.",
+      "units": "records and percent",
+      "sample_and_denominator": "Each full supplied vintage-year file; duplicates are diagnosed separately and not silently removed.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "The chart describes extract sizes, not the number of factories in the country.",
+      "limits": "Old 2015 currentlyunverified; old full annual and new safe samples different universes; no 10×expansion or nonsignificance-as-equivalence.",
+      "prerequisites": "G0/G2 accepted; actual old source available; paired/universe/concept gates as named.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G3/exhibits/G3-X05.pdf",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "The chart describes extract sizes, not the number of factories in the country.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G3-X06",
+      "kind": "chart",
+      "priority": "core",
+      "title": "Variable availability by source",
+      "question": "Variable availability by source?",
+      "source_nodes": [
+        "G3_S09"
+      ],
+      "fields": [
+        "source_year",
+        "category",
+        "N_category",
+        "N_denominator",
+        "share_percent",
+        "status"
+      ],
+      "formula_or_specification": "Observed(variable,vintage,year)/N_source(vintage,year)*100; distinguish absent column from missing response.",
+      "units": "records and percent",
+      "sample_and_denominator": "All source records in each vintage-year.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "Better coverage means more usable responses in that extract, not necessarily a change in the economy.",
+      "limits": "Old 2015 currentlyunverified; old full annual and new safe samples different universes; no 10×expansion or nonsignificance-as-equivalence.",
+      "prerequisites": "G0/G2 accepted; actual old source available; paired/universe/concept gates as named.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G3/exhibits/G3-X06.pdf",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "Better coverage means more usable responses in that extract, not necessarily a change in the economy.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G3-X07",
+      "kind": "table",
+      "priority": "core",
+      "title": "Definition and unit compatibility",
+      "question": "Definition and unit compatibility?",
+      "source_nodes": [
+        "G3_S03"
+      ],
+      "fields": [
+        "cell_id",
+        "source_year",
+        "N_source",
+        "N_eligible",
+        "result",
+        "unit",
+        "status"
+      ],
+      "formula_or_specification": "List old field, new field, question, universe, unit, price basis and compatible/conditional/incompatible status.",
+      "units": "definition or acceptance status; no economic magnitude",
+      "sample_and_denominator": "Every named item in the frozen source/method/check registry, including unavailable items.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "The same-looking column names can encode different concepts, while different names can represent the same concept.",
+      "limits": "Old 2015 currentlyunverified; old full annual and new safe samples different universes; no 10×expansion or nonsignificance-as-equivalence.",
+      "prerequisites": "G0/G2 accepted; actual old source available; paired/universe/concept gates as named.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G3/exhibits/G3-X07.tex",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "The same-looking column names can encode different concepts, while different names can represent the same concept.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G3-X08",
+      "kind": "table",
+      "priority": "core",
+      "title": "Permitted unit conversions",
+      "question": "Permitted unit conversions?",
+      "source_nodes": [
+        "G3_S04"
+      ],
+      "fields": [
+        "cell_id",
+        "source_year",
+        "N_source",
+        "N_eligible",
+        "result",
+        "unit",
+        "status"
+      ],
+      "formula_or_specification": "For each accepted conversion record target_value=native_value*verified_factor with source precision and factor evidence.",
+      "units": "definition or acceptance status; no economic magnitude",
+      "sample_and_denominator": "Every named item in the frozen source/method/check registry, including unavailable items.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "Only documented scale changes are harmonized; an unexplained difference is kept for investigation.",
+      "limits": "Old 2015 currentlyunverified; old full annual and new safe samples different universes; no 10×expansion or nonsignificance-as-equivalence.",
+      "prerequisites": "G0/G2 accepted; actual old source available; paired/universe/concept gates as named.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G3/exhibits/G3-X08.tex",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "Only documented scale changes are harmonized; an unexplained difference is kept for investigation.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G3-X09",
+      "kind": "table",
+      "priority": "diagnostic",
+      "title": "Industry-code revisions and match coverage",
+      "question": "Industry-code revisions and match coverage?",
+      "source_nodes": [
+        "G3_S05"
+      ],
+      "fields": [
+        "source_year",
+        "category",
+        "N_category",
+        "N_denominator",
+        "share_percent",
+        "status"
+      ],
+      "formula_or_specification": "Count records with same-vintage valid, verified harmonized, ambiguous or unmapped industry code.",
+      "units": "records and percent",
+      "sample_and_denominator": "Every source record by vintage-year; no deterministic allocation for unsupported one-to-many mappings.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "Industry differences may reflect a classification revision rather than factories changing activity.",
+      "limits": "Old 2015 currentlyunverified; old full annual and new safe samples different universes; no 10×expansion or nonsignificance-as-equivalence.",
+      "prerequisites": "G0/G2 accepted; actual old source available; paired/universe/concept gates as named.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G3/exhibits/G3-X09.tex",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "Industry differences may reflect a classification revision rather than factories changing activity.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G3-X10",
+      "kind": "table",
+      "priority": "diagnostic",
+      "title": "Validity of shared record keys",
+      "question": "Validity of shared record keys?",
+      "source_nodes": [
+        "G3_S06"
+      ],
+      "fields": [
+        "source_year",
+        "category",
+        "N_category",
+        "N_denominator",
+        "share_percent",
+        "status"
+      ],
+      "formula_or_specification": "Count missing keys, duplicate keys, authenticated unique keys and prohibited dummy/masked keys.",
+      "units": "records and percent",
+      "sample_and_denominator": "Every source record in each vintage-year.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "A shared row number is not evidence that two rows describe the same factory.",
+      "limits": "Old 2015 currentlyunverified; old full annual and new safe samples different universes; no 10×expansion or nonsignificance-as-equivalence.",
+      "prerequisites": "G0/G2 accepted; actual old source available; paired/universe/concept gates as named.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G3/exhibits/G3-X10.tex",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "A shared row number is not evidence that two rows describe the same factory.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G3-X11",
+      "kind": "chart",
+      "priority": "diagnostic",
+      "title": "Matched, old-only and new-only records",
+      "question": "Matched, old-only and new-only records?",
+      "source_nodes": [
+        "G3_S07"
+      ],
+      "fields": [
+        "source_year",
+        "category",
+        "N_category",
+        "N_denominator",
+        "share_percent",
+        "status"
+      ],
+      "formula_or_specification": "N_old=N_matched+N_old_only; N_new=N_matched+N_new_only; preserve genuine unmatched membership.",
+      "units": "records and percent",
+      "sample_and_denominator": "Authenticated same-year cross-vintage key union; unavailable keys make this exhibit unsupported.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "The overlap separates changes among the same factories from changes in who appears in each extract.",
+      "limits": "Old 2015 currentlyunverified; old full annual and new safe samples different universes; no 10×expansion or nonsignificance-as-equivalence.",
+      "prerequisites": "G0/G2 accepted; actual old source available; paired/universe/concept gates as named.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G3/exhibits/G3-X11.pdf",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "The overlap separates changes among the same factories from changes in who appears in each extract.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G3-X12",
+      "kind": "table",
+      "priority": "diagnostic",
+      "title": "Equality, rounding and equivalence rules",
+      "question": "Equality, rounding and equivalence rules?",
+      "source_nodes": [
+        "G3_S08"
+      ],
+      "fields": [
+        "cell_id",
+        "source_year",
+        "N_source",
+        "N_eligible",
+        "result",
+        "unit",
+        "status"
+      ],
+      "formula_or_specification": "Numerical round-off tolerance=max(1e-6,1e-10*max(abs(old),abs(new))); no substantive equivalence hypothesis is registered.",
+      "units": "definition or acceptance status; no economic magnitude",
+      "sample_and_denominator": "Every named item in the frozen source/method/check registry, including unavailable items.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "Passing a numerical equality check means values match within rounding tolerance; it does not prove two populations are economically equivalent.",
+      "limits": "Old 2015 currentlyunverified; old full annual and new safe samples different universes; no 10×expansion or nonsignificance-as-equivalence.",
+      "prerequisites": "G0/G2 accepted; actual old source available; paired/universe/concept gates as named.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G3/exhibits/G3-X12.tex",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "Passing a numerical equality check means values match within rounding tolerance; it does not prove two populations are economically equivalent.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G3-X13",
+      "kind": "chart",
+      "priority": "diagnostic",
+      "title": "Workers: source distributions",
+      "question": "Workers: source distributions?",
+      "source_nodes": [
+        "G3_S09"
+      ],
+      "fields": [
+        "source_year",
+        "variable_id",
+        "grouping_id",
+        "group_value",
+        "N_source",
+        "N_eligible",
+        "mean",
+        "sd",
+        "min",
+        "p1",
+        "p5",
+        "p25",
+        "p50",
+        "p75",
+        "p95",
+        "p99",
+        "max",
+        "status"
+      ],
+      "formula_or_specification": "For workers by vintage and year: N, mean=sum(x)/N, sample SD=sqrt(sum((x-mean)^2)/(N-1)), min, P1/P5/P25/P50/P75/P95/P99, max; retain zero/negative/missing counts.",
+      "units": "persons",
+      "sample_and_denominator": "Each vintage’s valid worker observations, with separate N and common-frame status.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "The median describes the middle observed factory; a source-wide gap can include differences in sample composition.",
+      "limits": "Old 2015 currentlyunverified; old full annual and new safe samples different universes; no 10×expansion or nonsignificance-as-equivalence.",
+      "prerequisites": "G0/G2 accepted; actual old source available; paired/universe/concept gates as named.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G3/exhibits/G3-X13.pdf",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "The median describes the middle observed factory; a source-wide gap can include differences in sample composition.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G3-X14",
+      "kind": "chart",
+      "priority": "diagnostic",
+      "title": "Output: source distributions",
+      "question": "Output: source distributions?",
+      "source_nodes": [
+        "G3_S09"
+      ],
+      "fields": [
+        "source_year",
+        "variable_id",
+        "grouping_id",
+        "group_value",
+        "N_source",
+        "N_eligible",
+        "mean",
+        "sd",
+        "min",
+        "p1",
+        "p5",
+        "p25",
+        "p50",
+        "p75",
+        "p95",
+        "p99",
+        "max",
+        "status"
+      ],
+      "formula_or_specification": "For harmonized nominal output by vintage and year: N, mean=sum(x)/N, sample SD=sqrt(sum((x-mean)^2)/(N-1)), min, P1/P5/P25/P50/P75/P95/P99, max; retain zero/negative/missing counts.",
+      "units": "nominal Rp000",
+      "sample_and_denominator": "Verified same-year same-concept output values; keep source-specific and common-frame samples separate.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "The comparison asks whether the extracts describe similarly sized output values, not whether real output grew.",
+      "limits": "Old 2015 currentlyunverified; old full annual and new safe samples different universes; no 10×expansion or nonsignificance-as-equivalence.",
+      "prerequisites": "G0/G2 accepted; actual old source available; paired/universe/concept gates as named.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G3/exhibits/G3-X14.pdf",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "The comparison asks whether the extracts describe similarly sized output values, not whether real output grew.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G3-X15",
+      "kind": "chart",
+      "priority": "diagnostic",
+      "title": "Value added and input distributions",
+      "question": "Value added and input distributions?",
+      "source_nodes": [
+        "G3_S09"
+      ],
+      "fields": [
+        "source_year",
+        "variable_id",
+        "grouping_id",
+        "group_value",
+        "N_source",
+        "N_eligible",
+        "mean",
+        "sd",
+        "min",
+        "p1",
+        "p5",
+        "p25",
+        "p50",
+        "p75",
+        "p95",
+        "p99",
+        "max",
+        "status"
+      ],
+      "formula_or_specification": "For harmonized value added and intermediate inputs in separate panels: N, mean=sum(x)/N, sample SD=sqrt(sum((x-mean)^2)/(N-1)), min, P1/P5/P25/P50/P75/P95/P99, max; retain zero/negative/missing counts.",
+      "units": "nominal Rp000",
+      "sample_and_denominator": "Valid same-year comparable concepts; signed value added remains visible where economically admissible.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "Value added and inputs are kept separate because a source may revise one without revising the other.",
+      "limits": "Old 2015 currentlyunverified; old full annual and new safe samples different universes; no 10×expansion or nonsignificance-as-equivalence.",
+      "prerequisites": "G0/G2 accepted; actual old source available; paired/universe/concept gates as named.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G3/exhibits/G3-X15.pdf",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "Value added and inputs are kept separate because a source may revise one without revising the other.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G3-X16",
+      "kind": "chart",
+      "priority": "diagnostic",
+      "title": "Imported-material value distributions",
+      "question": "Imported-material value distributions?",
+      "source_nodes": [
+        "G3_S09"
+      ],
+      "fields": [
+        "source_year",
+        "variable_id",
+        "grouping_id",
+        "group_value",
+        "N_source",
+        "N_eligible",
+        "mean",
+        "sd",
+        "min",
+        "p1",
+        "p5",
+        "p25",
+        "p50",
+        "p75",
+        "p95",
+        "p99",
+        "max",
+        "status"
+      ],
+      "formula_or_specification": "For harmonized imported-material value by vintage and year: N, mean=sum(x)/N, sample SD=sqrt(sum((x-mean)^2)/(N-1)), min, P1/P5/P25/P50/P75/P95/P99, max; retain zero/negative/missing counts.",
+      "units": "nominal Rp000",
+      "sample_and_denominator": "Comparable imported-material concept only; known zero and missing-response counts reported.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "A lower imported-material distribution can reflect different factories or different definitions as well as different values.",
+      "limits": "Old 2015 currentlyunverified; old full annual and new safe samples different universes; no 10×expansion or nonsignificance-as-equivalence.",
+      "prerequisites": "G0/G2 accepted; actual old source available; paired/universe/concept gates as named.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G3/exhibits/G3-X16.pdf",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "A lower imported-material distribution can reflect different factories or different definitions as well as different values.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G3-X17",
+      "kind": "chart",
+      "priority": "diagnostic",
+      "title": "Export and FDI rate comparability",
+      "question": "Export and FDI rate comparability?",
+      "source_nodes": [
+        "G3_S10"
+      ],
+      "fields": [
+        "cell_id",
+        "source_year",
+        "N_source",
+        "N_eligible",
+        "result",
+        "unit",
+        "status"
+      ],
+      "formula_or_specification": "Rate_gap=100*(yes_new/known_new-yes_old/known_old) for separately verified export-any, any-foreign and FDI10 definitions.",
+      "units": "percentage points",
+      "sample_and_denominator": "Each source’s verified known-response universe within comparable vintage-year definitions; show both denominators and unknown shares.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "A five-point gap means five more yes responses per hundred known answers, not five percent more exporting factories nationwide.",
+      "limits": "Old 2015 currentlyunverified; old full annual and new safe samples different universes; no 10×expansion or nonsignificance-as-equivalence.",
+      "prerequisites": "G0/G2 accepted; actual old source available; paired/universe/concept gates as named.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G3/exhibits/G3-X17.pdf",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "A five-point gap means five more yes responses per hundred known answers, not five percent more exporting factories nationwide.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G3-X18",
+      "kind": "chart",
+      "priority": "diagnostic",
+      "title": "Median and tail gaps on comparable cells",
+      "question": "Median and tail gaps on comparable cells?",
+      "source_nodes": [
+        "G3_S10"
+      ],
+      "fields": [
+        "cell_id",
+        "source_year",
+        "N_source",
+        "N_eligible",
+        "result",
+        "unit",
+        "status"
+      ],
+      "formula_or_specification": "For each comparable variable/year compute new_stat-old_stat for mean, P50, P90, P95 and P99; percent gap only when old_stat!=0.",
+      "units": "variable-specific units; percent only in a separate clearly labelled panel",
+      "sample_and_denominator": "Same-concept same-unit source summaries, with explicit common-frame eligibility.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "A median gap and a tail gap reveal whether differences are concentrated among typical or unusually large observations.",
+      "limits": "Old 2015 currentlyunverified; old full annual and new safe samples different universes; no 10×expansion or nonsignificance-as-equivalence.",
+      "prerequisites": "G0/G2 accepted; actual old source available; paired/universe/concept gates as named.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G3/exhibits/G3-X18.pdf",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "A median gap and a tail gap reveal whether differences are concentrated among typical or unusually large observations.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G3-X19",
+      "kind": "table",
+      "priority": "diagnostic",
+      "title": "Matched missingness and value changes",
+      "question": "Matched missingness and value changes?",
+      "source_nodes": [
+        "G3_S11"
+      ],
+      "fields": [
+        "source_year",
+        "category",
+        "N_category",
+        "N_denominator",
+        "share_percent",
+        "status"
+      ],
+      "formula_or_specification": "On authenticated matched records partition both missing, old-only missing, new-only missing, equal within tolerance and changed known values.",
+      "units": "records and percent",
+      "sample_and_denominator": "Matched source-year records for each comparable variable.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "This comparison holds the factory set fixed and shows whether its recorded information changed.",
+      "limits": "Old 2015 currentlyunverified; old full annual and new safe samples different universes; no 10×expansion or nonsignificance-as-equivalence.",
+      "prerequisites": "G0/G2 accepted; actual old source available; paired/universe/concept gates as named.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G3/exhibits/G3-X19.tex",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "This comparison holds the factory set fixed and shows whether its recorded information changed.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G3-X20",
+      "kind": "chart",
+      "priority": "diagnostic",
+      "title": "Within-sector comparisons where valid",
+      "question": "Within-sector comparisons where valid?",
+      "source_nodes": [
+        "G3_S12"
+      ],
+      "fields": [
+        "cell_id",
+        "source_year",
+        "N_source",
+        "N_eligible",
+        "result",
+        "unit",
+        "status"
+      ],
+      "formula_or_specification": "Recompute source-specific mean/median/P95 within every accepted common industry; report new-old and each source N.",
+      "units": "variable-specific units by panel",
+      "sample_and_denominator": "Verified harmonized industries and same-concept variables; ambiguous classifications excluded with an explicit coverage table.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "Within-industry comparisons reduce one source of composition difference but do not establish identical factories or selection.",
+      "limits": "Old 2015 currentlyunverified; old full annual and new safe samples different universes; no 10×expansion or nonsignificance-as-equivalence.",
+      "prerequisites": "G0/G2 accepted; actual old source available; paired/universe/concept gates as named.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G3/exhibits/G3-X20.pdf",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "Within-industry comparisons reduce one source of composition difference but do not establish identical factories or selection.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G3-X21",
+      "kind": "table",
+      "priority": "diagnostic",
+      "title": "Discrepancies sorted by verified cause",
+      "question": "Discrepancies sorted by verified cause?",
+      "source_nodes": [
+        "G3_S13"
+      ],
+      "fields": [
+        "source_year",
+        "category",
+        "N_category",
+        "N_denominator",
+        "share_percent",
+        "status"
+      ],
+      "formula_or_specification": "Count discrepancy cells by evidence-backed cause: units, definitions, coverage, classification, values, unresolved; retain multiple linked causes where justified.",
+      "units": "records and percent",
+      "sample_and_denominator": "Every flagged source-pair × year × variable issue; issue counts are not counts of distinct factories.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "The ledger distinguishes explained differences from differences still needing evidence.",
+      "limits": "Old 2015 currentlyunverified; old full annual and new safe samples different universes; no 10×expansion or nonsignificance-as-equivalence.",
+      "prerequisites": "G0/G2 accepted; actual old source available; paired/universe/concept gates as named.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G3/exhibits/G3-X21.tex",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "The ledger distinguishes explained differences from differences still needing evidence.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G3-X22",
+      "kind": "table",
+      "priority": "diagnostic",
+      "title": "What old 2015 absence prevents",
+      "question": "What old 2015 absence prevents?",
+      "source_nodes": [
+        "G3_S13"
+      ],
+      "fields": [
+        "cell_id",
+        "source_year",
+        "N_source",
+        "N_eligible",
+        "result",
+        "unit",
+        "status"
+      ],
+      "formula_or_specification": "For 2015 mark unavailable old-source pair and enumerate every requested comparison it blocks; no imputed old file.",
+      "units": "definition or acceptance status; no economic magnitude",
+      "sample_and_denominator": "Every named item in the frozen source/method/check registry, including unavailable items.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "A missing old extract prevents a comparison; a blank result is not evidence that the sources agree.",
+      "limits": "Old 2015 currentlyunverified; old full annual and new safe samples different universes; no 10×expansion or nonsignificance-as-equivalence.",
+      "prerequisites": "G0/G2 accepted; actual old source available; paired/universe/concept gates as named.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G3/exhibits/G3-X22.tex",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "A missing old extract prevents a comparison; a blank result is not evidence that the sources agree.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G3-X23",
+      "kind": "table",
+      "priority": "diagnostic",
+      "title": "Same-universe sensitivity versus full extracts",
+      "question": "Same-universe sensitivity versus full extracts?",
+      "source_nodes": [
+        "G3_S10"
+      ],
+      "fields": [
+        "cell_id",
+        "source_year",
+        "N_source",
+        "N_eligible",
+        "result",
+        "unit",
+        "status"
+      ],
+      "formula_or_specification": "Repeat registered source contrasts in the verified common-frame subset and report their difference from full-extract contrasts.",
+      "units": "variable units or percentage points according to the named contrast",
+      "sample_and_denominator": "Only a source-proven common universe; authentic matched-record subset is a separate narrower target, not an automatic common-frame proxy.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "If the contrast changes after aligning coverage, sample composition explains part of the original gap.",
+      "limits": "Old 2015 currentlyunverified; old full annual and new safe samples different universes; no 10×expansion or nonsignificance-as-equivalence.",
+      "prerequisites": "G0/G2 accepted; actual old source available; paired/universe/concept gates as named.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G3/exhibits/G3-X23.tex",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "If the contrast changes after aligning coverage, sample composition explains part of the original gap.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    },
+    {
+      "id": "G3-X24",
+      "kind": "table",
+      "priority": "diagnostic",
+      "title": "Six-year release recommendation and DoD",
+      "question": "Six-year release recommendation and DoD?",
+      "source_nodes": [
+        "G3_S14"
+      ],
+      "fields": [
+        "cell_id",
+        "source_year",
+        "N_source",
+        "N_eligible",
+        "result",
+        "unit",
+        "status"
+      ],
+      "formula_or_specification": "For all six years map source availability, comparability, key validity, numeric checks and unresolved required items to release status.",
+      "units": "definition or acceptance status; no economic magnitude",
+      "sample_and_denominator": "Every named item in the frozen source/method/check registry, including unavailable items.",
+      "uncertainty": "Exact descriptive summaries of the observed extract; no sampling confidence interval is claimed. Quantile bars show dispersion, not estimation uncertainty.",
+      "interpretation": "The recommendation states which comparisons can be used and which requested years still lack the necessary evidence.",
+      "limits": "Old 2015 currentlyunverified; old full annual and new safe samples different universes; no 10×expansion or nonsignificance-as-equivalence.",
+      "prerequisites": "G0/G2 accepted; actual old source available; paired/universe/concept gates as named.",
+      "acceptance": [
+        "Every displayed cell traces to a Stata aggregate key/hash and stated source scope.",
+        "Axis/table labels show unit, year, denominator and observed/unavailable status.",
+        "The caption states a concrete finding only after execution; planned exhibit never implies a numerical result."
+      ],
+      "filename": "outputs/G3/exhibits/G3-X24.tex",
+      "reader_sequence": [
+        "Ask the everyday question in the title.",
+        "The recommendation states which comparisons can be used and which requested years still lack the necessary evidence.",
+        "Show the formula and define every symbol next to it.",
+        "Name the population, units, eligible N and unknown states.",
+        "State the main numerical finding only after calculation, then state the limit."
+      ]
+    }
+  ],
+  "latex_outline": [
+    {
+      "h1": "What are we trying to learn?",
+      "lead_question": "Start with the actual question and the data we can observe.",
+      "h2": [
+        {
+          "title": "Six years and their actual source availability",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Six years and their actual source availability?",
+              "exhibit_ids": [
+                "G3-X01"
+              ],
+              "formula": "Count available and missing old/new source files for each of the six requested years.",
+              "reader_explanation": "The comparison can cover only the years for which both required sources actually exist."
+            }
+          ]
+        },
+        {
+          "title": "Old and new file hashes and vintages",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Old and new file hashes and vintages?",
+              "exhibit_ids": [
+                "G3-X02"
+              ],
+              "formula": "Record each old/new original file path, SHA256, byte size, year and supplied version.",
+              "reader_explanation": "File identity prevents an old result from being confused with a newer extract."
+            }
+          ]
+        },
+        {
+          "title": "When is a vintage comparison meaningful?",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "When is a vintage comparison meaningful??",
+              "exhibit_ids": [
+                "G3-X03"
+              ],
+              "formula": "A comparison requires compatible economic concept, unit, population/frame and—when paired—authenticated record key.",
+              "reader_explanation": "A difference between two extracts is informative only after we know what each extract represents."
+            }
+          ]
+        },
+        {
+          "title": "Sample, frame and coverage differences",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Sample, frame and coverage differences?",
+              "exhibit_ids": [
+                "G3-X04"
+              ],
+              "formula": "Compare survey universe, extract selection and verified weights by source-year; no tenfold expansion of the safe sample.",
+              "reader_explanation": "Different coverage can change a summary even if every overlapping factory has exactly the same value."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "h1": "What can the data support?",
+      "lead_question": "Show coverage, definitions and denominators before comparisons.",
+      "h2": [
+        {
+          "title": "Record counts by source and year",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Record counts by source and year?",
+              "exhibit_ids": [
+                "G3-X05"
+              ],
+              "formula": "Count distinct source records independently by vintage and year.",
+              "reader_explanation": "The chart describes extract sizes, not the number of factories in the country."
+            }
+          ]
+        },
+        {
+          "title": "Variable availability by source",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Variable availability by source?",
+              "exhibit_ids": [
+                "G3-X06"
+              ],
+              "formula": "Observed(variable,vintage,year)/N_source(vintage,year)*100; distinguish absent column from missing response.",
+              "reader_explanation": "Better coverage means more usable responses in that extract, not necessarily a change in the economy."
+            }
+          ]
+        },
+        {
+          "title": "Definition and unit compatibility",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Definition and unit compatibility?",
+              "exhibit_ids": [
+                "G3-X07"
+              ],
+              "formula": "List old field, new field, question, universe, unit, price basis and compatible/conditional/incompatible status.",
+              "reader_explanation": "The same-looking column names can encode different concepts, while different names can represent the same concept."
+            }
+          ]
+        },
+        {
+          "title": "Permitted unit conversions",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Permitted unit conversions?",
+              "exhibit_ids": [
+                "G3-X08"
+              ],
+              "formula": "For each accepted conversion record target_value=native_value*verified_factor with source precision and factor evidence.",
+              "reader_explanation": "Only documented scale changes are harmonized; an unexplained difference is kept for investigation."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "h1": "What do the main results mean?",
+      "lead_question": "Explain the results in plain language after valid execution.",
+      "h2": [
+        {
+          "title": "Industry-code revisions and match coverage",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Industry-code revisions and match coverage?",
+              "exhibit_ids": [
+                "G3-X09"
+              ],
+              "formula": "Count records with same-vintage valid, verified harmonized, ambiguous or unmapped industry code.",
+              "reader_explanation": "Industry differences may reflect a classification revision rather than factories changing activity."
+            }
+          ]
+        },
+        {
+          "title": "Validity of shared record keys",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Validity of shared record keys?",
+              "exhibit_ids": [
+                "G3-X10"
+              ],
+              "formula": "Count missing keys, duplicate keys, authenticated unique keys and prohibited dummy/masked keys.",
+              "reader_explanation": "A shared row number is not evidence that two rows describe the same factory."
+            }
+          ]
+        },
+        {
+          "title": "Matched, old-only and new-only records",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Matched, old-only and new-only records?",
+              "exhibit_ids": [
+                "G3-X11"
+              ],
+              "formula": "N_old=N_matched+N_old_only; N_new=N_matched+N_new_only; preserve genuine unmatched membership.",
+              "reader_explanation": "The overlap separates changes among the same factories from changes in who appears in each extract."
+            }
+          ]
+        },
+        {
+          "title": "Equality, rounding and equivalence rules",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Equality, rounding and equivalence rules?",
+              "exhibit_ids": [
+                "G3-X12"
+              ],
+              "formula": "Numerical round-off tolerance=max(1e-6,1e-10*max(abs(old),abs(new))); no substantive equivalence hypothesis is registered.",
+              "reader_explanation": "Passing a numerical equality check means values match within rounding tolerance; it does not prove two populations are economically equivalent."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "h1": "What changes under alternative choices?",
+      "lead_question": "Separate legitimate sensitivity from primary definition.",
+      "h2": [
+        {
+          "title": "Workers: source distributions",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Workers: source distributions?",
+              "exhibit_ids": [
+                "G3-X13"
+              ],
+              "formula": "For workers by vintage and year: N, mean=sum(x)/N, sample SD=sqrt(sum((x-mean)^2)/(N-1)), min, P1/P5/P25/P50/P75/P95/P99, max; retain zero/negative/missing counts.",
+              "reader_explanation": "The median describes the middle observed factory; a source-wide gap can include differences in sample composition."
+            }
+          ]
+        },
+        {
+          "title": "Output: source distributions",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Output: source distributions?",
+              "exhibit_ids": [
+                "G3-X14"
+              ],
+              "formula": "For harmonized nominal output by vintage and year: N, mean=sum(x)/N, sample SD=sqrt(sum((x-mean)^2)/(N-1)), min, P1/P5/P25/P50/P75/P95/P99, max; retain zero/negative/missing counts.",
+              "reader_explanation": "The comparison asks whether the extracts describe similarly sized output values, not whether real output grew."
+            }
+          ]
+        },
+        {
+          "title": "Value added and input distributions",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Value added and input distributions?",
+              "exhibit_ids": [
+                "G3-X15"
+              ],
+              "formula": "For harmonized value added and intermediate inputs in separate panels: N, mean=sum(x)/N, sample SD=sqrt(sum((x-mean)^2)/(N-1)), min, P1/P5/P25/P50/P75/P95/P99, max; retain zero/negative/missing counts.",
+              "reader_explanation": "Value added and inputs are kept separate because a source may revise one without revising the other."
+            }
+          ]
+        },
+        {
+          "title": "Imported-material value distributions",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Imported-material value distributions?",
+              "exhibit_ids": [
+                "G3-X16"
+              ],
+              "formula": "For harmonized imported-material value by vintage and year: N, mean=sum(x)/N, sample SD=sqrt(sum((x-mean)^2)/(N-1)), min, P1/P5/P25/P50/P75/P95/P99, max; retain zero/negative/missing counts.",
+              "reader_explanation": "A lower imported-material distribution can reflect different factories or different definitions as well as different values."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "h1": "What remains unavailable or uncertain?",
+      "lead_question": "Keep unsupported source branches and interpretation limits visible.",
+      "h2": [
+        {
+          "title": "Export and FDI rate comparability",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Export and FDI rate comparability?",
+              "exhibit_ids": [
+                "G3-X17"
+              ],
+              "formula": "Rate_gap=100*(yes_new/known_new-yes_old/known_old) for separately verified export-any, any-foreign and FDI10 definitions.",
+              "reader_explanation": "A five-point gap means five more yes responses per hundred known answers, not five percent more exporting factories nationwide."
+            }
+          ]
+        },
+        {
+          "title": "Median and tail gaps on comparable cells",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Median and tail gaps on comparable cells?",
+              "exhibit_ids": [
+                "G3-X18"
+              ],
+              "formula": "For each comparable variable/year compute new_stat-old_stat for mean, P50, P90, P95 and P99; percent gap only when old_stat!=0.",
+              "reader_explanation": "A median gap and a tail gap reveal whether differences are concentrated among typical or unusually large observations."
+            }
+          ]
+        },
+        {
+          "title": "Matched missingness and value changes",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Matched missingness and value changes?",
+              "exhibit_ids": [
+                "G3-X19"
+              ],
+              "formula": "On authenticated matched records partition both missing, old-only missing, new-only missing, equal within tolerance and changed known values.",
+              "reader_explanation": "This comparison holds the factory set fixed and shows whether its recorded information changed."
+            }
+          ]
+        },
+        {
+          "title": "Within-sector comparisons where valid",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Within-sector comparisons where valid?",
+              "exhibit_ids": [
+                "G3-X20"
+              ],
+              "formula": "Recompute source-specific mean/median/P95 within every accepted common industry; report new-old and each source N.",
+              "reader_explanation": "Within-industry comparisons reduce one source of composition difference but do not establish identical factories or selection."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "h1": "Can another colleague reproduce and accept this row?",
+      "lead_question": "End with audit able source-to-result path and exact completion checks.",
+      "h2": [
+        {
+          "title": "Discrepancies sorted by verified cause",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Discrepancies sorted by verified cause?",
+              "exhibit_ids": [
+                "G3-X21"
+              ],
+              "formula": "Count discrepancy cells by evidence-backed cause: units, definitions, coverage, classification, values, unresolved; retain multiple linked causes where justified.",
+              "reader_explanation": "The ledger distinguishes explained differences from differences still needing evidence."
+            }
+          ]
+        },
+        {
+          "title": "What old 2015 absence prevents",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "What old 2015 absence prevents?",
+              "exhibit_ids": [
+                "G3-X22"
+              ],
+              "formula": "For 2015 mark unavailable old-source pair and enumerate every requested comparison it blocks; no imputed old file.",
+              "reader_explanation": "A missing old extract prevents a comparison; a blank result is not evidence that the sources agree."
+            }
+          ]
+        },
+        {
+          "title": "Same-universe sensitivity versus full extracts",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Same-universe sensitivity versus full extracts?",
+              "exhibit_ids": [
+                "G3-X23"
+              ],
+              "formula": "Repeat registered source contrasts in the verified common-frame subset and report their difference from full-extract contrasts.",
+              "reader_explanation": "If the contrast changes after aligning coverage, sample composition explains part of the original gap."
+            }
+          ]
+        },
+        {
+          "title": "Six-year release recommendation and DoD",
+          "h3": [
+            {
+              "title": "Intuition, calculation and meaning",
+              "purpose": "Six-year release recommendation and DoD?",
+              "exhibit_ids": [
+                "G3-X24"
+              ],
+              "formula": "For all six years map source availability, comparability, key validity, numeric checks and unresolved required items to release status.",
+              "reader_explanation": "The recommendation states which comparisons can be used and which requested years still lack the necessary evidence."
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "definition_of_done": {
+    "repository_minimum_checks": [
+      "Exactly six requested years represented as comparable, unavailable or noncomparable; never hide the missing old-2015 case.",
+      "Same-universe and same-definition checks precede numerical comparison; retain both source hashes and harmonization decisions.",
+      "When matched, reconcile matched/add/drop counts and verify join cardinality.",
+      "When unmatched, do not claim firm-level equality; retain weighting/design limitations and preregistered tolerances.",
+      "Display all six requested years; old2015 remains missing until actually sourced. A different sample/population is explicitly non-comparable for equality."
+    ],
+    "operational_checks": [
+      {
+        "id": "G3-Q01",
+        "criterion": "All six years and comparability gates explicit",
+        "evidence_artifact": "G3/six_year_acceptance.csv",
+        "pass_rule": "2010–15 allrepresented; unsupported paired/full-universe claims zero; allhashes and cardinality controls verified.",
+        "blocking": true
+      },
+      {
+        "id": "G3-Q02",
+        "criterion": "Precision distinguishable from substantive sameness",
+        "evidence_artifact": "G3/tolerance_registry.csv",
+        "pass_rule": "Predefined numeric rule; no equivalence claim without substantive margin and adequate comparable data.",
+        "blocking": true
+      },
+      {
+        "id": "G3-PLAN-GATE",
+        "criterion": "Global upfront planning freeze",
+        "evidence_artifact": "work/plans/FREEZE.json",
+        "pass_rule": "All 44 plans pass root validation and root records the freeze; no analytical execution before freeze.",
+        "blocking": true
+      },
+      {
+        "id": "G3-SOURCE-TEXT",
+        "criterion": "Original request versus manager additions clearly separated",
+        "evidence_artifact": "outputs/G3/source_to_exhibit.csv",
+        "pass_rule": "Exact source.request/strategy/notes/number/PIC/completion unchanged; repository minimum checks labelled repository-authored, not DOC X quotation.",
+        "blocking": true
+      },
+      {
+        "id": "G3-OFFLINE",
+        "criterion": "Independent row entrypoint with nested modules",
+        "evidence_artifact": "outputs/G3/offline_replication.json",
+        "pass_rule": "Runrows/G3/G3.do from clean configured local environment without master; same full precision numeric results; all local dependencies documented.",
+        "blocking": true
+      },
+      {
+        "id": "G3-READER",
+        "criterion": "Every required report section has meaning and formula",
+        "evidence_artifact": "outputs/G3/reader_review.md",
+        "pass_rule": "Every H 1/H 2/H 3 sectionstatesquestion, intuition, equation and symbols, visual/table, plain meaning and limit; reviewer can explain without code.",
+        "blocking": true
+      },
+      {
+        "id": "G3-WAVE-BOUNDARY",
+        "criterion": "All company analysis descends from the single published consolidated master.",
+        "evidence_artifact": "analysis-input-lineage.json",
+        "pass_rule": "Every company-data operand in analysis must be the single published consolidated master or a declared derivative whose entire company-data ancestry ends at that consolidated master. Direct annual-wave reads are prohibited in analysis; only the master builder may append annual waves. Raw/staged/legacy/cached final company files cannot be numerical analysis parents. A required field missing from the wave is an upstream preparation failure; never repair it by opening an external company file inside this row. Comparison-only validators may read older data but may not feed construction or estimates. External reference and metadata inputs retain explicit non-company roles.",
+        "blocking": true
+      },
+      {
+        "id": "G3-READABLE-EXECUTION",
+        "criterion": "Readable non-executable comments and verified live progress at every nesting level.",
+        "evidence_artifact": "code-comments-and-progress-review.json",
+        "pass_rule": "Meet code_readability_and_progress_contract without changing the statistical results or control flow.",
+        "blocking": true
+      }
+    ],
+    "reader_gate": "An intelligent lay reader can state the question, what was counted/compared, each equation symbol, finding and limit without consulting code. Each section follows intuition → formula with every symbol → visual/table → plain meaning → boundary.",
+    "visual_gate": "Use custom vector charts from saved full-precision Stata aggregates, professional restrained publication typography, direct labels, meaningful color, clear units, visible missing 2016 gap, robust legends and notes. No default Stata graph in final delivery. Inspect every PDF page at reading size for overlap/clipping and all captions/axis labels. Distribution intervals are never labelled confidence intervals.",
+    "numerical_gate": "Independently recompute control counts/formulas against frozen aggregates/source receipts, exact categorical reconciliations, finite domains, and displayed rounding. Every chart/table value has a source table key/hash. No analytic calculations in for matting Python.",
+    "source_scope_gate": "The exact DOCX row and every repository minimum check must be satisfied on the declared actual data scope. Source absence remains a blocker where necessary; a readable PDF, synthetic passing run or existing column does not waive real-panel/WPI/source requirements."
+  },
+  "current_blockers": [
+    {
+      "id": "G3-B01",
+      "blocks": "Actual six-year equality",
+      "reason": "Old 2015 notverified; old 2010–14 and new extracts differ in their universe.",
+      "evidence": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/docs/DEPENDENCIES.md",
+      "resolution": "Obtainold 2015 andpairedsame-universe extracts or actual sampling design; otherwise exact comparison remains blocked.",
+      "next_unblocked_action": "Prepare exact source pair and comparability registry with six years."
+    }
+  ],
+  "references": [
+    {
+      "title": "Exact Deasy source row",
+      "locator": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/requests/data/03-old-new-si/SOURCE.md",
+      "purpose": "Original request; blank completion and PIC preserved",
+      "verified_status": "read exact task.json/source fields"
+    },
+    {
+      "title": "Latest actual local G0",
+      "locator": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/HANDOFF.md",
+      "purpose": "Current 3, 824-column source boundary; supersedes historical 3, 793-column file",
+      "verified_status": "fresh exact DTA metadata/hash confirmed"
+    },
+    {
+      "title": "Annual variable mapping evidence",
+      "locator": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/.worktrees/g0-row-pr-20260910/data/private/g0-real-20260910/report/evidence/variable_year_rules.csv",
+      "purpose": "Separate verified annual semantics from parsed/provisional mappings",
+      "verified_status": "read; completeness not asserted"
+    },
+    {
+      "title": "Full source authored minimum checks",
+      "locator": "/Users/natanaelmassie/Downloads/1014-deasy-imed-si-new-data-paper/requests/data/03-old-new-si/task.json",
+      "purpose": "Repository definition of done is notan original Word quotation; preserved exactly in plan",
+      "verified_status": "read and copied exactly"
+    }
+  ],
+  "review": {
+    "planning_review": "root_independent_review_fixed; final_global_consistency_pending",
+    "execution_review": "not_started",
+    "numerical_review": "not_started",
+    "visual_review": "not_started",
+    "exhibit_review": "Each of 24 exhibits now has a computation, unit, denominator, uncertainty rule and substantive reader explanation. Numerical and visual output review still required after execution.",
+    "final_independent_pass": "Narrow source/cardinality repairs applied; no empirical execution. See work/plans/reviews/G0-G7-final-review.json."
+  },
+  "rationale": "Differences in sampling universe, units or definitions can look like data errors.",
+  "scope": "Exactly six requested years; compare only compatible vintage cells; old 2015 not fabricated.",
+  "unit_of_analysis": "Vintage×year×variable; within-year matched records only if genuine common key exists.",
+  "target_estimands": [
+    {
+      "name": "Within-year vintage difference",
+      "formula": "\\Delta_{vy}=\\bar X^{new}_{vy}-\\bar X^{old}_{vy}",
+      "symbols": {
+        "v": "same verified variable",
+        "y": "same calendar year",
+        "barX": "mean on explicit compatible universe",
+        "new/old": "named source vintages"
+      },
+      "interpretation": "Show how much the same quantity differs between sources.",
+      "limits": "No equality claim if frames/definitions differ; nonsignificance is not equivalence."
+    }
+  ],
+  "comparison_protocol": {
+    "primary": "Descriptive same-concept distribution differences and exact paired-value comparisons where keys/universes are valid",
+    "computational_tolerance": "max(1e-6,1e-10*max(abs(old),abs(new))) for round-off checks only; physical source precision documented separately",
+    "percent_difference": "100*(new-old)/old only if old!=0; otherwise undefined with an explicit status",
+    "substantive_equivalence": "Not in this execution grid. A scientifically meaningful unit-specific equivalence margin requires a pre-result amended plan; nonsignificance is never equality.",
+    "sample_population": "No tenfold expansion of the new safe sample and no population comparison without verified common frames/weights."
+  },
+  "dataflow_protocol": {
+    "input_integrity": "Physical source data and source-definition evidence are separate declared inputs. Pin both before transforming a value.",
+    "join_keys": "Never merge by row order. Use declared keys and assert intended 1:1, m:1 or explicitly weighted 1:m cardinality; record unmatched and duplicate rows.",
+    "source_rows": "source_year/source_row identifies a row within the frozen canonical source family, not a longitudinal plant. If another source family is added, source_file_hash is part of the raw key until the canonical manifest proves uniqueness.",
+    "branch_status": "Each branch produces either a validated state or a typed unsupported receipt with the missing prerequisite. Unsupported receipts are not numeric datasets and cannot satisfy a required input gate.",
+    "missing_states": "Source absence, inapplicable questionnaire universe, parse failure, unknown unit, masked identifier, observed zero and valid positive/negative values remain distinguishable.",
+    "downstream_gate": "Only a passed input contract may unlock its dependent statistical branch. Publishing a diagnostic about a blocked branch does not complete the Word row."
+  },
+  "plan_revision": {
+    "id": "wave-foundation-v2",
+    "supersedes_boundary_of_sha256": "03a6adbd9ccd977a142b1a2eb4fee5a60872ae487646c32871d121211c7e9049",
+    "scope": "Input boundary, readable code comments and hierarchical execution visibility; exact original Word request and statistical plan retained.",
+    "implementation_status": "This revision does not execute this assignment row."
+  },
+  "code_readability_and_progress_contract": {
+    "comments": "Non-executable Stata comments explain purpose, actual inputs, outputs and failure checks at file, block and subblock levels in simple Indonesian. Do not invent scientific interpretations.",
+    "runtime": "Every file, block, subblock, iteration and deepest step prints start, finish or explicit early/error outcome, x/X, percent, elapsed time and exact location; stream live and save the same log.",
+    "clock": "Date-aware native Stata wall clock, one-second resolution; preserve scientific timers and fail certification on backward clock.",
+    "semantics": "Original operative source remains exactly recoverable; verify r(), e(), _rc, conditional branches and early transfers with a constructed runtime fixture before company execution.",
+    "rerun": "A documented launcher must run the actual preparation with visible progress before declaring data prep ready."
+  },
+  "wave_input_contract": {
+    "rule": "Every company-data operand in analysis must be the single published consolidated master or a declared derivative whose entire company-data ancestry ends at that consolidated master. Direct annual-wave reads are prohibited in analysis; only the master builder may append annual waves. Raw/staged/legacy/cached final company files cannot be numerical analysis parents. A required field missing from the wave is an upstream preparation failure; never repair it by opening an external company file inside this row. Comparison-only validators may read older data but may not feed construction or estimates. External reference and metadata inputs retain explicit non-company roles.",
+    "boundary_role": "consumer",
+    "release_root": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-wave-foundation-v2",
+    "annual_paths": [
+      "data/waves/wave_2010.dta",
+      "data/waves/wave_2011.dta",
+      "data/waves/wave_2012.dta",
+      "data/waves/wave_2013.dta",
+      "data/waves/wave_2014.dta",
+      "data/waves/wave_2015.dta",
+      "data/waves/wave_2017.dta",
+      "data/waves/wave_2018.dta",
+      "data/waves/wave_2019.dta",
+      "data/waves/wave_2020.dta",
+      "data/waves/wave_2021.dta",
+      "data/waves/wave_2022.dta"
+    ],
+    "master_path": "data/analysis/G0_analysis_ready.dta",
+    "wave_count": 12,
+    "key": [
+      "source_year",
+      "source_row"
+    ],
+    "expected_rows": 33049,
+    "expected_columns": 4593,
+    "original_projection_columns": 4591,
+    "new_columns": [
+      "rd17_own_token_class",
+      "rd17_external_token_class"
+    ],
+    "root_plan": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-wave-foundation-v2/PLAN.md",
+    "root_plan_sha256": "8cc95e89c9bbc68ac6ef417d8e60cadc97c2f266553376c3c6611b22ad1ec211",
+    "input_release_status": "Not certified until actual build, value comparisons and read-boundary checks pass.",
+    "scientific_gates": "All existing field-specific, identity, unit, price, scope and source gates remain binding.",
+    "old_vintage": "Historical-vintage company data must first pass its own versioned upstream annual adapter and consolidated master publication before comparative analysis. Comparison-only tests may inspect historical witnesses without feeding estimates. Building additional vintage adapters is not part of this G0 repair."
+  },
+  "execution_input_policy": {
+    "authority": "work-items/G0.5/OWNER-REQUEST.md",
+    "effective_date": "2026-09-13",
+    "role": "downstream_consumer",
+    "development_mode": "development",
+    "development_input": "data/g0-5-development/manifest.json",
+    "adapter": "harness.data_source.load_data",
+    "finalisation_mode": "actual",
+    "finalisation_input": "explicit local accepted G0; exact parent checksum required",
+    "actual_parent_sha256": "d0438798e28d67f5ac4fce3ea6a07b46630be28d88fd6cb6f17c15dc99baca08",
+    "identity_workflow": "harness/g05/EXTERNAL-WORKFLOW.md",
+    "identity_preparation_independent_of_G0_execution": true,
+    "same_analysis_code_both_modes": true,
+    "recompute_all_results_for_finalisation": true,
+    "fallback_to_historical_actual_Git_data": false,
+    "supersedes_older_planned_company_input_for_development": true,
+    "historical_source_references_retained_for_provenance": true,
+    "panel_rule": "Development accepts declared synthetic_development psid with firm-year uniqueness; actual requires verified real linkage. obs_id and annual clusters are not firm keys.",
+    "row_specific_source_and_method_gates_still_apply": true,
+    "research_execution_authorized_by_this_registration": false
+  }
+}
