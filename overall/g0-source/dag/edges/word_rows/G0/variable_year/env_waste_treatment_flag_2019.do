@@ -1,0 +1,28 @@
+* Tujuan: Untuk 2019, kolom sumber env_waste_treatment_flag tidak tersedia pada metode tahun ini; nilai dibiarkan kosong dengan status 4. // WFDOC-INJECTED
+* Input: Kolom yang dimuat launcher code/leaves/mapped/env_waste_treatment_flag_2019.do dari data/intermediate/raw_wave_2019.dta // WFDOC-INJECTED
+* Output: dag/data/word_data/G0/variable_year/N_G0_env_waste_treatment_flag_2019.dta // WFDOC-INJECTED
+* Jika perintah atau syarat berhenti dengan error, hasil belum selesai; cek pesan error dan baris terakhir di log. // WFDOC-INJECTED
+* N_G0_env_waste_treatment_flag_2019: annual staged raw state -> env_waste_treatment_flag at source_year/source_row.
+* Evidence: 2020 BPS questionnaire reproduction Q225; 2021 Lampung PDF p88 Q225; 2022 Sumbar PDF p68 Q209. inspli: 7=present, 8=not yet present. 2021 installation versus 2022 treatment wording retained in evidence.
+log using "$VYL/N_G0_env_waste_treatment_flag_2019.log", text replace name(vycell)
+* Mulai env_waste_treatment_flag sebagai nilai kosong; vs_env_waste_treatment_flag mulai dari kode 4. Baris berikut menerapkan aturan sumber tahun 2019. // WFDOC-INJECTED
+generate double env_waste_treatment_flag=.
+generate byte vs_env_waste_treatment_flag=4
+* Hitung berapa baris env_waste_treatment_flag yang terisi; hitungan berikut mencatat nol/status lalu post menulis ringkasan tanpa mengubah baris data. // WFDOC-INJECTED
+quietly count if !missing(env_waste_treatment_flag)
+local obs=r(N)
+quietly count if env_waste_treatment_flag==0
+local zeros=r(N)
+quietly count if inlist(vs_env_waste_treatment_flag,5,6,8)
+local bad=r(N)
+quietly count if vs_env_waste_treatment_flag==4
+local absent=r(N)
+post cell (2019) ("env_waste_treatment_flag") (_N) (`obs') (`zeros') (`bad') (`absent')
+* Simpan hanya source_year/source_row, env_waste_treatment_flag, status, dan kolom sumber yang diminta; isid lalu save satu hasil variabel/tahun, restore memulihkan data kerja. // WFDOC-INJECTED
+preserve
+keep source_year source_row env_waste_treatment_flag vs_env_waste_treatment_flag
+isid source_year source_row
+save "$VYD/N_G0_env_waste_treatment_flag_2019.dta", replace
+restore
+display "VARIABLE_YEAR_PASS N_G0_env_waste_treatment_flag_2019"
+log close vycell
