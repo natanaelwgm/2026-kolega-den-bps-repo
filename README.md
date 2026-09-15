@@ -14,6 +14,8 @@ The supported demo launch path was developed on macOS/Stata SE 17. Dependencies 
 
 See the **[DAG index](docs/DAG-INDEX.md)** for full G0 and G1 graphs and G0.5 node/edge contracts.
 
+The **[execution cascade](docs/RUN-CASCADE.md)** lists each child do-file called by `00_MASTER.do`, the helper scripts, and the separate full G0 reconstruction.
+
 ## Choose the work
 
 In `demo/00_MASTER.do`, set `RUN_TO` to `g0`, `g05`, or `g1`. Default `g1` uses the complete supplied development panel. For your own annual Excel/DTA files, choose `RUN_INPUT "custom"` and edit `demo/01_INPUTS.do`. `RUN_FULL_MASTER 0` retains every row and the G1 analytical columns; use `1` to retain the full 4,396-column master in the final G1 file, with higher disk needs. Sensitivity runs and bootstrap repetitions are optional and off in the quick demo.
