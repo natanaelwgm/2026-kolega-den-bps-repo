@@ -39,7 +39,7 @@ def audit(stage):
   for x in old:
    p=R/'corrections/reports'/Path(x['path']).name;actual=schema(p)
    # Core exporter intentionally formats all numeric fields to 17 digits in memory only.
-   assert actual==x['schema'],f'aggregate schema mismatch {p.name}';assert value_labels(p)==value_labels(x['path']),p.name;c=p.with_suffix('.csv');assert c.exists()
+   assert actual==x['schema'],f'aggregate schema mismatch {p.name}';assert value_labels(p)==value_labels(O/'corrections/reports'/Path(x['path']).name),p.name;c=p.with_suffix('.csv');assert c.exists()
    reports.append({**rec(p),'csv_path':str(c.relative_to(R)),'csv_sha256':sha(c),'csv_bytes':c.stat().st_size})
   rt=list(csv.DictReader((R/'corrections/reports/csv_roundtrip_validation.csv').open()))
   assert len(rt)==30 and all(x['different_cells']=='0' and x['roundtrip_pass']=='1' and x['all_keys_exact']=='1' for x in rt)

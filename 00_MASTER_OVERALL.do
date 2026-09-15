@@ -15,6 +15,7 @@ global OVERALL_OUTPUT "$OVERALL_REPO/../kolega-overall-runs"
 global OVERALL_RAW_ZIP "$OVERALL_REPO/inputs/raw/Deasy-Imed-17-Raw-Inputs-20260915.zip"
 global OVERALL_WITNESS "$OVERALL_REPO/g0-original"
 global OVERALL_PYTHON "python3"
+global OVERALL_PREPARE_REUSE ""
 global OVERALL_SEED 20260913
 global OVERALL_SENSITIVITY 1
 global OVERALL_BOOTSTRAP 1
@@ -25,7 +26,7 @@ global RUN_PYTHON "$OVERALL_PYTHON"
 do "$RUN_HOME/code/live_progress.do"
 demo_progress "OVERALL 0" "PREPARE: raw sources and complete G0 code"
 tempfile prepared
-demo_shell "$OVERALL_PYTHON" "$OVERALL_REPO/overall/scripts/overall.py" prepare "$OVERALL_OUTPUT" "$OVERALL_RAW_ZIP" "$OVERALL_WITNESS" "`prepared'"
+demo_shell "$OVERALL_PYTHON" "$OVERALL_REPO/overall/scripts/overall.py" prepare "$OVERALL_OUTPUT" "$OVERALL_RAW_ZIP" "$OVERALL_WITNESS" "`prepared'" "$OVERALL_PREPARE_REUSE"
 if $DEMO_HELPER_RC!=0 exit $DEMO_HELPER_RC
 confirm file "`prepared'"
 do "`prepared'"

@@ -2,6 +2,8 @@
 
 Private coauthor workspace. This repository collects the data foundation, development panel, nominal production-function estimation, source inputs, outputs and review documents in one place. Source code and review text live on `main`; complete datasets and retained results are attached to the **[data release](https://github.com/natanaelwgm/2026-kolega-den-bps-repo/releases/tag/g0-g05-g1-2026-09-15)** in this same private repository.
 
+A separate **[full raw-to-G1 overall master](docs/OVERALL-RUN.md)** is now present at `00_MASTER_OVERALL.do`. Its end-to-end verification is still in progress; the instructions below describe the previously tested fast demo.
+
 ## Start here
 
 1. Clone this repository using your authorized GitHub account (`gh repo clone natanaelwgm/2026-kolega-den-bps-repo`).

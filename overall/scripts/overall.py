@@ -14,11 +14,21 @@ def quote(s):
  s=str(s)
  if any(c in s for c in ['"','`','$','\n','\r']):raise ValueError('Use paths without Stata metacharacters')
  return '"'+s+'"'
-def prepare(output,rawzip,witness,reply):
+def prepare(output,rawzip,witness,reply,reuse=""):
  output=Path(output).resolve();output.mkdir(parents=True,exist_ok=True)
  if shutil.disk_usage(output).free<30*1024**3:raise ValueError('Fresh all-stage run needs 30 GiB free on its output volume')
- run=output/(datetime.datetime.now().strftime('%Y%m%d-%H%M%S')+'-'+uuid.uuid4().hex[:6]);run.mkdir()
- foundation=run/'G0-wave-foundation-v2';foundation.mkdir();template=ROOT/'overall/g0-source'
+ if reuse:
+  run=Path(reuse).resolve()
+  if run.parent!=output:raise ValueError('Preparation retry must be a direct child of this output folder')
+  marker=run/'PREPARATION.json'
+  if not marker.exists() or json.loads(marker.read_text()).get('source_root')!=str(ROOT):raise ValueError('Preparation retry lacks ownership receipt')
+  if (run/'overall.json').exists() or (run/'OVERALL_COMPLETE.json').exists():raise ValueError('Cannot retry preparation after analytical execution was enabled')
+  if list((run/'G0-rebuild/dag/data/staged').glob('sample_mfg*_raw.dta')):raise ValueError('Preparation retry found staged analytical input; inspect before reuse')
+  print('PREPARE | retrying unstarted preparation; all witnesses reverified and code rebound',flush=True)
+ else:
+  run=output/(datetime.datetime.now().strftime('%Y%m%d-%H%M%S')+'-'+uuid.uuid4().hex[:6]);run.mkdir()
+ write(run/'PREPARATION.json',{'source_root':str(ROOT),'status':'preparing','started_at':datetime.datetime.now().astimezone().isoformat()})
+ foundation=run/'G0-wave-foundation-v2';foundation.mkdir(exist_ok=True);template=ROOT/'overall/g0-source'
  manifest=json.loads((template/'implementation-manifest.original.json').read_text())
  for d in json.loads((ROOT/'overall/directory-skeleton.json').read_text()):(foundation/d).mkdir(parents=True,exist_ok=True)
  for d in ['raw','raw-reference','logs','figures','reports','tables','g05','code']:(run/d).mkdir(exist_ok=True)
@@ -27,15 +37,15 @@ def prepare(output,rawzip,witness,reply):
  for i,x in enumerate(manifest['input_files']):
   rel=Path(x['path']).relative_to(OLD);src=Path(witness)/rel
   if sha(src)!=x['sha256']:raise ValueError('Frozen input changed: '+str(src))
-  dest=run/rel;dest.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(src,dest)
+  dest=run/rel;dest.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(src,dest)
   copied.append({'path':str(rel),'sha256':x['sha256']})
   if i%1000==0:print('REFERENCE INPUTS',i,'/',len(manifest['input_files']),flush=True)
- for p in (run/'G0-rebuild/dag/data/staged').glob('sample_mfg*_raw.dta'):shutil.copy2(p,run/'raw-reference'/p.name);p.unlink()
+ for p in (run/'G0-rebuild/dag/data/staged').glob('sample_mfg*_raw.dta'):shutil.copyfile(p,run/'raw-reference'/p.name);p.unlink()
  print('PREPARE | copying complete active G0 code and binding this run',flush=True)
  for s in template.rglob('*'):
   if not s.is_file():continue
   rel=s.relative_to(template);dest=foundation/rel;dest.parent.mkdir(parents=True,exist_ok=True)
-  if s.suffix in ['.do','.ado','.py','.json','.csv','.md','.txt']:
+  if s.suffix in ['.do','.ado','.py','.json','.md','.txt']:
    text=s.read_text().replace(str(OLD/'G0-wave-foundation-v2'),str(foundation)).replace(str(OLD/'G0-rebuild'),str(run/'G0-rebuild'))
    if s.suffix=='.do':
     lines=[]
@@ -47,12 +57,14 @@ def prepare(output,rawzip,witness,reply):
      lines.append(line)
     text='\n'.join(lines)+'\n'
    dest.write_text(text)
-  else:shutil.copy2(s,dest)
+  else:shutil.copyfile(s,dest)
  with zipfile.ZipFile(rawzip) as z:
+  names=z.namelist()
+  if len(names)!=17 or len(set(names))!=17:raise ValueError('Expected 17 unique raw input files in ZIP')
   for item in z.infolist():
    if Path(item.filename).name!=item.filename:raise ValueError('Raw ZIP must contain only the 17 root input files')
    with z.open(item) as src,(run/'raw'/item.filename).open('wb') as dst:shutil.copyfileobj(src,dst)
- raw=[{'path':str(p.relative_to(run)),'sha256':sha(p)} for p in sorted((run/'raw').iterdir())]
+ raw=[{'path':str(Path('raw')/name),'sha256':sha(run/'raw'/name)} for name in sorted(names)]
  if len(raw)!=17:raise ValueError('Expected 17 raw Excel/DBF inputs')
  write(run/'overall.json',{'status':'prepared','run':str(run),'source_root':str(ROOT),'raw_inputs':raw,'reference_inputs':copied,'stages':[],'data_flow':'raw Excel -> fresh staged annual DTA -> all G0 stages -> freshly perturbed fictional panel -> G1','existing_master_used_as_working_input':False})
  reply=Path(reply);reply.write_text('global OVERALL_RUN '+quote(run)+'\nglobal OVERALL_RAW '+quote(run/'raw')+'\nglobal OVERALL_G0 '+quote(foundation)+'\n')
