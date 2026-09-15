@@ -1,0 +1,82 @@
+flowchart TB
+  G1_INPUT_ESTIMATOR["G1_INPUT_ESTIMATOR<br/>Pinned method source<br/>REAL PRIMARY UNADMITTED"]
+  G1_INPUT_QUALITY["G1_INPUT_QUALITY<br/>Same-version G2 masks<br/>REAL PRIMARY UNADMITTED"]
+  G1_INPUT_SEMANTICS["G1_INPUT_SEMANTICS<br/>Units / definitions / prices<br/>REAL PRIMARY UNADMITTED"]
+  G1_INPUT_CANONICAL["G1_INPUT_CANONICAL<br/>Frozen G0.5 input<br/>INPUT FROZEN"]
+  G1_S00["G1_S00<br/>Input manifest<br/>INPUT FROZEN"]
+  G1_S01["G1_S01<br/>Freeze method / input contracts<br/>REAL PRIMARY UNADMITTED"]
+  G1_S02["G1_S02<br/>Real production / technology<br/>REAL PRIMARY UNADMITTED"]
+  G1_S03["G1_S03<br/>Synthetic panel / calendar lags<br/>REAL PRIMARY UNADMITTED"]
+  G1_S04["G1_S04<br/>Input eligibility<br/>REAL PRIMARY UNADMITTED"]
+  G1_S05["G1_S05<br/>OP investment / selection<br/>REAL PRIMARY UNADMITTED"]
+  G1_S06["G1_S06<br/>LP proxy support<br/>REAL PRIMARY UNADMITTED"]
+  G1_S07["G1_S07<br/>ACF timing / moments<br/>REAL PRIMARY UNADMITTED"]
+  G1_S08["G1_S08<br/>Wooldridge system<br/>REAL PRIMARY UNADMITTED"]
+  G1_S09["G1_S09<br/>Own / common dynamic samples<br/>REAL PRIMARY UNADMITTED"]
+  G1_S10["G1_S10<br/>Estimate OP<br/>REAL PRIMARY UNADMITTED"]
+  G1_S11["G1_S11<br/>Estimate LP<br/>REAL PRIMARY UNADMITTED"]
+  G1_S12["G1_S12<br/>Estimate ACF<br/>REAL PRIMARY UNADMITTED"]
+  G1_S13["G1_S13<br/>Estimate Wooldridge<br/>REAL PRIMARY UNADMITTED"]
+  G1_S14["G1_S14<br/>Rank / convergence / sensitivity<br/>REAL PRIMARY UNADMITTED"]
+  G1_S15["G1_S15<br/>Predict / normalize<br/>REAL PRIMARY UNADMITTED"]
+  G1_S16["G1_S16<br/>999 full-process draws<br/>REAL PRIMARY UNADMITTED"]
+  G1_S17["G1_S17<br/>Compare shared predictions<br/>REAL PRIMARY UNADMITTED"]
+  G1_S18["G1_S18<br/>1:1 attachment to obs_id<br/>REAL PRIMARY UNADMITTED"]
+  G1_S19["G1_S19<br/>Replication / acceptance<br/>REAL PRIMARY UNADMITTED"]
+  G1_N01["G1_N01<br/>Declared nominal production inputs<br/>NOMINAL DEVELOPMENT: IMPLEMENTED; SEE RECEIPTS"]
+  G1_N02["G1_N02<br/>Synthetic disappearance intervals<br/>NOMINAL DEVELOPMENT: IMPLEMENTED; SEE RECEIPTS"]
+  G1_N03["G1_N03<br/>Own and common support<br/>NOMINAL DEVELOPMENT: IMPLEMENTED; SEE RECEIPTS"]
+  G1_N04["G1_N04<br/>Nominal points and sensitivities<br/>NOMINAL DEVELOPMENT: IMPLEMENTED; SEE RECEIPTS"]
+  G1_N05["G1_N05<br/>Exploratory full-process bootstrap<br/>NOMINAL DEVELOPMENT: IMPLEMENTED; SEE RECEIPTS"]
+  G1_N06["G1_N06<br/>Distributions comparisons and sidecar<br/>NOMINAL DEVELOPMENT: IMPLEMENTED; SEE RECEIPTS"]
+  G1_N07["G1_N07<br/>Attach full original master<br/>NOMINAL DEVELOPMENT: IMPLEMENTED; SEE RECEIPTS"]
+  G1_N08["G1_N08<br/>Source-year input domains and distributions<br/>DEEP NOMINAL DIAGNOSTIC; REAL PRIMARY SEPARATE"]
+  G1_N09["G1_N09<br/>Sequential domain, calendar, and admission funnel<br/>DEEP NOMINAL DIAGNOSTIC; REAL PRIMARY SEPARATE"]
+  G1_N10["G1_N10<br/>Primary prediction coverage, profiles, tails, and histograms<br/>DEEP NOMINAL DIAGNOSTIC; REAL PRIMARY SEPARATE"]
+  G1_N11["G1_N11<br/>Balanced fictional-panel paired changes and ranks<br/>DEEP NOMINAL DIAGNOSTIC; REAL PRIMARY SEPARATE"]
+  G1_N12["G1_N12<br/>Observed-group means and designed arithmetic example<br/>DEEP NOMINAL DIAGNOSTIC; REAL PRIMARY SEPARATE"]
+  G1_N13["G1_N13<br/>Existing fit sensitivities and bootstrap-draw diagnostics<br/>DEEP NOMINAL DIAGNOSTIC; REAL PRIMARY SEPARATE"]
+  G1_S00 -->|G1_E01| G1_S01
+  G1_INPUT_CANONICAL -->|G1_E01| G1_S01
+  G1_INPUT_SEMANTICS -->|G1_E01| G1_S01
+  G1_INPUT_QUALITY -->|G1_E01| G1_S01
+  G1_INPUT_ESTIMATOR -->|G1_E01| G1_S01
+  G1_S01 -->|G1_E02| G1_S02
+  G1_S02 -->|G1_E03| G1_S03
+  G1_S03 -->|G1_E04| G1_S04
+  G1_S04 -->|G1_E05| G1_S05
+  G1_S04 -->|G1_E06| G1_S06
+  G1_S04 -->|G1_E07| G1_S07
+  G1_S04 -->|G1_E08| G1_S08
+  G1_S05 -->|G1_E09| G1_S09
+  G1_S06 -->|G1_E09| G1_S09
+  G1_S07 -->|G1_E09| G1_S09
+  G1_S08 -->|G1_E09| G1_S09
+  G1_S09 -->|G1_E10| G1_S10
+  G1_S09 -->|G1_E11| G1_S11
+  G1_S09 -->|G1_E12| G1_S12
+  G1_S09 -->|G1_E13| G1_S13
+  G1_S10 -->|G1_E14| G1_S14
+  G1_S11 -->|G1_E14| G1_S14
+  G1_S12 -->|G1_E14| G1_S14
+  G1_S13 -->|G1_E14| G1_S14
+  G1_S14 -->|G1_E15| G1_S15
+  G1_S14 -->|G1_E16| G1_S16
+  G1_S15 -->|G1_E17| G1_S17
+  G1_S16 -->|G1_E17| G1_S17
+  G1_S17 -->|G1_E18| G1_S18
+  G1_S18 -->|G1_E19| G1_S19
+  G1_INPUT_CANONICAL -->|G1_NE01| G1_N01
+  G1_N01 -->|G1_NE02| G1_N02
+  G1_N02 -->|G1_NE03| G1_N03
+  G1_N03 -->|G1_NE04| G1_N04
+  G1_N04 -->|G1_NE05| G1_N05
+  G1_N05 -->|G1_NE06| G1_N06
+  G1_N06 -->|G1_NE07| G1_N07
+  G1_S01 -->|G1_NE08| G1_N08
+  G1_N01 -->|G1_NE08| G1_N08
+  G1_N04 -->|G1_NE09| G1_N09
+  G1_N04 -->|G1_NE10| G1_N10
+  G1_N10 -->|G1_NE11| G1_N11
+  G1_N10 -->|G1_NE12| G1_N12
+  G1_N05 -->|G1_NE13| G1_N13
