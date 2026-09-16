@@ -2,7 +2,7 @@
 import os
 for k in ['OPENBLAS_NUM_THREADS','OMP_NUM_THREADS','MKL_NUM_THREADS']:os.environ[k]='1'
 from pathlib import Path
-import sys,json,hashlib,hmac,secrets,datetime,uuid,csv,shutil,subprocess
+import sys,json,hashlib,hmac,secrets,datetime,uuid,csv,shutil,subprocess,re
 R=Path(__file__).resolve().parents[2]
 sys.path.insert(0,str(R/'harness/g05'))
 from column_policy import classify
@@ -49,6 +49,7 @@ def main():
    if n=='va_signed_tail_sensitivity':action='scale'
    if n=='va_log_positive':action='log_shift'
    if n=='r_ln_workers':action='log_count_shift'
+  if n.endswith('_state') or n.startswith(('st_','vs_','qs_','qn_','v_')):action='preserve'
   if n in meta:action='new_dummy_metadata';reason='declared exception: fictional identity/mode metadata'
   policies.append({'variable':n,'action':action,'reason':reason if action=='preserve' or n in meta else 'explicit numerical perturbation policy'})
  with (run/'reports/column_policy.csv').open('w') as f:
@@ -126,6 +127,12 @@ display "PAIR_STEP_DONE"
  after=pd.read_stata(run/'data/obscured_dummy.dta',convert_categoricals=False)
  assert set(before)==set(after) and len(before)==len(after)==33049
  assert before.obs_id.equals(after.obs_id)
+ # Independent semantic check: diagnostic/category fields cannot be transformed
+ # merely because their name contains a quantitative parent such as per_worker.
+ catpattern=re.compile(r'(^st_|^vs_|^qs_|^qn_|^v_|_state$|_status$|_flag$|_code$|_eligible$|_observed$|_verified$|_valid$|_ready$|_binary$)')
+ semantic_categories=[n for n in before if catpattern.search(n) and n not in meta]
+ for n in semantic_categories:
+  assert (before[n].eq(after[n])|(before[n].isna()&after[n].isna())).all(),('Categorical field changed',n)
  protected=[];changes=[]
  for row in policies:
   n=row['variable'];b=before[n];a=after[n];same=(a.eq(b)|(a.isna()&b.isna()));changed=int((~same).sum())
@@ -151,7 +158,7 @@ display "PAIR_STEP_DONE"
  assert ((before.workers>100)==(after.workers>100)).all()
  with (run/'reports/change_audit.csv').open('w') as f:
   w=csv.DictWriter(f,fieldnames=list(changes[0]));w.writeheader();w.writerows(changes)
- summary={'status':'passed','run':str(run),'rows':len(after),'columns':len(after.columns),'protected_fields_exact':len(protected),'changed_numeric_fields':sum(x['changed_cells']>0 and x['action']!='new_dummy_metadata' for x in changes),'changed_numeric_cells':sum(x['changed_cells'] for x in changes if x['action']!='new_dummy_metadata'),'dummy_firms':report['synthetic_firms'],'level_relative_change':{'min':.001,'max':.005},'counts':'integer rounding; preserve >100 worker category','percentages':'bounded 0..100; preserve zeros/full shares and FDI 10pct domain','coherence':dict(coherence),'actual_sha256':sha(run/'data/actual.dta'),'obscured_sha256':sha(run/'data/obscured_dummy.dta'),'g1_reestimated':False,'categories':'exact per obs_id except declared dummy identity/mode metadata','fully_anonymous':False,'source_build':str(src),'key_hash':hashlib.sha256(key).hexdigest()}
+ summary={'status':'passed','run':str(run),'rows':len(after),'columns':len(after.columns),'semantic_categories_exact':len(semantic_categories),'protected_fields_exact':len(protected),'changed_numeric_fields':sum(x['changed_cells']>0 and x['action']!='new_dummy_metadata' for x in changes),'changed_numeric_cells':sum(x['changed_cells'] for x in changes if x['action']!='new_dummy_metadata'),'dummy_firms':report['synthetic_firms'],'level_relative_change':{'min':.001,'max':.005},'counts':'integer rounding; preserve >100 worker category','percentages':'bounded 0..100; preserve zeros/full shares and FDI 10pct domain','coherence':dict(coherence),'actual_sha256':sha(run/'data/actual.dta'),'obscured_sha256':sha(run/'data/obscured_dummy.dta'),'g1_reestimated':False,'categories':'exact per obs_id except declared dummy identity/mode metadata','fully_anonymous':False,'source_build':str(src),'key_hash':hashlib.sha256(key).hexdigest()}
  write(run/'COMPLETE.json',summary);write(R/'downstream/obscure/latest.json',summary)
  (run/'README.md').write_text('# Actual + obscured/dummy pair\n\nTwo datasets, same 33,049 rows and 515 field names.\n\n- data/actual.dta: byte-identical verified actual projection. Firm IDs remain missing.\n- data/obscured_dummy.dta: numerical magnitudes perturbed by 0.1–0.5%; worker counts rounded to integers, percentages bounded; categorical source values preserved exactly. Firm IDs are newly fictional.\n\nDerived logs/per-worker values follow changed magnitudes. Ratios sharing the same scaling factor remain unchanged by arithmetic. Zeros, missingness, calendar and categorical thresholds are retained. Flags describe inherited source quality; no new empirical admission.\n\nG1 columns remain missing in BOTH files: historical G1 estimates belong to a different input version and require re-estimation for this obscured dataset. Original G1 outputs remain in the previous package. This is development perturbation, not a guarantee of anonymity.\n\nreports/column_policy.csv and change_audit.csv list the rule and exact number of changed cells for every field. COMPLETE.json contains checksums and tests. Private key/factors are stored outside this package.\n')
  for name in ['actual','obscured_dummy']:

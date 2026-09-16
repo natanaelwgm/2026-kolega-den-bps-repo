@@ -19,6 +19,12 @@ not reuse the older G0.5 numerical perturbation or its fitted G1 results.
 7. Verify original equations on their previously coherent support, year counts,
    firm-year keys, stratum boundaries, exact actual hash, domains and metadata.
 
+Category protection takes precedence over numerical-name rules, including
+diagnostic fields such as `r_capital_stock_per_worker_state`. A separate semantic
+category check compares all matching category/status/code fields independently
+of the transformation policy. The accepted run is recorded in `latest.json`;
+do not use older runs whose receipts mark them superseded.
+
 Research categorical values, numeric codes, source flags, years and geography
 are unchanged. Declared exceptions are new fictional identity/mode metadata.
 Existing source-quality flags remain source-quality flags, not a new analysis
