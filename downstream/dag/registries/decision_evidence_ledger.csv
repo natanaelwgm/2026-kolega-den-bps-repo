@@ -1,0 +1,11 @@
+node,status,decision,evidence,reopen_rule
+G0_SOURCE,passed_structural_scope,"actual values, unverified company linkage",External G0 master; unchanged,changed input/contract or failed check
+G1_SOURCE,passed_structural_scope,perturbed G0.5 values; nominal G1 results,External G1 master; unchanged,changed input/contract or failed check
+G1_N06,passed_structural_scope,comparison only; does not re-estimate,External original G1 selected sidecar,changed input/contract or failed check
+SCHEMA,passed_structural_scope,Metadata does not waive source acceptance gates,contracts/fields.json and variable_year_evidence.csv,changed input/contract or failed check
+PINNED,passed_structural_scope,Hash-bound sources and native code,BUILD.json,changed input/contract or failed check
+ACTUAL,passed_structural_scope,firm_id missing; district missing; no TFP attachment,data/analysis_actual.dta,changed input/contract or failed check
+DEVELOPMENT,passed_structural_scope,xtset-ready development only; original G1 results preserved,data/panel_development.dta,changed input/contract or failed check
+COVERAGE,passed_structural_scope,N=nonmissing+missing; all source records denominator,reports/coverage_actual.csv; coverage_development.csv,changed input/contract or failed check
+G1_CHECK,passed_structural_scope,Exact native comparison against original N06,logs/00_MASTER.log: G1_SIDECAR_EXACT,changed input/contract or failed check
+PACKAGE,passed_structural_scope,structural pass is not universal empirical readiness,COMPLETE.json; dictionaries; reports/readiness.csv,changed input/contract or failed check

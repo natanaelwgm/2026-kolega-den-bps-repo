@@ -1,0 +1,7 @@
+edge_id,inputs,output,producer
+E00,G0_SOURCE|G1_SOURCE|SCHEMA,PINNED,scripts/package.py prepare
+E01A,G0_SOURCE|PINNED,ACTUAL,code/01_project_source.do actual -> 02_identity -> 03_features -> 04_export_validate
+E01D,G1_SOURCE|PINNED,DEVELOPMENT,code/01_project_source.do development -> 02_identity -> 03_features -> 04_export_validate
+E02,ACTUAL|DEVELOPMENT,COVERAGE,code/04_export_validate.do
+E03,G1_SOURCE|G1_N06,G1_CHECK,code/05_g1_receipt_check.do
+E04,ACTUAL|DEVELOPMENT|COVERAGE|G1_CHECK|PINNED,PACKAGE,scripts/package.py finish
