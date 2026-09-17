@@ -95,8 +95,9 @@ the data OBSCURED. Each file hash is recorded in PACKAGE.json.
 python3 downstream/metadata/package_block0.py /path/to/SHARE-OBSCURED 20260917-run/block-0-data-preparation
 ```
 
-The DTA files are physically present in the local package and follow the repo's
-existing data-artifact ignore policy. Publishing them to a private GitHub release
-is a separate step; this local packaging command does not upload anything.
-
-The 17 September snapshot is published as **one final DTA** in the [private release](https://github.com/natanaelwgm/2026-kolega-den-bps-repo/releases/tag/20260917-block-0-data-preparation). Its block README and RELEASE.json give the download instructions and hash; the pre-G1 intermediate is local-only. The packaging command itself still performs no upload.
+The dated final file `20260917-run/block-0-data-preparation/analysis_ready_data.dta`
+is tracked directly on main through an exact `.gitignore` exception, as requested
+by the owner. Cloning main includes that one DTA. The pre-G1 intermediate remains
+local-only; other generated DTA files remain ignored. The packaging command itself
+does not upload anything. An identical [private release mirror](https://github.com/natanaelwgm/2026-kolega-den-bps-repo/releases/tag/20260917-block-0-data-preparation)
+is retained. The block README and RELEASE.json describe both locations.
