@@ -44,3 +44,11 @@
 - Exact native 30-table marker confirmed in `04_NATIVE_REPORTS_PASS_before_histogram_path_fix.log`; V090 schema/CSV audit also passed.
 - Final H090 required its root argument; fixed both `overall/code/02_all_g0.do` and the new generated raw driver. Final histogram execution succeeded.
 - Native full G0 has 33,049 rows and 4,593 variables. Next: GUI execute the four-step English master using this explicitly configured validated cleaning run; mask, panel and G1 are fresh. This is not a second raw rebuild.
+
+## 2026-09-17 15:34 WIB — GUI master through fresh estimation
+
+- Clicked Do on `00_run.do` in Stata's Do-file Editor. First execution completed native projection but stopped while reading the row count: the pandas StataReader had not initialized its metadata. Fixed initialization order (commit `235a759`); verified the produced projection is 33,049 x 516.
+- Set the ignored `settings.local.do` to resume the same run, `/Volumes/Kolega-Prep-Work/simple-runs/20260917-152516-a08eca`, and clicked Do again. Stata Results visibly displays the active step and streamed progress. Previous error remains in the append-only step log.
+- Steps 1, 2 and 3 passed at 15:29:53, 15:31:14 and 15:31:45 WIB. Numeric replay passed with the retained private seed; panel construction resumed that exact numeric checkpoint. Fresh panel contains 10,530 fictional firms (the accepted published snapshot has 10,463); the new run is a coherent rebuild, not a byte-identical replacement of the accepted snapshot.
+- Step 4 is actively running native G1 nominal specifications and then 99-draw bootstrap. Source scientific files remain fixed. No final success or publication of this new interface is claimed yet.
+- Added a separate delivered-interface validator and corrected the DAG alias section to English names and the actual intermediate/output paths. The existing published DTA is untouched; exactly one DTA remains tracked in Git. No seed, recovery file or machine-specific configuration is tracked.

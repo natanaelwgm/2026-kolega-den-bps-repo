@@ -73,22 +73,35 @@ E067 (`downstream/metadata/data_guide.py`) generates the final dataset README an
 
 E068 creates the explicitly requested dated local package under `20260917-run/block-0-data-preparation/`, with `analysis_ready_data.dta` retaining identical obscured bytes and regenerated filename references. This packaging step is explicit so future runs do not overwrite a dated snapshot.
 
-## Antarmuka persiapan yang disederhanakan
+## Data preparation entry points
 
-`20260917-run/block-0-data-preparation/00_run.do` adalah entry point baru
-untuk urutan lengkap raw → bersih → obscured → panel → produktivitas dan metadata.
-Nama tampilan tidak mengubah node atau keputusan ilmiah yang sudah ada.
-Concordance: `20260917-run/block-0-data-preparation/documentation/source_concordance.csv`.
+`20260917-run/block-0-data-preparation/00_run.do` calls the four steps below.
+The descriptive names preserve the original nodes and scientific decisions.
+File-level concordance is recorded in
+`20260917-run/block-0-data-preparation/documentation/source_concordance.csv`.
 
-| File tampilan | Node/proses asal | Artefak batas |
+| Entry point | Original node or process | Output within the run folder |
 |---|---|---|
-| 01_clean_data.do | Semua 17 tahap G0 + proyeksi ACTUAL | data-antara/data_bersih.dta |
-| 02_obscure_values.do | MASK_BASE → MASK_DERIVED / G025_STAGE | numeric.dta + NUMERIC_COMPLETE.json |
-| 03_construct_panel.do | MASK_IDS → MASK_QA / G05_MASKED_PANEL | obscured_dummy.dta |
-| 04_estimate_productivity.do | G1_MASKED_ESTIMATION → E063–E067 | hasil/analysis_ready_data.dta |
+| 01_clean_data.do | All 17 G0 stages + ACTUAL projection | intermediate/clean_data.dta |
+| 02_obscure_values.do | MASK_BASE → MASK_DERIVED / G025_STAGE | intermediate/obscured_values.dta |
+| 03_construct_panel.do | MASK_IDS → MASK_QA / G05_MASKED_PANEL | intermediate/panel.dta |
+| 04_estimate_productivity.do | G1_MASKED_ESTIMATION → E063–E067 | output/analysis_ready_data.dta |
 
-`downstream/simple/engine.py` mengikat input, checkpoint, dan panggilan sumber.
-Tahap 3 harus melanjutkan checkpoint numerik tahap 2, sehingga tidak ada noise
-kedua. Tahap 4 menerima panel dan receipt tersebut serta mengestimasi ulang
-model pada nilai tersamarkan yang sama. Hasil final tetap batas untuk semua
-analisis berikutnya; analisis tidak perlu menjalankan tahap raw.
+```mermaid
+flowchart LR
+    Raw[Annual source files] -->|01_clean_data.do| Clean[Clean data]
+    Clean -->|02_obscure_values.do| Obscured[Obscured values]
+    Obscured -->|03_construct_panel.do| Panel[Fictional firm-year panel]
+    Panel -->|04_estimate_productivity.do| Final[Analysis-ready data and metadata]
+    Final --> Analysis[Downstream analyses]
+    Master[00_run.do] -. calls in order .-> Clean
+    Master -.-> Obscured
+    Master -.-> Panel
+    Master -.-> Final
+```
+
+`downstream/simple/engine.py` binds inputs, checkpoints and source calls.
+Step 3 resumes the exact numeric checkpoint from step 2. Step 4 receives that
+panel and its receipt, then estimates productivity on the same obscured values.
+The final dataset remains the shared boundary for downstream work; downstream
+analysis does not require another raw-data rebuild.
