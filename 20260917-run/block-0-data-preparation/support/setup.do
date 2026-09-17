@@ -17,6 +17,7 @@ program define b0_setup
     global B0_SEED_FILE ""
     global B0_ACCEPTED_RAW ""
     do "$B0_HOME/settings.do"
+    global B0_ACCEPTED_RAW "$REUSE_CLEAN_RUN"
     if "$WORK_DIR"=="" {
         display as error "Set WORK_DIR in settings.do."
         exit 198
@@ -36,6 +37,7 @@ capture program drop b0_step
 program define b0_step
     args number title
     global DEMO_CURRENT_STAGE "`number'/4 - `title'"
+    capture window manage forward results
     display _n as result "============================================================"
     display as result "STEP `number' OF 4: `title'"
     display as text "Started: `c(current_time)'"

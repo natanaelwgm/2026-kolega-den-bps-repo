@@ -205,7 +205,10 @@ def mask(run):
           '--seed-file',state['seed_file'],'--through','numeric','--retain-intermediates'])
     numeric=load(run/'private/numeric-receipt.json')
     path=Path(numeric['run'])/'owner-work/numeric.dta'
-    pin(run,2,[path,run/'private/numeric-receipt.json'],masking_run=numeric['run'])
+    checkpoint=run/'intermediate/obscured_values.dta'
+    shutil.copyfile(path,checkpoint)
+    assert sha(path)==sha(checkpoint)
+    pin(run,2,[path,checkpoint,run/'private/numeric-receipt.json'],masking_run=numeric['run'])
     print('COMPLETE 2/4 | Values obscured; categories retained; exact numerical replay verified.',flush=True)
 
 def panel(run):
@@ -227,7 +230,10 @@ def panel(run):
               '--seed-file',state['seed_file'],'--resume',stage['masking_run'],'--retain-intermediates'])
     rec=load(run/'private/panel-receipt.json')
     panelpath=Path(rec['run'])/'OBSCURED-ONLY/obscured_dummy.dta'
-    pin(run,3,[panelpath,run/'private/panel-receipt.json'])
+    checkpoint=run/'intermediate/panel.dta'
+    shutil.copyfile(panelpath,checkpoint)
+    assert sha(panelpath)==sha(checkpoint)
+    pin(run,3,[panelpath,checkpoint,run/'private/panel-receipt.json'])
     print('COMPLETE 3/4 | Panel constructed without a second obscuring pass.',flush=True)
 
 def estimate(run):

@@ -1,6 +1,6 @@
 /* OBSCURE VALUES
    Input: intermediate/clean_data.dta.
-   Output: a validated numeric checkpoint retained in private/.
+   Output: intermediate/obscured_values.dta (local only; source keys remain).
    Apply seeded changes to base values and recompute derived quantities.
    Preserve categories and missingness; round count variables to integers.
    The owner retains the private seed and exact recovery information.

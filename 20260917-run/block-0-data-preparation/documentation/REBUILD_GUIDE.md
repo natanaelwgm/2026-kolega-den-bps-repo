@@ -18,6 +18,7 @@ Configure [settings.do](../settings.do):
 | `REFERENCE_DATA` | Accepted reference package containing `G0-wave-foundation-v2` and `G0-rebuild`. These files validate the rebuilt data; they do not replace raw imports. |
 | `PYTHON` | Python executable with the required packages. |
 | `RESUME_RUN` | Leave empty for a new run; set to an existing run folder to resume. |
+| `REUSE_CLEAN_RUN` | Optional validated raw-to-clean run to reuse. Leave empty to rebuild the annual inputs. |
 
 Use a filesystem with small allocation units, such as APFS. Large-allocation
 exFAT volumes are inefficient for the source workflow's many intermediate files.
@@ -41,7 +42,10 @@ Set Stata's working directory to `block-0-data-preparation`, then execute
 
 ```text
 <run>/
-├── intermediate/             # clean actual data; local only
+├── intermediate/             # local checkpoints; not a publication folder
+│   ├── clean_data.dta
+│   ├── obscured_values.dta    # source keys retained at this stage
+│   └── panel.dta
 ├── logs/                     # step logs
 ├── private/                  # source work, factors, recovery and estimates
 ├── output/

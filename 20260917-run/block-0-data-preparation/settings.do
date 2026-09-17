@@ -13,6 +13,10 @@ global PYTHON "python3"
 * Empty = new run. Set to an existing run folder to resume.
 global RESUME_RUN ""
 
+* Optional validated cleaning run to reuse in a new run.
+* Empty = rebuild from the annual source files.
+global REUSE_CLEAN_RUN ""
+
 * Optional machine-specific settings; excluded from Git.
 capture confirm file "$B0_HOME/settings.local.do"
 if !_rc do "$B0_HOME/settings.local.do"

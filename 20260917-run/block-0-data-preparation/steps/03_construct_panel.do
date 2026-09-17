@@ -1,6 +1,6 @@
 /* CONSTRUCT PANEL
    Input: the validated numeric checkpoint from step 2.
-   Output: an obscured panel with fictional firm identifiers.
+   Output: intermediate/panel.dta with fictional firm identifiers.
    Construct and validate firm-year links without adding another noise pass.
    Fictional links are for development; they do not establish actual identity.
 */
