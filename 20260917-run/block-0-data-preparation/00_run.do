@@ -20,6 +20,7 @@ do "$B0_HOME/steps/02_obscure_values.do"
 do "$B0_HOME/steps/03_construct_panel.do"
 do "$B0_HOME/steps/04_estimate_productivity.do"
 
+quietly cd "$B0_HOME"
 display _n as result "COMPLETE: analysis dataset and metadata are available."
 display as text "File: $B0_RUN/output/analysis_ready_data.dta"
 use "$B0_RUN/output/analysis_ready_data.dta", clear

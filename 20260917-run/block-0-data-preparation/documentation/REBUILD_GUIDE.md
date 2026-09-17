@@ -5,9 +5,11 @@ access to the original local inputs and validation references.
 
 ## Configuration
 
-The runner is tested on macOS with Stata SE 17. It uses Python 3.11+ and
-`pandas`, `numpy`, `cryptography`, `openpyxl`, and `matplotlib`. Windows execution
-has not been tested.
+The runner uses macOS with Stata SE 17 and Python 3.11+. Install the pinned
+dependencies from the repository root with `python3 -m pip install -r requirements.txt`,
+then set `PYTHON` to that environment's executable. The packages include
+`pandas`, `numpy`, `scipy`, `cryptography`, `openpyxl`, and `matplotlib`.
+Windows execution has not been tested.
 
 Configure [settings.do](../settings.do):
 
