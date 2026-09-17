@@ -44,3 +44,7 @@
   and the historical development/G1 dataset remains available unchanged.
 - Remaining broader work: full raw overall cascade validation and GitHub merge
   are separate, unfinished work; this delivery does not claim either completed.
+
+## 17 September 2026 correction
+
+A further source-definition audit found `energy_cost_reported_complete` (a 0/1 flag) was mistakenly scaled in the mild release. Its prior categorical-pass claim is withdrawn; the receipt is marked superseded_failed_categorical_check. The strong v2 release preserves both energy-cost status flags exactly and supersedes the mild owner links. See `20260917-0708-strong-seeded-masking.md`.

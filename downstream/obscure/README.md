@@ -1,3 +1,5 @@
+> Current owner delivery: [strong seeded masking and exact recovery](strong/README.md). The historical mild release below is superseded and failed a later categorical audit of the energy-cost completeness indicator. Use the strong builder for the current request.
+
 # Actual and obscured + fictional panel pair
 
 The current pair starts from the verified actual 515-column projection. It does

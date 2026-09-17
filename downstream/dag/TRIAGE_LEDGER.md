@@ -6,3 +6,5 @@
 - Classification/deflator/units: inherit existing gates, do not waive.
 - Development G1: retain existing values; reconcile to N06.
 - Original raw overall rebuild remains unfinished and separate from this projection.
+
+- 17 September 2026: strong seeded masking/recovery PASSED. 350 protected fields exact; 97 equations; same-seed native replay and byte-exact authenticated recovery. Retained categories remain linkable; not anonymisation certification. See `../obscure/strong/latest.json`.

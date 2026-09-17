@@ -1,0 +1,107 @@
+{
+  "status": "passed",
+  "version": "kolega-independent-cell-mask-v2",
+  "run": "/Volumes/Extreme SSD/2026-kolega-strong-obscured/20260917-071711-dde497",
+  "rows": 33049,
+  "columns": 515,
+  "protected_fields_exact": 350,
+  "independent_continuous_fields": 51,
+  "derived_fields_checked": 97,
+  "changed_numeric_fields": 134,
+  "integer_band_exceptions": {
+    "workers": 95,
+    "production_workers": 210,
+    "rd_workers": 714
+  },
+  "integer_fallback_events": {
+    "workers": 95,
+    "production_workers": 213,
+    "rd_workers": 714
+  },
+  "dummy_firms": 10472,
+  "numeric_stata_replay_exact": true,
+  "panel_replay_exact": true,
+  "byte_exact_recovery": true,
+  "wrong_seed_rejected": true,
+  "tampering_rejected": true,
+  "actual_sha256": "1ed0dc0049fdefeea2e05e3c8e23c3850d4fb7e383ee316563118965d7931cd8",
+  "masked_sha256": "c51a4c8b05035d6caba93253496a1f155f0654deceedd9faf3b7f2e87d66fc7e",
+  "seed_id": "5c17a78a39af6bc5aa289fa49af603e9102687ed6f5292734756cd05b8dc3013",
+  "seed_contents_published": false,
+  "g1_reestimated": false,
+  "privacy_checks": {
+    "common_factor_attack": [
+      {
+        "known_original": "value_added_nominal",
+        "target": "capital_stock_nominal",
+        "tested": 18885,
+        "recovered_at_1e_12": 0,
+        "within_1pct": 1789,
+        "median_relative_error": 0.34334954790922667
+      },
+      {
+        "known_original": "value_added_nominal",
+        "target": "intermediate_inputs_nominal",
+        "tested": 33028,
+        "recovered_at_1e_12": 0,
+        "within_1pct": 3158,
+        "median_relative_error": 0.12855183358989042
+      },
+      {
+        "known_original": "fuel_diesel_ltr",
+        "target": "fuel_diesel_rp000",
+        "tested": 22856,
+        "recovered_at_1e_12": 0,
+        "within_1pct": 2148,
+        "median_relative_error": 0.3383075276770693
+      },
+      {
+        "known_original": "elec_pln_kwh",
+        "target": "elec_pln_rp000",
+        "tested": 30675,
+        "recovered_at_1e_12": 0,
+        "within_1pct": 2928,
+        "median_relative_error": 0.1165464274045045
+      }
+    ],
+    "category_singleton_records": 7240,
+    "category_grouping": [
+      "year",
+      "province_code",
+      "industry_code"
+    ],
+    "strong_anonymity_claim": false,
+    "limitations": [
+      "Retained categories and missingness permit linkage; rare categories remain exact.",
+      "Zeros, percentage anchors and some small counts remain inferable.",
+      "Known ranges, external knowledge, related identities and repeated releases may narrow originals.",
+      "This is bounded masking, not differential privacy or fully synthetic data."
+    ]
+  },
+  "source_code_sha256": {
+    "build.py": "2ce2f70ffcec9306f50bc7dfa83991e35ec84bc16dc549ae39cd0e45e0923f4c",
+    "policy.py": "aec792f55d62159aada244e3e04b3f6985b56282892d72d84dd30894eb90024a",
+    "test_contract.py": "e1ff63fe9a81265ed95c62103e811b8ff90c1846d34c956129cbf5a7306adcb3",
+    "seeded.py": "368ebbc4bf7fa8fd11aa27880965ec7195ea920f26ab7d975e51f22983465a08",
+    "recover.py": "f1857d088edb5161d0b5cf5331c6954d0a60aec891c13ee70915c4649235c126"
+  },
+  "completion_followup": {
+    "cli_recovery_byte_exact": true,
+    "seed_and_backup_retained_mode_0600": true,
+    "public_seed_scan_passed": true,
+    "private_temporary_dta_remaining": 0,
+    "cleanup_fix": "exFAT removes companion sidecars automatically; cleanup now tolerates already removed sidecars",
+    "completed_source_code_sha256": {
+      "build.py": "14f8fd50cfd61f90d171773752ef630abf44bfebebc3c859c12113fa67f7c228",
+      "._build.py": "a2c21c2ab8c220c4137b2e19447868b6d6f64b61a4317ca3701dbbe64d26ba37",
+      "policy.py": "aec792f55d62159aada244e3e04b3f6985b56282892d72d84dd30894eb90024a",
+      "._policy.py": "a2c21c2ab8c220c4137b2e19447868b6d6f64b61a4317ca3701dbbe64d26ba37",
+      "test_contract.py": "e1ff63fe9a81265ed95c62103e811b8ff90c1846d34c956129cbf5a7306adcb3",
+      "._test_contract.py": "a2c21c2ab8c220c4137b2e19447868b6d6f64b61a4317ca3701dbbe64d26ba37",
+      "seeded.py": "368ebbc4bf7fa8fd11aa27880965ec7195ea920f26ab7d975e51f22983465a08",
+      "._seeded.py": "a2c21c2ab8c220c4137b2e19447868b6d6f64b61a4317ca3701dbbe64d26ba37",
+      "recover.py": "f1857d088edb5161d0b5cf5331c6954d0a60aec891c13ee70915c4649235c126",
+      "._recover.py": "a2c21c2ab8c220c4137b2e19447868b6d6f64b61a4317ca3701dbbe64d26ba37"
+    }
+  }
+}
