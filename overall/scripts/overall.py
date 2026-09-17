@@ -48,6 +48,14 @@ def prepare(output,rawzip,witness,reply,reuse=""):
  if sha(wpi)!=expected:raise ValueError('WPI reference differs from its original input manifest')
  shutil.copyfile(wpi,target)
  if sha(target)!=expected:raise ValueError('WPI reference copy failed verification')
+ # These report-schema comparators were omitted from the original input list.
+ # Retain their original bytes as explicit, portable validation contracts.
+ contracts=ROOT/'overall/reference-contracts'
+ for x in json.loads((contracts/'manifest.json').read_text())['files']:
+  src=contracts/x['file'];dest=run/x['run_path']
+  if sha(src)!=x['sha256']:raise ValueError('Validation contract changed: '+x['file'])
+  dest.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(src,dest)
+  copied.append({'path':x['run_path'],'sha256':x['sha256'],'role':'report_validation_contract'})
  for p in (run/'G0-rebuild/dag/data/staged').glob('sample_mfg*_raw.dta'):shutil.copyfile(p,run/'raw-reference'/p.name);p.unlink()
  print('PREPARE | copying complete active G0 code and binding this run',flush=True)
  for s in template.rglob('*'):

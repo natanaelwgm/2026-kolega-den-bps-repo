@@ -1,0 +1,2962 @@
+{
+  "version": "1.0",
+  "timestamp_utc": "2026-09-12T23:51:15.834740+00:00",
+  "execution_receipt": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-rebuild/runtime/corrections-latest.json",
+  "execution_receipt_sha256": "ef005356e0bf84bc780af0e722cf964434b3f5a1552b7d919fbb18feecc7c21a",
+  "G0_complete": false,
+  "source_admission": false,
+  "numeric_schema": "Continuous statistics are stored double; explicit numeric metadata blanks are missing; original JSON citation strings preserved.",
+  "scopes": {
+    "G0-X04": "Global field-domain/semantic/structural-absence counts remain unknown without admitted per-field definition registry; observed counts are presence only.",
+    "G0-X08": "Long by source_year and repaired per-worker ratio; denominator counts repeat per ratio.",
+    "G0-X09": "Nominal/per-worker stock and additions candidates; mixed capital_nominal not certified stock.",
+    "G0-X13": "Legacy binary, nominal amount candidate and raw categorical presence are separate measures; accepted conditional funding universe/share unavailable.",
+    "G0-X20": "Long by source_year and selected component set. observed_test_fields is mean observed fields per source observation, not national totals or distinct fuels.",
+    "G0-X24": "Source gate table is a pinned pre-execution evidence snapshot; join current execution receipt explicitly. This execution does not admit unresolved source semantics."
+  },
+  "entries": [
+    {
+      "exhibit_id": "G0-X01",
+      "aggregate_family": "source_lineage",
+      "csv_path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-rebuild/corrections/reports/source_lineage.csv",
+      "dta_path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-rebuild/corrections/reports/source_lineage.dta",
+      "csv_sha256": "2e3b1b48d379d24c6bbe456ae52a7790f4144865818e5fdaa9b07688d9b4b650",
+      "dta_sha256": "350f2e50e3c09b8930c1ee37f4fc3524f76438a113ca952b47aedbba8bcae2e7",
+      "expected_fields": [
+        "source_id",
+        "source_path",
+        "sha256",
+        "state_id",
+        "edge_id",
+        "output_path",
+        "status"
+      ],
+      "actual_schema": {
+        "rows": 3350,
+        "columns": 12,
+        "dataset_label": "",
+        "fields": [
+          {
+            "name": "state_id",
+            "storage": 18,
+            "label": "",
+            "display_format": "%18s",
+            "value_label": ""
+          },
+          {
+            "name": "source_path",
+            "storage": "Q",
+            "label": "",
+            "display_format": "%9s",
+            "value_label": ""
+          },
+          {
+            "name": "output_path",
+            "storage": 77,
+            "label": "",
+            "display_format": "%77s",
+            "value_label": ""
+          },
+          {
+            "name": "edge_id",
+            "storage": 26,
+            "label": "",
+            "display_format": "%26s",
+            "value_label": ""
+          },
+          {
+            "name": "source_sha256",
+            "storage": 64,
+            "label": "",
+            "display_format": "%64s",
+            "value_label": ""
+          },
+          {
+            "name": "copy_sha256",
+            "storage": 64,
+            "label": "",
+            "display_format": "%64s",
+            "value_label": ""
+          },
+          {
+            "name": "script_sha256",
+            "storage": 64,
+            "label": "",
+            "display_format": "%64s",
+            "value_label": ""
+          },
+          {
+            "name": "status",
+            "storage": 53,
+            "label": "",
+            "display_format": "%53s",
+            "value_label": ""
+          },
+          {
+            "name": "key",
+            "storage": 45,
+            "label": "",
+            "display_format": "%45s",
+            "value_label": ""
+          },
+          {
+            "name": "concept",
+            "storage": 104,
+            "label": "",
+            "display_format": "%104s",
+            "value_label": ""
+          },
+          {
+            "name": "source_id",
+            "storage": 40,
+            "label": "",
+            "display_format": "%40s",
+            "value_label": ""
+          },
+          {
+            "name": "sha256",
+            "storage": 64,
+            "label": "",
+            "display_format": "%64s",
+            "value_label": ""
+          }
+        ]
+      },
+      "missing_expected_fields": [],
+      "script": "rows/G0/publication/G0_X01_source_lineage.do",
+      "script_sha256": "502f939300bd08ed098370342ad6fa7206beca493273e104f820ecc419500b1b",
+      "execution_status": "passed",
+      "roundtrip_status": "exact",
+      "contract_status": "all_fields_present_source_gates_explicit",
+      "G0_complete": false
+    },
+    {
+      "exhibit_id": "G0-X02",
+      "aggregate_family": "annual_sample",
+      "csv_path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-rebuild/corrections/reports/annual_sample.csv",
+      "dta_path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-rebuild/corrections/reports/annual_sample.dta",
+      "csv_sha256": "2249d709b5ee7bcab09bdff3c3b0cd520ea97751cd366c32416d943737680bcd",
+      "dta_sha256": "0dcecdfce4b8d526466db5a037bb80ebb0e69491bbe0c3676ee11d8b2d6ebd24",
+      "expected_fields": [
+        "source_year",
+        "rows",
+        "availability",
+        "row_key_verified"
+      ],
+      "actual_schema": {
+        "rows": 12,
+        "columns": 4,
+        "dataset_label": "",
+        "fields": [
+          {
+            "name": "source_year",
+            "storage": "h",
+            "label": "",
+            "display_format": "%8.0g",
+            "value_label": ""
+          },
+          {
+            "name": "rows",
+            "storage": "d",
+            "label": "(sum) rows",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "availability",
+            "storage": 25,
+            "label": "",
+            "display_format": "%25s",
+            "value_label": ""
+          },
+          {
+            "name": "row_key_verified",
+            "storage": "b",
+            "label": "",
+            "display_format": "%8.0g",
+            "value_label": ""
+          }
+        ]
+      },
+      "missing_expected_fields": [],
+      "script": "rows/G0/publication/G0_X02_annual_sample.do",
+      "script_sha256": "589e002e2cd3c9e33d3fb69ae3d708491e2144de2988736cf6409089f0aff226",
+      "execution_status": "passed",
+      "roundtrip_status": "exact",
+      "contract_status": "all_fields_present_source_gates_explicit",
+      "G0_complete": false
+    },
+    {
+      "exhibit_id": "G0-X03",
+      "aggregate_family": "source_inventory",
+      "csv_path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-rebuild/corrections/reports/source_inventory.csv",
+      "dta_path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-rebuild/corrections/reports/source_inventory.dta",
+      "csv_sha256": "1bf1083126c5e373d1e75837208246f1212e04307cc2aa1c493e4ea2ec8525a5",
+      "dta_sha256": "3f87b4c1f640aa9299673ff889e96413e8da31944a2c566d3240c94da1b0f974",
+      "expected_fields": [
+        "source_path",
+        "sha256",
+        "bytes",
+        "rows",
+        "columns",
+        "import_launcher",
+        "native_reconciliation_pass"
+      ],
+      "actual_schema": {
+        "rows": 43,
+        "columns": 13,
+        "dataset_label": "",
+        "fields": [
+          {
+            "name": "source_path",
+            "storage": 176,
+            "label": "",
+            "display_format": "%176s",
+            "value_label": ""
+          },
+          {
+            "name": "local_path",
+            "storage": 77,
+            "label": "",
+            "display_format": "%77s",
+            "value_label": ""
+          },
+          {
+            "name": "sha256",
+            "storage": 64,
+            "label": "",
+            "display_format": "%64s",
+            "value_label": ""
+          },
+          {
+            "name": "role",
+            "storage": 53,
+            "label": "",
+            "display_format": "%53s",
+            "value_label": ""
+          },
+          {
+            "name": "column_scope",
+            "storage": 48,
+            "label": "",
+            "display_format": "%48s",
+            "value_label": ""
+          },
+          {
+            "name": "import_launcher",
+            "storage": 29,
+            "label": "",
+            "display_format": "%29s",
+            "value_label": ""
+          },
+          {
+            "name": "reconciliation_receipt",
+            "storage": 41,
+            "label": "",
+            "display_format": "%41s",
+            "value_label": ""
+          },
+          {
+            "name": "bytes",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "source_year",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "rows",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "columns",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "raw_columns",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "native_reconciliation_pass",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          }
+        ]
+      },
+      "missing_expected_fields": [],
+      "script": "rows/G0/publication/G0_X03_source_inventory.do",
+      "script_sha256": "bab0f650e8f71a379abdc8e439c1ca5c5ed40fbba6ecb8442e852c87afb5195c",
+      "execution_status": "passed",
+      "roundtrip_status": "exact",
+      "contract_status": "all_fields_present_source_gates_explicit",
+      "G0_complete": false
+    },
+    {
+      "exhibit_id": "G0-X04",
+      "aggregate_family": "variable_year_acceptance",
+      "csv_path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-rebuild/corrections/reports/variable_year_acceptance.csv",
+      "dta_path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-rebuild/corrections/reports/variable_year_acceptance.dta",
+      "csv_sha256": "c0d6d548b280f1f96e0d4d983e6b6f62b6b9b95adb721719f0338e1f3e3bf77c",
+      "dta_sha256": "1697fe6785a7f12ec67c53e92ea4bb3b9a8b2168cf08ff7d08c3974dbbc4906a",
+      "expected_fields": [
+        "variable",
+        "source_year",
+        "rows",
+        "observed",
+        "numeric_domain_n",
+        "verified_definition_n",
+        "provisional_n",
+        "absent_n",
+        "source_gate"
+      ],
+      "actual_schema": {
+        "rows": 55092,
+        "columns": 14,
+        "dataset_label": "",
+        "fields": [
+          {
+            "name": "variable",
+            "storage": 32,
+            "label": "",
+            "display_format": "%32s",
+            "value_label": ""
+          },
+          {
+            "name": "source_year",
+            "storage": "h",
+            "label": "",
+            "display_format": "%8.0g",
+            "value_label": ""
+          },
+          {
+            "name": "rows",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "observed",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "missing_rows",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "zero",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "negative",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "release_status",
+            "storage": 35,
+            "label": "",
+            "display_format": "%35s",
+            "value_label": ""
+          },
+          {
+            "name": "verified_definition_n",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "numeric_domain_n",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "provisional_n",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "absent_n",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "source_gate",
+            "storage": 50,
+            "label": "",
+            "display_format": "%50s",
+            "value_label": ""
+          },
+          {
+            "name": "domain_status",
+            "storage": 120,
+            "label": "",
+            "display_format": "%120s",
+            "value_label": ""
+          }
+        ]
+      },
+      "missing_expected_fields": [],
+      "script": "rows/G0/publication/G0_X04_variable_year_acceptance.do",
+      "script_sha256": "0da399f08e77c4b232ddc895d42962db9f2fe96d7dc7b9ddcb51f8b8ad657550",
+      "execution_status": "passed",
+      "roundtrip_status": "exact",
+      "contract_status": "all_fields_present_source_gates_explicit",
+      "G0_complete": false
+    },
+    {
+      "exhibit_id": "G0-X05",
+      "aggregate_family": "annual_schema_mapping",
+      "csv_path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-rebuild/corrections/reports/annual_schema_mapping.csv",
+      "dta_path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-rebuild/corrections/reports/annual_schema_mapping.dta",
+      "csv_sha256": "2ffc956788a3b53e023ac0b27cdb46ba56e5ec02f5dd102e3315b006a8bcb86f",
+      "dta_sha256": "5826ea7299851869fa93e224c42852f13eac983819296ed58cbe3dd01ec71d53",
+      "expected_fields": [
+        "source_year",
+        "raw_header",
+        "raw_name",
+        "canonical_name",
+        "mapping_rule",
+        "source_state",
+        "evidence_ref"
+      ],
+      "actual_schema": {
+        "rows": 2796,
+        "columns": 10,
+        "dataset_label": "",
+        "fields": [
+          {
+            "name": "canonical_name",
+            "storage": 27,
+            "label": "",
+            "display_format": "%27s",
+            "value_label": ""
+          },
+          {
+            "name": "raw_name",
+            "storage": 32,
+            "label": "",
+            "display_format": "%32s",
+            "value_label": ""
+          },
+          {
+            "name": "raw_header",
+            "storage": 24,
+            "label": "",
+            "display_format": "%24s",
+            "value_label": ""
+          },
+          {
+            "name": "mapping_rule",
+            "storage": "Q",
+            "label": "",
+            "display_format": "%9s",
+            "value_label": ""
+          },
+          {
+            "name": "child_path",
+            "storage": 72,
+            "label": "",
+            "display_format": "%72s",
+            "value_label": ""
+          },
+          {
+            "name": "child_sha256",
+            "storage": 64,
+            "label": "",
+            "display_format": "%64s",
+            "value_label": ""
+          },
+          {
+            "name": "source_state",
+            "storage": 29,
+            "label": "",
+            "display_format": "%29s",
+            "value_label": ""
+          },
+          {
+            "name": "source_gate",
+            "storage": 43,
+            "label": "",
+            "display_format": "%43s",
+            "value_label": ""
+          },
+          {
+            "name": "source_year",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "evidence_ref",
+            "storage": "Q",
+            "label": "",
+            "display_format": "%9s",
+            "value_label": ""
+          }
+        ]
+      },
+      "missing_expected_fields": [],
+      "script": "rows/G0/publication/G0_X05_annual_schema_mapping.do",
+      "script_sha256": "f1ada74abc17a9e89005202e086e1223141cc969d84384b0bc0175fb1438e51e",
+      "execution_status": "passed",
+      "roundtrip_status": "exact",
+      "contract_status": "all_fields_present_source_gates_explicit",
+      "G0_complete": false
+    },
+    {
+      "exhibit_id": "G0-X06",
+      "aggregate_family": "source_state_counts",
+      "csv_path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-rebuild/corrections/reports/source_state_counts.csv",
+      "dta_path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-rebuild/corrections/reports/source_state_counts.dta",
+      "csv_sha256": "12c3641911eb0e55d52ed6b55ff4a2a619e033fdaf716ded550da3ab1b569654",
+      "dta_sha256": "73ad28c33a7317eedcb63d633098200a08e6d546414cacf984a2171bf93376cf",
+      "expected_fields": [
+        "variable",
+        "source_year",
+        "state",
+        "count",
+        "annual_n"
+      ],
+      "actual_schema": {
+        "rows": 28380,
+        "columns": 6,
+        "dataset_label": "",
+        "fields": [
+          {
+            "name": "source_year",
+            "storage": "h",
+            "label": "",
+            "display_format": "%8.0g",
+            "value_label": ""
+          },
+          {
+            "name": "variable",
+            "storage": 30,
+            "label": "",
+            "display_format": "%30s",
+            "value_label": ""
+          },
+          {
+            "name": "state",
+            "storage": "b",
+            "label": "",
+            "display_format": "%8.0g",
+            "value_label": ""
+          },
+          {
+            "name": "count",
+            "storage": "h",
+            "label": "",
+            "display_format": "%8.0g",
+            "value_label": ""
+          },
+          {
+            "name": "state_scope",
+            "storage": 50,
+            "label": "",
+            "display_format": "%50s",
+            "value_label": ""
+          },
+          {
+            "name": "annual_n",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          }
+        ]
+      },
+      "missing_expected_fields": [],
+      "script": "rows/G0/publication/G0_X06_source_state_counts.do",
+      "script_sha256": "f0d1f9d2fdb6c6d0286318079b1507854d4571f932030fec38f3bc465d786835",
+      "execution_status": "passed",
+      "roundtrip_status": "exact",
+      "contract_status": "all_fields_present_source_gates_explicit",
+      "G0_complete": false
+    },
+    {
+      "exhibit_id": "G0-X07",
+      "aggregate_family": "reported_accounting_diagnostics",
+      "csv_path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-rebuild/corrections/reports/reported_accounting_diagnostics.csv",
+      "dta_path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-rebuild/corrections/reports/reported_accounting_diagnostics.dta",
+      "csv_sha256": "77bf946717ca6ca57c8c429c303d332312cf92739a821af09a0ea6acc9ac6ece",
+      "dta_sha256": "30107e47fa010f993af87a52ad4e67f78baa56ee8fdc8073b4c91f41cab130e9",
+      "expected_fields": [
+        "variable",
+        "source_year",
+        "n",
+        "mean",
+        "p25",
+        "p50",
+        "p75",
+        "gap_status"
+      ],
+      "actual_schema": {
+        "rows": 36,
+        "columns": 23,
+        "dataset_label": "",
+        "fields": [
+          {
+            "name": "variable",
+            "storage": 32,
+            "label": "",
+            "display_format": "%32s",
+            "value_label": ""
+          },
+          {
+            "name": "source_year",
+            "storage": "h",
+            "label": "",
+            "display_format": "%8.0g",
+            "value_label": ""
+          },
+          {
+            "name": "bound_field",
+            "storage": 32,
+            "label": "",
+            "display_format": "%32s",
+            "value_label": ""
+          },
+          {
+            "name": "release_status",
+            "storage": 35,
+            "label": "",
+            "display_format": "%35s",
+            "value_label": ""
+          },
+          {
+            "name": "rows",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "n",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "missing_rows",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "zero",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "negative",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "mean",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "sd",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "min",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "p1",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "p5",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "p10",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "p25",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "p50",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "p75",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "p90",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "p95",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "p99",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "max",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "gap_status",
+            "storage": 80,
+            "label": "",
+            "display_format": "%80s",
+            "value_label": ""
+          }
+        ]
+      },
+      "missing_expected_fields": [],
+      "script": "rows/G0/publication/G0_X07_reported_accounting_diagnostics.do",
+      "script_sha256": "42f786aeecbcce90ff7d6325c2402507c69bf2db88bf78fdc994a4675b46ae52",
+      "execution_status": "passed",
+      "roundtrip_status": "exact",
+      "contract_status": "all_fields_present_source_gates_explicit",
+      "G0_complete": false
+    },
+    {
+      "exhibit_id": "G0-X08",
+      "aggregate_family": "worker_denominator_domains",
+      "csv_path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-rebuild/corrections/reports/worker_denominator_domains.csv",
+      "dta_path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-rebuild/corrections/reports/worker_denominator_domains.dta",
+      "csv_sha256": "0a32c5f84d6281f225d59eb4a0080bbed518e9a1ac5bdfe0ffe7bba5764ee939",
+      "dta_sha256": "11fe4a84940d7846fcb18501ece51019fcf19adf72c2fef4e4ee0360a7a2095d",
+      "expected_fields": [
+        "source_year",
+        "positive_workers_n",
+        "zero_workers_n",
+        "negative_workers_n",
+        "missing_workers_n",
+        "ratio_eligible_n"
+      ],
+      "actual_schema": {
+        "rows": 1908,
+        "columns": 8,
+        "dataset_label": "",
+        "fields": [
+          {
+            "name": "source_year",
+            "storage": "h",
+            "label": "",
+            "display_format": "%8.0g",
+            "value_label": ""
+          },
+          {
+            "name": "ratio",
+            "storage": 32,
+            "label": "",
+            "display_format": "%32s",
+            "value_label": ""
+          },
+          {
+            "name": "ratio_eligible_n",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "rows",
+            "storage": "d",
+            "label": "(sum) rows",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "positive_workers_n",
+            "storage": "d",
+            "label": "(sum) positive_workers_n",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "zero_workers_n",
+            "storage": "d",
+            "label": "(sum) zero_workers_n",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "negative_workers_n",
+            "storage": "d",
+            "label": "(sum) negative_workers_n",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "missing_workers_n",
+            "storage": "d",
+            "label": "(sum) missing_workers_n",
+            "display_format": "%12.0g",
+            "value_label": ""
+          }
+        ]
+      },
+      "missing_expected_fields": [],
+      "script": "rows/G0/publication/G0_X08_worker_denominator_domains.do",
+      "script_sha256": "830c8216c95c9cf209ee8797d409ad3e0da068833a5e9921924c2a52fbcaf26c",
+      "execution_status": "passed",
+      "roundtrip_status": "exact",
+      "contract_status": "all_fields_present_source_gates_explicit",
+      "G0_complete": false
+    },
+    {
+      "exhibit_id": "G0-X09",
+      "aggregate_family": "capital_definition_coverage",
+      "csv_path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-rebuild/corrections/reports/capital_definition_coverage.csv",
+      "dta_path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-rebuild/corrections/reports/capital_definition_coverage.dta",
+      "csv_sha256": "24f3b8b00dcffa7432df906ab267f7997ef4014deffc8305624b796c29dc1c8b",
+      "dta_sha256": "ff52e10616dba5e3c2b84b50ec1b4f9786605aca868144b10ad50dd918edf388",
+      "expected_fields": [
+        "source_year",
+        "concept",
+        "observed_n",
+        "definition_status",
+        "verified_n",
+        "mean",
+        "p50"
+      ],
+      "actual_schema": {
+        "rows": 48,
+        "columns": 26,
+        "dataset_label": "",
+        "fields": [
+          {
+            "name": "variable",
+            "storage": 32,
+            "label": "",
+            "display_format": "%32s",
+            "value_label": ""
+          },
+          {
+            "name": "source_year",
+            "storage": "h",
+            "label": "",
+            "display_format": "%8.0g",
+            "value_label": ""
+          },
+          {
+            "name": "bound_field",
+            "storage": 32,
+            "label": "",
+            "display_format": "%32s",
+            "value_label": ""
+          },
+          {
+            "name": "release_status",
+            "storage": 35,
+            "label": "",
+            "display_format": "%35s",
+            "value_label": ""
+          },
+          {
+            "name": "rows",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "n",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "missing_rows",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "zero",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "negative",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "mean",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "sd",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "min",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "p1",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "p5",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "p10",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "p25",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "p50",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "p75",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "p90",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "p95",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "p99",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "max",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "definition_status",
+            "storage": 90,
+            "label": "",
+            "display_format": "%90s",
+            "value_label": ""
+          },
+          {
+            "name": "concept",
+            "storage": 32,
+            "label": "",
+            "display_format": "%32s",
+            "value_label": ""
+          },
+          {
+            "name": "observed_n",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "verified_n",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          }
+        ]
+      },
+      "missing_expected_fields": [],
+      "script": "rows/G0/publication/G0_X09_capital_definition_coverage.do",
+      "script_sha256": "27327ff0c343015c93401d8a72a4faf5080bc44911ceb01128cfd781e69e2de0",
+      "execution_status": "passed",
+      "roundtrip_status": "exact",
+      "contract_status": "all_fields_present_source_gates_explicit",
+      "G0_complete": false
+    },
+    {
+      "exhibit_id": "G0-X10",
+      "aggregate_family": "log_domain_losses",
+      "csv_path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-rebuild/corrections/reports/log_domain_losses.csv",
+      "dta_path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-rebuild/corrections/reports/log_domain_losses.dta",
+      "csv_sha256": "800f4fcd41b586ed06c02daad0a3344cb0000b54b015069c6a4fd9ed8ac22d9f",
+      "dta_sha256": "2cbfbfa9d9fcf4a295a2100a660880406b03ca6b0cb03c61f557293d6b51fbe8",
+      "expected_fields": [
+        "variable",
+        "source_year",
+        "source_positive_n",
+        "source_zero_n",
+        "source_negative_n",
+        "source_missing_n",
+        "semantic_gate_excluded_n",
+        "valid_log_n"
+      ],
+      "actual_schema": {
+        "rows": 1932,
+        "columns": 8,
+        "dataset_label": "",
+        "fields": [
+          {
+            "name": "source_year",
+            "storage": "h",
+            "label": "",
+            "display_format": "%8.0g",
+            "value_label": ""
+          },
+          {
+            "name": "variable",
+            "storage": 32,
+            "label": "",
+            "display_format": "%32s",
+            "value_label": ""
+          },
+          {
+            "name": "source_positive_n",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "source_zero_n",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "source_negative_n",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "source_missing_n",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "semantic_gate_excluded_n",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "valid_log_n",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          }
+        ]
+      },
+      "missing_expected_fields": [],
+      "script": "rows/G0/publication/G0_X10_log_domain_losses.do",
+      "script_sha256": "ae06a909a97dbd9a7445b4bc2368faf207cd8fb992f17c34cd4772cf8aeeb211",
+      "execution_status": "passed",
+      "roundtrip_status": "exact",
+      "contract_status": "all_fields_present_source_gates_explicit",
+      "G0_complete": false
+    },
+    {
+      "exhibit_id": "G0-X11",
+      "aggregate_family": "outlier_sensitivity",
+      "csv_path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-rebuild/corrections/reports/outlier_sensitivity.csv",
+      "dta_path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-rebuild/corrections/reports/outlier_sensitivity.dta",
+      "csv_sha256": "3a1ae842e91b71804c9bcd829fa3f536c5b745725517a484f013d6ef35724a6b",
+      "dta_sha256": "095502b102d91ea2e30819b2efdc88b74b9bc4fdd8bb238e2712dd740c6f4422",
+      "expected_fields": [
+        "variable",
+        "source_year",
+        "variant",
+        "n",
+        "p1",
+        "p25",
+        "p50",
+        "p75",
+        "p99",
+        "threshold",
+        "flagged_n",
+        "missing_flag_n"
+      ],
+      "actual_schema": {
+        "rows": 96,
+        "columns": 16,
+        "dataset_label": "",
+        "fields": [
+          {
+            "name": "source_year",
+            "storage": "h",
+            "label": "",
+            "display_format": "%8.0g",
+            "value_label": ""
+          },
+          {
+            "name": "variable",
+            "storage": 32,
+            "label": "",
+            "display_format": "%32s",
+            "value_label": ""
+          },
+          {
+            "name": "variant",
+            "storage": 40,
+            "label": "",
+            "display_format": "%40s",
+            "value_label": ""
+          },
+          {
+            "name": "n",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "mean",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "p1",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "p25",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "p50",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "p75",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "p99",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "min",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "max",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "threshold",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "flagged_n",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "missing_flag_n",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "release_status",
+            "storage": 35,
+            "label": "",
+            "display_format": "%35s",
+            "value_label": ""
+          }
+        ]
+      },
+      "missing_expected_fields": [],
+      "script": "rows/G0/publication/G0_X11_outlier_sensitivity.do",
+      "script_sha256": "4247ba75d637395595debb30b85a47a7051bcd803b6d28fdc8bdf3cdbcf559ef",
+      "execution_status": "passed",
+      "roundtrip_status": "exact",
+      "contract_status": "all_fields_present_source_gates_explicit",
+      "G0_complete": false
+    },
+    {
+      "exhibit_id": "G0-X12",
+      "aggregate_family": "export_definition_states",
+      "csv_path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-rebuild/corrections/reports/export_definition_states.csv",
+      "dta_path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-rebuild/corrections/reports/export_definition_states.dta",
+      "csv_sha256": "320aeee77064cc5ee937e10f00162b7ffd2fb69837d43697001ed3ddeb84e146",
+      "dta_sha256": "35b8a853b7dec1ff3756f432ed73374ebd9239a786f459d0c7b9b0465b405a39",
+      "expected_fields": [
+        "source_year",
+        "measure",
+        "yes_n",
+        "no_n",
+        "unknown_n",
+        "observed_denominator",
+        "definition_status"
+      ],
+      "actual_schema": {
+        "rows": 60,
+        "columns": 9,
+        "dataset_label": "",
+        "fields": [
+          {
+            "name": "source_year",
+            "storage": "h",
+            "label": "",
+            "display_format": "%8.0g",
+            "value_label": ""
+          },
+          {
+            "name": "measure",
+            "storage": 32,
+            "label": "",
+            "display_format": "%32s",
+            "value_label": ""
+          },
+          {
+            "name": "rows",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "yes_n",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "no_n",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "unknown_n",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "positive_share",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "definition_status",
+            "storage": 100,
+            "label": "",
+            "display_format": "%100s",
+            "value_label": ""
+          },
+          {
+            "name": "observed_denominator",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          }
+        ]
+      },
+      "missing_expected_fields": [],
+      "script": "rows/G0/publication/G0_X12_export_definition_states.do",
+      "script_sha256": "a7351c7270f765519034bb14afee88aa22e9bb5021eba34b75ed19f99e0a8e35",
+      "execution_status": "passed",
+      "roundtrip_status": "exact",
+      "contract_status": "all_fields_present_source_gates_explicit",
+      "G0_complete": false
+    },
+    {
+      "exhibit_id": "G0-X13",
+      "aggregate_family": "rd_definition_states",
+      "csv_path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-rebuild/corrections/reports/rd_definition_states.csv",
+      "dta_path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-rebuild/corrections/reports/rd_definition_states.dta",
+      "csv_sha256": "b1e95db16f222d6569ac1bd1ebc188f42434a599c3c55ce7c4eb02aa0cbe4d68",
+      "dta_sha256": "2a35c105c5e9f5fe4236d8d42a33634296d7733d6b2e48f8f6cfb2cf8bacdaf8",
+      "expected_fields": [
+        "source_year",
+        "measure",
+        "value_n",
+        "yes_n",
+        "no_n",
+        "not_asked_n",
+        "unknown_n",
+        "definition_status"
+      ],
+      "actual_schema": {
+        "rows": 48,
+        "columns": 16,
+        "dataset_label": "",
+        "fields": [
+          {
+            "name": "measure",
+            "storage": 32,
+            "label": "",
+            "display_format": "%32s",
+            "value_label": ""
+          },
+          {
+            "name": "source_year",
+            "storage": "h",
+            "label": "",
+            "display_format": "%8.0g",
+            "value_label": ""
+          },
+          {
+            "name": "release_status",
+            "storage": 35,
+            "label": "",
+            "display_format": "%35s",
+            "value_label": ""
+          },
+          {
+            "name": "rows",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "value_n",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "unknown_n",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "mean",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "p50",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "measure_kind",
+            "storage": 32,
+            "label": "",
+            "display_format": "%32s",
+            "value_label": ""
+          },
+          {
+            "name": "yes_n",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "no_n",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "legacy_positive_share",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "definition_status",
+            "storage": 150,
+            "label": "",
+            "display_format": "%150s",
+            "value_label": ""
+          },
+          {
+            "name": "not_asked_n",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "accepted_eligible_n",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "accepted_positive_share",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          }
+        ]
+      },
+      "missing_expected_fields": [],
+      "script": "rows/G0/publication/G0_X13_rd_definition_states.do",
+      "script_sha256": "c7c95845af1feb5864b0c3fae1e999e94fda383f0aad1923289587cb923c2e39",
+      "execution_status": "passed",
+      "roundtrip_status": "exact",
+      "contract_status": "all_fields_present_source_gates_explicit",
+      "G0_complete": false
+    },
+    {
+      "exhibit_id": "G0-X14",
+      "aggregate_family": "identity_acceptance",
+      "csv_path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-rebuild/corrections/reports/identity_acceptance.csv",
+      "dta_path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-rebuild/corrections/reports/identity_acceptance.dta",
+      "csv_sha256": "cfda3a02fa6843f605747daf45f06aefa3a2b6955ba27e773fa7324d26cd13d0",
+      "dta_sha256": "c5c5f0226e68e62b7a056e6101c5562f64b5d1fddca033af4be07b2340365962",
+      "expected_fields": [
+        "source_year",
+        "rows",
+        "identity_mode",
+        "verified_link_n",
+        "dummy_n",
+        "duplicate_source_key_n",
+        "panel_gate"
+      ],
+      "actual_schema": {
+        "rows": 12,
+        "columns": 7,
+        "dataset_label": "",
+        "fields": [
+          {
+            "name": "source_year",
+            "storage": "h",
+            "label": "",
+            "display_format": "%8.0g",
+            "value_label": ""
+          },
+          {
+            "name": "rows",
+            "storage": "d",
+            "label": "(sum) rows",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "verified_link_n",
+            "storage": "d",
+            "label": "(sum) verified_link_n",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "dummy_n",
+            "storage": "d",
+            "label": "(sum) dummy_n",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "duplicate_source_key_n",
+            "storage": "d",
+            "label": "(sum) duplicate_source_key_n",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "identity_mode",
+            "storage": 12,
+            "label": "",
+            "display_format": "%12s",
+            "value_label": ""
+          },
+          {
+            "name": "panel_gate",
+            "storage": 90,
+            "label": "",
+            "display_format": "%90s",
+            "value_label": ""
+          }
+        ]
+      },
+      "missing_expected_fields": [],
+      "script": "rows/G0/publication/G0_X14_identity_acceptance.do",
+      "script_sha256": "5bb9cfcbd7018a2429b4f405e92bf9912146216947d0810839fac66db0871a96",
+      "execution_status": "passed",
+      "roundtrip_status": "exact",
+      "contract_status": "all_fields_present_source_gates_explicit",
+      "G0_complete": false
+    },
+    {
+      "exhibit_id": "G0-X15",
+      "aggregate_family": "classification_acceptance",
+      "csv_path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-rebuild/corrections/reports/classification_acceptance.csv",
+      "dta_path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-rebuild/corrections/reports/classification_acceptance.dta",
+      "csv_sha256": "f22315d89ae174a8d498420bc5c90b245b3cb371c100305b4a507860acae73b7",
+      "dta_sha256": "e8767a96acc070c8ac393befc685482b9047e1a018af6dd8f84258e7fe1edcc2",
+      "expected_fields": [
+        "source_year",
+        "raw_field",
+        "vintage",
+        "vintage_evidence",
+        "canonical_target",
+        "bridge_status",
+        "unknown_n"
+      ],
+      "actual_schema": {
+        "rows": 39,
+        "columns": 21,
+        "dataset_label": "",
+        "fields": [
+          {
+            "name": "domain",
+            "storage": 8,
+            "label": "",
+            "display_format": "%9s",
+            "value_label": ""
+          },
+          {
+            "name": "raw_field",
+            "storage": 16,
+            "label": "",
+            "display_format": "%16s",
+            "value_label": ""
+          },
+          {
+            "name": "original_header",
+            "storage": 12,
+            "label": "",
+            "display_format": "%12s",
+            "value_label": ""
+          },
+          {
+            "name": "vintage",
+            "storage": 8,
+            "label": "",
+            "display_format": "%9s",
+            "value_label": ""
+          },
+          {
+            "name": "vintage_evidence",
+            "storage": "Q",
+            "label": "",
+            "display_format": "%9s",
+            "value_label": ""
+          },
+          {
+            "name": "canonical_target",
+            "storage": 97,
+            "label": "",
+            "display_format": "%97s",
+            "value_label": ""
+          },
+          {
+            "name": "bridge_status",
+            "storage": 18,
+            "label": "",
+            "display_format": "%18s",
+            "value_label": ""
+          },
+          {
+            "name": "binding_status",
+            "storage": 116,
+            "label": "",
+            "display_format": "%116s",
+            "value_label": ""
+          },
+          {
+            "name": "unknown_n_status",
+            "storage": 33,
+            "label": "",
+            "display_format": "%33s",
+            "value_label": ""
+          },
+          {
+            "name": "native_schema_receipt",
+            "storage": 204,
+            "label": "",
+            "display_format": "%204s",
+            "value_label": ""
+          },
+          {
+            "name": "supplier_file",
+            "storage": 125,
+            "label": "",
+            "display_format": "%125s",
+            "value_label": ""
+          },
+          {
+            "name": "supplier_sha256",
+            "storage": 64,
+            "label": "",
+            "display_format": "%64s",
+            "value_label": ""
+          },
+          {
+            "name": "ledger_path",
+            "storage": 137,
+            "label": "",
+            "display_format": "%137s",
+            "value_label": ""
+          },
+          {
+            "name": "ledger_sha256",
+            "storage": 64,
+            "label": "",
+            "display_format": "%64s",
+            "value_label": ""
+          },
+          {
+            "name": "rule_receipt",
+            "storage": 243,
+            "label": "",
+            "display_format": "%243s",
+            "value_label": ""
+          },
+          {
+            "name": "remaining_input",
+            "storage": 128,
+            "label": "",
+            "display_format": "%128s",
+            "value_label": ""
+          },
+          {
+            "name": "interpretation",
+            "storage": 137,
+            "label": "",
+            "display_format": "%137s",
+            "value_label": ""
+          },
+          {
+            "name": "source_year",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "unknown_n",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "native_field_present",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "measurement_admitted",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          }
+        ]
+      },
+      "missing_expected_fields": [],
+      "script": "rows/G0/publication/G0_X15_classification_acceptance.do",
+      "script_sha256": "d48cb99bd4f5e5b023427c147b14608f1816dfde3aa5d84681a081bd195f3b43",
+      "execution_status": "passed",
+      "roundtrip_status": "exact",
+      "contract_status": "all_fields_present_source_gates_explicit",
+      "G0_complete": false
+    },
+    {
+      "exhibit_id": "G0-X16",
+      "aggregate_family": "wpi_reference",
+      "csv_path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-rebuild/corrections/reports/wpi_reference.csv",
+      "dta_path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-rebuild/corrections/reports/wpi_reference.dta",
+      "csv_sha256": "b776a68bfa28774869eeeb2b0279533f0a69eaf63c1766bf66acab86be9dc0cd",
+      "dta_sha256": "ae4eab4bcc55d7ba8a3b22159152967433648b63d27f966b0b2f29404798a898",
+      "expected_fields": [
+        "source_year",
+        "series_id",
+        "industry_key",
+        "index_value",
+        "base_year",
+        "source_hash",
+        "splice_status"
+      ],
+      "actual_schema": {
+        "rows": 1703,
+        "columns": 10,
+        "dataset_label": "",
+        "fields": [
+          {
+            "name": "industry_key",
+            "storage": "h",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "source_year",
+            "storage": "h",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "index_value",
+            "storage": "d",
+            "label": "Output WPI index; base 2000=100; source ISIC Rev3/3.1 four digit",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "splice_status",
+            "storage": "b",
+            "label": "",
+            "display_format": "%8.0g",
+            "value_label": ""
+          },
+          {
+            "name": "wpi_cagr",
+            "storage": "d",
+            "label": "",
+            "display_format": "%8.0g",
+            "value_label": ""
+          },
+          {
+            "name": "base_year",
+            "storage": "h",
+            "label": "",
+            "display_format": "%8.0g",
+            "value_label": ""
+          },
+          {
+            "name": "series_id",
+            "storage": 40,
+            "label": "",
+            "display_format": "%40s",
+            "value_label": ""
+          },
+          {
+            "name": "source_sha256",
+            "storage": 64,
+            "label": "",
+            "display_format": "%64s",
+            "value_label": ""
+          },
+          {
+            "name": "source_hash",
+            "storage": 64,
+            "label": "",
+            "display_format": "%64s",
+            "value_label": ""
+          },
+          {
+            "name": "source_status",
+            "storage": 100,
+            "label": "",
+            "display_format": "%100s",
+            "value_label": ""
+          }
+        ]
+      },
+      "missing_expected_fields": [],
+      "script": "rows/G0/publication/G0_X16_wpi_reference.do",
+      "script_sha256": "ebab98ce8789a475020911073d889e584ef6f2ddfd1c3712a1375c611fc7b710",
+      "execution_status": "passed",
+      "roundtrip_status": "exact",
+      "contract_status": "all_fields_present_source_gates_explicit",
+      "G0_complete": false
+    },
+    {
+      "exhibit_id": "G0-X17",
+      "aggregate_family": "company_price_gate",
+      "csv_path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-rebuild/corrections/reports/company_price_gate.csv",
+      "dta_path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-rebuild/corrections/reports/company_price_gate.dta",
+      "csv_sha256": "6689a11f865fb748a6330a1bbb6ba9707cb1ffc0fba2b85f8afe685006302f45",
+      "dta_sha256": "c29261f20c328f6ea9ad0b1de8403501e306903a10859ed11cb03f16db597871",
+      "expected_fields": [
+        "source_year",
+        "rows",
+        "accepted_match_n",
+        "not_attempted_n",
+        "ambiguous_n",
+        "unmatched_n",
+        "gate_status"
+      ],
+      "actual_schema": {
+        "rows": 12,
+        "columns": 7,
+        "dataset_label": "",
+        "fields": [
+          {
+            "name": "source_year",
+            "storage": "h",
+            "label": "",
+            "display_format": "%8.0g",
+            "value_label": ""
+          },
+          {
+            "name": "rows",
+            "storage": "d",
+            "label": "(sum) rows",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "accepted_match_n",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "not_attempted_n",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "ambiguous_n",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "unmatched_n",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "gate_status",
+            "storage": 100,
+            "label": "",
+            "display_format": "%100s",
+            "value_label": ""
+          }
+        ]
+      },
+      "missing_expected_fields": [],
+      "script": "rows/G0/publication/G0_X17_company_price_gate.do",
+      "script_sha256": "e0e1229d01dcd4695f5868b5c984b198e2736a6b5bd6970ba327d5a979b50dfa",
+      "execution_status": "passed",
+      "roundtrip_status": "exact",
+      "contract_status": "all_fields_present_source_gates_explicit",
+      "G0_complete": false
+    },
+    {
+      "exhibit_id": "G0-X18",
+      "aggregate_family": "nominal_real_gate",
+      "csv_path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-rebuild/corrections/reports/nominal_real_gate.csv",
+      "dta_path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-rebuild/corrections/reports/nominal_real_gate.dta",
+      "csv_sha256": "19a886b2b7b4d157913e18f1c3cfbb5882db7d670efeafa13ebde30575ef8e5e",
+      "dta_sha256": "22f7cfdc458be7a504ac04734cc6f7653d075fb6c37aa2a4cc4dda5e1df6ebf5",
+      "expected_fields": [
+        "source_year",
+        "concept",
+        "nominal_n",
+        "price_eligible_n",
+        "real_n",
+        "approximation",
+        "gate_status"
+      ],
+      "actual_schema": {
+        "rows": 48,
+        "columns": 8,
+        "dataset_label": "",
+        "fields": [
+          {
+            "name": "source_year",
+            "storage": "h",
+            "label": "",
+            "display_format": "%8.0g",
+            "value_label": ""
+          },
+          {
+            "name": "concept",
+            "storage": 32,
+            "label": "",
+            "display_format": "%32s",
+            "value_label": ""
+          },
+          {
+            "name": "nominal_n",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "price_eligible_n",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "real_n",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "index_value",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "gate_status",
+            "storage": 100,
+            "label": "",
+            "display_format": "%100s",
+            "value_label": ""
+          },
+          {
+            "name": "approximation",
+            "storage": 70,
+            "label": "",
+            "display_format": "%70s",
+            "value_label": ""
+          }
+        ]
+      },
+      "missing_expected_fields": [],
+      "script": "rows/G0/publication/G0_X18_nominal_real_gate.do",
+      "script_sha256": "242b3d571755f7f54cf0329b1480478a4dee666e376bf6d84484fac9f9d39ae9",
+      "execution_status": "passed",
+      "roundtrip_status": "exact",
+      "contract_status": "all_fields_present_source_gates_explicit",
+      "G0_complete": false
+    },
+    {
+      "exhibit_id": "G0-X19",
+      "aggregate_family": "fuel_unit_acceptance",
+      "csv_path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-rebuild/corrections/reports/fuel_unit_acceptance.csv",
+      "dta_path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-rebuild/corrections/reports/fuel_unit_acceptance.dta",
+      "csv_sha256": "0742223f9d6d96b7b410dce30fb9e00b984817c71ba3b090a9f3750eedf262bd",
+      "dta_sha256": "43d4a6ef02c5e0a0f2986ece7d703c38cc032457203a3ea30601f0a849b49a33",
+      "expected_fields": [
+        "fuel_field",
+        "source_year",
+        "reported_unit",
+        "canonical_unit",
+        "multiplier",
+        "factor",
+        "evidence_ref",
+        "status"
+      ],
+      "actual_schema": {
+        "rows": 273,
+        "columns": 27,
+        "dataset_label": "",
+        "fields": [
+          {
+            "name": "fuel_field",
+            "storage": 18,
+            "label": "",
+            "display_format": "%18s",
+            "value_label": ""
+          },
+          {
+            "name": "raw_field",
+            "storage": 12,
+            "label": "",
+            "display_format": "%12s",
+            "value_label": ""
+          },
+          {
+            "name": "reported_unit",
+            "storage": 44,
+            "label": "",
+            "display_format": "%44s",
+            "value_label": ""
+          },
+          {
+            "name": "questionnaire_unit",
+            "storage": 5,
+            "label": "",
+            "display_format": "%9s",
+            "value_label": ""
+          },
+          {
+            "name": "supplied_numeric_unit",
+            "storage": 1,
+            "label": "",
+            "display_format": "%9s",
+            "value_label": ""
+          },
+          {
+            "name": "canonical_unit",
+            "storage": 5,
+            "label": "",
+            "display_format": "%9s",
+            "value_label": ""
+          },
+          {
+            "name": "factor_scope",
+            "storage": 87,
+            "label": "",
+            "display_format": "%87s",
+            "value_label": ""
+          },
+          {
+            "name": "evidence_ref",
+            "storage": "Q",
+            "label": "",
+            "display_format": "%9s",
+            "value_label": ""
+          },
+          {
+            "name": "document_evidence_status",
+            "storage": 38,
+            "label": "",
+            "display_format": "%38s",
+            "value_label": ""
+          },
+          {
+            "name": "annual_code_binding",
+            "storage": 105,
+            "label": "",
+            "display_format": "%105s",
+            "value_label": ""
+          },
+          {
+            "name": "status",
+            "storage": 31,
+            "label": "",
+            "display_format": "%31s",
+            "value_label": ""
+          },
+          {
+            "name": "replacement_field",
+            "storage": 17,
+            "label": "",
+            "display_format": "%17s",
+            "value_label": ""
+          },
+          {
+            "name": "inherited_rule_evidence",
+            "storage": 151,
+            "label": "",
+            "display_format": "%151s",
+            "value_label": ""
+          },
+          {
+            "name": "inherited_rule_receipt",
+            "storage": 243,
+            "label": "",
+            "display_format": "%243s",
+            "value_label": ""
+          },
+          {
+            "name": "native_schema_receipt",
+            "storage": 204,
+            "label": "",
+            "display_format": "%204s",
+            "value_label": ""
+          },
+          {
+            "name": "supplier_file",
+            "storage": 125,
+            "label": "",
+            "display_format": "%125s",
+            "value_label": ""
+          },
+          {
+            "name": "supplier_sha256",
+            "storage": 64,
+            "label": "",
+            "display_format": "%64s",
+            "value_label": ""
+          },
+          {
+            "name": "remaining_input",
+            "storage": 205,
+            "label": "",
+            "display_format": "%205s",
+            "value_label": ""
+          },
+          {
+            "name": "interpretation",
+            "storage": 233,
+            "label": "",
+            "display_format": "%233s",
+            "value_label": ""
+          },
+          {
+            "name": "source_year",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "native_field_present",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "multiplier",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "factor",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "inherited_multiplier_candidate",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "measurement_admitted",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "source_metadata_only",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "test_is_applicable",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          }
+        ]
+      },
+      "missing_expected_fields": [],
+      "script": "rows/G0/publication/G0_X19_fuel_unit_acceptance.do",
+      "script_sha256": "a222dd0de116397c07d4b8144ff8503943584859cbad89f0af020cb529523e58",
+      "execution_status": "passed",
+      "roundtrip_status": "exact",
+      "contract_status": "all_fields_present_source_gates_explicit",
+      "G0_complete": false
+    },
+    {
+      "exhibit_id": "G0-X20",
+      "aggregate_family": "energy_component_coverage",
+      "csv_path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-rebuild/corrections/reports/energy_component_coverage.csv",
+      "dta_path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-rebuild/corrections/reports/energy_component_coverage.dta",
+      "csv_sha256": "4dfd72379d56b475c321e8329b669c4fdfc7568430a8849ea6c496f0647ae215",
+      "dta_sha256": "7831c589683631e36ba977149a3b51890b3ae8bb054f6fc1a13f4d0dd3b8b45d",
+      "expected_fields": [
+        "source_year",
+        "component_set",
+        "required_test_fields",
+        "observed_test_fields",
+        "n_partial",
+        "n_complete_in_set",
+        "all_sources_complete"
+      ],
+      "actual_schema": {
+        "rows": 24,
+        "columns": 24,
+        "dataset_label": "",
+        "fields": [
+          {
+            "name": "source_year",
+            "storage": "h",
+            "label": "",
+            "display_format": "%8.0g",
+            "value_label": ""
+          },
+          {
+            "name": "rows",
+            "storage": "d",
+            "label": "(sum) rows",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "n_nine_fuel_complete",
+            "storage": "d",
+            "label": "(sum) n_nine_fuel_complete",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "n_two_purchase_complete",
+            "storage": "d",
+            "label": "(sum) n_two_purchase_complete",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "n_nine_fuel_partial",
+            "storage": "d",
+            "label": "(sum) n_nine_fuel_partial",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "n_two_purchase_partial",
+            "storage": "d",
+            "label": "(sum) n_two_purchase_partial",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "n_nine_fuel_none",
+            "storage": "d",
+            "label": "(sum) n_nine_fuel_none",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "n_two_purchase_none",
+            "storage": "d",
+            "label": "(sum) n_two_purchase_none",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "n_selected_partial",
+            "storage": "d",
+            "label": "(sum) n_selected_partial",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "n_all_sources_complete",
+            "storage": "d",
+            "label": "(sum) n_all_sources_complete",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "mean_observed_fuel_fields",
+            "storage": "d",
+            "label": "(mean) co2_scope1_nfuels_s1",
+            "display_format": "%8.0g",
+            "value_label": ""
+          },
+          {
+            "name": "mean_observed_purchase_fields",
+            "storage": "d",
+            "label": "(mean) electricity_n_observed",
+            "display_format": "%8.0g",
+            "value_label": ""
+          },
+          {
+            "name": "mean_quantity_tests",
+            "storage": "d",
+            "label": "(mean) n_quantity_tests",
+            "display_format": "%8.0g",
+            "value_label": ""
+          },
+          {
+            "name": "mean_quantity_unknown",
+            "storage": "d",
+            "label": "(mean) n_quantity_unknown",
+            "display_format": "%8.0g",
+            "value_label": ""
+          },
+          {
+            "name": "scope",
+            "storage": 110,
+            "label": "",
+            "display_format": "%110s",
+            "value_label": ""
+          },
+          {
+            "name": "set_id",
+            "storage": "b",
+            "label": "",
+            "display_format": "%8.0g",
+            "value_label": ""
+          },
+          {
+            "name": "component_set",
+            "storage": 35,
+            "label": "",
+            "display_format": "%35s",
+            "value_label": ""
+          },
+          {
+            "name": "required_test_fields",
+            "storage": "b",
+            "label": "",
+            "display_format": "%8.0g",
+            "value_label": ""
+          },
+          {
+            "name": "observed_test_fields",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "n_complete_in_set",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "n_partial",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "n_none_observed",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "all_sources_complete",
+            "storage": "b",
+            "label": "",
+            "display_format": "%8.0g",
+            "value_label": ""
+          },
+          {
+            "name": "observed_count_scope",
+            "storage": 65,
+            "label": "",
+            "display_format": "%65s",
+            "value_label": ""
+          }
+        ]
+      },
+      "missing_expected_fields": [],
+      "script": "rows/G0/publication/G0_X20_energy_component_coverage.do",
+      "script_sha256": "9ae3759bb3b496dd8425319508cf807bb91f8c303c596c6948927a2e4bb24333",
+      "execution_status": "passed",
+      "roundtrip_status": "exact",
+      "contract_status": "all_fields_present_source_gates_explicit",
+      "G0_complete": false
+    },
+    {
+      "exhibit_id": "G0-X21",
+      "aggregate_family": "electricity_and_own_generation",
+      "csv_path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-rebuild/corrections/reports/electricity_and_own_generation.csv",
+      "dta_path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-rebuild/corrections/reports/electricity_and_own_generation.dta",
+      "csv_sha256": "d78f8d9c7a989f951b1b48b570218f3392602752d8aabb5707614dd54178c4b9",
+      "dta_sha256": "da92c497d442e4c7b9c9707dc1925d89989c8e0eeeabaa8f551dcf48cee3c843",
+      "expected_fields": [
+        "source_year",
+        "pln_n",
+        "nonpln_n",
+        "purchased_n",
+        "purchased_gj_n",
+        "own_positive_n",
+        "own_zero_n",
+        "own_unknown_n",
+        "own_added_n"
+      ],
+      "actual_schema": {
+        "rows": 12,
+        "columns": 11,
+        "dataset_label": "",
+        "fields": [
+          {
+            "name": "source_year",
+            "storage": "h",
+            "label": "",
+            "display_format": "%8.0g",
+            "value_label": ""
+          },
+          {
+            "name": "rows",
+            "storage": "d",
+            "label": "(sum) rows",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "pln_n",
+            "storage": "d",
+            "label": "(sum) pln_n",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "nonpln_n",
+            "storage": "d",
+            "label": "(sum) nonpln_n",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "purchased_n",
+            "storage": "d",
+            "label": "(sum) purchased_n",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "purchased_gj_n",
+            "storage": "d",
+            "label": "(sum) purchased_gj_n",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "own_positive_n",
+            "storage": "d",
+            "label": "(sum) own_positive_n",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "own_zero_n",
+            "storage": "d",
+            "label": "(sum) own_zero_n",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "own_unknown_n",
+            "storage": "d",
+            "label": "(sum) own_unknown_n",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "own_added_n",
+            "storage": "d",
+            "label": "(sum) own_added_n",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "scope",
+            "storage": 120,
+            "label": "",
+            "display_format": "%120s",
+            "value_label": ""
+          }
+        ]
+      },
+      "missing_expected_fields": [],
+      "script": "rows/G0/publication/G0_X21_electricity_and_own_generation.do",
+      "script_sha256": "baeace6a8642d5130fdd590cdb49583a16482e5af9cbb591f8e35b47db73ccef",
+      "execution_status": "passed",
+      "roundtrip_status": "exact",
+      "contract_status": "all_fields_present_source_gates_explicit",
+      "G0_complete": false
+    },
+    {
+      "exhibit_id": "G0-X22",
+      "aggregate_family": "grid_assumption_coverage",
+      "csv_path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-rebuild/corrections/reports/grid_assumption_coverage.csv",
+      "dta_path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-rebuild/corrections/reports/grid_assumption_coverage.dta",
+      "csv_sha256": "a6c4fefa506bd1f33c4602057f4eb71ea894fbcefbba05572d6a1f90212d2d5f",
+      "dta_sha256": "1948e16966b1568251494bb5e8fde649911687797f484c04dc40ca3af381574a",
+      "expected_fields": [
+        "source_year",
+        "factor_s1",
+        "factor_s2",
+        "carry_flag",
+        "scope2_candidate_n",
+        "accepted_factor_n",
+        "source_status"
+      ],
+      "actual_schema": {
+        "rows": 12,
+        "columns": 7,
+        "dataset_label": "",
+        "fields": [
+          {
+            "name": "source_year",
+            "storage": "h",
+            "label": "",
+            "display_format": "%8.0g",
+            "value_label": ""
+          },
+          {
+            "name": "factor_s1",
+            "storage": "d",
+            "label": "(firstnm) grid_factor_s1",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "factor_s2",
+            "storage": "d",
+            "label": "(firstnm) grid_factor_s2",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "carry_flag",
+            "storage": "b",
+            "label": "(firstnm) grid_factor_is_carried",
+            "display_format": "%8.0g",
+            "value_label": ""
+          },
+          {
+            "name": "scope2_candidate_n",
+            "storage": "d",
+            "label": "(sum) scope2_candidate_n",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "accepted_factor_n",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "source_status",
+            "storage": 100,
+            "label": "",
+            "display_format": "%100s",
+            "value_label": ""
+          }
+        ]
+      },
+      "missing_expected_fields": [],
+      "script": "rows/G0/publication/G0_X22_grid_assumption_coverage.do",
+      "script_sha256": "dbdfe7b92d2102f8e4b750a3d3faa50949e8a0923022cce7a59308ca19b24981",
+      "execution_status": "passed",
+      "roundtrip_status": "exact",
+      "contract_status": "all_fields_present_source_gates_explicit",
+      "G0_complete": false
+    },
+    {
+      "exhibit_id": "G0-X23",
+      "aggregate_family": "energy_cost_reconciliation",
+      "csv_path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-rebuild/corrections/reports/energy_cost_reconciliation.csv",
+      "dta_path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-rebuild/corrections/reports/energy_cost_reconciliation.dta",
+      "csv_sha256": "271a6c7d0c459497da151a08fd656bc38b42002f3da602227bc575d9b565faa3",
+      "dta_sha256": "9c7bc29f797cc063c775c5223d61069b972bdd6b22de4446dc550caa6e526bc3",
+      "expected_fields": [
+        "source_year",
+        "reported_fuel_total_n",
+        "purchase_component_n",
+        "subtotal_n",
+        "three_component_complete_n",
+        "legacy_fallback_n",
+        "gap_n",
+        "gap_status"
+      ],
+      "actual_schema": {
+        "rows": 12,
+        "columns": 12,
+        "dataset_label": "",
+        "fields": [
+          {
+            "name": "source_year",
+            "storage": "h",
+            "label": "",
+            "display_format": "%8.0g",
+            "value_label": ""
+          },
+          {
+            "name": "rows",
+            "storage": "d",
+            "label": "(sum) rows",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "reported_fuel_total_n",
+            "storage": "d",
+            "label": "(sum) reported_fuel_total_n",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "purchase_component_n",
+            "storage": "d",
+            "label": "(sum) purchase_component_n",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "subtotal_n",
+            "storage": "d",
+            "label": "(sum) subtotal_n",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "three_component_complete_n",
+            "storage": "d",
+            "label": "(sum) three_component_complete_n",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "partial_component_n",
+            "storage": "d",
+            "label": "(sum) partial_component_n",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "legacy_fallback_n",
+            "storage": "d",
+            "label": "(sum) legacy_fallback_n",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "mean_reported_subtotal",
+            "storage": "d",
+            "label": "(mean) energy_exp_observed_repaired",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "gap_n",
+            "storage": "l",
+            "label": "",
+            "display_format": "%12.0g",
+            "value_label": ""
+          },
+          {
+            "name": "purchase_count_scope",
+            "storage": 65,
+            "label": "",
+            "display_format": "%65s",
+            "value_label": ""
+          },
+          {
+            "name": "gap_status",
+            "storage": 120,
+            "label": "",
+            "display_format": "%120s",
+            "value_label": ""
+          }
+        ]
+      },
+      "missing_expected_fields": [],
+      "script": "rows/G0/publication/G0_X23_energy_cost_reconciliation.do",
+      "script_sha256": "d55423a8ec756f255ca4d782c2b303b1fbb3718006b78c2c53840768c3ead78b",
+      "execution_status": "passed",
+      "roundtrip_status": "exact",
+      "contract_status": "all_fields_present_source_gates_explicit",
+      "G0_complete": false
+    },
+    {
+      "exhibit_id": "G0-X24",
+      "aggregate_family": "completion_gate",
+      "csv_path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-rebuild/corrections/reports/completion_gate.csv",
+      "dta_path": "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-rebuild/corrections/reports/completion_gate.dta",
+      "csv_sha256": "70a44cb771263eec9355315b997e75461519aa0babd0cefcba3460867cc3f71e",
+      "dta_sha256": "00a0093809bbf38026ea74380785dee961b5ed16ac608975d374f8cb35ae0c56",
+      "expected_fields": [
+        "requirement_id",
+        "source_or_manager",
+        "mandatory",
+        "evidence_path",
+        "evidence_sha256",
+        "status",
+        "remaining_input"
+      ],
+      "actual_schema": {
+        "rows": 29,
+        "columns": 14,
+        "dataset_label": "",
+        "fields": [
+          {
+            "name": "requirement_id",
+            "storage": 20,
+            "label": "",
+            "display_format": "%20s",
+            "value_label": ""
+          },
+          {
+            "name": "source_or_manager",
+            "storage": 22,
+            "label": "",
+            "display_format": "%22s",
+            "value_label": ""
+          },
+          {
+            "name": "requirement_text",
+            "storage": "Q",
+            "label": "",
+            "display_format": "%9s",
+            "value_label": ""
+          },
+          {
+            "name": "evidence_path",
+            "storage": 104,
+            "label": "",
+            "display_format": "%104s",
+            "value_label": ""
+          },
+          {
+            "name": "evidence_sha256",
+            "storage": 64,
+            "label": "",
+            "display_format": "%64s",
+            "value_label": ""
+          },
+          {
+            "name": "status",
+            "storage": 34,
+            "label": "",
+            "display_format": "%34s",
+            "value_label": ""
+          },
+          {
+            "name": "remaining_input",
+            "storage": 153,
+            "label": "",
+            "display_format": "%153s",
+            "value_label": ""
+          },
+          {
+            "name": "evidence_as_of_utc",
+            "storage": 32,
+            "label": "",
+            "display_format": "%32s",
+            "value_label": ""
+          },
+          {
+            "name": "interpretation",
+            "storage": 65,
+            "label": "",
+            "display_format": "%65s",
+            "value_label": ""
+          },
+          {
+            "name": "docx_sha256",
+            "storage": 64,
+            "label": "",
+            "display_format": "%64s",
+            "value_label": ""
+          },
+          {
+            "name": "source_locator",
+            "storage": 32,
+            "label": "",
+            "display_format": "%32s",
+            "value_label": ""
+          },
+          {
+            "name": "mandatory",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "G0_complete",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          },
+          {
+            "name": "exact_request_line",
+            "storage": "d",
+            "label": "",
+            "display_format": "%10.0g",
+            "value_label": ""
+          }
+        ]
+      },
+      "missing_expected_fields": [],
+      "script": "rows/G0/publication/G0_X24_completion_gate.do",
+      "script_sha256": "6a424e15da8b388fb16b6c83f9b66334c11c291a3aea03eb015826365c55e18f",
+      "execution_status": "passed",
+      "roundtrip_status": "exact",
+      "contract_status": "all_fields_present_source_gates_explicit",
+      "G0_complete": false
+    }
+  ]
+}

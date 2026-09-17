@@ -1,5 +1,5 @@
 * Tujuan: Bandingkan tabel laporan saat ini dengan hasil G0-rebuild; untuk tabel pekerja, cocokkan baris dengan kunci source_year dan ratio yang unik. // WFDOC-INJECTED
-* Input: corrections/reports/*.dta dan tabel pembanding pada work/G0-rebuild/corrections/reports. // WFDOC-INJECTED
+* Input: all DTA files in corrections/reports and witnesses in work/G0-rebuild/corrections/reports.
 * Output: penanda WF_REPORT_VALUES_30_EXACT hanya setelah seluruh tabel lolos perbandingan; nilai laporan tidak dihitung ulang atau disimpan ulang. // WFDOC-INJECTED
 * Pada tabel pekerja, sort hanya mengurutkan baris untuk pencocokan; pasangan kunci ganda menghentikan validasi. // WFDOC-INJECTED
 do "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-wave-foundation-v2/code/init.do"
@@ -123,3 +123,4 @@ use "corrections/reports/wpi_reference.dta", clear
 cf _all using "/Users/natanaelmassie/Documents/Codex/2026-09-13/hai/work/G0-rebuild/corrections/reports/wpi_reference.dta", all
 * Tampilkan tanda lulus setelah seluruh 30 tabel cocok. // WFDOC-INJECTED
 display "WF_REPORT_VALUES_30_EXACT"
+global WF_REPORT_VALUES_30_EXACT 1

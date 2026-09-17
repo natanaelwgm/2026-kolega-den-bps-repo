@@ -30,3 +30,10 @@
 - Fixed `overall/scripts/overall.py` to verify and copy that reference to the operative foundation path during preparation. SHA256 is `6e41ec26e960ac290b88844960229bba6d4b8b72e110b539e817e1046c60d3c1`; no deflator is applied to firm data.
 - Repaired the exact owned run with the same verified reference. `WPI_REFERENCE_REPAIR.json` preserves hashes of 26 completed report files and the completed module calls. `F090_reports_continue.do` resumes at G0-X16; earlier modules are not re-estimated. F090R audit, V090 exact report comparisons, and H090 are still required. Prior failed log retained as `02_REPORTS_before_WPI_fix.log`.
 - Current owned native worker PID12524 (parent from `/private/tmp/kolega_resume_probe.py`); no other processes signalled.
+
+## 2026-09-17T15:22:24.613719+07:00 — Restore report validation
+
+- F090R computation completed. V090 then failed because `G0-rebuild/corrections/runtime/aggregate-output-manifest.json` and `publication-manifest.json` were absent from the original input manifest. Added original byte-pinned, schema-only comparator contracts under `overall/reference-contracts/`; preparation copies them into the expected run paths.
+- Found an independent validation gap: line 2 of `compare_reports.do` used a wildcard containing slash-star within a Stata line comment. Stata treated the remainder as a block comment, so the native comparisons did not run. Removed that wildcard notation; added a native success global and a required guard in the new raw driver. No analytical expressions changed.
+- Searched every source .do for this comment pattern: only this file matched. Baseline/leaf/corrected/master comparison scripts were unaffected.
+- Preserved the failed validation log and repair receipt in the owned run. Resumed V090 and H090 only; complete native 30-table value comparison is required, followed by the existing independent schema/CSV audit. Do not infer success from the previous no-op return.
