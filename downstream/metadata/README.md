@@ -18,6 +18,7 @@ G0; masking does not reclassify those categorical fields from changed values.
 | E064 | Numerical schema and source contracts | `G1_LABEL_CONTRACT` | `compile_metadata.py`, `definitions.py` |
 | E065 | Parent and metadata contract | `G1_LABELLED` DTA | `../dag/edges/E065_apply_variable_metadata.do` |
 | E066 | Parent, labelled DTA and contract | `MASKED_FINAL` published delivery | `finish.py` exact comparison gate |
+| E067 | Validated final, dictionary and optional G0.5 input | `DATA_GUIDE` README + machine metadata | `data_guide.py` read-only dataset profiling |
 
 Every node has a contract, triage and decision under `downstream/dag/nodes/`;
 registries and `downstream/dag/DAG.md` link the edges. The numerical G1 body
@@ -61,3 +62,24 @@ binary completeness flag. `firm_id` is a fictional company key within the releas
 
 Detailed definitions are also in `metadata/variable_dictionary.csv` and
 `metadata/CODEBOOK.md` beside the final DTA.
+
+## Dataset README and nonbinding analysis recommendations
+
+E067 writes `README.md`, `METADATA.json`, and `metadata/DATA_GUIDE_VALIDATION.json`
+beside the final DTA. It records file roles, row/column counts, keys, years, panel
+coverage, missingness, G1 method coverage and hashes. Recommendations explicitly
+set `binding: false`; they are suggested starting points, not model/sample rules.
+The default suggestion is the labelled G1 master; the pre-G1 obscured panel is
+an optional input for fresh estimation. Actual owner-only data is not bundled.
+
+The full masked runner calls E067 after final packaging. For an already validated
+delivery, run only the documentation edge (no Stata rerun required):
+
+```sh
+python3 downstream/metadata/data_guide.py /path/to/SHARE-OBSCURED
+```
+
+The documentation edge reads `metadata/VALIDATION.json` and refuses a DTA with
+a different hash. It checks dictionary labels against the DTA, reconciles observed
+counts, confirms named fields/files, and proves all included DTAs retain their
+original byte hashes after documentation is written.

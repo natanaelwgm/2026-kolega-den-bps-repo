@@ -21,6 +21,7 @@ from seeded import sha
 from build import stata, write, log
 sys.path.insert(0, str(ROOT / 'downstream/metadata'))
 from finish import finish as finish_metadata
+from data_guide import write_data_guide
 
 VERSION = 'g025-mask-g05-panel-g1-v1'
 
@@ -244,36 +245,18 @@ save "{g1/'analysis/G1_final_values.dta'}", replace
                    masking_run=str(stage_root), code=code, executed_estimation_code=estimation_code,
                    g1_intermediates=output_inventory,
                    qa={f: json.loads((g1/'qa'/f).read_text())['status'] for f in ['numeric-validation.json', 'nominal-validation.json', 'full-master-validation.json']})
-    write(run / 'COMPLETE.json', receipt)
-    write(ROOT / 'downstream/g025_to_g1/latest.json', receipt)
     public_receipt = {k: v for k, v in receipt.items() if k not in ['run', 'final_file', 'masking_run', 'g1_intermediates']}
     public_receipt['metadata_finishing'] = {k: v for k, v in metadata.items() if k not in ['parent_file', 'final_file']}
     write(public / 'LINEAGE.json', public_receipt)
     (public / '00_OPEN.do').write_text('version 17\nset more off\nuse "analysis_obscured_with_g1.dta", clear\nxtset firm_id year\nsummarize workers value_added_nominal dev_nominal_tfp_*\n')
     (run / '00_OPEN_FINAL.do').write_text(f'version 17\nset more off\nuse "{public/"analysis_obscured_with_g1.dta"}", clear\nxtset firm_id year\nsummarize workers value_added_nominal dev_nominal_tfp_*\n')
-    (public / 'README.md').write_text('''# Obscured panel with freshly estimated G1
-
-The order is G0 -> G0.25 (independent 20–30% numeric masking and rebuilt formulas)
--> G0.5 (fictional panel links, no second numeric perturbation) -> G1 (fresh
-nominal development estimation and 99-draw exploratory bootstrap).
-
-The final visible input values are exactly those used to estimate the attached
-G1 residuals. No numbers are masked again after estimation. Source categories
-are retained. Original data, seed, mapping and recovery are kept outside this
-folder. The G0.5 panel file in intermediate/ is the pre-estimation dataset.
-
-E064-E066 finish the delivery with 516 readable variable labels, embedded full
-variable notes, and metadata/variable_dictionary.csv plus metadata/CODEBOOK.md.
-In Stata use notes workers or notes dev_nominal_tfp_lp. Metadata finishing
-preserves every value, storage type, row/column order and missing value.
-
-This is obscured development data with fictional company links, not verified
-actual-firm TFP or a fully anonymous dataset. See masking-reports for numerical
-rules, integer exceptions and retained-category linkage limitations.
-''')
     shutil.copytree(stage_root / 'OBSCURED-ONLY/reports', public / 'masking-reports', dirs_exist_ok=True)
     (public / 'intermediate').mkdir(exist_ok=True)
     shutil.copyfile(g05, public / 'intermediate/G05_obscured_panel.dta')
+    log('DOCUMENTATION | E067 dataset metadata and nonbinding downstream recommendations')
+    receipt['data_guide'] = write_data_guide(public)
+    write(run / 'COMPLETE.json', receipt)
+    write(ROOT / 'downstream/g025_to_g1/latest.json', receipt)
     log('COMPLETE | ' + json.dumps({k: receipt[k] for k in ['status', 'run', 'rows', 'columns', 'firms', 'g1_nonmissing', 'final_file']}))
 
 

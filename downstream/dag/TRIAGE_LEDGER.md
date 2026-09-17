@@ -23,3 +23,7 @@ No full raw-Excel rebuild or GitHub infrastructure/publication is claimed.
 ## 2026-09-17: final variable metadata
 
 E064-E066 passed locally. G1_FINAL_VALUES -> G1_LABEL_CONTRACT -> G1_LABELLED -> MASKED_FINAL. All 516 labels/notes verified after save/reopen; 17,053,284 values unchanged. No refit or seed change. Evidence: `downstream/metadata/latest.json`.
+
+## 2026-09-17: dataset metadata and optional analysis guide
+
+E067 -> DATA_GUIDE passed. Final README and METADATA.json describe two available datasets and six advisory starting points. Counts are read from the DTAs; byte hashes unchanged. Evidence: downstream/metadata/data-guide-latest.json.
