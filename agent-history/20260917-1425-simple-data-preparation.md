@@ -65,3 +65,11 @@
 - Added missing pinned cryptography dependency, restored the block working directory after master completion, and linked the dated run README/DAG index to the English entry points. Original scientific code was not changed during G1 execution.
 - Private PR #3: `https://github.com/natanaelwgm/2026-kolega-den-bps-repo/pull/3`. Draft created during validation; now updating the finished evidence and merging under the owner's existing authorization. No coauthor access or messages were sent.
 - Keep the task-owned APFS image mounted: it contains the validated raw rebuild and final local result and is currently used by the Stata view. The compressed pre-compaction archive and original raw inputs are retained. No unrelated workers or applications were stopped.
+
+## 2026-09-17T16:16:32.346537+07:00 — Main publication complete
+
+- PR #3 merged by squash to remote main at `805d3d027d0f2ba259aecdecbcdc135318a20497` (17 September, 16:14:28 WIB). Fetched main and proved its complete Git tree exactly matches reviewed commit `9a480e1932d2107447008a768fae42b6d335f157`.
+- Remote main contains exactly one DTA, the accepted block-0 file, with original Git blob `5b1d75be3402db0f35592aeff2a94f54d7c8017e`; no seed, encrypted recovery, or settings.local.do is tracked.
+- Local main was behind at `92536c1e`; direct checkout would have collided with pre-existing dirty history files. Verified ancestry, fast-forwarded only the unchecked main ref to the merge commit, then switched to its identical tree. The complete pre-existing working diff was verified byte-for-byte unchanged. No stash/reset or user-file overwrite.
+- All owned batch/validation worker PIDs were absent after completion. Stata remains open in Browse on the new validated local final dataset. The mounted APFS work image is deliberately retained because it holds that file and the raw rebuild.
+- Finished: neutral English names, connected execution DAG, source concordance, validated four-step runner, labels/metadata, checkpoint replay, and private main source publication. New test data remain local; the accepted published snapshot remains unchanged.
