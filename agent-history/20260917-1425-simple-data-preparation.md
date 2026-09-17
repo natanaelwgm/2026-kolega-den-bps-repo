@@ -37,3 +37,10 @@
 - Found an independent validation gap: line 2 of `compare_reports.do` used a wildcard containing slash-star within a Stata line comment. Stata treated the remainder as a block comment, so the native comparisons did not run. Removed that wildcard notation; added a native success global and a required guard in the new raw driver. No analytical expressions changed.
 - Searched every source .do for this comment pattern: only this file matched. Baseline/leaf/corrected/master comparison scripts were unaffected.
 - Preserved the failed validation log and repair receipt in the owned run. Resumed V090 and H090 only; complete native 30-table value comparison is required, followed by the existing independent schema/CSV audit. Do not infer success from the previous no-op return.
+
+## 2026-09-17T15:24:46.429925+07:00 — RAW TO CLEAN PASS
+
+- All 17 original stages now passed, after true raw Excel imports and the documented resumed repairs. Final native marker `RAW_TO_CLEAN_COMPLETE`, process return0, `RAW_PROBE_RESULT.json` PASS.
+- Exact native 30-table marker confirmed in `04_NATIVE_REPORTS_PASS_before_histogram_path_fix.log`; V090 schema/CSV audit also passed.
+- Final H090 required its root argument; fixed both `overall/code/02_all_g0.do` and the new generated raw driver. Final histogram execution succeeded.
+- Native full G0 has 33,049 rows and 4,593 variables. Next: GUI execute the four-step English master using this explicitly configured validated cleaning run; mask, panel and G1 are fresh. This is not a second raw rebuild.

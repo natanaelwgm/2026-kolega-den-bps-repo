@@ -64,8 +64,9 @@ def raw_driver(run,rawrun):
     if not done:lines.append('do "$OVERALL_REPO/overall/code/01_raw_imports.do"')
     for i,x in enumerate(stages[len(done):],start=len(done)+1):
         if x['id']=='V090':lines.append('global WF_REPORT_VALUES_30_EXACT 0')
+        argument=' "$OVERALL_G0"' if x['id']=='H090' else ''
         lines += [f'display as result "Clean data {i}/{len(stages)} | {x["path"]}"',
-                  'cd "$OVERALL_G0"',f'do "$OVERALL_G0/{x["path"]}"']
+                  'cd "$OVERALL_G0"',f'do "$OVERALL_G0/{x["path"]}"'+argument]
         if x['id']=='V090':lines.append('if "$WF_REPORT_VALUES_30_EXACT"!="1" exit 9')
         lines += [
                   'quietly do "$B0_HOME/support/progress.do"',
