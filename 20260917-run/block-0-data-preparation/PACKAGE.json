@@ -41,6 +41,11 @@
       "sha256": "5943e1664814ac58e33ec962bb3368b1e2c0567c7c8dd35ff06c37e64f580738"
     },
     {
+      "file": "00_run.do",
+      "bytes": 934,
+      "sha256": "01d5003245b2518125cdd2be8fe5aee8f04fcda800d1376b8226a36330448a0c"
+    },
+    {
       "file": "LINEAGE.json",
       "bytes": 22441,
       "sha256": "a55a9ac0aa3ad075b5afff670e4667ad640328be0dec77fbd8515ccaf08e9702"
@@ -52,8 +57,8 @@
     },
     {
       "file": "README.md",
-      "bytes": 10395,
-      "sha256": "192edab45348eb81bfb9328d3a39dd8fec75d14104b97042c9242681ee77aab4"
+      "bytes": 3100,
+      "sha256": "43520129d4247f14a872c641471cf7ba4ec9d39647804ba953094f3952d1c803"
     },
     {
       "file": "RELEASE.json",
@@ -64,6 +69,36 @@
       "file": "analysis_ready_data.dta",
       "bytes": 86734218,
       "sha256": "975f7d2a4087ea5ee95ba1f59acbfe52f68cb25eea1a9f21ba23e64d3bba0c7c"
+    },
+    {
+      "file": "documentation/DATA_GUIDE.md",
+      "bytes": 10422,
+      "sha256": "13f231d66bb8e5a08daf71e10c3cf960381c6cb40afeef017ff2abfc060c6882"
+    },
+    {
+      "file": "documentation/REBUILD_GUIDE.md",
+      "bytes": 3803,
+      "sha256": "82fd740e6e417671f86d9de5ba96683fb7040cf03f56541a01a842e9ce514c64"
+    },
+    {
+      "file": "documentation/RUN_VALIDATION.json",
+      "bytes": 2553,
+      "sha256": "4c26c5e118bb11a3053997ce923e87e448920ecad60ac7100b5c57aac9f5957b"
+    },
+    {
+      "file": "documentation/SOURCE_CONCORDANCE.md",
+      "bytes": 2091,
+      "sha256": "db77d40bf6fb1aaba562a2ad7bb91937bab520daf20bd64189b31075d922f4ac"
+    },
+    {
+      "file": "documentation/VALIDATION.md",
+      "bytes": 2353,
+      "sha256": "576fe3c963fec5f6918533ca5c122e81662ec714a21037983e7783921a99d88d"
+    },
+    {
+      "file": "documentation/source_concordance.csv",
+      "bytes": 3121981,
+      "sha256": "263f55d0351b3d38f492e50ba3848158b920de10b7068e3310926a3fff9fda37"
     },
     {
       "file": "masking-reports/column_policy_and_changes.csv",
@@ -92,8 +127,8 @@
     },
     {
       "file": "metadata/DATA_GUIDE_VALIDATION.json",
-      "bytes": 1044,
-      "sha256": "44c547fd6d980600a7c202f8f2daf251eaa56437db5ef8a671cb90cea55d689f"
+      "bytes": 1223,
+      "sha256": "d63f762c7e2368b3ab743dfb38b7c5d7674fb10c1b80a1dfb0fea718ed7f4af5"
     },
     {
       "file": "metadata/VALIDATION.json",
@@ -134,6 +169,46 @@
       "file": "provenance/upstream/README.md",
       "bytes": 8546,
       "sha256": "d8efe00e5b56c144b0528c81fa73747119e2fca8c98270497a564c084a208762"
+    },
+    {
+      "file": "settings.do",
+      "bytes": 758,
+      "sha256": "16a8d4ff970bcd9cb66af116be5382849fa2a4fdf73d24aa3fa63c4687054bf5"
+    },
+    {
+      "file": "steps/01_clean_data.do",
+      "bytes": 1668,
+      "sha256": "a087ba39a8542ef007ec769b7a324d29dc1b9aeb3f092f8b112e9beaa9b1feaa"
+    },
+    {
+      "file": "steps/02_obscure_values.do",
+      "bytes": 1066,
+      "sha256": "baafd304b8736648d4a0b8e465d1e5a70eefa4bc73288b18a6491db8ffa24e86"
+    },
+    {
+      "file": "steps/03_construct_panel.do",
+      "bytes": 1022,
+      "sha256": "005e0a404055a70e5e2a6ccf91be0c077dc094db96942c7553f2a5e4c5c22ab6"
+    },
+    {
+      "file": "steps/04_estimate_productivity.do",
+      "bytes": 1354,
+      "sha256": "0af00291fcefecdd851529344cc9c353444295934cfa392c16cd86c0a9e7a836"
+    },
+    {
+      "file": "support/input_files.csv",
+      "bytes": 464,
+      "sha256": "497a312b5e1d3b46a9256e1e65919e40c4ec5d83a2f0c4d4311f7dbda0ee4b31"
+    },
+    {
+      "file": "support/progress.do",
+      "bytes": 2063,
+      "sha256": "4eb3f25fc87cc30addb088565397799f6e0445dcbafa34f49b08ac834dcdd74f"
+    },
+    {
+      "file": "support/setup.do",
+      "bytes": 1773,
+      "sha256": "1f8a69e736457c6e304977ad2a19c4ddb4ef541e0d3c87cad43d127deaaf88ae"
     }
   ],
   "release_manifest": "RELEASE.json",
@@ -145,5 +220,19 @@
       "sha256": "2eac69214768a8c4db3641f0cc1fa9b85d1a2e32eef20e94b86b10e8ab71278e"
     }
   ],
-  "included_in_git_clone": true
+  "included_in_git_clone": true,
+  "documentation_updated_at": "2026-09-17T16:11:11.933132+07:00",
+  "interface": {
+    "master": "00_run.do",
+    "settings": "settings.do",
+    "concordance": "documentation/source_concordance.csv",
+    "concordance_rows": 6389,
+    "old_data_bytes_preserved": true,
+    "validation": {
+      "status": "PASS",
+      "file": "documentation/RUN_VALIDATION.json",
+      "sha256": "4c26c5e118bb11a3053997ce923e87e448920ecad60ac7100b5c57aac9f5957b",
+      "rebuilt_dta_sha256": "e16441b2cd1b6a136164992292bd7b5a0aa420fef6b3edbe805b60e7a88b58c0"
+    }
+  }
 }

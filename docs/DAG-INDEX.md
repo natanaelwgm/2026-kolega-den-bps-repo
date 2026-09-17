@@ -1,6 +1,16 @@
-# DAG index: G0, G0.5 and G1
+# Analytical DAGs
 
-The preserved analytical graphs cover this repository's three stages. They are separate module graphs and contracts; a single integrated interactive G0→G0.5→G1 canvas has not been built here. This is not a completion claim for all 44 research work items.
+The current [preparation master](../20260917-run/block-0-data-preparation/00_run.do)
+calls **clean data → obscure values → construct panel → estimate productivity**.
+The [integrated execution overview](../downstream/dag/DAG.md#data-preparation-entry-points)
+connects those steps to their output datasets. The
+[source concordance](../20260917-run/block-0-data-preparation/documentation/SOURCE_CONCORDANCE.md)
+maps them to the original local stages, including numeric obscuring before estimation.
+
+The detailed module graphs and contracts below retain the original stage names.
+They cover preparation and estimation; they do not imply completion of all 44
+research work items. The integrated overview is a static graph; the detailed
+source registries remain available separately.
 
 | Module | Coverage | Open in GitHub |
 |---|---|---|

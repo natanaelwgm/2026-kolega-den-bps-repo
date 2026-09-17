@@ -40,6 +40,22 @@ def prepare(output,rawzip,witness,reply,reuse=""):
   dest=run/rel;dest.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(src,dest)
   copied.append({'path':str(rel),'sha256':x['sha256']})
   if i%1000==0:print('REFERENCE INPUTS',i,'/',len(manifest['input_files']),flush=True)
+ # The original foundation builder exposes this pinned macro reference at a
+ # second, operative path. DTA files are not part of the source-code template.
+ wpi=run/'G0-rebuild/references/WPI_output_lookup.dta'
+ target=foundation/'references/WPI_output_lookup.dta';target.parent.mkdir(parents=True,exist_ok=True)
+ expected=next(x['sha256'] for x in manifest['input_files'] if Path(x['path']).name=='WPI_output_lookup.dta')
+ if sha(wpi)!=expected:raise ValueError('WPI reference differs from its original input manifest')
+ shutil.copyfile(wpi,target)
+ if sha(target)!=expected:raise ValueError('WPI reference copy failed verification')
+ # These report-schema comparators were omitted from the original input list.
+ # Retain their original bytes as explicit, portable validation contracts.
+ contracts=ROOT/'overall/reference-contracts'
+ for x in json.loads((contracts/'manifest.json').read_text())['files']:
+  src=contracts/x['file'];dest=run/x['run_path']
+  if sha(src)!=x['sha256']:raise ValueError('Validation contract changed: '+x['file'])
+  dest.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(src,dest)
+  copied.append({'path':x['run_path'],'sha256':x['sha256'],'role':'report_validation_contract'})
  for p in (run/'G0-rebuild/dag/data/staged').glob('sample_mfg*_raw.dta'):shutil.copyfile(p,run/'raw-reference'/p.name);p.unlink()
  print('PREPARE | copying complete active G0 code and binding this run',flush=True)
  for s in template.rglob('*'):

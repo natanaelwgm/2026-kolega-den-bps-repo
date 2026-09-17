@@ -113,16 +113,27 @@ def main():
     p.add_argument('--source-receipt',type=Path,default=REPO/'downstream/reports/latest-build.json')
     p.add_argument('--latest-receipt',type=Path,default=REPO/'downstream/obscure/strong/latest.json')
     p.add_argument('--retain-intermediates',action='store_true',help='Retain private G0.25 numeric and G0.5 identity stages for the downstream local pipeline')
+    p.add_argument('--through',choices=['numeric','panel'],default='panel',help='Stop after validated numeric masking, or finish panel construction and recovery')
+    p.add_argument('--resume',type=Path,help='Continue a pinned numeric stage in its original private run folder')
     a=p.parse_args()
     source_receipt=json.loads(a.source_receipt.read_text())
     src=Path(source_receipt['outputs']['actual']['file']);sourcehash=sha(src)
     assert sourcehash==source_receipt['outputs']['actual']['sha256']
     a.output_root.mkdir(parents=True,exist_ok=True)
     if shutil.disk_usage(a.output_root).free<2*1024**3:raise ValueError('Need 2 GiB headroom')
-    run=a.output_root/(datetime.datetime.now().strftime('%Y%m%d-%H%M%S')+'-'+uuid.uuid4().hex[:6]);run.mkdir()
-    work=run/'owner-work';work.mkdir()
-    public=run/'OBSCURED-ONLY';public.mkdir();(public/'reports').mkdir()
-    owner=run/'OWNER-ONLY';owner.mkdir()
+    run=a.resume or a.output_root/(datetime.datetime.now().strftime('%Y%m%d-%H%M%S')+'-'+uuid.uuid4().hex[:6])
+    run=run.resolve()
+    if a.resume:
+        if run.parent!=a.output_root.resolve():raise ValueError('Numeric stage must belong to this output folder')
+        numeric_pin=json.loads((run/'NUMERIC_COMPLETE.json').read_text())
+        assert numeric_pin['status']=='PASS' and numeric_pin['source_sha256']==sourcehash
+        assert numeric_pin['code_sha256']=={p.name:sha(p) for p in Path(__file__).parent.glob('*.py')},'Masking code changed; start a new run'
+        assert numeric_pin['numeric_sha256']==sha(run/'owner-work/numeric.dta'),'Numeric checkpoint changed'
+        assert not (run/'COMPLETE.json').exists(),'Completed masking run is immutable'
+    run.mkdir(exist_ok=bool(a.resume))
+    work=run/'owner-work';work.mkdir(exist_ok=bool(a.resume))
+    public=run/'OBSCURED-ONLY';public.mkdir(exist_ok=bool(a.resume));(public/'reports').mkdir(exist_ok=bool(a.resume))
+    owner=run/'OWNER-ONLY';owner.mkdir(exist_ok=bool(a.resume))
     seedpath=a.seed_file.resolve()
     assert not seedpath.is_relative_to(run) and not seedpath.is_relative_to(REPO)
     seedpath.parent.mkdir(parents=True,exist_ok=True,mode=0o700)
@@ -136,6 +147,7 @@ def main():
         with backup.open('xb') as f:f.write(seed)
         backup.chmod(0o600)
     seed_id=hashlib.sha256(seed).hexdigest()
+    if a.resume:assert numeric_pin['seed_id']==seed_id,'Seed differs from the numeric checkpoint'
     write(seedpath.parent/'OWNER-RECOVERY.json',{'seed_file':str(seedpath),'backup_seed_file':str(backup),'seed_id':seed_id,'run':str(run),'state':'building'})
     log('RUN | '+str(run));log('PRIVATE SEED | retained; contents never printed')
     before=pd.read_stata(src,convert_categoricals=False)
@@ -155,38 +167,52 @@ def main():
         good=np.isclose(before.loc[mask,n],expected[mask],rtol=1e-7,atol=1e-7)
         source_equations[n]={'observed':int(mask.sum()),'source_mismatches':int((~good).sum())}
         if not good.all():raise ValueError(('Source equation needs audit',n,int((~good).sum())))
-    factors,channels,exceptions=factor_frame(before,base,seed,sourcehash)
-    factors.to_stata(work/'factors.dta',write_index=False,version=118)
-    log(f'POLICY | {len(base)} independent continuous fields, 3 integer counts, 2 percentages, {len(derived)} derived fields')
-    parent=source_receipt['source_inputs']['actual']['path']
-    assert sha(parent)==source_receipt['source_inputs']['actual']['sha256']
-    setup=f'''use source_year source_row {' '.join(EXTRA)} using "{parent}", clear
-isid source_year source_row
-tempfile extra
-save "`extra'"
-use "{src}", clear
-generate long __order=_n
-merge 1:1 source_year source_row using "`extra'", assert(match) nogen
-merge 1:1 obs_id using "{work/'factors.dta'}", assert(match) nogen
-sort __order
-'''
-    code=setup
-    for n in base+EXTRA:
-        code+=f'recast double {n}\nquietly replace {n}={n}*{channels[n]} if !missing({n})\n'
-    for n in COUNTS:
-        code+=f'recast double {n}\nquietly replace {n}=max(1,floor({n}*{channels[n]}+.5)) if {n}>0 & !missing({n})\nassert {n}==floor({n}) if !missing({n})\n'
-    for n in PERCENTAGES:
-        code+=f'recast double {n}\nquietly replace {n}={n}*{channels[n]} if !missing({n}) & !inlist({n},0,100)\n'
-    for n,s in derived.items():
-        code+=f'recast double {n}\nquietly replace {n}={expression(s)} if !missing({n})\n'
-    code+='drop __f*\nsort __order\n'
-    stata(work,'01_mask_and_derive',code+f'save "{work/"numeric.dta"}", replace\n')
-    # Full native numerical replay with newly regenerated draws, same private seed.
-    regen,regen_channels,regen_exceptions=factor_frame(before,base,seed,sourcehash)
-    pd.testing.assert_frame_equal(factors,regen,check_exact=True)
-    assert regen_channels==channels and regen_exceptions==exceptions
-    regen.to_stata(work/'factors.dta',write_index=False,version=118)
-    stata(work,'02_replay_numeric',code+f'cf _all using "{work/"numeric.dta"}", all\n')
+    if not a.resume:
+        factors,channels,exceptions=factor_frame(before,base,seed,sourcehash)
+        factors.to_stata(work/'factors.dta',write_index=False,version=118)
+        log(f'POLICY | {len(base)} independent continuous fields, 3 integer counts, 2 percentages, {len(derived)} derived fields')
+        parent=source_receipt['source_inputs']['actual']['path']
+        assert sha(parent)==source_receipt['source_inputs']['actual']['sha256']
+        setup=f'''use source_year source_row {' '.join(EXTRA)} using "{parent}", clear
+    isid source_year source_row
+    tempfile extra
+    save "`extra'"
+    use "{src}", clear
+    generate long __order=_n
+    merge 1:1 source_year source_row using "`extra'", assert(match) nogen
+    merge 1:1 obs_id using "{work/'factors.dta'}", assert(match) nogen
+    sort __order
+    '''
+        code=setup
+        for n in base+EXTRA:
+            code+=f'recast double {n}\nquietly replace {n}={n}*{channels[n]} if !missing({n})\n'
+        for n in COUNTS:
+            code+=f'recast double {n}\nquietly replace {n}=max(1,floor({n}*{channels[n]}+.5)) if {n}>0 & !missing({n})\nassert {n}==floor({n}) if !missing({n})\n'
+        for n in PERCENTAGES:
+            code+=f'recast double {n}\nquietly replace {n}={n}*{channels[n]} if !missing({n}) & !inlist({n},0,100)\n'
+        for n,s in derived.items():
+            code+=f'recast double {n}\nquietly replace {n}={expression(s)} if !missing({n})\n'
+        code+='drop __f*\nsort __order\n'
+        stata(work,'01_mask_and_derive',code+f'save "{work/"numeric.dta"}", replace\n')
+        # Full native numerical replay with newly regenerated draws, same private seed.
+        regen,regen_channels,regen_exceptions=factor_frame(before,base,seed,sourcehash)
+        pd.testing.assert_frame_equal(factors,regen,check_exact=True)
+        assert regen_channels==channels and regen_exceptions==exceptions
+        regen.to_stata(work/'factors.dta',write_index=False,version=118)
+        stata(work,'02_replay_numeric',code+f'cf _all using "{work/"numeric.dta"}", all\n')
+        numeric_receipt={'status':'PASS','run':str(run),'source_sha256':sourcehash,
+            'numeric_sha256':sha(work/'numeric.dta'),'seed_id':seed_id,
+            'code_sha256':{p.name:sha(p) for p in Path(__file__).parent.glob('*.py')},
+            'numeric_stata_replay_exact':True,'panel_constructed':False,'integer_exception_counts':exceptions}
+        write(run/'NUMERIC_COMPLETE.json',numeric_receipt)
+    else:
+        numeric_receipt=numeric_pin
+        exceptions=numeric_pin['integer_exception_counts']
+        log('NUMERIC REUSE | exact pinned checkpoint; no second masking pass')
+    if a.through=='numeric':
+        write(a.latest_receipt,numeric_receipt)
+        log('NUMERIC COMPLETE | numbers masked and replay checked; panel is the next separate step')
+        return
     numeric_df=pd.read_stata(work/'numeric.dta',convert_categoricals=False)
     mapping=pd.DataFrame({'actual_obs_id':before.obs_id,'obs_id':['M'+digest(seed,sourcehash,o,'public-observation-id').hex()[:24] for o in before.obs_id]})
     assert mapping.obs_id.is_unique

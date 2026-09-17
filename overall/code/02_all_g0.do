@@ -97,7 +97,7 @@ demo_shell "$OVERALL_PYTHON" "$OVERALL_REPO/overall/scripts/overall.py" stage "$
 if $DEMO_HELPER_RC!=0 exit $DEMO_HELPER_RC
 demo_progress "G0 17/17 H090" "CALL dag/edges/word_rows/G0/G0_report_histogram_bins.do"
 cd "$OVERALL_G0"
-do "$OVERALL_G0/dag/edges/word_rows/G0/G0_report_histogram_bins.do"
+do "$OVERALL_G0/dag/edges/word_rows/G0/G0_report_histogram_bins.do" "$OVERALL_G0"
 quietly do "$RUN_HOME/code/live_progress.do"
 demo_shell "$OVERALL_PYTHON" "$OVERALL_REPO/overall/scripts/overall.py" stage "$OVERALL_RUN" "H090"
 if $DEMO_HELPER_RC!=0 exit $DEMO_HELPER_RC
