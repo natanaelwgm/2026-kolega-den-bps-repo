@@ -43,11 +43,14 @@ The master reports the active step and stops if a required check fails.
 - [Variable dictionary](metadata/variable_dictionary.csv).
 - [Source concordance](documentation/SOURCE_CONCORDANCE.md), with [file-level mapping](documentation/source_concordance.csv) to the original local workflow.
 - [Annual input filenames](support/input_files.csv).
+- [Local execution and resume validation](documentation/VALIDATION.md).
 
 The current adapters cover 2010–2015 and 2017–2022. New source schemas require
 an adapter and validation update. Productivity results are nominal development
 residuals; actual longitudinal identity and real TFP are not established by this
 obscured dataset.
 
-**Validation status:** the new entry points are undergoing a complete local run.
-The included dataset remains the previously validated publication.
+**Validation status:** all 17 raw stages and all four preparation steps passed
+locally, including fresh estimation, metadata checks and a second GUI Do run
+that reused unchanged checkpoints. The [validation record](documentation/VALIDATION.md)
+distinguishes the tested rebuild from the unchanged dataset included here.

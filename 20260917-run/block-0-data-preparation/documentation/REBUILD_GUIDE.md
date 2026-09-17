@@ -37,6 +37,11 @@ from Git. The seed is stored in `WORK_DIR/private/seed.key`, unless the owner ha
 configured an existing retained seed. Keep seeds, recovery material and actual
 data outside the repository.
 
+Exact replay is bound to the retained seed, source-file hash and code version.
+Use `RESUME_RUN` to continue that same version. A newly serialized source file
+can produce a different obscured version even when its numerical values agree;
+the run receipts distinguish those versions.
+
 ## Execution and outputs
 
 Set Stata's working directory to `block-0-data-preparation`, then execute

@@ -55,6 +55,11 @@ def main():
     assert sha(BLOCK/'analysis_ready_data.dta')==p['final_sha256']
     p['documentation_updated_at']=g['interface_documentation_updated_at']
     p['interface']={'master':'00_run.do','settings':'settings.do','concordance':'documentation/source_concordance.csv','concordance_rows':len(rows),'old_data_bytes_preserved':True}
+    validation=BLOCK/'documentation/RUN_VALIDATION.json'
+    if validation.exists():
+        v=json.loads(validation.read_text())
+        assert v['status']=='PASS' and v['published_snapshot']['sha256']==p['final_sha256']
+        p['interface']['validation']={'status':'PASS','file':'documentation/RUN_VALIDATION.json','sha256':sha(validation),'rebuilt_dta_sha256':v['final_sha256']}
     eligible=subprocess.check_output(['git','ls-files','-z','--cached','--others','--exclude-standard','--',str(BLOCK)],cwd=ROOT).decode().split('\0')
     files=[ROOT/f for f in eligible if f and (ROOT/f).is_file() and ROOT/f!=package]
     assert [x for x in files if x.suffix=='.dta']==[BLOCK/'analysis_ready_data.dta']

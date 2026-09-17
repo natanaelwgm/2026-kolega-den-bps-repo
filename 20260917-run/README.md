@@ -4,7 +4,8 @@
 
 Start with [the block-0 README](block-0-data-preparation/README.md).
 
-- [analysis_ready_data.dta](block-0-data-preparation/analysis_ready_data.dta): **OBSCURED** final G0/G0.5/G1 dataset; 33,049 rows and 516 labelled variables.
+- [analysis_ready_data.dta](block-0-data-preparation/analysis_ready_data.dta): **OBSCURED** firm-year panel with productivity estimates; 33,049 rows and 516 labelled variables.
+- [00_run.do](block-0-data-preparation/00_run.do): rebuild through clean data, obscured values, panel construction and productivity estimation; configure [settings.do](block-0-data-preparation/settings.do) first.
 - [METADATA.json](block-0-data-preparation/METADATA.json): file catalogue, keys, coverage, hashes and nonbinding analysis suggestions.
 - [PACKAGE.json](block-0-data-preparation/PACKAGE.json): integrity manifest for the published package, with the intermediate explicitly marked local-only.
 

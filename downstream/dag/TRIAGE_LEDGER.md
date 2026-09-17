@@ -35,3 +35,14 @@ E068 -> BLOCK0_PACKAGE passed. The requested repo folder holds 21 files includin
 Publication update, 17 September: the owner authorized main publication and clarified one final dataset. RELEASE.json selects only analysis_ready_data.dta for the private release; the pre-G1 intermediate remains local. No numerical values were changed.
 
 Owner location correction: store analysis_ready_data.dta directly in block-0 on main with an exact ignore exception. The release remains an identical mirror. Final DTA SHA256 unchanged; no rerun or numerical modification.
+
+## 2026-09-17 16:09 WIB: data preparation entry points
+
+The English master and four step files passed local validation. All 17 raw
+stages passed separately, then the GUI master reused that fresh raw rebuild
+and completed obscuring, panel construction and fresh G1 estimation. New local
+result: 33,049 rows, 516 variables, 10,530 fictional firms; 38 primary models
+and all 3,762 bootstrap draws passed. All labels/notes passed, with 17,053,284
+cells unchanged by metadata finishing. A second GUI Do run reused all four
+checkpoints with 31 files unchanged. The existing published DTA is unchanged.
+Evidence: `20260917-run/block-0-data-preparation/documentation/RUN_VALIDATION.json`.

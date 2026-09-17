@@ -16,7 +16,7 @@ This private repository retains the full preparation and estimation source code.
 
 Rebuilding requires licensed Stata 17+ and Python dependencies from `requirements.txt`. To retrieve the original source inputs and retained results, run `python scripts/download_data.py --profile all` using an authenticated GitHub account with access. Raw source data, working outputs, seeds and recovery material remain local. See the [rebuild guide](20260917-run/block-0-data-preparation/documentation/REBUILD_GUIDE.md) for configuration and supported inputs.
 
-The previously published final DTA remains byte-identical. The new preparation entry points are undergoing local end-to-end validation; their status is recorded in the data-preparation block. [Historical runners and results](docs/LEGACY-RUNNERS.md) remain available for provenance.
+The preparation entry points passed a full local test: 17 raw stages, four master steps, fresh productivity estimation, metadata validation and checkpoint resume. See the [validation record](20260917-run/block-0-data-preparation/documentation/VALIDATION.md) for the exact execution scope. The previously published final DTA remains byte-identical. [Historical runners and results](docs/LEGACY-RUNNERS.md) remain available for provenance.
 
 ## Contributing
 
