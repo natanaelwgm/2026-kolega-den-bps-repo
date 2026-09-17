@@ -192,7 +192,7 @@ save {sq(projection)}, replace
 ''')
     import pandas as pd
     with pd.io.stata.StataReader(projection) as reader:
-        rows=reader._nobs;columns=len(reader.variable_labels())
+        columns=len(reader.variable_labels());rows=reader._nobs
     source=dict(source_inputs={'actual':dict(path=str(parent),sha256=sha(parent),bytes=parent.stat().st_size)},
                 outputs={'actual':dict(file=str(projection),sha256=sha(projection),bytes=projection.stat().st_size,rows=rows,columns=columns)},
                 source_boundary='Fresh raw Excel imports and all validated original G0 stages',raw_run=str(rawrun))
