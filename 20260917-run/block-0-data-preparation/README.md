@@ -1,6 +1,6 @@
 # Block 0 — Data preparation: OBSCURED analysis-ready data
 
-**Mulai dari [`analysis_ready_data.dta`](https://github.com/natanaelwgm/2026-kolega-den-bps-repo/releases/download/20260917-block-0-data-preparation/analysis_ready_data.dta)** jika ingin membaca data, mengembangkan analisis,
+**Mulai dari [`analysis_ready_data.dta`](analysis_ready_data.dta)** jika ingin membaca data, mengembangkan analisis,
 atau bekerja bersama coauthor. File ini menyatukan fitur G0, panel G0.5, hasil G1,
 label yang terbaca, dan definisi variabel lengkap.
 
@@ -25,32 +25,25 @@ berlaku apa pun pilihan analisisnya.
 OBSCURED.** Penggantian nama tidak menjadikannya data aktual. Bytes DTA identik
 dengan final G1 obscured yang telah diverifikasi.
 
-## Unduh satu dataset final
+## Satu dataset final langsung di folder ini
 
-Rilis ini menyediakan **satu DTA final**, yaitu [`analysis_ready_data.dta`](https://github.com/natanaelwgm/2026-kolega-den-bps-repo/releases/download/20260917-block-0-data-preparation/analysis_ready_data.dta).
-README, metadata dan kode berada di `main`; DTA disimpan sebagai aset
-[rilis privat GitHub](https://github.com/natanaelwgm/2026-kolega-den-bps-repo/releases/tag/20260917-block-0-data-preparation), sesuai kebijakan penyimpanan repo.
-Clone saja belum mengunduh DTA. Setelah clone, jalankan dari root repo:
+[`analysis_ready_data.dta`](analysis_ready_data.dta) disimpan **langsung dalam folder block-0
+pada branch `main`**, bersama README, metadata dan kode. Clone `main` sudah
+menyertakan DTA ini; tidak perlu mengunduh data terpisah dari Releases.
+Di GitHub, buka file lalu gunakan **Download raw file** untuk mengunduh DTA.
 
-```sh
-gh release download 20260917-block-0-data-preparation \
-  --repo natanaelwgm/2026-kolega-den-bps-repo \
-  --pattern analysis_ready_data.dta \
-  --dir 20260917-run/block-0-data-preparation
-shasum -a 256 20260917-run/block-0-data-preparation/analysis_ready_data.dta
-```
-
-Gunakan akun GitHub yang memiliki akses repo ini. SHA256 yang diharapkan:
+Dari folder block ini, buka `00_OPEN_DATA.do` di Stata. Hash DTA tetap:
 `975f7d2a4087ea5ee95ba1f59acbfe52f68cb25eea1a9f21ba23e64d3bba0c7c`.
-Jika file sudah ada, periksa hash-nya; tidak perlu mengunduh ulang.
-Selanjutnya buka `00_OPEN_DATA.do` dari folder block ini di Stata.
-`RELEASE.json` mencatat satu aset beserta ukuran, hash dan alamat unduhnya.
+
+[Salinan di rilis privat](https://github.com/natanaelwgm/2026-kolega-den-bps-repo/releases/tag/20260917-block-0-data-preparation) tetap tersedia sebagai cadangan dengan
+bytes yang sama. Ini satu dataset final yang sama, bukan dataset kedua.
+`RELEASE.json` mencatat lokasi utama di repo dan salinan rilisnya.
 
 ## File mana untuk apa?
 
 | File | Peran yang disarankan | Baris x variabel | Ada hasil G1? |
 |---|---|---:|---|
-| [`analysis_ready_data.dta`](https://github.com/natanaelwgm/2026-kolega-den-bps-repo/releases/download/20260917-block-0-data-preparation/analysis_ready_data.dta) | recommended starting dataset | 33,049 x 516 | Ya |
+| [`analysis_ready_data.dta`](analysis_ready_data.dta) | recommended starting dataset | 33,049 x 516 | Ya |
 | `intermediate/G05_obscured_panel.dta` (lokal saja) | optional pre-G1 input | 33,049 x 516 | Belum; sebelum estimasi |
 
 File G0.5 adalah intermediate lokal untuk mencoba estimasi baru; file ini tidak disertakan dalam rilis GitHub ini. Jika hanya ingin
