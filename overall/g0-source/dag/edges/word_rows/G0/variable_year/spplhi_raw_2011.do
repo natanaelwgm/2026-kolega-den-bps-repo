@@ -1,0 +1,28 @@
+* Tujuan: Untuk 2011, kolom sumber spplhi_raw tidak tersedia pada metode tahun ini; nilai dibiarkan kosong dengan status 4. // WFDOC-INJECTED
+* Input: Kolom yang dimuat launcher code/leaves/mapped/spplhi_raw_2011.do dari data/intermediate/raw_wave_2011.dta // WFDOC-INJECTED
+* Output: dag/data/word_data/G0/variable_year/N_G0_spplhi_raw_2011.dta // WFDOC-INJECTED
+* Jika perintah atau syarat berhenti dengan error, hasil belum selesai; cek pesan error dan baris terakhir di log. // WFDOC-INJECTED
+* N_G0_spplhi_raw_2011: annual staged raw state -> spplhi_raw at source_year/source_row.
+* Evidence: Existing G0 source map; semantic verification not implied by a parsed value.
+log using "$VYL/N_G0_spplhi_raw_2011.log", text replace name(vycell)
+* Mulai spplhi_raw sebagai nilai kosong; vs_spplhi_raw mulai dari kode 4. Baris berikut menerapkan aturan sumber tahun 2011. // WFDOC-INJECTED
+generate double spplhi_raw=.
+generate byte vs_spplhi_raw=4
+* Hitung berapa baris spplhi_raw yang terisi; hitungan berikut mencatat nol/status lalu post menulis ringkasan tanpa mengubah baris data. // WFDOC-INJECTED
+quietly count if !missing(spplhi_raw)
+local obs=r(N)
+quietly count if spplhi_raw==0
+local zeros=r(N)
+quietly count if inlist(vs_spplhi_raw,5,6,8)
+local bad=r(N)
+quietly count if vs_spplhi_raw==4
+local absent=r(N)
+post cell (2011) ("spplhi_raw") (_N) (`obs') (`zeros') (`bad') (`absent')
+* Simpan hanya source_year/source_row, spplhi_raw, status, dan kolom sumber yang diminta; isid lalu save satu hasil variabel/tahun, restore memulihkan data kerja. // WFDOC-INJECTED
+preserve
+keep source_year source_row spplhi_raw vs_spplhi_raw
+isid source_year source_row
+save "$VYD/N_G0_spplhi_raw_2011.dta", replace
+restore
+display "VARIABLE_YEAR_PASS N_G0_spplhi_raw_2011"
+log close vycell

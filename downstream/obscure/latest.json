@@ -1,0 +1,136 @@
+{
+  "status": "superseded_failed_categorical_check",
+  "run": "/Volumes/Extreme SSD/2026-kolega-obscured-pair/20260916-140834-00486b",
+  "rows": 33049,
+  "columns": 515,
+  "semantic_categories_exact": 256,
+  "protected_fields_exact": 354,
+  "changed_numeric_fields": 131,
+  "changed_numeric_cells": 2299327,
+  "dummy_firms": 10392,
+  "level_relative_change": {
+    "min": 0.001,
+    "max": 0.005
+  },
+  "counts": "integer rounding; preserve >100 worker category",
+  "percentages": "bounded 0..100; preserve zeros/full shares and FDI 10pct domain",
+  "coherence": {
+    "r_labor_productivity_nominal": {
+      "source_applicable": 33021,
+      "new_failures": 0
+    },
+    "r_output_per_worker_nominal": {
+      "source_applicable": 33021,
+      "new_failures": 0
+    },
+    "r_inputs_per_worker_nominal": {
+      "source_applicable": 33021,
+      "new_failures": 0
+    },
+    "r_rd_cost_per_worker_nominal": {
+      "source_applicable": 18538,
+      "new_failures": 0
+    },
+    "r_energy_cost_per_worker": {
+      "source_applicable": 33021,
+      "new_failures": 0
+    },
+    "r_total_gj_per_worker": {
+      "source_applicable": 33021,
+      "new_failures": 0
+    },
+    "r_co2_per_worker": {
+      "source_applicable": 33021,
+      "new_failures": 0
+    },
+    "r_capital_stock_per_worker": {
+      "source_applicable": 31896,
+      "new_failures": 0
+    },
+    "r_capital_additions_per_worker": {
+      "source_applicable": 29629,
+      "new_failures": 0
+    },
+    "r_ln_output_nominal": {
+      "source_applicable": 33049,
+      "new_failures": 0
+    },
+    "r_ln_va_nominal": {
+      "source_applicable": 33049,
+      "new_failures": 0
+    },
+    "r_ln_inputs_nominal": {
+      "source_applicable": 33028,
+      "new_failures": 0
+    },
+    "r_ln_workers": {
+      "source_applicable": 33021,
+      "new_failures": 0
+    },
+    "r_ln_total_gj_s1": {
+      "source_applicable": 32535,
+      "new_failures": 0
+    },
+    "r_ln_co2_total_s1": {
+      "source_applicable": 32535,
+      "new_failures": 0
+    },
+    "r_ln_energy_expenditure": {
+      "source_applicable": 32626,
+      "new_failures": 0
+    },
+    "r_ln_import_nominal": {
+      "source_applicable": 12206,
+      "new_failures": 0
+    },
+    "r_ln_rd_cost_nominal": {
+      "source_applicable": 3431,
+      "new_failures": 0
+    },
+    "r_ln_capital_stock_nominal": {
+      "source_applicable": 18885,
+      "new_failures": 0
+    },
+    "r_ln_capital_additions_nominal": {
+      "source_applicable": 6172,
+      "new_failures": 0
+    },
+    "gross_output_real": {
+      "source_applicable": 0,
+      "new_failures": 0
+    },
+    "value_added_real": {
+      "source_applicable": 0,
+      "new_failures": 0
+    },
+    "va_log_positive": {
+      "source_applicable": 33049,
+      "new_failures": 0
+    },
+    "va_signed_per_worker": {
+      "source_applicable": 33021,
+      "new_failures": 0
+    }
+  },
+  "actual_sha256": "1ed0dc0049fdefeea2e05e3c8e23c3850d4fb7e383ee316563118965d7931cd8",
+  "obscured_sha256": "30432396e9da2f53cc0e8c77824770818a4b67049d74126f8ed5265b2140ec44",
+  "g1_reestimated": false,
+  "categories": "exact per obs_id except declared dummy identity/mode metadata",
+  "fully_anonymous": false,
+  "source_build": "/Volumes/Extreme SSD/2026-kolega-analysis-ready/20260916-133412-1f1519/data/analysis_actual.dta",
+  "key_hash": "5c88fcbe875d8438fcdc7d7fc4cfd67f97568ad812a076e6f1b8d8859b77ce61",
+  "independent_followup": {
+    "state_fields_exact": 16,
+    "scale_fields_in_range": 124,
+    "worker_order_preserved": true
+  },
+  "source_sha256": {
+    "downstream/obscure/build_pair.py": "1355929a5cf233d75d96be2e1aafd2fc2b320818d38c048397ffb4c414cf9fa6",
+    "harness/g05/panel_generator.py": "67ecdf964c7394a9187ebd392e3363de534d6563fd557597c3af60ad2dcef920",
+    "harness/g05/column_policy.py": "aaecc702a0d3fead9a8de66cbdf6b25b00a5a5a2e7e6269b4c897b52ca42c677",
+    "harness/g05/build_development.py": "e2f3b7d9af803272d27e7147a1a3866d821e7b1fc4a5885729dcd6a7fd32b972"
+  },
+  "prior_status": "passed",
+  "superseded_by": "/Volumes/Extreme SSD/2026-kolega-strong-obscured/20260917-071711-dde497",
+  "reason": "energy_cost_reported_complete was incorrectly treated as a numerical level in the old mild policy; strong v2 protects both energy-cost status indicators and passes exact checks."
+}

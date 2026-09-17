@@ -5,9 +5,11 @@ from pathlib import Path
 import json
 import sys
 import pandas as pd
+from input_contract import load_input_contract
 
 
 def main(run):
+    contract = load_input_contract(run)
     # WFDOC: Attachment dibandingkan dalam urutan asli; setiap potongan harus identik, tanpa duplikasi psid-tahun atau baris tambahan.
     original = pd.read_stata(run / "full_input.dta", chunksize=512, convert_categoricals=False)
     attached = pd.read_stata(run / "analysis/G1_main_with_tfp.dta", chunksize=512, convert_categoricals=False)
@@ -40,7 +42,7 @@ def main(run):
         raise AssertionError("Attachment added unexpected source rows")
     # WFDOC: Gerbang akhir mengunci cakupan 33.049 baris dan 4.396 kolom serta menghitung sel yang dibandingkan.
     # WFDOC: Kedua key global dilaporkan terpisah karena firm-year menguji panel fiktif, sedangkan obs-year menguji identitas observasi yang dipakai attachment.
-    assert rows == 33049 and len(columns) == 4396
+    assert rows == contract['rows'] and len(columns) == contract['full_columns']
     result = {"status": "PASS", "rows": rows, "source_columns": len(columns),
               "source_cells_compared_exactly": cells, "chunk_rows": 512,
               "original_order_preserved": True,

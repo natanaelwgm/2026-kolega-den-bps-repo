@@ -147,7 +147,8 @@ def execute(root,stata,through):
                     removed.append({'path':str(p.relative_to(foundation)),'bytes':p.stat().st_size,'sha256':sha(p)});p.unlink()
             write_json(foundation/'runtime/generated-duplicate-cleanup.json',{'after_stage':'V070','files':removed,'originals_removed':False})
     for x in receipt['input_files']:
-        if sha(frozen_path(x['path']))!=x['sha256']:raise RuntimeError('Original input changed during replay')
+        input_path=Path(receipt['original_root']).parent/Path(x['path']).relative_to(Path(OLD).parent)
+        if sha(input_path)!=x['sha256']:raise RuntimeError('Original input changed during replay')
     receipt.update(status='passed_full_replay' if through=='H090' else 'passed_selected_initial_stages',all_17_stages_rerun=through=='H090',finished_at=dt.datetime.now(dt.timezone.utc).isoformat())
     write_json(root/'replay.json',receipt)
 

@@ -1,0 +1,891 @@
+{
+  "status": "PASS",
+  "version": "g05-external-excel-panel-v3",
+  "rows": 33049,
+  "synthetic_firms": 10463,
+  "firms_multiple_waves": 5469,
+  "firms_single_wave": 4994,
+  "matched_links": 22586,
+  "invalid_code_rows": 2,
+  "insufficient_feature_rows": 0,
+  "firm_wave_duplicates": 0,
+  "cross_stratum_links": 0,
+  "real_links_verified": 0,
+  "parameters": {
+    "caliper": 0.25,
+    "cluster_weight": 0.2,
+    "min_shared_features": 6,
+    "ranking": "midrank_within_year_sector",
+    "cluster_method": "Ward; k=min(8,ceil(sqrt(n/8)))",
+    "matching": "optional one-to-one minimum-cost; adjacent available waves",
+    "seed": "private domain-separated seed retained by owner"
+  },
+  "features": [
+    {
+      "name": "workers",
+      "family": "employment",
+      "label": "Total workers",
+      "excel_stem": "ltlnou",
+      "weight": 0.2
+    },
+    {
+      "name": "gross_output_nominal",
+      "family": "scale",
+      "label": "Gross output",
+      "excel_stem": "output",
+      "weight": 0.06666666666666667
+    },
+    {
+      "name": "value_added_nominal",
+      "family": "scale",
+      "label": "Reported value added",
+      "excel_stem": "vtlvcu",
+      "weight": 0.06666666666666667
+    },
+    {
+      "name": "intermediate_inputs_nominal",
+      "family": "scale",
+      "label": "Intermediate inputs",
+      "excel_stem": "iinput",
+      "weight": 0.06666666666666667
+    },
+    {
+      "name": "val_rtlvcu",
+      "family": "materials",
+      "label": "Raw materials used",
+      "excel_stem": "rtlvcu",
+      "weight": 0.2
+    },
+    {
+      "name": "val_efuvcu",
+      "family": "energy",
+      "label": "Reported fuel/lubricant expenditure",
+      "excel_stem": "efuvcu",
+      "weight": 0.1
+    },
+    {
+      "name": "elec_pln_kwh",
+      "family": "energy",
+      "label": "Purchased PLN electricity, kWh",
+      "excel_stem": "eplkhu",
+      "weight": 0.1
+    },
+    {
+      "name": "val_zpdvcu",
+      "family": "payroll",
+      "label": "Production payroll field ZPDVCU (source proxy)",
+      "excel_stem": "zpdvcu",
+      "weight": 0.1
+    },
+    {
+      "name": "val_zndvcu",
+      "family": "payroll",
+      "label": "Nonproduction payroll field ZNDVCU (source proxy)",
+      "excel_stem": "zndvcu",
+      "weight": 0.1
+    }
+  ],
+  "feature_coverage": [
+    {
+      "year": 2010,
+      "feature": "workers",
+      "rows": 2334,
+      "finite_nonnegative": 2334
+    },
+    {
+      "year": 2010,
+      "feature": "gross_output_nominal",
+      "rows": 2334,
+      "finite_nonnegative": 2334
+    },
+    {
+      "year": 2010,
+      "feature": "value_added_nominal",
+      "rows": 2334,
+      "finite_nonnegative": 2334
+    },
+    {
+      "year": 2010,
+      "feature": "intermediate_inputs_nominal",
+      "rows": 2334,
+      "finite_nonnegative": 2334
+    },
+    {
+      "year": 2010,
+      "feature": "val_rtlvcu",
+      "rows": 2334,
+      "finite_nonnegative": 2334
+    },
+    {
+      "year": 2010,
+      "feature": "val_efuvcu",
+      "rows": 2334,
+      "finite_nonnegative": 2334
+    },
+    {
+      "year": 2010,
+      "feature": "elec_pln_kwh",
+      "rows": 2334,
+      "finite_nonnegative": 2334
+    },
+    {
+      "year": 2010,
+      "feature": "val_zpdvcu",
+      "rows": 2334,
+      "finite_nonnegative": 2334
+    },
+    {
+      "year": 2010,
+      "feature": "val_zndvcu",
+      "rows": 2334,
+      "finite_nonnegative": 2334
+    },
+    {
+      "year": 2011,
+      "feature": "workers",
+      "rows": 2337,
+      "finite_nonnegative": 2337
+    },
+    {
+      "year": 2011,
+      "feature": "gross_output_nominal",
+      "rows": 2337,
+      "finite_nonnegative": 2337
+    },
+    {
+      "year": 2011,
+      "feature": "value_added_nominal",
+      "rows": 2337,
+      "finite_nonnegative": 2337
+    },
+    {
+      "year": 2011,
+      "feature": "intermediate_inputs_nominal",
+      "rows": 2337,
+      "finite_nonnegative": 2337
+    },
+    {
+      "year": 2011,
+      "feature": "val_rtlvcu",
+      "rows": 2337,
+      "finite_nonnegative": 2337
+    },
+    {
+      "year": 2011,
+      "feature": "val_efuvcu",
+      "rows": 2337,
+      "finite_nonnegative": 2337
+    },
+    {
+      "year": 2011,
+      "feature": "elec_pln_kwh",
+      "rows": 2337,
+      "finite_nonnegative": 2337
+    },
+    {
+      "year": 2011,
+      "feature": "val_zpdvcu",
+      "rows": 2337,
+      "finite_nonnegative": 2337
+    },
+    {
+      "year": 2011,
+      "feature": "val_zndvcu",
+      "rows": 2337,
+      "finite_nonnegative": 2337
+    },
+    {
+      "year": 2012,
+      "feature": "workers",
+      "rows": 2359,
+      "finite_nonnegative": 2359
+    },
+    {
+      "year": 2012,
+      "feature": "gross_output_nominal",
+      "rows": 2359,
+      "finite_nonnegative": 2359
+    },
+    {
+      "year": 2012,
+      "feature": "value_added_nominal",
+      "rows": 2359,
+      "finite_nonnegative": 2359
+    },
+    {
+      "year": 2012,
+      "feature": "intermediate_inputs_nominal",
+      "rows": 2359,
+      "finite_nonnegative": 2359
+    },
+    {
+      "year": 2012,
+      "feature": "val_rtlvcu",
+      "rows": 2359,
+      "finite_nonnegative": 2359
+    },
+    {
+      "year": 2012,
+      "feature": "val_efuvcu",
+      "rows": 2359,
+      "finite_nonnegative": 2359
+    },
+    {
+      "year": 2012,
+      "feature": "elec_pln_kwh",
+      "rows": 2359,
+      "finite_nonnegative": 2359
+    },
+    {
+      "year": 2012,
+      "feature": "val_zpdvcu",
+      "rows": 2359,
+      "finite_nonnegative": 2359
+    },
+    {
+      "year": 2012,
+      "feature": "val_zndvcu",
+      "rows": 2359,
+      "finite_nonnegative": 2359
+    },
+    {
+      "year": 2013,
+      "feature": "workers",
+      "rows": 2369,
+      "finite_nonnegative": 2369
+    },
+    {
+      "year": 2013,
+      "feature": "gross_output_nominal",
+      "rows": 2369,
+      "finite_nonnegative": 2369
+    },
+    {
+      "year": 2013,
+      "feature": "value_added_nominal",
+      "rows": 2369,
+      "finite_nonnegative": 2369
+    },
+    {
+      "year": 2013,
+      "feature": "intermediate_inputs_nominal",
+      "rows": 2369,
+      "finite_nonnegative": 2369
+    },
+    {
+      "year": 2013,
+      "feature": "val_rtlvcu",
+      "rows": 2369,
+      "finite_nonnegative": 2369
+    },
+    {
+      "year": 2013,
+      "feature": "val_efuvcu",
+      "rows": 2369,
+      "finite_nonnegative": 2369
+    },
+    {
+      "year": 2013,
+      "feature": "elec_pln_kwh",
+      "rows": 2369,
+      "finite_nonnegative": 2369
+    },
+    {
+      "year": 2013,
+      "feature": "val_zpdvcu",
+      "rows": 2369,
+      "finite_nonnegative": 2369
+    },
+    {
+      "year": 2013,
+      "feature": "val_zndvcu",
+      "rows": 2369,
+      "finite_nonnegative": 2369
+    },
+    {
+      "year": 2014,
+      "feature": "workers",
+      "rows": 2452,
+      "finite_nonnegative": 2452
+    },
+    {
+      "year": 2014,
+      "feature": "gross_output_nominal",
+      "rows": 2452,
+      "finite_nonnegative": 2452
+    },
+    {
+      "year": 2014,
+      "feature": "value_added_nominal",
+      "rows": 2452,
+      "finite_nonnegative": 2452
+    },
+    {
+      "year": 2014,
+      "feature": "intermediate_inputs_nominal",
+      "rows": 2452,
+      "finite_nonnegative": 2452
+    },
+    {
+      "year": 2014,
+      "feature": "val_rtlvcu",
+      "rows": 2452,
+      "finite_nonnegative": 2452
+    },
+    {
+      "year": 2014,
+      "feature": "val_efuvcu",
+      "rows": 2452,
+      "finite_nonnegative": 2452
+    },
+    {
+      "year": 2014,
+      "feature": "elec_pln_kwh",
+      "rows": 2452,
+      "finite_nonnegative": 2452
+    },
+    {
+      "year": 2014,
+      "feature": "val_zpdvcu",
+      "rows": 2452,
+      "finite_nonnegative": 2452
+    },
+    {
+      "year": 2014,
+      "feature": "val_zndvcu",
+      "rows": 2452,
+      "finite_nonnegative": 2452
+    },
+    {
+      "year": 2015,
+      "feature": "workers",
+      "rows": 2632,
+      "finite_nonnegative": 2632
+    },
+    {
+      "year": 2015,
+      "feature": "gross_output_nominal",
+      "rows": 2632,
+      "finite_nonnegative": 2632
+    },
+    {
+      "year": 2015,
+      "feature": "value_added_nominal",
+      "rows": 2632,
+      "finite_nonnegative": 2632
+    },
+    {
+      "year": 2015,
+      "feature": "intermediate_inputs_nominal",
+      "rows": 2632,
+      "finite_nonnegative": 2632
+    },
+    {
+      "year": 2015,
+      "feature": "val_rtlvcu",
+      "rows": 2632,
+      "finite_nonnegative": 2632
+    },
+    {
+      "year": 2015,
+      "feature": "val_efuvcu",
+      "rows": 2632,
+      "finite_nonnegative": 2632
+    },
+    {
+      "year": 2015,
+      "feature": "elec_pln_kwh",
+      "rows": 2632,
+      "finite_nonnegative": 2632
+    },
+    {
+      "year": 2015,
+      "feature": "val_zpdvcu",
+      "rows": 2632,
+      "finite_nonnegative": 2632
+    },
+    {
+      "year": 2015,
+      "feature": "val_zndvcu",
+      "rows": 2632,
+      "finite_nonnegative": 2632
+    },
+    {
+      "year": 2017,
+      "feature": "workers",
+      "rows": 3357,
+      "finite_nonnegative": 3357
+    },
+    {
+      "year": 2017,
+      "feature": "gross_output_nominal",
+      "rows": 3357,
+      "finite_nonnegative": 3357
+    },
+    {
+      "year": 2017,
+      "feature": "value_added_nominal",
+      "rows": 3357,
+      "finite_nonnegative": 3357
+    },
+    {
+      "year": 2017,
+      "feature": "intermediate_inputs_nominal",
+      "rows": 3357,
+      "finite_nonnegative": 3357
+    },
+    {
+      "year": 2017,
+      "feature": "val_rtlvcu",
+      "rows": 3357,
+      "finite_nonnegative": 3357
+    },
+    {
+      "year": 2017,
+      "feature": "val_efuvcu",
+      "rows": 3357,
+      "finite_nonnegative": 3357
+    },
+    {
+      "year": 2017,
+      "feature": "elec_pln_kwh",
+      "rows": 3357,
+      "finite_nonnegative": 3357
+    },
+    {
+      "year": 2017,
+      "feature": "val_zpdvcu",
+      "rows": 3357,
+      "finite_nonnegative": 3357
+    },
+    {
+      "year": 2017,
+      "feature": "val_zndvcu",
+      "rows": 3357,
+      "finite_nonnegative": 3357
+    },
+    {
+      "year": 2018,
+      "feature": "workers",
+      "rows": 3011,
+      "finite_nonnegative": 3011
+    },
+    {
+      "year": 2018,
+      "feature": "gross_output_nominal",
+      "rows": 3011,
+      "finite_nonnegative": 3011
+    },
+    {
+      "year": 2018,
+      "feature": "value_added_nominal",
+      "rows": 3011,
+      "finite_nonnegative": 3011
+    },
+    {
+      "year": 2018,
+      "feature": "intermediate_inputs_nominal",
+      "rows": 3011,
+      "finite_nonnegative": 3011
+    },
+    {
+      "year": 2018,
+      "feature": "val_rtlvcu",
+      "rows": 3011,
+      "finite_nonnegative": 3011
+    },
+    {
+      "year": 2018,
+      "feature": "val_efuvcu",
+      "rows": 3011,
+      "finite_nonnegative": 3011
+    },
+    {
+      "year": 2018,
+      "feature": "elec_pln_kwh",
+      "rows": 3011,
+      "finite_nonnegative": 3011
+    },
+    {
+      "year": 2018,
+      "feature": "val_zpdvcu",
+      "rows": 3011,
+      "finite_nonnegative": 3011
+    },
+    {
+      "year": 2018,
+      "feature": "val_zndvcu",
+      "rows": 3011,
+      "finite_nonnegative": 3011
+    },
+    {
+      "year": 2019,
+      "feature": "workers",
+      "rows": 3007,
+      "finite_nonnegative": 3007
+    },
+    {
+      "year": 2019,
+      "feature": "gross_output_nominal",
+      "rows": 3007,
+      "finite_nonnegative": 3007
+    },
+    {
+      "year": 2019,
+      "feature": "value_added_nominal",
+      "rows": 3007,
+      "finite_nonnegative": 3007
+    },
+    {
+      "year": 2019,
+      "feature": "intermediate_inputs_nominal",
+      "rows": 3007,
+      "finite_nonnegative": 3007
+    },
+    {
+      "year": 2019,
+      "feature": "val_rtlvcu",
+      "rows": 3007,
+      "finite_nonnegative": 3007
+    },
+    {
+      "year": 2019,
+      "feature": "val_efuvcu",
+      "rows": 3007,
+      "finite_nonnegative": 3007
+    },
+    {
+      "year": 2019,
+      "feature": "elec_pln_kwh",
+      "rows": 3007,
+      "finite_nonnegative": 3007
+    },
+    {
+      "year": 2019,
+      "feature": "val_zpdvcu",
+      "rows": 3007,
+      "finite_nonnegative": 3007
+    },
+    {
+      "year": 2019,
+      "feature": "val_zndvcu",
+      "rows": 3007,
+      "finite_nonnegative": 3007
+    },
+    {
+      "year": 2020,
+      "feature": "workers",
+      "rows": 2936,
+      "finite_nonnegative": 2936
+    },
+    {
+      "year": 2020,
+      "feature": "gross_output_nominal",
+      "rows": 2936,
+      "finite_nonnegative": 2936
+    },
+    {
+      "year": 2020,
+      "feature": "value_added_nominal",
+      "rows": 2936,
+      "finite_nonnegative": 2936
+    },
+    {
+      "year": 2020,
+      "feature": "intermediate_inputs_nominal",
+      "rows": 2936,
+      "finite_nonnegative": 2936
+    },
+    {
+      "year": 2020,
+      "feature": "val_rtlvcu",
+      "rows": 2936,
+      "finite_nonnegative": 2936
+    },
+    {
+      "year": 2020,
+      "feature": "val_efuvcu",
+      "rows": 2936,
+      "finite_nonnegative": 2936
+    },
+    {
+      "year": 2020,
+      "feature": "elec_pln_kwh",
+      "rows": 2936,
+      "finite_nonnegative": 2936
+    },
+    {
+      "year": 2020,
+      "feature": "val_zpdvcu",
+      "rows": 2936,
+      "finite_nonnegative": 2936
+    },
+    {
+      "year": 2020,
+      "feature": "val_zndvcu",
+      "rows": 2936,
+      "finite_nonnegative": 2936
+    },
+    {
+      "year": 2021,
+      "feature": "workers",
+      "rows": 3078,
+      "finite_nonnegative": 3078
+    },
+    {
+      "year": 2021,
+      "feature": "gross_output_nominal",
+      "rows": 3078,
+      "finite_nonnegative": 3078
+    },
+    {
+      "year": 2021,
+      "feature": "value_added_nominal",
+      "rows": 3078,
+      "finite_nonnegative": 3078
+    },
+    {
+      "year": 2021,
+      "feature": "intermediate_inputs_nominal",
+      "rows": 3078,
+      "finite_nonnegative": 3078
+    },
+    {
+      "year": 2021,
+      "feature": "val_rtlvcu",
+      "rows": 3078,
+      "finite_nonnegative": 3078
+    },
+    {
+      "year": 2021,
+      "feature": "val_efuvcu",
+      "rows": 3078,
+      "finite_nonnegative": 3078
+    },
+    {
+      "year": 2021,
+      "feature": "elec_pln_kwh",
+      "rows": 3078,
+      "finite_nonnegative": 3078
+    },
+    {
+      "year": 2021,
+      "feature": "val_zpdvcu",
+      "rows": 3078,
+      "finite_nonnegative": 3078
+    },
+    {
+      "year": 2021,
+      "feature": "val_zndvcu",
+      "rows": 3078,
+      "finite_nonnegative": 3078
+    },
+    {
+      "year": 2022,
+      "feature": "workers",
+      "rows": 3177,
+      "finite_nonnegative": 3177
+    },
+    {
+      "year": 2022,
+      "feature": "gross_output_nominal",
+      "rows": 3177,
+      "finite_nonnegative": 3177
+    },
+    {
+      "year": 2022,
+      "feature": "value_added_nominal",
+      "rows": 3177,
+      "finite_nonnegative": 3177
+    },
+    {
+      "year": 2022,
+      "feature": "intermediate_inputs_nominal",
+      "rows": 3177,
+      "finite_nonnegative": 3177
+    },
+    {
+      "year": 2022,
+      "feature": "val_rtlvcu",
+      "rows": 3177,
+      "finite_nonnegative": 3177
+    },
+    {
+      "year": 2022,
+      "feature": "val_efuvcu",
+      "rows": 3177,
+      "finite_nonnegative": 3177
+    },
+    {
+      "year": 2022,
+      "feature": "elec_pln_kwh",
+      "rows": 3177,
+      "finite_nonnegative": 3177
+    },
+    {
+      "year": 2022,
+      "feature": "val_zpdvcu",
+      "rows": 3177,
+      "finite_nonnegative": 3177
+    },
+    {
+      "year": 2022,
+      "feature": "val_zndvcu",
+      "rows": 3177,
+      "finite_nonnegative": 3177
+    }
+  ],
+  "transitions": [
+    {
+      "from_year": 2010,
+      "to_year": 2011,
+      "calendar_gap": 1,
+      "capacity_before_distance": 2076,
+      "matched": 1783,
+      "unmatched_previous": 551,
+      "new_current": 554,
+      "median_rank_distance": 0.13151898471546097,
+      "max_rank_distance": 0.2498918687534488
+    },
+    {
+      "from_year": 2011,
+      "to_year": 2012,
+      "calendar_gap": 1,
+      "capacity_before_distance": 2078,
+      "matched": 1796,
+      "unmatched_previous": 541,
+      "new_current": 563,
+      "median_rank_distance": 0.13222122753807258,
+      "max_rank_distance": 0.2499686257565872
+    },
+    {
+      "from_year": 2012,
+      "to_year": 2013,
+      "calendar_gap": 1,
+      "capacity_before_distance": 2091,
+      "matched": 1785,
+      "unmatched_previous": 574,
+      "new_current": 584,
+      "median_rank_distance": 0.1354285457030805,
+      "max_rank_distance": 0.24836416516645915
+    },
+    {
+      "from_year": 2013,
+      "to_year": 2014,
+      "calendar_gap": 1,
+      "capacity_before_distance": 2087,
+      "matched": 1790,
+      "unmatched_previous": 579,
+      "new_current": 662,
+      "median_rank_distance": 0.13354574518578322,
+      "max_rank_distance": 0.24964427839001554
+    },
+    {
+      "from_year": 2014,
+      "to_year": 2015,
+      "calendar_gap": 1,
+      "capacity_before_distance": 2163,
+      "matched": 1890,
+      "unmatched_previous": 562,
+      "new_current": 742,
+      "median_rank_distance": 0.12762565366771444,
+      "max_rank_distance": 0.24996296021907222
+    },
+    {
+      "from_year": 2015,
+      "to_year": 2017,
+      "calendar_gap": 2,
+      "capacity_before_distance": 2385,
+      "matched": 2049,
+      "unmatched_previous": 583,
+      "new_current": 1308,
+      "median_rank_distance": 0.13253071670558894,
+      "max_rank_distance": 0.2498109262302346
+    },
+    {
+      "from_year": 2017,
+      "to_year": 2018,
+      "calendar_gap": 1,
+      "capacity_before_distance": 2692,
+      "matched": 2374,
+      "unmatched_previous": 983,
+      "new_current": 637,
+      "median_rank_distance": 0.11986002470148677,
+      "max_rank_distance": 0.24949055738116305
+    },
+    {
+      "from_year": 2018,
+      "to_year": 2019,
+      "calendar_gap": 1,
+      "capacity_before_distance": 2588,
+      "matched": 2266,
+      "unmatched_previous": 745,
+      "new_current": 741,
+      "median_rank_distance": 0.12099542550233092,
+      "max_rank_distance": 0.2481759099000987
+    },
+    {
+      "from_year": 2019,
+      "to_year": 2020,
+      "calendar_gap": 1,
+      "capacity_before_distance": 2534,
+      "matched": 2199,
+      "unmatched_previous": 808,
+      "new_current": 737,
+      "median_rank_distance": 0.12318238136846638,
+      "max_rank_distance": 0.24994853489764665
+    },
+    {
+      "from_year": 2020,
+      "to_year": 2021,
+      "calendar_gap": 1,
+      "capacity_before_distance": 2588,
+      "matched": 2289,
+      "unmatched_previous": 647,
+      "new_current": 789,
+      "median_rank_distance": 0.1220308357644776,
+      "max_rank_distance": 0.24959542442319077
+    },
+    {
+      "from_year": 2021,
+      "to_year": 2022,
+      "calendar_gap": 1,
+      "capacity_before_distance": 2717,
+      "matched": 2365,
+      "unmatched_previous": 713,
+      "new_current": 812,
+      "median_rank_distance": 0.12231208359678906,
+      "max_rank_distance": 0.24999320187953758
+    }
+  ],
+  "cluster_counts_by_year": {
+    "2010": 337,
+    "2011": 335,
+    "2012": 353,
+    "2013": 359,
+    "2014": 360,
+    "2015": 374,
+    "2017": 425,
+    "2018": 404,
+    "2019": 427,
+    "2020": 405,
+    "2021": 417,
+    "2022": 427
+  },
+  "firm_wave_count_distribution": {
+    "1": 4994,
+    "2": 1579,
+    "3": 889,
+    "4": 601,
+    "5": 387,
+    "6": 500,
+    "7": 326,
+    "8": 201,
+    "9": 168,
+    "10": 113,
+    "11": 101,
+    "12": 604
+  },
+  "inference_scope": "Fictional development continuity; not recovered actual company identity.",
+  "downstream_estimation_executed": false
+}

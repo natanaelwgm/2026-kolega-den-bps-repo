@@ -1,0 +1,21 @@
+edge_id,inputs,output,producer
+E00,G0_SOURCE|G1_SOURCE|SCHEMA,PINNED,scripts/package.py prepare
+E01A,G0_SOURCE|PINNED,ACTUAL,code/01_project_source.do actual -> 02_identity -> 03_features -> 04_export_validate
+E01D,G1_SOURCE|PINNED,DEVELOPMENT,code/01_project_source.do development -> 02_identity -> 03_features -> 04_export_validate
+E02,ACTUAL|DEVELOPMENT,COVERAGE,code/04_export_validate.do
+E03,G1_SOURCE|G1_N06,G1_CHECK,code/05_g1_receipt_check.do
+E04,ACTUAL|DEVELOPMENT|COVERAGE|G1_CHECK|PINNED,PACKAGE,scripts/package.py finish
+E050,ACTUAL,MASK_BASE,obscure/strong/build.py
+E051,MASK_BASE,MASK_DERIVED,obscure/strong/build.py
+E052,MASK_DERIVED,MASK_IDS,obscure/strong/build.py
+E053,MASK_IDS,MASK_QA,obscure/strong/build.py
+E054,ACTUAL|MASK_IDS|MASK_QA,MASK_RECOVERY,obscure/strong/build.py
+E060,ACTUAL|MASK_BASE|MASK_DERIVED,G025_STAGE,downstream/g025_to_g1/build.py
+E061,G025_STAGE,G05_MASKED_PANEL,downstream/g025_to_g1/build.py
+E062,G05_MASKED_PANEL,G1_MASKED_ESTIMATION,downstream/g025_to_g1/build.py
+E063,G1_MASKED_ESTIMATION,G1_FINAL_VALUES,downstream/g025_to_g1/build.py:99_publish
+E064,G1_FINAL_VALUES|SCHEMA,G1_LABEL_CONTRACT,downstream/metadata/compile_metadata.py
+E065,G1_FINAL_VALUES|G1_LABEL_CONTRACT,G1_LABELLED,downstream/dag/edges/E065_apply_variable_metadata.do
+E066,G1_FINAL_VALUES|G1_LABELLED|G1_LABEL_CONTRACT,MASKED_FINAL,downstream/metadata/finish.py:independent validation and publication
+E067,MASKED_FINAL|G1_LABEL_CONTRACT|G05_MASKED_PANEL,DATA_GUIDE,downstream/metadata/data_guide.py
+E068,MASKED_FINAL|DATA_GUIDE|G05_MASKED_PANEL,BLOCK0_PACKAGE,downstream/metadata/package_block0.py
