@@ -10,7 +10,8 @@ flowchart LR
     P --> M[G0.25: independent numeric masking and derived formulas]
     M --> I[G0.5: fictional panel from masked features]
     I --> G1[G1: fresh nominal estimators and bootstrap]
-    G1 --> Final[Obscured analysis dataset with consistent G1 residuals]
+    G1 --> Metadata[E064-E066: variable definitions, Stata labels/notes, exact-data QA]
+    Metadata --> Final[Obscured analysis dataset with consistent G1 residuals and readable definitions]
 ```
 
 ## Local entry point
@@ -43,7 +44,10 @@ remain private and continue to reproduce the changes for the pinned source.
 | G0.5 | Same records with new observation keys and fictional company links constructed from masked matching features; **no additional numeric noise** | `MASK-STAGES/<id>/OBSCURED-ONLY/obscured_dummy.dta` |
 | G1 adapter | Drops empty G1 placeholders; selects the complete 41-field estimator input and retains the wider masked master | `G1/input.dta`, `G1/full_input.dta` |
 | G1 estimation | Existing E01–E19 and N01–N07 bodies; four methods, sensitivity fits, 99-draw exploratory bootstrap; source states remain separate from estimation eligibility | `G1/nominal/`, `G1/analysis/`, `G1/outputs/` |
-| Final | Same masked values and panel plus freshly computed G1 residuals; no further masking | `SHARE-OBSCURED/analysis_obscured_with_g1.dta` |
+| Final values | Same masked values and panel plus freshly computed G1 residuals; no further masking | `G1/analysis/G1_final_values.dta` |
+| Metadata contract | 516 source-grounded definitions, short labels, units and full notes | `METADATA/contract/` |
+| Labelled stage | Native Stata metadata only; preserve values, types and order | `METADATA/G1_labelled.dta` |
+| Final | E066 publishes only after exact-data and serialized-metadata validation | `SHARE-OBSCURED/analysis_obscured_with_g1.dta` |
 
 G0.25 is private because this intermediate still has original observation keys
 and the factor/recovery work files nearby. Share only `SHARE-OBSCURED/` when

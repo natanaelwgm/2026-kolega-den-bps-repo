@@ -46,7 +46,11 @@ flowchart LR
     ACTUAL --> G025_STAGE
     G025_STAGE --> G05_MASKED_PANEL
     G05_MASKED_PANEL --> G1_MASKED_ESTIMATION
-    G1_MASKED_ESTIMATION --> MASKED_FINAL
+    G1_MASKED_ESTIMATION -->|E063 final values| G1_FINAL_VALUES
+    G1_FINAL_VALUES -->|E064 compile definitions| G1_LABEL_CONTRACT
+    G1_FINAL_VALUES -->|E065 native Stata metadata| G1_LABELLED
+    G1_LABEL_CONTRACT --> G1_LABELLED
+    G1_LABELLED -->|E066 exact-data and metadata QA| MASKED_FINAL
 ```
 
 The detailed numeric masking subgraph remains MASK_BASE → MASK_DERIVED → MASK_IDS,
@@ -55,3 +59,7 @@ native intermediate datasets remain in the run.
 
 Acceptance: downstream/g025_to_g1/latest.json and RESULT.md. The earlier
 G1.5-after-G1 proposal is superseded by this explicit owner direction.
+
+## Terminal metadata finishing
+
+The accepted masked-input runner `downstream/g025_to_g1/build.py` invokes E064-E066 automatically after numerical G1 publication and before the public final DTA is admitted. The standalone `downstream/metadata/finish.py` runs the same edges on an existing pinned final numerical parent. This stage changes metadata only; no refit is needed. The native edge is `downstream/dag/edges/E065_apply_variable_metadata.do`. See `downstream/metadata/README.md` for commands and validation.

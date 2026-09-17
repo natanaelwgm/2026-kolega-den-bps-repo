@@ -44,3 +44,7 @@ All source records remain. Missing residuals reflect calendar, domain and sample
 The attached TFP fields are **nominal development residuals on a fictional panel**, computed from the final visible masked values. They are not verified actual-company TFP or unrestricted empirical readiness. Actual-linkage and real-TFP gates remain false. Retained source categories can support linkage; this masking does not guarantee anonymity.
 
 The two local run fixes were Stata temporary-path quoting on the SSD and key-based final comparison after `xtset` sorting. Neither changed the fitted model equations, support thresholds or bootstrap rules. No GitHub push, demo deletion, or full infrastructure change was performed.
+
+## Metadata finishing revision, 17 September 2026
+
+The current `latest.json` points to the labelled delivery under `METADATA-v1/SHARE-OBSCURED`. Numerical parent hash remains `f7916d6fcda541d54bff2dc1d4cf01377f181b2e4a99fa115483b74779603c58`. E064-E066 added 516 readable labels and full notes; all 17,053,284 cells are exactly unchanged. Parent receipt: `downstream/metadata/parent-lineage.json`; new validation: `downstream/metadata/latest.json`. The estimation was not rerun for this metadata-only change.

@@ -19,6 +19,8 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'downstream/obscure/strong'))
 from seeded import sha
 from build import stata, write, log
+sys.path.insert(0, str(ROOT / 'downstream/metadata'))
+from finish import finish as finish_metadata
 
 VERSION = 'g025-mask-g05-panel-g1-v1'
 
@@ -26,6 +28,9 @@ VERSION = 'g025-mask-g05-panel-g1-v1'
 def source_files():
     files = list((ROOT / 'downstream/obscure/strong').glob('*.py'))
     files += list((ROOT / 'downstream/g025_to_g1').glob('*.py'))
+    files += list((ROOT / 'downstream/metadata').glob('*.py'))
+    files += list((ROOT / 'downstream/dag/edges').glob('E06*.do'))
+    files += [ROOT / 'downstream/contracts/variable_year_evidence.csv']
     files += list((ROOT / 'harness/g05').glob('*.py'))
     files += list((ROOT / 'work-items/G1').glob('*.py'))
     files += list((ROOT / 'work-items/G1').glob('*.json'))
@@ -209,8 +214,10 @@ label data "G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED"
 char _dta[lineage] "G0 -> G0.25 strong mask -> G0.5 fictional panel -> G1 nominal re-estimation"
 char _dta[input_manifest_sha256] "{input_contract['manifest_sha256']}"
 compress
-save "{public/'analysis_obscured_with_g1.dta'}", replace
+save "{g1/'analysis/G1_final_values.dta'}", replace
 ''')
+    log('FINISH | E064 definitions -> E065 Stata labels/notes -> E066 unchanged-data validation')
+    metadata = finish_metadata(g1 / 'analysis/G1_final_values.dta', public, run / 'METADATA')
     final = pd.read_stata(public / 'analysis_obscured_with_g1.dta', convert_categoricals=False)
     assert list(final) == original_columns
     untouched = [x for x in before if not x.startswith('dev_nominal_') and x != 'g1_results_attached']
@@ -233,12 +240,15 @@ save "{public/'analysis_obscured_with_g1.dta'}", replace
                    no_post_estimation_perturbation=True, g05_added_noise=False,
                    source_and_category_cells_preserved_through_g1=True,
                    g1_estimates_freshly_computed=True, real_empirical_panel_admitted=False,
+                   metadata_finishing=metadata,
                    masking_run=str(stage_root), code=code, executed_estimation_code=estimation_code,
                    g1_intermediates=output_inventory,
                    qa={f: json.loads((g1/'qa'/f).read_text())['status'] for f in ['numeric-validation.json', 'nominal-validation.json', 'full-master-validation.json']})
     write(run / 'COMPLETE.json', receipt)
     write(ROOT / 'downstream/g025_to_g1/latest.json', receipt)
-    write(public / 'LINEAGE.json', {k: v for k, v in receipt.items() if k not in ['run', 'final_file', 'masking_run', 'g1_intermediates']})
+    public_receipt = {k: v for k, v in receipt.items() if k not in ['run', 'final_file', 'masking_run', 'g1_intermediates']}
+    public_receipt['metadata_finishing'] = {k: v for k, v in metadata.items() if k not in ['parent_file', 'final_file']}
+    write(public / 'LINEAGE.json', public_receipt)
     (public / '00_OPEN.do').write_text('version 17\nset more off\nuse "analysis_obscured_with_g1.dta", clear\nxtset firm_id year\nsummarize workers value_added_nominal dev_nominal_tfp_*\n')
     (run / '00_OPEN_FINAL.do').write_text(f'version 17\nset more off\nuse "{public/"analysis_obscured_with_g1.dta"}", clear\nxtset firm_id year\nsummarize workers value_added_nominal dev_nominal_tfp_*\n')
     (public / 'README.md').write_text('''# Obscured panel with freshly estimated G1
@@ -251,6 +261,11 @@ The final visible input values are exactly those used to estimate the attached
 G1 residuals. No numbers are masked again after estimation. Source categories
 are retained. Original data, seed, mapping and recovery are kept outside this
 folder. The G0.5 panel file in intermediate/ is the pre-estimation dataset.
+
+E064-E066 finish the delivery with 516 readable variable labels, embedded full
+variable notes, and metadata/variable_dictionary.csv plus metadata/CODEBOOK.md.
+In Stata use notes workers or notes dev_nominal_tfp_lp. Metadata finishing
+preserves every value, storage type, row/column order and missing value.
 
 This is obscured development data with fictional company links, not verified
 actual-firm TFP or a fully anonymous dataset. See masking-reports for numerical

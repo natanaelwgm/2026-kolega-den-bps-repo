@@ -1,9 +1,9 @@
 # MASKED_FINAL
 
-Owner-selected order, 17 September 2026: G0 → G0.25 → G0.5 → G1.
+Publish only after native and independent exact data/metadata validation. Final DTA includes labels and full definitions; no re-estimation or remasking.
 
-Preserve all masked inputs and panel links; attach newly estimated G1 residuals without post-estimation masking.
+Grain: Same obscured fictional company-years; 33049 rows by 516 variables.
 
-Inputs: G1_MASKED_ESTIMATION. Grain: One masked observation; preserve all 33049 source rows and 516-view schema.
+Artifact: `SHARE-OBSCURED/analysis_obscured_with_g1.dta; metadata/VALIDATION.json`. Evidence: `downstream/metadata/latest.json` after local execution. The original numerical parent is retained; label changes must not change any cell or overwrite unrelated notes.
 
-Runner: downstream/g025_to_g1/build.py. Evidence must be downstream/g025_to_g1/latest.json after acceptance. Accepted local run passed; see downstream/g025_to_g1/RESULT.md for scope and counts.
+Local PASS: 516 exact labels and serialized full notes; 17,053,284 cells, schema, order, missingness and value-label dictionaries unchanged. Native note reapplication is idempotent.

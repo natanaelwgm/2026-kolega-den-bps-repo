@@ -19,3 +19,7 @@ residual, bootstrap and recovery checks passed. See downstream/g025_to_g1/RESULT
 
 G15_LINEAGE was superseded by the owner's G0 → G0.25 → G0.5 → G1 order.
 No full raw-Excel rebuild or GitHub infrastructure/publication is claimed.
+
+## 2026-09-17: final variable metadata
+
+E064-E066 passed locally. G1_FINAL_VALUES -> G1_LABEL_CONTRACT -> G1_LABELLED -> MASKED_FINAL. All 516 labels/notes verified after save/reopen; 17,053,284 values unchanged. No refit or seed change. Evidence: `downstream/metadata/latest.json`.

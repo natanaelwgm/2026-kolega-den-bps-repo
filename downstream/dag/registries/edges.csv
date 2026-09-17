@@ -13,4 +13,7 @@ E054,ACTUAL|MASK_IDS|MASK_QA,MASK_RECOVERY,obscure/strong/build.py
 E060,ACTUAL|MASK_BASE|MASK_DERIVED,G025_STAGE,downstream/g025_to_g1/build.py
 E061,G025_STAGE,G05_MASKED_PANEL,downstream/g025_to_g1/build.py
 E062,G05_MASKED_PANEL,G1_MASKED_ESTIMATION,downstream/g025_to_g1/build.py
-E063,G1_MASKED_ESTIMATION,MASKED_FINAL,downstream/g025_to_g1/build.py
+E063,G1_MASKED_ESTIMATION,G1_FINAL_VALUES,downstream/g025_to_g1/build.py:99_publish
+E064,G1_FINAL_VALUES|SCHEMA,G1_LABEL_CONTRACT,downstream/metadata/compile_metadata.py
+E065,G1_FINAL_VALUES|G1_LABEL_CONTRACT,G1_LABELLED,downstream/dag/edges/E065_apply_variable_metadata.do
+E066,G1_FINAL_VALUES|G1_LABELLED|G1_LABEL_CONTRACT,MASKED_FINAL,downstream/metadata/finish.py:independent validation and publication

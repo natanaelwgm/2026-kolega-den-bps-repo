@@ -1,9 +1,12 @@
 {
   "node": "MASKED_FINAL",
   "inputs": [
-    "G1_MASKED_ESTIMATION"
+    "G1_FINAL_VALUES",
+    "G1_LABELLED",
+    "G1_LABEL_CONTRACT"
   ],
-  "grain": "One masked observation; preserve all 33049 source rows and 516-view schema.",
-  "behavior": "Preserve all masked inputs and panel links; attach newly estimated G1 residuals without post-estimation masking.",
-  "scope": "obscured nominal development; actual panel/real TFP not admitted"
+  "grain": "Same obscured fictional company-years; 33049 rows by 516 variables.",
+  "behavior": "Publish only after native and independent exact data/metadata validation. Final DTA includes labels and full definitions; no re-estimation or remasking.",
+  "output": "SHARE-OBSCURED/analysis_obscured_with_g1.dta; metadata/VALIDATION.json",
+  "scope": "obscured nominal development; metadata does not admit actual linkage or real TFP"
 }
