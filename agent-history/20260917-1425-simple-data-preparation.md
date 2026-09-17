@@ -23,3 +23,10 @@
 - Opened English `00_run.do` in the owner's Stata Do-file Editor via computer use; main Results working directory set to the data-preparation block. Execution will follow completed raw validation.
 
 - English interface source/configuration checks passed. Added English progress adapter while retaining the original live-helper process supervision. Raw rebuild passed T000,F010,F030,F040,F050,F060,F070,V070,V060,F080,V080,F085,F090A,V085; reporting stages still active as of 14:52 WIB. The current run is not yet complete and no claim of full interface success has been made.
+
+## 2026-09-17T15:18:29.821155+07:00 — Reference-path repair
+
+- Full raw run reached reporting module G0-X16 and stopped with r601: `references/WPI_output_lookup.dta` was absent in the isolated foundation. Its source was already copied and hash-pinned at `G0-rebuild/references/WPI_output_lookup.dta`. The original foundation builder establishes this second operative path, but overall.prepare omitted it because DTA files are absent from the code template.
+- Fixed `overall/scripts/overall.py` to verify and copy that reference to the operative foundation path during preparation. SHA256 is `6e41ec26e960ac290b88844960229bba6d4b8b72e110b539e817e1046c60d3c1`; no deflator is applied to firm data.
+- Repaired the exact owned run with the same verified reference. `WPI_REFERENCE_REPAIR.json` preserves hashes of 26 completed report files and the completed module calls. `F090_reports_continue.do` resumes at G0-X16; earlier modules are not re-estimated. F090R audit, V090 exact report comparisons, and H090 are still required. Prior failed log retained as `02_REPORTS_before_WPI_fix.log`.
+- Current owned native worker PID12524 (parent from `/private/tmp/kolega_resume_probe.py`); no other processes signalled.
