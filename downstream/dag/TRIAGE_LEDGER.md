@@ -31,3 +31,5 @@ E067 -> DATA_GUIDE passed. Final README and METADATA.json describe two available
 ## 2026-09-17: dated block-0 package
 
 E068 -> BLOCK0_PACKAGE passed. The requested repo folder holds 21 files including two unchanged obscured DTAs, metadata/dictionaries, advisory README, lineage and masking reports. The primary entry is analysis_ready_data.dta. No GitHub data upload performed. Evidence: 20260917-run/block-0-data-preparation/PACKAGE.json.
+
+Publication update, 17 September: the owner authorized main publication and clarified one final dataset. RELEASE.json selects only analysis_ready_data.dta for the private release; the pre-G1 intermediate remains local. No numerical values were changed.

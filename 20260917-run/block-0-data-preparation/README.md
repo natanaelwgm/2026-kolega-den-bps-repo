@@ -1,6 +1,6 @@
 # Block 0 — Data preparation: OBSCURED analysis-ready data
 
-**Mulai dari [`analysis_ready_data.dta`](analysis_ready_data.dta)** jika ingin membaca data, mengembangkan analisis,
+**Mulai dari [`analysis_ready_data.dta`](https://github.com/natanaelwgm/2026-kolega-den-bps-repo/releases/download/20260917-block-0-data-preparation/analysis_ready_data.dta)** jika ingin membaca data, mengembangkan analisis,
 atau bekerja bersama coauthor. File ini menyatukan fitur G0, panel G0.5, hasil G1,
 label yang terbaca, dan definisi variabel lengkap.
 
@@ -15,7 +15,7 @@ berlaku apa pun pilihan analisisnya.
 - `analysis_ready_data.dta`: dataset final **OBSCURED**, lengkap dengan hasil G1 dan 516 label/notes.
 - `README.md` dan `METADATA.json`: panduan analisis opsional dan metadata dataset.
 - `metadata/`: dictionary, codebook, do-file label/notes dan hasil validasi.
-- `intermediate/`: input panel obscured sebelum G1 untuk percobaan estimasi baru.
+- `intermediate/`: input sebelum G1 yang hanya disimpan lokal; tidak diunggah pada rilis ini.
 - `masking-reports/`: aturan perubahan angka, identitas fiktif dan pemeriksaan terkait.
 - `provenance/upstream/`: dokumentasi sumber sebelum file final diberi nama paket ini.
 - `LINEAGE.json` dan `PACKAGE.json`: rantai versi, hash dan bukti penyalinan.
@@ -25,18 +25,35 @@ berlaku apa pun pilihan analisisnya.
 OBSCURED.** Penggantian nama tidak menjadikannya data aktual. Bytes DTA identik
 dengan final G1 obscured yang telah diverifikasi.
 
-Paket ini sudah tersedia lengkap di checkout lokal. DTA mengikuti kebijakan repo
-sebagai artefak data di luar Git source; snapshot tanggal ini belum diunggah sebagai
-rilis GitHub. Manifest tetap mencatat nama, ukuran dan hash untuk publikasi berikutnya.
+## Unduh satu dataset final
+
+Rilis ini menyediakan **satu DTA final**, yaitu [`analysis_ready_data.dta`](https://github.com/natanaelwgm/2026-kolega-den-bps-repo/releases/download/20260917-block-0-data-preparation/analysis_ready_data.dta).
+README, metadata dan kode berada di `main`; DTA disimpan sebagai aset
+[rilis privat GitHub](https://github.com/natanaelwgm/2026-kolega-den-bps-repo/releases/tag/20260917-block-0-data-preparation), sesuai kebijakan penyimpanan repo.
+Clone saja belum mengunduh DTA. Setelah clone, jalankan dari root repo:
+
+```sh
+gh release download 20260917-block-0-data-preparation \
+  --repo natanaelwgm/2026-kolega-den-bps-repo \
+  --pattern analysis_ready_data.dta \
+  --dir 20260917-run/block-0-data-preparation
+shasum -a 256 20260917-run/block-0-data-preparation/analysis_ready_data.dta
+```
+
+Gunakan akun GitHub yang memiliki akses repo ini. SHA256 yang diharapkan:
+`975f7d2a4087ea5ee95ba1f59acbfe52f68cb25eea1a9f21ba23e64d3bba0c7c`.
+Jika file sudah ada, periksa hash-nya; tidak perlu mengunduh ulang.
+Selanjutnya buka `00_OPEN_DATA.do` dari folder block ini di Stata.
+`RELEASE.json` mencatat satu aset beserta ukuran, hash dan alamat unduhnya.
 
 ## File mana untuk apa?
 
 | File | Peran yang disarankan | Baris x variabel | Ada hasil G1? |
 |---|---|---:|---|
-| [`analysis_ready_data.dta`](analysis_ready_data.dta) | recommended starting dataset | 33,049 x 516 | Ya |
-| [`intermediate/G05_obscured_panel.dta`](intermediate/G05_obscured_panel.dta) | optional pre-G1 input | 33,049 x 516 | Belum; sebelum estimasi |
+| [`analysis_ready_data.dta`](https://github.com/natanaelwgm/2026-kolega-den-bps-repo/releases/download/20260917-block-0-data-preparation/analysis_ready_data.dta) | recommended starting dataset | 33,049 x 516 | Ya |
+| `intermediate/G05_obscured_panel.dta` (lokal saja) | optional pre-G1 input | 33,049 x 516 | Belum; sebelum estimasi |
 
-File G0.5 adalah alternatif input untuk mencoba estimasi baru. Jika hanya ingin
+File G0.5 adalah intermediate lokal untuk mencoba estimasi baru; file ini tidak disertakan dalam rilis GitHub ini. Jika hanya ingin
 menganalisis keluaran yang sudah tersedia, master final biasanya cukup; seluruh
 fitur yang diperlukan untuk membacanya sudah berada dalam satu file.
 
@@ -71,7 +88,7 @@ kelayakan dan missingness; identitas panel; residual dan indikator sampel G1.
 | Eksplorasi energi, emisi dan intensitas | `analysis_ready_data.dta` | Mulai dengan cakupan komponen per tahun, lalu pilih subtotal atau subset lengkap sesuai tujuan. | Cakupan sembilan bahan bakar dan listrik dibeli; complete berarti lengkap untuk subset itu. CO2 bukan CO2e; own generation tidak ditambahkan dua kali. Unit/faktor tetap mengikuti evidence tahun. |
 | Eksplorasi per tahun, provinsi atau industri | `analysis_ready_data.dta` | Tabel tahunan/provinsi/industri dapat menjadi titik awal pemeriksaan pola pada data development. | Ketersediaan kode dihitung dalam metadata. Kolom kosong tidak memberi informasi wilayah. Kode industri lintas vintage belum dijembatani; agregat sampel tidak otomatis estimasi populasi. |
 | Menguji kode panel, lag, atau transisi | `analysis_ready_data.dta` | Gunakan firm_id dan year untuk pengujian struktur panel. Pertahankan jarak kalender asli ketika membuat lag. | ID konsisten dalam rilis ini, namun keterkaitan perusahaan bersifat fiktif. Tidak semua perusahaan muncul tiap tahun; 2016 tidak tersedia. Identitas tidak dijamin tetap pada rebuild dengan input baru. |
-| Mencoba estimasi G1 atau spesifikasi lain dari input sebelum G1 | `intermediate/G05_obscured_panel.dta` | Jika file intermediate disertakan, gunakan G0.5 obscured sebagai input awal dan simpan output percobaan secara terpisah. | Ini input sebelum G1, bukan alternatif hasil G1 final. Placeholder hasil G1 di file ini tidak boleh dibaca sebagai estimasi. Tidak diperlukan untuk sekadar membaca master final. |
+| Mencoba estimasi G1 atau spesifikasi lain dari input sebelum G1 | `intermediate/G05_obscured_panel.dta` | Intermediate ini hanya tersedia lokal. Jika membangunnya ulang, gunakan G0.5 obscured sebagai input awal dan simpan output percobaan secara terpisah. | Ini input sebelum G1, bukan alternatif hasil G1 final. Placeholder hasil G1 di file ini tidak boleh dibaca sebagai estimasi. Tidak diperlukan untuk sekadar membaca master final. |
 
 Tidak ada filter yang diterapkan oleh README atau metadata ini. Tidak perlu
 membuang seluruh baris hanya karena satu metode TFP atau satu fitur belum tersedia.
@@ -149,5 +166,5 @@ berarti obscuring bukan jaminan anonimitas penuh.
 - ID rilis data: `kolega-g025-g05-g1-975f7d2a4087`.
 - SHA256 DTA final: `975f7d2a4087ea5ee95ba1f59acbfe52f68cb25eea1a9f21ba23e64d3bba0c7c`.
 - Bukti metadata tanpa perubahan angka: [VALIDATION.json](metadata/VALIDATION.json).
-- Dokumentasi ini dibuat otomatis oleh edge **E067** setelah DTA final tervalidasi.
+- Dasar dokumentasi dibuat oleh edge **E067** setelah DTA final tervalidasi; cakupan publikasi diperjelas menjadi satu DTA final pada 17 September 2026.
 - Rekomendasi tidak mengubah nilai, filter, hasil estimasi atau indikator kesiapan.

@@ -98,3 +98,5 @@ python3 downstream/metadata/package_block0.py /path/to/SHARE-OBSCURED 20260917-r
 The DTA files are physically present in the local package and follow the repo's
 existing data-artifact ignore policy. Publishing them to a private GitHub release
 is a separate step; this local packaging command does not upload anything.
+
+The 17 September snapshot is published as **one final DTA** in the [private release](https://github.com/natanaelwgm/2026-kolega-den-bps-repo/releases/tag/20260917-block-0-data-preparation). Its block README and RELEASE.json give the download instructions and hash; the pre-G1 intermediate is local-only. The packaging command itself still performs no upload.
