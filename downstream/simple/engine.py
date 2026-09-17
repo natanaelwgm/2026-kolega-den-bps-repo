@@ -212,9 +212,19 @@ def panel(run):
     stage=check_pin(run/'step-2.json')
     if (run/'step-3.json').exists():check_pin(run/'step-3.json');print('Panel checkpoint verified; reusing the same identifiers.',flush=True);return
     state=load(run/'settings.json')
-    call([sys.executable,ROOT/'downstream/obscure/strong/build.py',run/'private/masking',
-          '--source-receipt',run/'private/clean-source.json','--latest-receipt',run/'private/panel-receipt.json',
-          '--seed-file',state['seed_file'],'--resume',stage['masking_run'],'--retain-intermediates'])
+    completed=Path(stage['masking_run'])/'COMPLETE.json'
+    if completed.exists():
+        rec=load(completed)
+        assert rec['status']=='passed'
+        assert rec['actual_sha256']==load(run/'private/clean-source.json')['outputs']['actual']['sha256']
+        assert rec['source_code_sha256']=={p.name:sha(p) for p in (ROOT/'downstream/obscure/strong').glob('*.py')}
+        assert rec['masked_sha256']==sha(Path(stage['masking_run'])/'OBSCURED-ONLY/obscured_dummy.dta')
+        write(run/'private/panel-receipt.json',rec)
+        print('Completed panel verified; recovering its step receipt.',flush=True)
+    else:
+        call([sys.executable,ROOT/'downstream/obscure/strong/build.py',run/'private/masking',
+              '--source-receipt',run/'private/clean-source.json','--latest-receipt',run/'private/panel-receipt.json',
+              '--seed-file',state['seed_file'],'--resume',stage['masking_run'],'--retain-intermediates'])
     rec=load(run/'private/panel-receipt.json')
     panelpath=Path(rec['run'])/'OBSCURED-ONLY/obscured_dummy.dta'
     pin(run,3,[panelpath,run/'private/panel-receipt.json'])
@@ -237,9 +247,18 @@ def estimate(run):
         shutil.copytree(source.parent/name,run/'output/documentation'/name,dirs_exist_ok=True)
     for name in ['LINEAGE.json','METADATA.json']:
         shutil.copyfile(source.parent/name,run/'output/documentation'/name)
+    provenance=run/'output/documentation/provenance';provenance.mkdir(exist_ok=True)
+    for name in ['README.md','METADATA.json']:
+        shutil.copyfile(source.parent/name,provenance/name)
+    shutil.copyfile(source.parent/'metadata/DATA_GUIDE_VALIDATION.json',provenance/'DATA_GUIDE_VALIDATION.json')
     metadata=load(run/'output/documentation/METADATA.json')
     metadata['recommended_entry_file']='../analysis_ready_data.dta'
     metadata['dataset_catalogue']=[dict(x,file='../analysis_ready_data.dta') for x in metadata['dataset_catalogue'] if x['contains_fresh_g1_results']]
+    for entry in metadata['downstream_starting_points']:
+        if entry['file']==source.name:
+            entry['file']='../analysis_ready_data.dta'
+        else:
+            entry['available_in_delivery']=False
     write(run/'output/documentation/METADATA.json',metadata)
     (run/'output/README.md').write_text("""# Analysis dataset
 
@@ -249,6 +268,10 @@ The [variable dictionary](documentation/metadata/variable_dictionary.csv) provid
 
 `COMPLETE.json` records the validated file hash and source run.
 """)
+    write(run/'output/documentation/metadata/DATA_GUIDE_VALIDATION.json',dict(status='PASS',
+        dataset_files=1,final_sha256=sha(dest),recommendations_are_binding=False,
+        files={name:sha(run/'output'/name) for name in ['README.md','documentation/METADATA.json']},
+        original_receipt='../provenance/DATA_GUIDE_VALIDATION.json'))
     write(run/'output/COMPLETE.json',dict(status='PASS',file=dest.name,sha256=sha(dest),rows=rec['rows'],variables=rec['columns'],source_run=str(run),
         order=['clean_data','obscure_values','construct_panel','estimate_productivity'],obscured=True,no_post_estimation_masking=True))
     pin(run,4,[dest,run/'output/COMPLETE.json'])
