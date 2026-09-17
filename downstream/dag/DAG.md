@@ -72,3 +72,23 @@ The accepted masked-input runner `downstream/g025_to_g1/build.py` invokes E064-E
 E067 (`downstream/metadata/data_guide.py`) generates the final dataset README and `METADATA.json` from the validated delivered files. Dataset recommendations are advisory and never impose a sample/model or change data. The masked runner invokes it after packaging the optional G0.5 intermediate.
 
 E068 creates the explicitly requested dated local package under `20260917-run/block-0-data-preparation/`, with `analysis_ready_data.dta` retaining identical obscured bytes and regenerated filename references. This packaging step is explicit so future runs do not overwrite a dated snapshot.
+
+## Antarmuka persiapan yang disederhanakan
+
+`20260917-run/block-0-data-preparation/00_run.do` adalah entry point baru
+untuk urutan lengkap raw → bersih → obscured → panel → produktivitas dan metadata.
+Nama tampilan tidak mengubah node atau keputusan ilmiah yang sudah ada.
+Concordance: `20260917-run/block-0-data-preparation/documentation/source_concordance.csv`.
+
+| File tampilan | Node/proses asal | Artefak batas |
+|---|---|---|
+| 01_clean_data.do | Semua 17 tahap G0 + proyeksi ACTUAL | data-antara/data_bersih.dta |
+| 02_obscure_values.do | MASK_BASE → MASK_DERIVED / G025_STAGE | numeric.dta + NUMERIC_COMPLETE.json |
+| 03_construct_panel.do | MASK_IDS → MASK_QA / G05_MASKED_PANEL | obscured_dummy.dta |
+| 04_estimate_productivity.do | G1_MASKED_ESTIMATION → E063–E067 | hasil/analysis_ready_data.dta |
+
+`downstream/simple/engine.py` mengikat input, checkpoint, dan panggilan sumber.
+Tahap 3 harus melanjutkan checkpoint numerik tahap 2, sehingga tidak ada noise
+kedua. Tahap 4 menerima panel dan receipt tersebut serta mengestimasi ulang
+model pada nilai tersamarkan yang sama. Hasil final tetap batas untuk semua
+analisis berikutnya; analisis tidak perlu menjalankan tahap raw.

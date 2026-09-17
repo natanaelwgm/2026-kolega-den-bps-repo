@@ -44,6 +44,10 @@ def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('output_root', type=Path)
     p.add_argument('--resume', type=Path, help='Resume this runner at its existing immutable stages; no source overrides')
+    p.add_argument('--source-receipt',type=Path,default=ROOT/'downstream/reports/latest-build.json')
+    p.add_argument('--masking-receipt',type=Path,help='Use the separately completed masking/panel stage for these exact source inputs')
+    p.add_argument('--seed-file',type=Path,help='Owner-retained masking seed; used only when building a new masking stage')
+    p.add_argument('--latest-receipt',type=Path,default=ROOT/'downstream/g025_to_g1/latest.json')
     a = p.parse_args()
     a.output_root.mkdir(parents=True, exist_ok=True)
     if shutil.disk_usage(a.output_root).free < 5 * 1024**3:
@@ -68,7 +72,14 @@ def main():
     write(run / ('attempt-' + attempt_id + '.json'), attempt)
     write(run / 'attempt.json', dict(version=VERSION, state='RUNNING', code=code,
                                   source_checkout=subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()))
-    source = json.loads((ROOT / 'downstream/reports/latest-build.json').read_text())
+    source = json.loads(a.source_receipt.read_text())
+    source_pin=owner/'source-input-pin.json'
+    selected_source=dict(source_receipt_sha256=sha(a.source_receipt),
+                         masking_receipt_sha256=sha(a.masking_receipt) if a.masking_receipt else None)
+    if source_pin.exists():
+        assert json.loads(source_pin.read_text())==selected_source,'Resume inputs differ from the original run'
+    else:
+        write(source_pin,selected_source)
     for rec in [source['source_inputs']['actual'], source['outputs']['actual']]:
         assert sha(Path(rec.get('path', rec.get('file')))) == rec['sha256']
     augmented = owner / 'G0_projection_with_industry_status.dta'
@@ -90,12 +101,31 @@ save "{augmented}", replace
     augmented_receipt['outputs']['actual'].update(file=str(augmented), sha256=sha(augmented), columns=516, bytes=augmented.stat().st_size)
     write(owner / 'source-receipt.json', augmented_receipt)
     masking_receipt = run / 'masking-receipt.json'
+    if a.masking_receipt and masking_receipt.exists():
+        assert sha(a.masking_receipt)==sha(masking_receipt),'Existing panel receipt differs from supplied panel'
+    if a.masking_receipt and not masking_receipt.exists():
+        supplied=json.loads(a.masking_receipt.read_text())
+        assert supplied['status']=='passed'
+        # The separately prepared source projection already has the industry
+        # status; require this exact file as the source bound by its mask.
+        if supplied['actual_sha256']!=sha(augmented):
+            assert supplied['actual_sha256']==source['outputs']['actual']['sha256']
+            check=pd.read_stata(augmented,convert_categoricals=False)
+            pinned=pd.read_stata(source['outputs']['actual']['file'],convert_categoricals=False)
+            pd.testing.assert_frame_equal(check,pinned,check_exact=True)
+            shutil.copyfile(source['outputs']['actual']['file'],augmented)
+            augmented_receipt['outputs']['actual'].update(sha256=sha(augmented),bytes=augmented.stat().st_size)
+            write(owner/'source-receipt.json',augmented_receipt)
+        assert supplied['actual_sha256']==sha(augmented)
+        shutil.copyfile(a.masking_receipt,masking_receipt)
     if not masking_receipt.exists():
         log('G0.25 -> G0.5 | independent masking, derived formulas, then fictional panel; no second noise pass')
+        seed_args=['--seed-file',str(a.seed_file)] if a.seed_file else []
         subprocess.run([sys.executable, str(ROOT / 'downstream/obscure/strong/build.py'), str(run / 'MASK-STAGES'),
                         '--source-receipt', str(owner / 'source-receipt.json'), '--latest-receipt', str(masking_receipt),
-                        '--retain-intermediates'], check=True, cwd=ROOT)
+                        '--retain-intermediates',*seed_args], check=True, cwd=ROOT)
     masked = json.loads(masking_receipt.read_text())
+    assert masked['actual_sha256']==sha(augmented),'Masking is not bound to this source projection'
     stage_root = Path(masked['run'])
     g025 = stage_root / 'owner-work/numeric.dta'
     g05 = stage_root / 'OBSCURED-ONLY/obscured_dummy.dta'
@@ -133,6 +163,8 @@ save "{g1/'input.dta'}", replace
                           full_columns=full_columns, manifest_sha256=sha(g1 / 'input-manifest.json'),
                           input_sha256=sha(g1 / 'input.dta'), full_input_sha256=sha(g1 / 'full_input.dta'),
                           extra_g05_numeric_noise=False)
+    if (g1/'input-contract.json').exists():
+        assert json.loads((g1/'input-contract.json').read_text())==input_contract,'Prepared estimation inputs changed'
     write(g1 / 'input-contract.json', input_contract)
     master = f'''version 17
 clear all
@@ -184,15 +216,15 @@ exit, clear
         temp_alias.symlink_to(tempdir, target_is_directory=True)
         env = dict(os.environ, STATATMP=str(temp_alias))
         proc = subprocess.Popen(['/Applications/Stata/StataSE.app/Contents/MacOS/stata-se', '-b', 'do', '00_MASTER_MASKED_G1.do'], cwd=g1, env=env)
-        last = ''
+        printed_status = 0
         while proc.poll() is None:
             time.sleep(20)
             if runlog.exists():
                 lines = runlog.read_text(errors='replace').splitlines()
                 status = [x for x in lines if re.match(r'^G1_', x)]
-                current = status[-1] if status else 'Starting Stata'
-                if current != last:
-                    log('G1 PROGRESS | ' + current); last = current
+                for current in status[printed_status:]:
+                    log('G1 PROGRESS | ' + current)
+                printed_status = len(status)
         temp_alias.unlink(missing_ok=True)
         if proc.returncode or '\nMASKED_PIPELINE_G1_COMPLETE\n' not in runlog.read_text():
             raise RuntimeError('G1 did not complete: ' + str(runlog))
@@ -256,7 +288,7 @@ save "{g1/'analysis/G1_final_values.dta'}", replace
     log('DOCUMENTATION | E067 dataset metadata and nonbinding downstream recommendations')
     receipt['data_guide'] = write_data_guide(public)
     write(run / 'COMPLETE.json', receipt)
-    write(ROOT / 'downstream/g025_to_g1/latest.json', receipt)
+    write(a.latest_receipt, receipt)
     log('COMPLETE | ' + json.dumps({k: receipt[k] for k in ['status', 'run', 'rows', 'columns', 'firms', 'g1_nonmissing', 'final_file']}))
 
 

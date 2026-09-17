@@ -1,3 +1,5 @@
+> Current entry point: [data preparation](../20260917-run/block-0-data-preparation/README.md). This page describes a retained earlier runner.
+
 # What 00_MASTER.do actually calls
 
 Yes: the master dispatches a cascade of child do-files. All those sources are in this repository. Python helpers handle input adaptation, fictional panel construction, provenance, workbooks and graphics; Stata do-files perform the statistical and estimation stages.

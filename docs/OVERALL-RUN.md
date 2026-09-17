@@ -1,3 +1,5 @@
+> Current entry point: [data preparation](../20260917-run/block-0-data-preparation/README.md). This page describes a retained earlier runner.
+
 # Full raw-to-G1 run
 
 **Status: implementation present; full end-to-end verification remains unfinished.**
