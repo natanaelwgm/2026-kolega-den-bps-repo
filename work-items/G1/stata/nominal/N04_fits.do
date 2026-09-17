@@ -228,7 +228,9 @@ gen double beta_K=capital
 gen double N=N_dynamic if status=="fit_success"
 gen double center_proxy=center_p
 gen str40 specification_id="`spec_id'"
-gen str64 input_manifest_sha256="060b0ee0a2158a9c94b0e7e68fcfba719eda37561422855471a99da6810ba260"
+local input_hash "$G1_INPUT_MANIFEST_SHA256"
+if "`input_hash'"=="" local input_hash "060b0ee0a2158a9c94b0e7e68fcfba719eda37561422855471a99da6810ba260"
+gen str64 input_manifest_sha256="`input_hash'"
 gen str24 measurement_mode="nominal_development"
 gen byte real_input_verified=0
 gen byte development_only=1

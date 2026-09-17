@@ -6,9 +6,11 @@ from pathlib import Path
 import sys
 import numpy as np
 import pandas as pd
+from input_contract import load_input_contract
 
 
 def validate(run):
+    contract = load_input_contract(run)
     # WFDOC: Input terpilih dan sidecar eligibility dicocokkan lewat obs_id; setiap nilai sumber harus identik setelah indeks disusun ulang.
     source = pd.read_stata(run / "input.dta", convert_categoricals=False)
     derived = pd.read_stata(run / "analysis/G1_input_eligibility.dta", convert_categoricals=False)
@@ -17,7 +19,7 @@ def validate(run):
         if not bool(condition):
             raise AssertionError(name)
         checks.append({"check": name, "status": "PASS"})
-    check("input_rows_33049", len(source) == 33049)
+    check("input_rows_match_pinned_contract", len(source) == contract['rows'])
     check("observation_ids_unique", source.obs_id.is_unique and derived.obs_id.is_unique)
     check("one_to_one_complete_attachment", set(source.obs_id) == set(derived.obs_id))
     a = source.set_index("obs_id").sort_index()
@@ -32,8 +34,8 @@ def validate(run):
     check("exact_real_calendar_lag1", np.array_equal(expected_lag1,b.g1_lag1.eq(1)))
     check("exact_real_calendar_lag2", np.array_equal(expected_lag2,b.g1_lag2.eq(1)))
     check("no_missing_lag_status_on_accepted_panel", b[["g1_lag1","g1_lag2"]].notna().all().all())
-    check("fictional_firm_count_10395", source.psid.nunique()==10395)
-    check("annual_lag_count_20579", sum(expected_lag1)==20579)
+    check("fictional_firm_count_matches_pinned_contract", source.psid.nunique()==contract['firms'])
+    check("annual_lag_count_matches_pinned_contract", sum(expected_lag1)==contract['lag1_rows'])
     check("no_2016_and_exact_calendar", set(source.source_year) == set(range(2010, 2016)) | set(range(2017, 2023)))
     positive=lambda x: x.gt(0) & x.notna()
     # WFDOC: Masker nominal hanya memeriksa nilai positif; masker konsep menambahkan flag kuesioner dan tidak mengesahkan satuan atau harga riil.

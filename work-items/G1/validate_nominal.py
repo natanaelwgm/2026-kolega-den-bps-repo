@@ -13,6 +13,7 @@ import json
 from pathlib import Path
 import numpy as np
 import pandas as pd
+from input_contract import load_input_contract
 
 METHODS = ("op", "lp", "acf", "wrdg")
 SAMPLES = ("own", "common")
@@ -22,6 +23,7 @@ HERE = Path(__file__).resolve().parent
 
 def validate(run: Path, source_run: Path, allow_incomplete: bool = False):
     spec = json.loads((HERE / "nominal-specification.json").read_text())
+    contract = load_input_contract(source_run)
     checks, unavailable, files = [], [], []
 
     def check(name, ok):
@@ -49,7 +51,7 @@ def validate(run: Path, source_run: Path, allow_incomplete: bool = False):
     pred = load("nominal/N04_predictions.dta")
     if any(x is None for x in [source, n01, frozen, fits, pred]):
         raise FileNotFoundError("Source, frozen samples, fits and predictions are necessary even for partial arithmetic validation")
-    check("full_selected_source_33049_10395_fictional_firms", len(source) == 33049 and source.psid.nunique() == 10395)
+    check("full_selected_source_matches_pinned_contract", len(source) == contract['rows'] and source.psid.nunique() == contract['firms'])
     check("official_synthetic_panel_and_unique_keys", source.psid_status.eq("synthetic_development").all() and not source.duplicated(["psid", "source_year"]).any() and source.obs_id.is_unique)
     source_years = set(spec["history_years"])
     production_years = {y for y in source_years if y - 1 in source_years}
@@ -142,7 +144,7 @@ def validate(run: Path, source_run: Path, allow_incomplete: bool = False):
     fit_keys = ["sector", "method", "sample_id", "variant"]
     check("complete_fixed_fit_obligations", not fits.duplicated(fit_keys).any() and set(fits[fit_keys].itertuples(index=False, name=None)) == expected_fit_keys)
     check("nominal_metadata_never_claims_real_inputs", fits.real_input_verified.eq(0).all() and fits.development_only.eq(1).all() and fits.measurement_mode.eq("nominal_development").all())
-    check("fit_metadata_matches_declared_input_and_specification", fits.specification_id.eq(spec["specification_id"]).all() and fits.input_manifest_sha256.eq(spec["input_manifest_sha256"]).all())
+    check("fit_metadata_matches_declared_input_and_specification", fits.specification_id.eq(spec["specification_id"]).all() and fits.input_manifest_sha256.eq(contract['manifest_sha256']).all())
     check("all_fit_rows_declare_pooled_reference", fits.reference_scope.eq("pooled_dynamic").all() and fits.reference_year.isna().all())
     check("fit_statuses_are_explicit", fits.status.isin(["skipped_support", "fit_failed", "fit_success"]).all())
     pred_groups = {k: g for k, g in pred.groupby(fit_keys)}

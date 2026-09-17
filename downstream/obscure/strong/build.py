@@ -110,8 +110,11 @@ def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('output_root',type=Path)
     p.add_argument('--seed-file',type=Path,default=Path('/Users/natanaelmassie/Downloads/.kolega-private/strong-v2/seed.key'))
+    p.add_argument('--source-receipt',type=Path,default=REPO/'downstream/reports/latest-build.json')
+    p.add_argument('--latest-receipt',type=Path,default=REPO/'downstream/obscure/strong/latest.json')
+    p.add_argument('--retain-intermediates',action='store_true',help='Retain private G0.25 numeric and G0.5 identity stages for the downstream local pipeline')
     a=p.parse_args()
-    source_receipt=json.loads((REPO/'downstream/reports/latest-build.json').read_text())
+    source_receipt=json.loads(a.source_receipt.read_text())
     src=Path(source_receipt['outputs']['actual']['file']);sourcehash=sha(src)
     assert sourcehash==source_receipt['outputs']['actual']['sha256']
     a.output_root.mkdir(parents=True,exist_ok=True)
@@ -329,6 +332,7 @@ save "{public/'obscured_dummy.dta'}", replace
     shutil.copyfile(src,owner/'actual.dta');assert sha(owner/'actual.dta')==sourcehash
     seed_record={'seed_file':str(seedpath),'backup_seed_file':str(backup),'seed_id':seed_id,'run':str(run),'recovery_archive':str(archive),'recovery_sha256':sha(archive),'state':'passed'}
     write(seedpath.parent/'OWNER-RECOVERY.json',seed_record)
+    write(seedpath.parent/('OWNER-RECOVERY-'+run.name+'.json'),seed_record)
     summary={'status':'passed','version':VERSION,'run':str(run),'rows':len(before),'columns':len(before.columns),'protected_fields_exact':len(protected),
              'independent_continuous_fields':len(base),'derived_fields_checked':len(derived),'changed_numeric_fields':sum(r['changed_cells']>0 and r['variable'] in numeric for r in changes),
              'integer_band_exceptions':{r['variable']:r['outside_20_30'] for r in changes if r['variable'] in COUNTS},
@@ -336,7 +340,9 @@ save "{public/'obscured_dummy.dta'}", replace
              'numeric_stata_replay_exact':True,'panel_replay_exact':True,'byte_exact_recovery':True,'wrong_seed_rejected':True,'tampering_rejected':True,
              'actual_sha256':sourcehash,'masked_sha256':sha(public/'obscured_dummy.dta'),'seed_id':seed_id,'seed_contents_published':False,
              'g1_reestimated':False,'privacy_checks':privacy,'source_code_sha256':{p.name:sha(p) for p in Path(__file__).parent.glob('*.py')}}
-    write(run/'COMPLETE.json',summary);write(REPO/'downstream/obscure/strong/latest.json',summary)
+    summary['private_intermediates_retained']=a.retain_intermediates
+    summary['input_receipt_sha256']=sha(a.source_receipt)
+    write(run/'COMPLETE.json',summary);write(a.latest_receipt,summary)
     public_receipt={k:v for k,v in summary.items() if k not in ['run','actual_sha256','seed_id']}
     write(public/'COMPLETE.json',public_receipt)
     (public/'README.md').write_text('''# Obscured development data — 20–30% seeded masking
@@ -385,7 +391,8 @@ Recovered DTA hash must be `{sourcehash}`.
     # and deterministic replay pass. Seed and recovery are permanent deliverables.
     # exFAT removes an AppleDouble sidecar when its main file is deleted;
     # a directory iterator may still yield that now-absent sidecar.
-    for p in list(work.glob('*.dta')):p.unlink(missing_ok=True)
+    if not a.retain_intermediates:
+        for p in list(work.glob('*.dta')):p.unlink(missing_ok=True)
     log('COMPLETE | '+json.dumps({k:v for k,v in summary.items() if k!='privacy_checks'}))
 
 if __name__=='__main__':main()
