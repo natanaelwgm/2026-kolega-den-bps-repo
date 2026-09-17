@@ -54,6 +54,8 @@ flowchart LR
     MASKED_FINAL -->|E067 metadata and optional analysis guide| DATA_GUIDE
     G1_LABEL_CONTRACT --> DATA_GUIDE
     G05_MASKED_PANEL -. if included .-> DATA_GUIDE
+    DATA_GUIDE -->|E068 dated local package| BLOCK0_PACKAGE
+    MASKED_FINAL --> BLOCK0_PACKAGE
 ```
 
 The detailed numeric masking subgraph remains MASK_BASE → MASK_DERIVED → MASK_IDS,
@@ -68,3 +70,5 @@ G1.5-after-G1 proposal is superseded by this explicit owner direction.
 The accepted masked-input runner `downstream/g025_to_g1/build.py` invokes E064-E066 automatically after numerical G1 publication and before the public final DTA is admitted. The standalone `downstream/metadata/finish.py` runs the same edges on an existing pinned final numerical parent. This stage changes metadata only; no refit is needed. The native edge is `downstream/dag/edges/E065_apply_variable_metadata.do`. See `downstream/metadata/README.md` for commands and validation.
 
 E067 (`downstream/metadata/data_guide.py`) generates the final dataset README and `METADATA.json` from the validated delivered files. Dataset recommendations are advisory and never impose a sample/model or change data. The masked runner invokes it after packaging the optional G0.5 intermediate.
+
+E068 creates the explicitly requested dated local package under `20260917-run/block-0-data-preparation/`, with `analysis_ready_data.dta` retaining identical obscured bytes and regenerated filename references. This packaging step is explicit so future runs do not overwrite a dated snapshot.

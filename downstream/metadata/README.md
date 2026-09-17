@@ -83,3 +83,18 @@ The documentation edge reads `metadata/VALIDATION.json` and refuses a DTA with
 a different hash. It checks dictionary labels against the DTA, reconciles observed
 counts, confirms named fields/files, and proves all included DTAs retain their
 original byte hashes after documentation is written.
+
+## Dated block-0 snapshot
+
+E068 makes an explicit local package; it refuses to overwrite a nonempty dated
+folder. It copies only the public delivery, preserves DTA bytes, names the final
+file `analysis_ready_data.dta`, regenerates README/metadata references and marks
+the data OBSCURED. Each file hash is recorded in PACKAGE.json.
+
+```sh
+python3 downstream/metadata/package_block0.py /path/to/SHARE-OBSCURED 20260917-run/block-0-data-preparation
+```
+
+The DTA files are physically present in the local package and follow the repo's
+existing data-artifact ignore policy. Publishing them to a private GitHub release
+is a separate step; this local packaging command does not upload anything.

@@ -27,3 +27,7 @@ E064-E066 passed locally. G1_FINAL_VALUES -> G1_LABEL_CONTRACT -> G1_LABELLED ->
 ## 2026-09-17: dataset metadata and optional analysis guide
 
 E067 -> DATA_GUIDE passed. Final README and METADATA.json describe two available datasets and six advisory starting points. Counts are read from the DTAs; byte hashes unchanged. Evidence: downstream/metadata/data-guide-latest.json.
+
+## 2026-09-17: dated block-0 package
+
+E068 -> BLOCK0_PACKAGE passed. The requested repo folder holds 21 files including two unchanged obscured DTAs, metadata/dictionaries, advisory README, lineage and masking reports. The primary entry is analysis_ready_data.dta. No GitHub data upload performed. Evidence: 20260917-run/block-0-data-preparation/PACKAGE.json.

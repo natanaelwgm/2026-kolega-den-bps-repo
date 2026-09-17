@@ -18,27 +18,27 @@ FINAL = 'analysis_obscured_with_g1.dta'
 PRIOR = 'intermediate/G05_obscured_panel.dta'
 METHODS = {'op':'Olley-Pakes', 'lp':'Levinsohn-Petrin', 'acf':'Ackerberg-Caves-Frazer', 'wrdg':'Wooldridge'}
 
-def recommendations():
+def recommendations(final_name=FINAL):
     # Advisory only: these fields do not prescribe an estimand or analysis sample.
     return [
         dict(purpose='Mulai membaca data, membuat tabel, atau mengembangkan kode',
-             file=FINAL,variables=['obs_id','firm_id','year','workers','value_added_nominal','gross_output_nominal'],
+             file=final_name,variables=['obs_id','firm_id','year','workers','value_added_nominal','gross_output_nominal'],
              suggestion='Mulai dari master G1 berlabel agar fitur G0, panel G0.5, hasil G1 dan status sumber berada dalam satu file.',
              qualification='Angka sudah diobscure; tabel mendeskripsikan versi development ini, bukan besaran aktual/populasi.'),
         dict(purpose='Eksplorasi produktivitas dan perbandingan metode',
-             file=FINAL,variables=['dev_nominal_tfp_'+m for m in METHODS]+['dev_nominal_in_fit_'+m for m in METHODS],
+             file=final_name,variables=['dev_nominal_tfp_'+m for m in METHODS]+['dev_nominal_in_fit_'+m for m in METHODS],
              suggestion='Pilih metode dan sampel sesuai pertanyaan. Untuk meniru ringkasan estimasi, pertimbangkan in_fit metode tersebut; untuk hasil pada sampel bersama, lihat keluarga dev_nominal_common_*.',
              qualification='Residual nominal pada panel fiktif; pred adalah flag tersedianya residual. TFP missing bukan nol. Own dan common merupakan sampel berbeda; tidak ada satu filter wajib.'),
         dict(purpose='Eksplorasi energi, emisi dan intensitas',
-             file=FINAL,variables=['total_gj_s1','co2_total_s1','co2_total_complete','energy_cost_reported_n','energy_coverage_status'],
+             file=final_name,variables=['total_gj_s1','co2_total_s1','co2_total_complete','energy_cost_reported_n','energy_coverage_status'],
              suggestion='Mulai dengan cakupan komponen per tahun, lalu pilih subtotal atau subset lengkap sesuai tujuan.',
              qualification='Cakupan sembilan bahan bakar dan listrik dibeli; complete berarti lengkap untuk subset itu. CO2 bukan CO2e; own generation tidak ditambahkan dua kali. Unit/faktor tetap mengikuti evidence tahun.'),
         dict(purpose='Eksplorasi per tahun, provinsi atau industri',
-             file=FINAL,variables=['year','province_code','district_code','industry_code','industry2_reported','industry_bridge_verified'],
+             file=final_name,variables=['year','province_code','district_code','industry_code','industry2_reported','industry_bridge_verified'],
              suggestion='Tabel tahunan/provinsi/industri dapat menjadi titik awal pemeriksaan pola pada data development.',
              qualification='Ketersediaan kode dihitung dalam metadata. Kolom kosong tidak memberi informasi wilayah. Kode industri lintas vintage belum dijembatani; agregat sampel tidak otomatis estimasi populasi.'),
         dict(purpose='Menguji kode panel, lag, atau transisi',
-             file=FINAL,variables=['firm_id','year','dev_prev_obs_id','dev_prev_year','dev_link_status'],
+             file=final_name,variables=['firm_id','year','dev_prev_obs_id','dev_prev_year','dev_link_status'],
              suggestion='Gunakan firm_id dan year untuk pengujian struktur panel. Pertahankan jarak kalender asli ketika membuat lag.',
              qualification='ID konsisten dalam rilis ini, namun keterkaitan perusahaan bersifat fiktif. Tidak semua perusahaan muncul tiap tahun; 2016 tidak tersedia. Identitas tidak dijamin tetap pada rebuild dengan input baru.'),
         dict(purpose='Mencoba estimasi G1 atau spesifikasi lain dari input sebelum G1',
@@ -80,10 +80,11 @@ def inspect(path, include_results):
         assert df.g1_results_attached.eq(0).all()
     return stats,labels
 
-def write_data_guide(directory, output_dir=None):
+def write_data_guide(directory, output_dir=None, final_name=FINAL):
     directory=Path(directory).resolve();out=Path(output_dir or directory)
     out.mkdir(parents=True,exist_ok=True);(out/'metadata').mkdir(exist_ok=True)
-    final=directory/FINAL
+    assert Path(final_name).name==final_name and final_name.endswith(".dta"), "Use a DTA basename"
+    final=directory/final_name
     validation=json.loads((directory/'metadata/VALIDATION.json').read_text())
     assert validation['status']=='PASS'
     before_hash=sha(final)
@@ -91,7 +92,7 @@ def write_data_guide(directory, output_dir=None):
     variables=list(csv.DictReader((directory/'metadata/variable_dictionary.csv').open()))
     stats,labels=inspect(final,True)
     assert {r['name']:r['label'] for r in variables}==labels
-    catalogue=[dict(file=FINAL,role='recommended starting dataset',recommendation='advisory_nonbinding',
+    catalogue=[dict(file=final_name,role='recommended starting dataset',recommendation='advisory_nonbinding',
         stage='G0 -> G0.25 obscure -> G0.5 fictional panel -> G1 nominal estimation -> labels',
         sha256=before_hash,bytes=final.stat().st_size,contains_fresh_g1_results=True,**stats)]
     prior=directory/PRIOR
@@ -101,13 +102,13 @@ def write_data_guide(directory, output_dir=None):
             stage='G0 -> G0.25 obscure -> G0.5 fictional panel',sha256=sha(prior),bytes=prior.stat().st_size,
             contains_fresh_g1_results=False,**prior_stats))
     available={r['file'] for r in catalogue}
-    advice=[dict(r,available_in_delivery=r['file'] in available,binding=False) for r in recommendations()]
+    advice=[dict(r,available_in_delivery=r['file'] in available,binding=False) for r in recommendations(final_name)]
     assert all(set(r['variables'])<=set(labels) for r in advice)
     supporting=['metadata/variable_dictionary.csv','metadata/CODEBOOK.md','metadata/contract.json','metadata/VALIDATION.json']
     supporting += [p for p in ['LINEAGE.json','masking-reports/equations.json','masking-reports/column_policy_and_changes.csv','masking-reports/privacy_checks.json'] if (directory/p).exists()]
     metadata=dict(schema_version=VERSION,title='Obscured manufacturing panel with G1 nominal-development results',
         generated_at=datetime.datetime.now().astimezone().isoformat(),language_of_guide='id',
-        dataset_id='kolega-g025-g05-g1-'+before_hash[:12],recommended_entry_file=FINAL,
+        dataset_id='kolega-g025-g05-g1-'+before_hash[:12],recommended_entry_file=final_name,
         recommendations_are_binding=False,recommendation_scope='Suggested starting points; collaborators may choose other variables, samples or models with their own documented rationale.',
         dataset_catalogue=catalogue,downstream_starting_points=advice,
         variable_dictionary='metadata/variable_dictionary.csv',full_definitions='metadata/CODEBOOK.md',
@@ -126,7 +127,7 @@ def write_data_guide(directory, output_dir=None):
     years=', '.join(map(str,stats['years']))
     readme=f'''# Data final G0–G1: titik awal analisis
 
-**Mulai dari [`{FINAL}`]({FINAL})** jika ingin membaca data, mengembangkan analisis,
+**Mulai dari [`{final_name}`]({final_name})** jika ingin membaca data, mengembangkan analisis,
 atau bekerja bersama coauthor. File ini menyatukan fitur G0, panel G0.5, hasil G1,
 label yang terbaca, dan definisi variabel lengkap.
 
@@ -196,7 +197,7 @@ salinan own setelah difilter. Angka tabel adalah jumlah baris, bukan jumlah peru
 Dari folder data ini, jalankan di Stata:
 
 ```stata
-use "{FINAL}", clear
+use "{final_name}", clear
 isid firm_id year
 xtset firm_id year
 browse
@@ -271,5 +272,5 @@ berarti obscuring bukan jaminan anonimitas penuh.
 
 if __name__=='__main__':
     p=argparse.ArgumentParser(description=__doc__)
-    p.add_argument('delivery',type=Path);p.add_argument('--output-dir',type=Path)
-    a=p.parse_args();write_data_guide(a.delivery,a.output_dir)
+    p.add_argument('delivery',type=Path);p.add_argument('--output-dir',type=Path);p.add_argument('--final-file',default=FINAL)
+    a=p.parse_args();write_data_guide(a.delivery,a.output_dir,final_name=a.final_file)

@@ -1,5 +1,7 @@
 # Kolega DEN–BPS: G0 → G0.5 → G1
 
+Latest prepared local dataset: **[20260917-run / block 0](20260917-run/block-0-data-preparation/README.md)**, with the obscured `analysis_ready_data.dta`, readable labels, metadata and optional downstream guidance. This dated data snapshot is local; its GitHub data release is not yet uploaded.
+
 Private coauthor workspace. This repository collects the data foundation, development panel, nominal production-function estimation, source inputs, outputs and review documents in one place. Source code and review text live on `main`; complete datasets and retained results are attached to the **[data release](https://github.com/natanaelwgm/2026-kolega-den-bps-repo/releases/tag/g0-g05-g1-2026-09-15)** in this same private repository.
 
 A separate **[full raw-to-G1 overall master](docs/OVERALL-RUN.md)** is now present at `00_MASTER_OVERALL.do`. Its end-to-end verification is still in progress; the instructions below describe the previously tested fast demo.
