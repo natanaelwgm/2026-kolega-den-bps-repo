@@ -11,6 +11,7 @@ Item-by-item coverage of Deasy's row and the review record: [TRACKER.md](TRACKER
 
 | `02_event_time_support.do` → `figures/02_event_time_support.png`, `tables/02_event_time_support.csv` | How many export starters are seen in each year before and after their start year (by start year), and how many comparison firms (never seen exporting) exist each calendar year; sets the year window (−5 to +5, outer years grouped) that the later before/after charts use | "Stagged did" (the firm counts the design stands on) | done, reviewed |
 | `03_energy_efficiency_export_start.do` → `figures/03_energy_efficiency_export_start.png`, `tables/03_energy_efficiency_export_start.csv` | Value added per GJ of energy before and after firms start exporting, as % change since the year before the start, starters minus firms never seen exporting (firm and year fixed effects); average after the start; before-start checks | "Intertionalized and energy efficiency"; "Stagged did"; "Mirip dengan paper kita sebelumnya" (same outcome as the previous paper, ln VA per GJ) | done, reviewed |
+| `04_co2_efficiency_export_start.do` → `figures/04_co2_efficiency_export_start.png`, `tables/04_co2_efficiency_export_start.csv` | Same event study for value added per tonne of CO2 (CO2 per unit of value added in the table) | "Intertionalized and energy efficiency" (emissions side; the previous paper's ln VA per CO2); "Stagged did" | done, reviewed |
 ## Details kept out of the figures
 
 **01 — start years.** Rule A (main, "simple"): a firm starts in the first year it is seen participating after a
@@ -49,3 +50,11 @@ year exists), without the 2017 starters, and exact-dated starters only. Starters
 together; if the change differs by start year a dot can mix in other years. A method that keeps start years apart
 (Sun–Abraham) moves each dot by at most 0.05 log points here; R2-07 checks this. The year window is computed in the
 file with R2-02's rule and cross-checked against R2-02's table when present.
+
+**04 — CO2 efficiency before and after the export start.** The R2-03 template with only the outcome changed;
+same sample (20,070 rows, 3,574 firms, 742 starters). Average of years 0 to +5: +10% (95% interval −6% to +30%);
+before-start check p = 0.276 for all starters, p < 0.001 for exact-dated starters. CO2 here is calculated from
+fuel and electricity use at standard rates (not measured), so each dot equals R2-03's dot minus the change in CO2
+per GJ (exact at all 12 dots): the chart can differ from R2-03 only when firms switch fuels. Bought electricity
+uses one national factor per year (rising 2010–2014, fixed after); holding it fixed (`co2_variant_static_grid`)
+moves each dot by at most 0.016 log points.
