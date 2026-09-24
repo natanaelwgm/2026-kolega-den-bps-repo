@@ -13,6 +13,7 @@ Item-by-item coverage of Deasy's row and the review record: [TRACKER.md](TRACKER
 | `03_energy_efficiency_export_start.do` → `figures/03_energy_efficiency_export_start.png`, `tables/03_energy_efficiency_export_start.csv` | Value added per GJ of energy before and after firms start exporting, as % change since the year before the start, starters minus firms never seen exporting (firm and year fixed effects); average after the start; before-start checks | "Intertionalized and energy efficiency"; "Stagged did"; "Mirip dengan paper kita sebelumnya" (same outcome as the previous paper, ln VA per GJ) | done, reviewed |
 | `04_co2_efficiency_export_start.do` → `figures/04_co2_efficiency_export_start.png`, `tables/04_co2_efficiency_export_start.csv` | Same event study for value added per tonne of CO2 (CO2 per unit of value added in the table) | "Intertionalized and energy efficiency" (emissions side; the previous paper's ln VA per CO2); "Stagged did" | done, reviewed |
 | `05_energy_co2_va_export_start.do` → `figures/05_energy_co2_va_export_start.png`, `tables/05_energy_co2_va_export_start.csv` | The same before/after comparison for energy use, CO2 and value added separately (three panels, one scale): what moves when firms start exporting | "Intertionalized and energy efficiency" (where an efficiency change comes from); "Stagged did" | done, reviewed |
+| `06_efficiency_by_start_year.do` → `figures/06_efficiency_by_start_year.png`, `tables/06_efficiency_by_start_year.csv` | Each start year compared only with never-exporters (never with earlier starters): value added per GJ after vs before the start, per start year, with averages for all, before-Paris and after-Paris starters; a version without doubtful energy records | "Stagged did" (the clean building block of a staggered design); "Mirip dengan paper kita sebelumnya" | done, reviewed |
 ## Details kept out of the figures
 
 **01 — start years.** Rule A (main, "simple"): a firm starts in the first year it is seen participating after a
@@ -68,3 +69,22 @@ from never-exporters', while value added did not (p = 0.599), so the later energ
 pre-existing difference. Identities checked in the file: value added minus energy use equals 03's dot and value added
 minus CO2 equals 04's (to 1e-15); when 03's and 04's tables are present the file cross-checks them and stops on any
 mismatch. The note is wrapped by estimated printed width, so real-data numbers cannot run off the page.
+
+**06 — one start year at a time.** For each start year g with 30+ starters seen before and after: calendar years
+g−5 to g+5, starters of year g plus never-exporters, firm and year fixed effects (each start year its own), one
+after-start marker; one stacked regression gives all start years at once (each equals its separate estimate,
+asserted) and an interval that allows for never-exporters being reused across start years (firm clustering; about
+5% wider than treating them as new firms). Average weighted by starters (Callaway–Sant'Anna's size weights):
+−4% (95% interval −16% to +10%); equal weights −6.2%, weights by after-start rows +1.4%. Started before Paris +1%,
+after −10%: no clear difference (p = 0.436). The only clear start year is 2022 (−53%): one year after the start, and
+its file asks only about direct exports; without it the average is +2%. Before-start check: all starters p = 0.116,
+starters seen not exporting the year just before p < 0.001 (a warning sign). Without doubtful energy records
+(importers of unknown export status in years their energy records jump or drop; same definition as the R1 reviews):
++1% (−11% to +15%). Stricter group (seen not exporting the year just before): after-Paris −38.6%, Paris gap
+p = 0.006, but it fails the before-start check and without doubtful records it is −15.7%, p = 0.326. Pretend starts
+1/2/3 years early: −6% / −21% / −15% (p = 0.48 / 0.02 / 0.13); without doubtful records none is clear.
+Why this average (−4%) differs from Figure R2-03's (+9%): R2-03 gives each year since the start the same weight,
+while here each start year's 'after' is the average of its rows, so the start year itself (735 firms, −7%) counts
+most and year +5 (188 firms, +41%) little; with the same comparisons as here and equal weights per year since the
+start the average is +6%, combining start years as R2-03 does adds about 3 points, and the choice of base year almost
+nothing. Both averages cross 0.
