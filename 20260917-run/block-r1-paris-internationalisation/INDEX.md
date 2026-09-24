@@ -12,6 +12,7 @@ Item-by-item coverage of Deasy's row and the review record: [TRACKER.md](TRACKER
 | `02_exporters_energy_co2_per_va.do` → `figures/02_exporters_energy_co2_per_va.png`, `tables/02_exporters_energy_co2_per_va.csv` | Each year, the typical (median) exporter's and non-exporter's energy and CO2 per million of value added, and exporters as % of non-exporters with a 95% range; Paris date marked | "Did internationally engaged firms change their environmental behaviour more strongly after the Paris Agreement?"; "Gj/va", "Co2/va" (drawn); "VA/energy use … total", "VA/emisi … total" (reciprocals, table only); "matching yearly" (unmatched yearly comparison) | done, reviewed |
 | `03_importers_energy_co2_per_va.do` → `figures/03_importers_energy_co2_per_va.png`, `tables/03_importers_energy_co2_per_va.csv` | Same chart for importers vs non-importers; 2017 kept in the table only; 2019–2022 drawn hollow gray because importers' energy records are in doubt | "import vs non import"; "Gj/va", "Co2/va"; "VA/energy use … total", "VA/emisi … total" (table); "Did internationally engaged firms change … after the Paris Agreement?" | done, reviewed |
 | `04_foreign_owned_energy_co2_per_va.do` → `figures/04_foreign_owned_energy_co2_per_va.png`, `tables/04_foreign_owned_energy_co2_per_va.csv` | Same chart for firms with 10%+ foreign ownership vs other firms; 2020 kept in the table only; 2017, 2019, 2021, 2022 drawn light gray in both groups because many firms' energy records are in doubt | "fdi vs non fdi"; "Gj/va", "Co2/va"; "VA/energy use … total", "VA/emisi … total" (table); "Did internationally engaged firms change … after the Paris Agreement?" | done, reviewed |
+| `05_before_after_paris.do` → `figures/05_before_after_paris.png`, `tables/05_before_after_paris.csv` | Before (2013–14) vs after (2018) the Paris Agreement for every outcome in Deasy's list (energy and CO2 per unit of value added, energy used, CO2 emitted, GJ per tonne — scope 1, 2 and total; electricity; own electricity), for all firms and for each group against other firms, with the % change or gap printed on the chart | "Do global climate commitments reach the factory floor?"; "Did internationally engaged firms change their environmental behaviour more strongly after the Paris Agreement?"; the full outcome list | done, reviewed |
 ## Details kept out of the figures
 
 **01 — group shares.** Foreign ownership is drawn at 10% or more (`fdi_10_flag`), the usual foreign-investment
@@ -53,3 +54,27 @@ doubtful firms, which would also drop 5–42% of firms in years whose records lo
 clear change after Paris. Unknown ownership (up to 10% of firms, in 2021) is left out. Template change made with
 this file (02 and 03 re-run, tables byte-identical): optional light-gray marks for the other group
 (`flag_g0`, `flag_key0`).
+
+**05 — before vs after Paris, every outcome.**
+
+- **Figure.** R1-05 compares the middle (median) firm before Paris (the average of the 2013 and 2014 yearly medians) with after Paris (2018), for all firms and for exporters, importers and foreign-owned firms (10%+) against the other firms. Every outcome in Deasy's list is covered, for scope 1, scope 2 and total.
+- **Numbers on the chart.** Panel (a) shows the % change. Panels (b)–(d) show the gap = the % change in the group's median divided by the other firms' median, which is 0 when both changed alike.
+- **Table only.** Value added per GJ and per tonne of CO2 (Deasy's "VA/energy use" and "VA/emisi", rows o21–o26) are in the table only. They mirror the drawn per-value-added rows.
+- **Why "after" is 2018 only.** In 2017 and 2019–22, many firms' energy records jump or drop sharply. These are mostly importers with no export answer: in 2017 their median energy per value added jumps tenfold; in 2019–22 their energy per worker falls to about a fifth while their value added per worker holds steady.
+  - Figures R1-02 to R1-04 show every later year, with those years in light gray.
+  - For exporters, whose comparison leaves these firms out by design, 2017–21 gives the same answer as 2018: a gap in energy per value added of −9.1% against −12.6%.
+- **Importers with no export answer drive much of panel (a).** They are 14% of firms in 2013 (318 of 2,331), 12% in 2014 (284 of 2,406) and 41% in 2018 (1,203 of 2,966). In 2018, 86% of them make their own electricity, against 50% of other importers and 16% of non-importers.
+
+  Leaving them out, from 2013–14 to 2018:
+
+  | All firms, row | As drawn | Without them |
+  |---|---|---|
+  | Energy per value added | −29% | −13% |
+  | Fuels per value added | −46% | −39% |
+  | Value added | +155% | +62% |
+  | Firms making their own electricity | +111% | +39% |
+  | Bought electricity per value added | +2% | +33% |
+- **Trends before Paris.** Most rows were already moving the same way before Paris. From 2010 to 2013–14, for all firms: energy per value added −34%, fuels per value added −35%, value added +95%, CO2 +76%.
+- **Own electricity.** It is recorded for 100% of firms in 2010–13 and 2017–22, but for only 57–60% in 2014–15. The unrecorded firms are mostly firms that make none. So own-electricity rows use a year only if at least 75% of every group's firms have it recorded; "before" is 2013 for these rows.
+- **Check window.** The CSV's check columns (`chk_*`) average every later year. They include the 2017 jump year, so for importers they mostly reflect that jump.
+- **Units.** Energy and CO2 "per million of value added" means per million Rp000 on the real files. Value added is at current prices.
