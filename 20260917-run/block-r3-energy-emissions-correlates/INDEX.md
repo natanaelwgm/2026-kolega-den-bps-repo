@@ -14,6 +14,7 @@ Item-by-item coverage of Deasy's row and the review record: [TRACKER.md](TRACKER
 | `04_trait_associations_fe.do` → `figures/04_trait_associations_fe.png`, `tables/04_trait_associations_fe.csv`, `tables/04_trait_associations_fe_all_terms.csv` | Which firm traits (size, exporting, importing, 10%+ foreign ownership, making own electricity) go with bigger one-year cuts in energy and CO2, other traits held fixed; (A) against similar firms (same year, sector, province), (B) the same firm in its other years; starting level shown separately | "determinan motivasi apa yg membuat firms respond" (traits, not motives); Strategy "FE"; "Bukan kausal" | done, reviewed |
 | `05_motivation_proxies.do` → `figures/05_motivation_proxies.png`, `tables/05_motivation_proxies.csv`, `tables/05_motivation_proxies_fe.csv` | Firms with environmental permit documents (AMDAL, UKL-UPL, SPPL), waste treatment, R&D or innovation vs firms without: share of one-year changes that fell more (or rose less) than the typical firm answering the same question that year | "determinan motivasi apa yg membuat firms respond" (closest stand-ins: rules faced, capacity to change); "Bukan kausal" | done, reviewed |
 | `06_own_electricity_reducers.do` → `figures/06_own_electricity_reducers.png`, `tables/06_own_electricity_reducers_by_year.csv`, `tables/06_own_electricity_reducers_changes.csv` | A: share of reducers vs non-reducers making some of their own electricity, by year (reducers found from all changes, and without changes starting in 2017); B: share of one-year changes beating the typical change, by own electricity at the start and from start to end | "Siapa yang reduce energy use and emisi?"; brief: "electricity self-generation among reducers vs non" | done, reviewed |
+| `07_productivity_reducers.do` → `figures/07_productivity_reducers.png`, `tables/07_productivity_reducers_*.csv` | A: productivity of reducers vs non-reducers (with and without changes starting in 2017); B: share of one-year changes beating the typical change by productivity at the start | Brief: "TFP residual … of reducers vs non"; "Siapa yang reduce energy use and emisi?" | done, reviewed |
 ## Details kept out of the figures
 
 **01 — reducer shares.** A change is counted only between a firm's records exactly one year apart, with energy,
@@ -125,3 +126,49 @@ energy use, which double counts generator fuel and mechanically raises starters'
 with a blank in either year). Blanks are more common for non-reducers (46–49% of their 2014–15 rows) than for
 reducers (34–39%). The 2014 gap in A is +4.5 points among recorded firms; it would be +6.5 if every blank were
 "none".
+
+**07 — productivity and reducers.**
+
+Row: `07_productivity_reducers.do` → Are the firms that cut energy and CO2 more productive? (A: reducers vs
+non-reducers; B: do more productive firms go on to cut more often?) → "Siapa yang reduce energy use and emisi? …
+determinan motivasi …", "Bukan kausal" → done.
+
+**Which productivity measure, and why not the one in the brief (M3).** The brief asked for
+`dev_nominal_common_tfp_lp`. This exhibit uses `dev_nominal_tfp_lp` instead. Both come from the same
+Levinsohn–Petrin estimate: log value added (current prices) minus what the firm's workers and last year's capital stock
+predict, estimated per sector, no deflation, fictional firm links. The "common" version exists only where all four
+methods can be estimated; Olley–Pakes needs reported investment, so it covers 665 firm-years (385 firms, 184 reducers /
+201 non-reducers), against 10,284 firm-years (2,740 firms) for the own-sample version. Where both exist they correlate
+0.996. With the common version the gap in energy per unit of value added is 25.6% [−4.1, 64.4]: too uncertain to read.
+It stays in the CSV (row 11) with two other methods: ACF 41.1% [31.1, 51.8], WRDG 50.1% [36.3, 65.3].
+
+**Coverage.** A productivity figure exists for 2011–15 and 2018–22 only (it needs last year's capital, so never 2010
+or 2017), in 12 of 24 sectors (10, 12–16, 20, 22, 23, 25, 31, 32). Even there, only 10,284 of 17,552 firm-years with a
+record the year before have one (other inputs missing). Covered: 2,740 of the 3,709 firms with a reducer flag (A) and
+7,115 of the 20,169 one-year changes (B). Covered firms are smaller: median 38 workers vs 57. Each figure is compared
+with the average of the same sector and year.
+
+**A: reducers look more productive, mostly because of 2017 and because value added is in both numbers.** Reducers
+(energy per unit of value added) average 51.5% [37.1, 67.4] higher productivity than non-reducers (1,359 / 1,381
+firms). Changes starting in 2017 move this most (0.290 log points; next 2018 0.103). From 2017 to 2018 one firm in ten
+cut its recorded energy by 99.7% or more, against at most 91.7% in other years: likely a recording change (see R3-06).
+The 296 firms that stop being reducers without those changes are 95% own-electricity makers. Without them the gap is
+13.3% [2.2, 25.6]; for energy use it goes from 28.1% to −6.5% [−15.7, 3.7] and for CO2 from 28.9% to −7.7%. Value
+added is in both productivity and energy per unit of value added, so a good year raises one and lowers the other at
+once. Holding each firm's value-added change fixed shrinks the gap from 0.415 to 0.325 log points; without 2017 starts
+and holding it fixed, nothing is left: −0.004 [−0.111, 0.103]. Controlling for firm size: 0.415 → 0.332.
+
+**B: more productive firms do not go on to cut energy use more often.** Productivity is measured at the start of each
+change and split into four equal groups within each start year. Energy per unit of value added fell more than the
+typical firm's in 56.7% of the least productive group's changes and 42.6% of the most productive group's; the reason is
+value added: it fell more than typical in 36.0% vs 61.0% of their changes (a high start falls back). Energy use: 48.7,
+53.0, 47.2, 50.0% (highest − lowest +1.35 [−1.61, 4.30]). In this data productivity rises steeply with size (0.72 per
+log worker within sector and year): the most productive 25% start with 5.5× the workers, 107× the value added and 49×
+the energy of the least productive (ratios of typical values within the start year). Holding starting size fixed, the
+answer does not turn positive: same fifth of starting workers +1.1 [−2.6, 4.7] points; same fifth of starting energy
+−21.8 [−25.5, −18.1] (big starts fall back: 35, 48, 54, 56, 65% by fifth); both −16.0. Energy per unit of value added,
+starts before 2016 vs 2018–21: 56.2 / 57.2% (least productive) and 41.4 / 43.9% (most productive).
+
+**Considered and rejected.** Productivity at the end of the change (value added in both numbers: 39.9% → 57.9% by
+group, pure arithmetic); productivity a year before the start (4,776 changes, needs four consecutive years; value added
+still falls back 42.3% → 52.3%, so the link is not removed).

@@ -15,7 +15,7 @@ global OUTDIR "/Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917
 * The two paths above are passed to every exhibit file, so you edit them once here.
 
 * Exhibit files, in order (added as each exhibit passes review).
-local files "01_reducer_shares_by_year 02_who_reduces_by_group 03_who_reduces_by_sector 04_trait_associations_fe 05_motivation_proxies 06_own_electricity_reducers"
+local files "01_reducer_shares_by_year 02_who_reduces_by_group 03_who_reduces_by_sector 04_trait_associations_fe 05_motivation_proxies 06_own_electricity_reducers 07_productivity_reducers"
 
 local n : word count `files'
 local i 0
