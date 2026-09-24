@@ -11,6 +11,7 @@ Item-by-item coverage of Deasy's row and the review record: [TRACKER.md](TRACKER
 | `02_who_reduces_by_group.do` → `figures/02_who_reduces_by_group.png`, `tables/02_who_reduces_by_group.csv`, `tables/02_who_reduces_firm_flag.csv` | For firm size, exporters, importers and foreign-owned firms: the share of their one-year changes in which energy and CO2 (per unit of value added and in total) fell more, or rose less, than at the typical firm that year | "Siapa yang reduce energy use and emisi?"; "determinan motivasi" (who, not why); "Bukan kausal" | done, reviewed |
 
 | `03_who_reduces_by_sector.do` → `figures/03_who_reduces_by_sector.png`, `tables/03_who_reduces_by_sector.csv`, `tables/03_who_reduces_by_sector_firm_flag.csv` | For each of the 24 manufacturing sectors: the share of one-year changes in which energy and CO2 (per unit of value added and in total) fell more, or rose less, than at the typical firm that year | "Siapa yang reduce energy use and emisi?"; "determinan motivasi" (which sectors, not why) | done, reviewed |
+| `04_trait_associations_fe.do` → `figures/04_trait_associations_fe.png`, `tables/04_trait_associations_fe.csv`, `tables/04_trait_associations_fe_all_terms.csv` | Which firm traits (size, exporting, importing, 10%+ foreign ownership, making own electricity) go with bigger one-year cuts in energy and CO2, other traits held fixed; (A) against similar firms (same year, sector, province), (B) the same firm in its other years; starting level shown separately | "determinan motivasi apa yg membuat firms respond" (traits, not motives); Strategy "FE"; "Bukan kausal" | done, reviewed |
 ## Details kept out of the figures
 
 **01 — reducer shares.** A change is counted only between a firm's records exactly one year apart, with energy,
@@ -50,3 +51,20 @@ changes sector in this file (the fictional firm link is drawn within sector); wh
 years is not verified. Firm-level companion: it depends on which years a firm is observed (clothing flips: 55.7%
 by firm, 48.2% by change). Before/after-2016 columns show which sector results hold in both periods (furniture and
 textiles hold; steel and motor vehicles flip).
+
+**04 — fixed-effects associations.** Outcome: the one-year change in log energy (or CO2) per unit of value added
+and in total; traits measured at the start of each change. (A) year + sector + province fixed effects (main: it
+compares firms with each other, which is what "which firms respond" asks); (B) firm + year fixed effects (a firm
+against itself: only firms whose trait changes drive it — exporter 691, importer 1,781, foreign-owned 775, own
+electricity 1,943 firms — and such switches may be recording shifts); (C) sector×year + province×year, in the
+tables only (it never differs from (A) by more than 3.2 points). All standard errors clustered by firm. Sample:
+17,922 changes, 5,176 firms — changes starting in 2020 are left out of every model because foreign status that
+year is unusable (keeping them changes no conclusion; see the `A_keepbreak` rows). "Not recorded" export, foreign
+and own-electricity status are their own groups in the model, not drawn. Main results in (a): making own
+electricity −36% [−41, −31], importer −9% [−16, −1], others unclear. Both rest on the changes starting in 2017:
+without them own electricity is −18% and the importer gap flips to +14% (the gray bars show this leave-one-year-out
+range). In 2017 own-electricity firms recorded about 31 times other firms' fuel (1.4 to 4 times in other years)
+and the share making own electricity doubles in 2017–19 — likely a recording change, not behaviour. Starting level
+(separate model): a level twice as high goes with a ~38% bigger cut, a third to a half of which is automatic
+fall-back. The all-terms CSV has 356 coefficients from 11 variants (incl. before/after 2016, without own
+electricity, firm effects split at 2016). Hand-off: R3-06 (self-generation) must deal with the 2017 pattern.
