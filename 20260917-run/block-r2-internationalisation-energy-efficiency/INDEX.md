@@ -10,6 +10,7 @@ Item-by-item coverage of Deasy's row and the review record: [TRACKER.md](TRACKER
 | `01_export_entry_cohorts.do` → `figures/01_export_entry_cohorts.png`, `tables/01_export_entry_cohorts.csv` | How many firms start exporting in each year (and which firms cannot be dated), under the simple rule and the previous paper's stricter rule; the table repeats both for importing and 10%+ foreign ownership | "Stagged did" (start year per firm); "Mirip dengan paper kita sebelumnya hanya Ganti tahun" (previous paper's rule kept as rule B) | done, reviewed |
 
 | `02_event_time_support.do` → `figures/02_event_time_support.png`, `tables/02_event_time_support.csv` | How many export starters are seen in each year before and after their start year (by start year), and how many comparison firms (never seen exporting) exist each calendar year; sets the year window (−5 to +5, outer years grouped) that the later before/after charts use | "Stagged did" (the firm counts the design stands on) | done, reviewed |
+| `03_energy_efficiency_export_start.do` → `figures/03_energy_efficiency_export_start.png`, `tables/03_energy_efficiency_export_start.csv` | Value added per GJ of energy before and after firms start exporting, as % change since the year before the start, starters minus firms never seen exporting (firm and year fixed effects); average after the start; before-start checks | "Intertionalized and energy efficiency"; "Stagged did"; "Mirip dengan paper kita sebelumnya" (same outcome as the previous paper, ln VA per GJ) | done, reviewed |
 ## Details kept out of the figures
 
 **01 — start years.** Rule A (main, "simple"): a firm starts in the first year it is seen participating after a
@@ -32,3 +33,19 @@ firms that started in 2015; at +5 the only late starters are the 19 firms that s
 all rows of firms never seen exporting (2022 records direct exporters only, so no firm is "seen not exporting"
 that year); 2,832 of 4,945 have two or more usable years, which firm fixed effects need. The previous paper's rule
 (29 starters) never reaches 30 firms in any column: it supports one pooled comparison only (R2-07).
+
+**03 — energy efficiency before and after the export start.** Model: log value added per GJ on one marker per
+year since the start (−5 to +5; ≤ −6 and ≥ +6 pooled; −1 = reference), firm and year fixed effects (reghdfe),
+standard errors clustered by firm; starters (simple rule) and firms never seen exporting (all their rows); 20,070
+rows, 3,574 firms (742 starters); 2,017 firms with a single usable year drop out. Result on this file: average of
+years 0 to +5 = +9% (95% interval −8% to +28%); only +5 is clearly above zero (+45%), and it rests on 169 starters
+from before 2016 and just 19 from 2017. Before-start check: all starters p = 0.245, but starters seen not exporting
+the year just before fail it (p < 0.001) — the two groups pull in opposite directions (−5 = +1.10 vs −0.48 log
+points), so read the after-start dots with care. In 193 of the 700 reference-year rows export status is unknown,
+and 42 starters have no −1 row. "Never seen exporting" can include firms that exported in years with unknown
+status. The table also has energy per unit of value added (exactly the same result, other way up), and three
+variants: the previous paper's age² control (age = years since the firm first appears in the file, as no founding
+year exists), without the 2017 starters, and exact-dated starters only. Starters from different years are averaged
+together; if the change differs by start year a dot can mix in other years. A method that keeps start years apart
+(Sun–Abraham) moves each dot by at most 0.05 log points here; R2-07 checks this. The year window is computed in the
+file with R2-02's rule and cross-checked against R2-02's table when present.
