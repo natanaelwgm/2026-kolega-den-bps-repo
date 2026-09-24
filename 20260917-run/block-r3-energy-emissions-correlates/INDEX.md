@@ -13,6 +13,7 @@ Item-by-item coverage of Deasy's row and the review record: [TRACKER.md](TRACKER
 | `03_who_reduces_by_sector.do` → `figures/03_who_reduces_by_sector.png`, `tables/03_who_reduces_by_sector.csv`, `tables/03_who_reduces_by_sector_firm_flag.csv` | For each of the 24 manufacturing sectors: the share of one-year changes in which energy and CO2 (per unit of value added and in total) fell more, or rose less, than at the typical firm that year | "Siapa yang reduce energy use and emisi?"; "determinan motivasi" (which sectors, not why) | done, reviewed |
 | `04_trait_associations_fe.do` → `figures/04_trait_associations_fe.png`, `tables/04_trait_associations_fe.csv`, `tables/04_trait_associations_fe_all_terms.csv` | Which firm traits (size, exporting, importing, 10%+ foreign ownership, making own electricity) go with bigger one-year cuts in energy and CO2, other traits held fixed; (A) against similar firms (same year, sector, province), (B) the same firm in its other years; starting level shown separately | "determinan motivasi apa yg membuat firms respond" (traits, not motives); Strategy "FE"; "Bukan kausal" | done, reviewed |
 | `05_motivation_proxies.do` → `figures/05_motivation_proxies.png`, `tables/05_motivation_proxies.csv`, `tables/05_motivation_proxies_fe.csv` | Firms with environmental permit documents (AMDAL, UKL-UPL, SPPL), waste treatment, R&D or innovation vs firms without: share of one-year changes that fell more (or rose less) than the typical firm answering the same question that year | "determinan motivasi apa yg membuat firms respond" (closest stand-ins: rules faced, capacity to change); "Bukan kausal" | done, reviewed |
+| `06_own_electricity_reducers.do` → `figures/06_own_electricity_reducers.png`, `tables/06_own_electricity_reducers_by_year.csv`, `tables/06_own_electricity_reducers_changes.csv` | A: share of reducers vs non-reducers making some of their own electricity, by year (reducers found from all changes, and without changes starting in 2017); B: share of one-year changes beating the typical change, by own electricity at the start and from start to end | "Siapa yang reduce energy use and emisi?"; brief: "electricity self-generation among reducers vs non" | done, reviewed |
 ## Details kept out of the figures
 
 **01 — reducer shares.** A change is counted only between a firm's records exactly one year apart, with energy,
@@ -85,3 +86,42 @@ bottom fifth); with starting energy held fixed every total-energy gap disappears
 are nearly the same records for every question and their distance from 50% depends on the start year — not a
 result. The FE companion (R3-04 comparison A with each answer added, blank answers given a baseline per year) is in
 `05_motivation_proxies_fe.csv`.
+
+**06 — own electricity and reducers.**
+
+**Own electricity and the 2017 recording change.** Firms recorded as making their own electricity show 31 times
+the fuel of other firms in 2017 (1.4–4.0 times in every other year); their share of all firms doubles in 2017–19,
+and makers' self-made share of their electricity falls from 19–27% (2010–15) to 1.4–6.9% (2017–22). This looks
+like a change in recording. Their 2017 to 2018 changes then look like big cuts, which is why reducers make own
+electricity far more often in 2017–19 (gap +30.7 points in 2017). Leaving out changes that start in 2017 (chosen
+from the data: it moves the gap 5.0 points, other years at most 1.6), the pooled gap falls from +10.1 [8.3, 11.9]
+to +2.4 [0.5, 4.2] points.
+
+**Without 2017: no robust difference either way (N1).** In panel (a), firms making own electricity beat the typical
+change in 49.0% of changes, against 50.1% for firms making none. This raw result depends on starting levels:
+without 2017 they start with 0.65 times the energy per unit of value added of other firms, and low starts tend to
+rise back. Comparing firms in the same fifth of starting energy per unit of value added, they beat the typical
+change 4.3 points more often [2.6, 5.9]; comparing firms in the same fifth of starting energy, 6.0 points less often
+[−7.7, −4.3]. Starts before 2016: −2.8 points; starts 2018–21: +9.1 (same fifth of energy per unit of value added).
+So there is no robust difference either way; do not read the raw shares as "no difference" or as "own-electricity
+firms cut more".
+
+**Energy use and CO2 totals, panels (c)–(d).** Firms making own electricity start with 4.4 times the energy of other
+firms in the same start year, and big starts fall back (share beating the typical energy-use change by fifth of
+starting energy: 30, 41, 50, 59, 69%). In the same fifth of starting energy, their gap in (c) reverses from +7.3 to
+−2.7 points [−4.2, −1.1] (+1.8 to −4.2 without 2017). The (c)–(d) gaps are size fall-back, not a finding.
+
+**Switching to own power does not fake cuts (N2).** Self-made power is not counted in energy use (nine fuels plus
+bought electricity); fuel burnt to make it counts only if it is one of the nine fuels. If switching faked cuts,
+firms that start making own electricity would beat the typical energy-use change more often. They do not: 47.9%
+[45.9, 50.0], against 47.4% for firms making none in both years. Their bought electricity fell more than the typical
+firm's in 51.2% of changes [49.1, 53.3], against 49.4% [48.5, 50.3]; this excludes 42 starters whose bought power
+fell to zero and 73 with none at the start (52.1% if the 42 count as cuts). Their gap in (a) comes from value added,
+which rose 18.7% more than the typical firm's (stoppers: −18.3%). Considered and rejected: adding self-made kWh to
+energy use, which double counts generator fuel and mechanically raises starters' changes.
+
+**Not recorded (N3).** Own-electricity status is blank for 2,125 rows, all in 2014–15; blanks are never counted as
+"none". They are left out of panel A and shown as hollow gray rows in B (795 changes, all starting in 2014; 1,808
+with a blank in either year). Blanks are more common for non-reducers (46–49% of their 2014–15 rows) than for
+reducers (34–39%). The 2014 gap in A is +4.5 points among recorded firms; it would be +6.5 if every blank were
+"none".
