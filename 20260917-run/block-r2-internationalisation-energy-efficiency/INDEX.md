@@ -5,15 +5,22 @@ Development data — obscured values, fictional firm panel. Not BPS findings.
 Run all: open `00_run.do`, check the two paths at the top, press Do. Each file below also runs on its own.
 Item-by-item coverage of Deasy's row and the review record: [TRACKER.md](TRACKER.md).
 
+**Stata add-ons this block needs** (install once; no file installs or updates anything; on a computer without internet, copy the
+add-on folder from one that has them): `ssc install reghdfe`, `ssc install ftools`, `ssc install require` (all files from R2-03 on);
+for R2-07 also `ssc install csdid`, `ssc install drdid`, `ssc install eventstudyinteract`, `ssc install avar`,
+`ssc install did_imputation`, `ssc install did_multiplegt_dyn`, `ssc install gtools`. If one of the R2-07 method add-ons is
+missing, that method gets an "unavailable" row and the file still finishes.
+
 | File | What it shows | Deasy's words it answers | Status |
 |---|---|---|---|
 | `01_export_entry_cohorts.do` → `figures/01_export_entry_cohorts.png`, `tables/01_export_entry_cohorts.csv` | How many firms start exporting in each year (and which firms cannot be dated), under the simple rule and the previous paper's stricter rule; the table repeats both for importing and 10%+ foreign ownership | "Stagged did" (start year per firm); "Mirip dengan paper kita sebelumnya hanya Ganti tahun" (previous paper's rule kept as rule B) | done, reviewed |
-
 | `02_event_time_support.do` → `figures/02_event_time_support.png`, `tables/02_event_time_support.csv` | How many export starters are seen in each year before and after their start year (by start year), and how many comparison firms (never seen exporting) exist each calendar year; sets the year window (−5 to +5, outer years grouped) that the later before/after charts use | "Stagged did" (the firm counts the design stands on) | done, reviewed |
 | `03_energy_efficiency_export_start.do` → `figures/03_energy_efficiency_export_start.png`, `tables/03_energy_efficiency_export_start.csv` | Value added per GJ of energy before and after firms start exporting, as % change since the year before the start, starters minus firms never seen exporting (firm and year fixed effects); average after the start; before-start checks | "Intertionalized and energy efficiency"; "Stagged did"; "Mirip dengan paper kita sebelumnya" (same outcome as the previous paper, ln VA per GJ) | done, reviewed |
 | `04_co2_efficiency_export_start.do` → `figures/04_co2_efficiency_export_start.png`, `tables/04_co2_efficiency_export_start.csv` | Same event study for value added per tonne of CO2 (CO2 per unit of value added in the table) | "Intertionalized and energy efficiency" (emissions side; the previous paper's ln VA per CO2); "Stagged did" | done, reviewed |
 | `05_energy_co2_va_export_start.do` → `figures/05_energy_co2_va_export_start.png`, `tables/05_energy_co2_va_export_start.csv` | The same before/after comparison for energy use, CO2 and value added separately (three panels, one scale): what moves when firms start exporting | "Intertionalized and energy efficiency" (where an efficiency change comes from); "Stagged did" | done, reviewed |
 | `06_efficiency_by_start_year.do` → `figures/06_efficiency_by_start_year.png`, `tables/06_efficiency_by_start_year.csv` | Each start year compared only with never-exporters (never with earlier starters): value added per GJ after vs before the start, per start year, with averages for all, before-Paris and after-Paris starters; a version without doubtful energy records | "Stagged did" (the clean building block of a staggered design); "Mirip dengan paper kita sebelumnya" | done, reviewed |
+| `07_efficiency_by_method.do` → `figures/07_efficiency_by_method.png`, `tables/07_efficiency_by_method.csv` | Value added per GJ after the export start under the previous paper's four methods (Callaway–Sant'Anna, Sun–Abraham, Borusyak–Jaravel–Spiess, de Chaisemartin–D'Haultfœuille) next to Figure R2-03's single regression, with Figure R2-06's average and the previous paper's stricter start rule as reference rows; each method's before-start check; each method's year-by-year path in the table | "Stagged did"; "Mirip dengan paper kita sebelumnya hanya Ganti tahun" (its four methods and its start rule on 2010–2022) | done, reviewed |
+
 ## Details kept out of the figures
 
 **01 — start years.** Rule A (main, "simple"): a firm starts in the first year it is seen participating after a
@@ -88,3 +95,30 @@ while here each start year's 'after' is the average of its rows, so the start ye
 most and year +5 (188 firms, +41%) little; with the same comparisons as here and equal weights per year since the
 start the average is +6%, combining start years as R2-03 does adds about 3 points, and the choice of base year almost
 nothing. Both averages cross 0.
+
+**07 — the previous paper's four methods.** Same starters (simple rule) and never-exporters as R2-03, log value added per GJ, no
+control variables. Main number = average of years 0 to +5, each year counting equally. Averages: R2-03's model +9% (95% interval
+−8% to +28%); Callaway–Sant'Anna +8% (−10% to +30%); Sun–Abraham +5% (−11% to +24%); Borusyak–Jaravel–Spiess +4% (−11% to +22%);
+de Chaisemartin–D'Haultfœuille +8% (−10% to +30%). None is clearly different from zero. Before-start checks: p = 0.245 / 0.159 /
+0.238 / 0.190 / 0.326; but Callaway–Sant'Anna's check over all years before the start (not only the five shown) gives p = 0.009,
+a warning sign. The previous paper's single summary numbers: its two-way model with one on/off marker +1.0% (−11.8% to +15.7%),
+Callaway–Sant'Anna +6.4%, Borusyak–Jaravel–Spiess +4.4%, de Chaisemartin–D'Haultfœuille +4.0%. The one-marker model is the one
+number far from the others, which is what mixing start years does. Keeping start years apart (Sun–Abraham) moves each of R2-03's
+dots by at most 0.047 log points.
+
+Missing 2016 file: Callaway–Sant'Anna and de Chaisemartin–D'Haultfœuille count calendar years, so starters of 2017 (their year
+before the start has no file) get no after-start estimate. Sun–Abraham and Borusyak–Jaravel–Spiess keep them. For de
+Chaisemartin–D'Haultfœuille every missing year inside a firm's span gets an empty row with the export-start status filled in.
+Without that, the package treats 2015→2017 as one year, and firms whose status is missing in their switch year become comparison
+firms. With it, only never-exporters are comparisons. Its yearly results then equal Callaway–Sant'Anna's, as they should with
+never-exporters as the only comparison and no control variables. Year labels: the package's Effect_1 = the start year,
+Placebo_1 = the year before that.
+
+The previous paper's stricter start rule dates 29 starters (2–11 per start year). Methods that estimate each start year alone give
+meaningless numbers there, so this row uses Borusyak–Jaravel–Spiess over all start years at once, with its leave-out interval for
+small groups: −21% (−59% to +53%), before-start p = 0.342. With each year counting equally: −27% (−62% to +40%). Without the 6 firms
+that exported before their 0-0-1-1 pattern: −16% (−64% to +97%). Too few firms to say anything.
+
+Differences from the previous paper: never-exporters are the only comparison (it also used firms not yet started for
+Callaway–Sant'Anna and de Chaisemartin–D'Haultfœuille), no age² control, and Sun–Abraham's outer years are grouped (its code put
+them into the reference year).
