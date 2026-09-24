@@ -11,6 +11,7 @@ Item-by-item coverage of Deasy's row and the review record: [TRACKER.md](TRACKER
 
 | `02_exporters_energy_co2_per_va.do` → `figures/02_exporters_energy_co2_per_va.png`, `tables/02_exporters_energy_co2_per_va.csv` | Each year, the typical (median) exporter's and non-exporter's energy and CO2 per million of value added, and exporters as % of non-exporters with a 95% range; Paris date marked | "Did internationally engaged firms change their environmental behaviour more strongly after the Paris Agreement?"; "Gj/va", "Co2/va" (drawn); "VA/energy use … total", "VA/emisi … total" (reciprocals, table only); "matching yearly" (unmatched yearly comparison) | done, reviewed |
 | `03_importers_energy_co2_per_va.do` → `figures/03_importers_energy_co2_per_va.png`, `tables/03_importers_energy_co2_per_va.csv` | Same chart for importers vs non-importers; 2017 kept in the table only; 2019–2022 drawn hollow gray because importers' energy records are in doubt | "import vs non import"; "Gj/va", "Co2/va"; "VA/energy use … total", "VA/emisi … total" (table); "Did internationally engaged firms change … after the Paris Agreement?" | done, reviewed |
+| `04_foreign_owned_energy_co2_per_va.do` → `figures/04_foreign_owned_energy_co2_per_va.png`, `tables/04_foreign_owned_energy_co2_per_va.csv` | Same chart for firms with 10%+ foreign ownership vs other firms; 2020 kept in the table only; 2017, 2019, 2021, 2022 drawn light gray in both groups because many firms' energy records are in doubt | "fdi vs non fdi"; "Gj/va", "Co2/va"; "VA/energy use … total", "VA/emisi … total" (table); "Did internationally engaged firms change … after the Paris Agreement?" | done, reviewed |
 ## Details kept out of the figures
 
 **01 — group shares.** Foreign ownership is drawn at 10% or more (`fdi_10_flag`), the usual foreign-investment
@@ -41,3 +42,14 @@ recording problem, not behaviour — so 2019–2022 are drawn hollow gray (numbe
 the enlarged importer group, shows a normal gap (59%). Template changes made with this file (02 re-run, table
 byte-identical): shorter notes with a reading rule for the 95% range ("crossing 100 = no clear difference"), years
 computed but not drawn labelled under the x axis, and optional hollow-gray years with a legend key.
+
+**04 — foreign-owned vs other firms, yearly.** Built from the 02 template. 2020 is not drawn: 47% of firms are
+marked foreign-owned that year (8–11% otherwise), and that year's foreign group has a median of 39 workers against
+141–201 in other years, so the flag is wrong. In 2017, 2019, 2021 and 2022 both groups contain many firms whose
+energy records jump or drop (the same recording problem found in R1-03; a check that does not rely on import or
+export status finds it in exactly those years, and not in 2018), so those years are drawn light gray in both groups,
+each with its own legend key; the numbers stay in the table. Keeping the gray years is preferred to dropping the
+doubtful firms, which would also drop 5–42% of firms in years whose records look fine. Either way the gap shows no
+clear change after Paris. Unknown ownership (up to 10% of firms, in 2021) is left out. Template change made with
+this file (02 and 03 re-run, tables byte-identical): optional light-gray marks for the other group
+(`flag_g0`, `flag_key0`).

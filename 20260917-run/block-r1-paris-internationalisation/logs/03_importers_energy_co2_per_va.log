@@ -3,7 +3,7 @@
        log:  /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r1-paris-internationalisation/l
 > ogs/03_importers_energy_co2_per_va.log
   log type:  text
- opened on:  25 Sep 2026, 04:01:22
+ opened on:  25 Sep 2026, 04:34:26
 
 . timer clear 1
 
@@ -68,7 +68,7 @@ Step 2/6: common sample and groups
 . tempfile counts
 
 . save `counts'
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_56085.000002 saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_15160.000002 saved as .dta format
 
 . restore
 
@@ -138,7 +138,7 @@ xij variables:
 . tempfile meds
 
 . save `meds'
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_56085.000004 saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_15160.000004 saved as .dta format
 
 . restore
 
@@ -166,7 +166,7 @@ Step 4/6: gap between the groups and its 95% range
 . tempfile gaps
 
 . postfile `h' int year double(gap_gj gap_gj_lo95 gap_gj_hi95 gap_co2 gap_co2_lo95 gap_co2_hi95) using `gaps', replace
-(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_56085.000005 not found)
+(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_15160.000005 not found)
 
 . levelsof year, local(yrs)
 2010 2011 2012 2013 2014 2015 2017 2018 2019 2020 2021 2022
@@ -631,6 +631,20 @@ Step 6/6: draw: top row = the two groups, bottom row = the gap
 . replace lg = "" if flagged == 1
 (2 real changes made)
 
+. * flag_g0 = yes: the other group's records are in doubt in those years too, so its
+. * marks move to a light gray layer as well
+. gen double y0f = y0 if flagged == 1 & "`flag_g0'" == "yes"
+(52 missing values generated)
+
+. gen str8 l0f = l0 if flagged == 1 & "`flag_g0'" == "yes"
+(52 missing values generated)
+
+. replace y0 = . if flagged == 1 & "`flag_g0'" == "yes"
+(0 real changes made)
+
+. replace l0 = "" if flagged == 1 & "`flag_g0'" == "yes"
+(0 real changes made)
+
 . local flaglayers ""
 
 . local flagkey ""
@@ -646,7 +660,11 @@ Step 6/6: draw: top row = the two groups, bottom row = the gap
 > ll) mcolor(gs8) mlabel(l1f) mlabvposition(p1) mlabsize(vsmall) mlabcolor(gs6))"'
 .     local flaglayers `"`flaglayers' (rspike ghif glof year, lcolor(gs8) lwidth(thin)) (scatter gpf year, msymbol(Dh) m
 > size(small) mcolor(gs8) mlabel(lgf) mlabvposition(pg) mlabsize(vsmall) mlabcolor(gs6))"'
+.     if "`flag_g0'" == "yes" local flaglayers `"`flaglayers' (connected y0f year, cmissing(n) lcolor(gs10) lpattern(sho
+> rtdash) lwidth(thin) msymbol(Sh) msize(small) mcolor(gs10) mlabel(l0f) mlabvposition(p0) mlabsize(vsmall) mlabcolor(gs
+> 8))"'
 .     local flagkey `"9 "`flag_key'""'
+.     if "`flag_g0'" == "yes" local flagkey `"`flagkey' 12 "`flag_key0'""'
 .     local lrows 4
 .     local ysz 9            // one more legend row and note line; 9 keeps the PNG edges opaque
 . }
@@ -738,6 +756,6 @@ file
 . local elapsed = strtrim(string(r(t1), "%9.1f"))
 
 . display "FINISHED: figure -> figures/`fname'.png (elapsed `elapsed' s)"
-FINISHED: figure -> figures/03_importers_energy_co2_per_va.png (elapsed 36.2 s)
+FINISHED: figure -> figures/03_importers_energy_co2_per_va.png (elapsed 35.8 s)
 
 . quietly log close

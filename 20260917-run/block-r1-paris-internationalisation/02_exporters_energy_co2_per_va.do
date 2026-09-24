@@ -47,6 +47,8 @@ local skip_why ""                  // short reason, written in the table's note 
 local flag_yrs ""                  // years drawn hollow gray: records in doubt (numbers stay in the table). importers: 2019-2022
 local flag_why ""                  // short reason, written in the table's note column
 local flag_key ""                  // legend text for the hollow gray marks
+local flag_g0  ""                  // "yes" = the other group's line is also drawn light gray in flag_yrs (its records are in doubt too)
+local flag_key0 ""                  // legend text for the other group's light gray marks (used when flag_g0 = yes)
 local cav_note ""                  // one extra sentence for the notes about the group flag (empty = none)
 local min_n   30                   // a year is drawn only if both groups have at least this many firms
 local reps    999                  // random redraws of each year's firms for the 95% range
@@ -304,6 +306,12 @@ foreach v in y1 gp glo ghi {
 }
 replace l1 = "" if flagged == 1
 replace lg = "" if flagged == 1
+* flag_g0 = yes: the other group's records are in doubt in those years too, so its
+* marks move to a light gray layer as well
+gen double y0f = y0 if flagged == 1 & "`flag_g0'" == "yes"
+gen str8 l0f = l0 if flagged == 1 & "`flag_g0'" == "yes"
+replace y0 = . if flagged == 1 & "`flag_g0'" == "yes"
+replace l0 = "" if flagged == 1 & "`flag_g0'" == "yes"
 local flaglayers ""
 local flagkey ""
 local lrows 3
@@ -312,7 +320,9 @@ quietly count if flagged == 1
 if r(N) > 0 {
     local flaglayers `"(connected y1f year, cmissing(n) lcolor(gs8) lpattern(solid) lwidth(thin) msymbol(Oh) msize(small) mcolor(gs8) mlabel(l1f) mlabvposition(p1) mlabsize(vsmall) mlabcolor(gs6))"'
     local flaglayers `"`flaglayers' (rspike ghif glof year, lcolor(gs8) lwidth(thin)) (scatter gpf year, msymbol(Dh) msize(small) mcolor(gs8) mlabel(lgf) mlabvposition(pg) mlabsize(vsmall) mlabcolor(gs6))"'
+    if "`flag_g0'" == "yes" local flaglayers `"`flaglayers' (connected y0f year, cmissing(n) lcolor(gs10) lpattern(shortdash) lwidth(thin) msymbol(Sh) msize(small) mcolor(gs10) mlabel(l0f) mlabvposition(p0) mlabsize(vsmall) mlabcolor(gs8))"'
     local flagkey `"9 "`flag_key'""'
+    if "`flag_g0'" == "yes" local flagkey `"`flagkey' 12 "`flag_key0'""'
     local lrows 4
     local ysz 9            // one more legend row and note line; 9 keeps the PNG edges opaque
 }
