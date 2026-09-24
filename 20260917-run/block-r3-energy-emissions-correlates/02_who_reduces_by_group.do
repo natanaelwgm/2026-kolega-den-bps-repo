@@ -130,6 +130,21 @@ foreach d in size exp imp large fdiall {
 }
 quietly count if cmp & missing(g_fdi)
 display "   Changes left out of the foreign-ownership rows (break year): " r(N)
+* Fall-back check for panels (c)–(d): changes that start from a high energy level
+* tend to fall back, so groups that start bigger look better there partly
+* automatically. Fifths of starting energy within each start year.
+gen double s_lnE = ln(L.total_gj_s1) if cmp
+gen byte e5 = .
+foreach y of local ys {
+    xtile tmp5 = s_lnE if start_year == `y', nq(5)
+    replace e5 = tmp5 if start_year == `y'
+    drop tmp5
+}
+quietly summarize beat_energy if e5 == 5
+local fb_top = strtrim(string(100 * r(mean), "%3.0f"))
+quietly summarize beat_energy if e5 == 1
+local fb_bot = strtrim(string(100 * r(mean), "%3.0f"))
+display "   Energy use: changes from the top fifth of starting energy beat the typical change `fb_top'%, bottom fifth `fb_bot'%"
 
 *---------------------------------------------------------------------------
 display "Step 4/7: share beating the typical firm, per group, with 95% intervals -> CSV"
@@ -338,6 +353,8 @@ twoway (rspike lo hi y, horizontal lcolor(black) lwidth(thin)) ///
               "by firm size, exports, imports and foreign ownership", size(small) pos(11) span) ///
         note("Notes: Each dot = share of the group's one-year changes that fell more or rose less than the typical (median) firm's change that year." ///
              "50% = same as the typical firm; where the 95% interval crosses the dashed line, the group is not clearly different. Shows who, not why." ///
+             "In (c)–(d), changes starting from the highest fifth of energy use beat the typical change `fb_top'% of the time, the lowest fifth `fb_bot'%:" ///
+             "groups that start with more energy look better there partly automatically." ///
              "Group = the firm's status in the first year of each change (`n_cmp' changes). Each change is compared only with the same year's changes," ///
              "so a shift in how a status is recorded between years cannot create a gap by itself`fdinote'." ///
              "VA = value added = output value minus materials, energy and services bought (current prices). GJ = gigajoules." ///

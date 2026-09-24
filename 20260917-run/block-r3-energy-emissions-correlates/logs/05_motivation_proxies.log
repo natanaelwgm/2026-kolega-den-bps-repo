@@ -1,0 +1,1215 @@
+------------------------------------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r3-energy-emissions-correlates/
+> logs/05_motivation_proxies.log
+  log type:  text
+ opened on:  25 Sep 2026, 04:58:12
+
+. timer clear 1
+
+. timer on 1
+
+. display _newline "=== [R3-05] STARTING: do firms with environmental documents, waste treatment, R&D or innovation cut 
+> energy and CO2 more often ==="
+
+=== [R3-05] STARTING: do firms with environmental documents, waste treatment, R&D or innovation cut energy and CO2 more 
+> often ===
+
+. 
+. * ---- chart style (identical block in every file) ----
+. set scheme s1mono
+
+. capture graph set window fontface "Times New Roman"   // GUI Stata; console Stata keeps its default font
+
+. * Note: this changes your Stata graph font permanently; undo with: graph set window fontface default
+. local devnote "Development data — obscured values, fictional firm panel. Not BPS findings."
+
+. local srcnote "Source: SI/IBS annual files 2010–2022 (masked), analysis_ready_data.dta."
+
+. 
+. * small helper: turn a list of years into short text, e.g. "2011 2017 2018 2019" -> "2011, 2017–19"
+. capture program drop yearspan
+
+. program define yearspan, rclass
+  1.     local out ""
+  2.     local first = .
+  3.     local prev  = .
+  4.     foreach y of local 0 {
+  5.         if `y' == `prev' + 1 {
+  6.             local prev = `y'
+  7.             continue
+  8.         }
+  9.         if `first' < . {
+ 10.             local seg = cond(`prev' > `first', "`first'–" + substr("`prev'", 3, 2), "`first'")
+ 11.             local out = cond(`"`out'"' == "", "`seg'", "`out', `seg'")
+ 12.         }
+ 13.         local first = `y'
+ 14.         local prev  = `y'
+ 15.     }
+ 16.     if `first' < . {
+ 17.         local seg = cond(`prev' > `first', "`first'–" + substr("`prev'", 3, 2), "`first'")
+ 18.         local out = cond(`"`out'"' == "", "`seg'", "`out', `seg'")
+ 19.     }
+ 20.     return local s "`out'"
+ 21. end
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 1/8: load the variables; find the years each question was asked"
+Step 1/8: load the variables; find the years each question was asked
+
+. *---------------------------------------------------------------------------
+. * env_amdal_flag / env_ukl_upl_flag / env_sppl_flag = the firm holds that environmental
+. *   permit document (AMDAL strictest, for large impacts; UKL-UPL middle; SPPL simplest)
+. * env_waste_treatment_flag = the firm has a waste treatment installation
+. * rd_activity_flag = the firm does research and development (R&D)
+. * innovation_flag / innovation_process_flag = any innovation / a new production process
+. * A blank answer stays blank ("not recorded"); it is never counted as "no".
+. use firm_id year total_gj_s1 co2_total_s1 value_added_nominal workers ///
+>     export_flag import_flag fdi_10_flag own_gen_positive_reported industry2_reported province_code ///
+>     env_amdal_flag env_ukl_upl_flag env_sppl_flag env_waste_treatment_flag ///
+>     rd_activity_flag innovation_flag innovation_process_flag ///
+>     vs_rd_activity_flag vs_innovation_flag vs_innovation_process_flag using "$DATA", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. isid firm_id year
+
+. * years in which each question has at least one answer (read from the data)
+. local fams "doc waste rd inn proc amdal ukl sppl"
+
+. local fv_doc   "env_amdal_flag"
+
+. local fv_waste "env_waste_treatment_flag"
+
+. local fv_rd    "rd_activity_flag"
+
+. local fv_inn   "innovation_flag"
+
+. local fv_proc  "innovation_process_flag"
+
+. local fv_amdal "env_amdal_flag"
+
+. local fv_ukl   "env_ukl_upl_flag"
+
+. local fv_sppl  "env_sppl_flag"
+
+. foreach f of local fams {
+  2.     quietly levelsof year if !missing(`fv_`f''), local(ask_`f')
+  3.     display "   `fv_`f'': answers in `ask_`f''"
+  4. }
+   env_amdal_flag: answers in 2020 2021 2022
+   env_waste_treatment_flag: answers in 2020 2021 2022
+   rd_activity_flag: answers in 2011 2017 2018 2019 2020 2021 2022
+   innovation_flag: answers in 2011 2017 2018 2020 2021 2022
+   innovation_process_flag: answers in 2017 2018
+   env_amdal_flag: answers in 2020 2021 2022
+   env_ukl_upl_flag: answers in 2020 2021 2022
+   env_sppl_flag: answers in 2020 2021 2022
+
+. * years whose R&D / innovation answers are a provisional reading of the survey codes
+. * (source-validity code 10 = "PROVISIONAL observed; assumption documented")
+. quietly levelsof year if vs_rd_activity_flag == 10 | vs_innovation_flag == 10 | vs_innovation_process_flag == 10, loca
+> l(prov_yrs)
+
+. display "   provisional R&D / innovation years: `prov_yrs'"
+   provisional R&D / innovation years: 2017 2018
+
+. * foreign-ownership break year (R3-02 rule) - only for the companion model
+. preserve
+
+. collapse (mean) sh_fdi = fdi_10_flag, by(year)
+
+. quietly summarize sh_fdi, detail
+
+. local med_sh = r(p50)
+
+. quietly levelsof year if sh_fdi > 2 * `med_sh' & !missing(sh_fdi), local(fdi_skip)
+
+. restore
+
+. display "   Foreign-ownership break year(s): `fdi_skip'"
+   Foreign-ownership break year(s): 2020
+
+. gen int sector = real(industry2_reported)
+
+. encode province_code, gen(province)
+
+. xtset firm_id year
+
+Panel variable: firm_id (unbalanced)
+ Time variable: year, 2010 to 2022, but with gaps
+         Delta: 1 unit
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 2/8: one-year changes, as in R3-01 (same code)"
+Step 2/8: one-year changes, as in R3-01 (same code)
+
+. *---------------------------------------------------------------------------
+. gen double energy    = total_gj_s1
+
+. gen double co2       = co2_total_s1
+
+. gen double energy_va = total_gj_s1  / value_added_nominal
+
+. gen double co2_va    = co2_total_s1 / value_added_nominal
+
+. gen byte pair1 = !missing(L.total_gj_s1)                        // firm is in last year's file
+
+. gen byte cmp = pair1 & total_gj_s1>0 & L.total_gj_s1>0 & co2_total_s1>0 & L.co2_total_s1>0 ///
+>                & value_added_nominal>0 & L.value_added_nominal>0
+
+. assert pair1 == 0 if year == 2017                               // no 2016 file
+
+. foreach v in energy co2 energy_va co2_va {
+  2.     gen double chg_`v' = ln(`v') - ln(L.`v') if cmp
+  3. }
+(12,880 missing values generated)
+(12,880 missing values generated)
+(12,880 missing values generated)
+(12,880 missing values generated)
+
+. * R3-02 benchmark (typical change of ALL firms that year): kept for one CSV column
+. bysort year: egen double med_all_energy_va = pctile(chg_energy_va), p(50)   // median; egen median() would ignore "dou
+> ble"
+(5,691 missing values generated)
+
+. xtset firm_id year                // the bysort call above changed the sort order
+
+Panel variable: firm_id (unbalanced)
+ Time variable: year, 2010 to 2022, but with gaps
+         Delta: 1 unit
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 3/8: each firm's answer in the FIRST year of each change"
+Step 3/8: each firm's answer in the FIRST year of each change
+
+. *---------------------------------------------------------------------------
+. gen int start_year = year - 1 if cmp
+(12,880 missing values generated)
+
+. gen double ln_e0 = ln(L.total_gj_s1) if cmp                     // energy at the start (log), for the notes
+(12,880 missing values generated)
+
+. * environmental document: the strictest one held (a firm may hold more than one)
+. gen byte doc_ans = !missing(L.env_amdal_flag, L.env_ukl_upl_flag, L.env_sppl_flag) if cmp
+(12,880 missing values generated)
+
+. gen byte g_doc = 4 if cmp                                                    // 4 = not recorded (any of the three bla
+> nk)
+(12,880 missing values generated)
+
+. replace  g_doc = 3 if cmp & doc_ans & L.env_amdal_flag == 0 & L.env_ukl_upl_flag == 0 & L.env_sppl_flag == 0
+(1,152 real changes made)
+
+. replace  g_doc = 2 if cmp & doc_ans & L.env_amdal_flag == 0 & (L.env_ukl_upl_flag == 1 | L.env_sppl_flag == 1)
+(345 real changes made)
+
+. replace  g_doc = 1 if cmp & doc_ans & L.env_amdal_flag == 1
+(805 real changes made)
+
+. * yes / no / not recorded questions
+. foreach f in waste rd inn proc amdal ukl sppl {
+  2.     gen byte g_`f' = cond(L.`fv_`f'' == 1, 1, cond(L.`fv_`f'' == 0, 2, 3)) if cmp
+  3. }
+(12,880 missing values generated)
+(12,880 missing values generated)
+(12,880 missing values generated)
+(12,880 missing values generated)
+(12,880 missing values generated)
+(12,880 missing values generated)
+(12,880 missing values generated)
+
+. * keep a change in a question's rows only if the question was asked in its first year
+. foreach f of local fams {
+  2.     gen byte cov_`f' = 0 if cmp
+  3.     foreach y of local ask_`f' {
+  4.         replace cov_`f' = 1 if cmp & start_year == `y'
+  5.     }
+  6.     replace g_`f' = . if cov_`f' != 1
+  7.     local nr = cond("`f'" == "doc", 4, 3)
+  8.     gen byte ans_`f' = !missing(g_`f') & g_`f' != `nr'
+  9.     quietly levelsof start_year if cov_`f' == 1, local(st_`f')
+ 10.     yearspan `st_`f''
+ 11.     local span_`f' "`r(s)'"
+ 12.     * are ALL of this question's years provisionally coded? (then the figure header says so)
+.     local allprov_`f' : list st_`f' in prov_yrs
+ 13.     if "`st_`f''" == "" | "`prov_yrs'" == "" local allprov_`f' 0
+ 14.     quietly count if cov_`f' == 1
+ 15.     local ncov = r(N)
+ 16.     quietly count if ans_`f'
+ 17.     display "   `f': answers taken from `span_`f''; changes `ncov', with an answer " r(N)
+ 18. }
+(12,880 missing values generated)
+(2,247 real changes made)
+(2,313 real changes made)
+(0 real changes made)
+(15,609 real changes made, 15,609 to missing)
+   doc: answers taken from 2020–21; changes 4560, with an answer 2302
+(12,880 missing values generated)
+(2,247 real changes made)
+(2,313 real changes made)
+(0 real changes made)
+(15,609 real changes made, 15,609 to missing)
+   waste: answers taken from 2020–21; changes 4560, with an answer 2310
+(12,880 missing values generated)
+(1,770 real changes made)
+(2,345 real changes made)
+(2,243 real changes made)
+(2,173 real changes made)
+(2,247 real changes made)
+(2,313 real changes made)
+(0 real changes made)
+(7,078 real changes made, 7,078 to missing)
+   rd: answers taken from 2011, 2017–21; changes 13091, with an answer 7238
+(12,880 missing values generated)
+(1,770 real changes made)
+(2,345 real changes made)
+(2,243 real changes made)
+(2,247 real changes made)
+(2,313 real changes made)
+(0 real changes made)
+(9,251 real changes made, 9,251 to missing)
+   inn: answers taken from 2011, 2017–18, 2020–21; changes 10918, with an answer 6229
+(12,880 missing values generated)
+(2,345 real changes made)
+(2,243 real changes made)
+(15,581 real changes made, 15,581 to missing)
+   proc: answers taken from 2017–18; changes 4588, with an answer 2082
+(12,880 missing values generated)
+(2,247 real changes made)
+(2,313 real changes made)
+(0 real changes made)
+(15,609 real changes made, 15,609 to missing)
+   amdal: answers taken from 2020–21; changes 4560, with an answer 2306
+(12,880 missing values generated)
+(2,247 real changes made)
+(2,313 real changes made)
+(0 real changes made)
+(15,609 real changes made, 15,609 to missing)
+   ukl: answers taken from 2020–21; changes 4560, with an answer 2315
+(12,880 missing values generated)
+(2,247 real changes made)
+(2,313 real changes made)
+(0 real changes made)
+(15,609 real changes made, 15,609 to missing)
+   sppl: answers taken from 2020–21; changes 4560, with an answer 2307
+
+. quietly count if cmp
+
+. local n_cmp = strtrim(string(r(N), "%9.0fc"))
+
+. * do 'Yes' firms start with more energy than 'No' firms? (numbers for the notes)
+. * A high start tends to be followed by a fall, which moves panels (c) and (d).
+. local nq 0
+
+. local nhi 0
+
+. foreach f in doc waste rd inn proc {
+  2.     local yc "g_`f' == 1"
+  3.     local nc "g_`f' == 2"
+  4.     if "`f'" == "doc" {
+  5.         local yc "inlist(g_doc, 1, 2)"
+  6.         local nc "g_doc == 3"
+  7.     }
+  8.     quietly summarize ln_e0 if `yc', detail
+  9.     local my = r(p50)
+ 10.     quietly summarize ln_e0 if `nc', detail
+ 11.     if `my' < . & r(p50) < . {
+ 12.         local ++nq
+ 13.         if `my' > r(p50) local ++nhi
+ 14.         display "   `f': median start energy (log GJ), Yes " %6.2f `my' " vs No " %6.2f r(p50)
+ 15.     }
+ 16. }
+   doc: median start energy (log GJ), Yes   7.02 vs No   5.10
+   waste: median start energy (log GJ), Yes   7.32 vs No   5.53
+   rd: median start energy (log GJ), Yes   7.54 vs No   5.93
+   inn: median start energy (log GJ), Yes   6.65 vs No   5.78
+   proc: median start energy (log GJ), Yes   6.78 vs No   5.83
+
+. display "   'Yes' firms start with more energy in `nhi' of `nq' questions"
+   'Yes' firms start with more energy in 5 of 5 questions
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 4/8: did each change beat the typical firm that ANSWERED the same question that year?"
+Step 4/8: did each change beat the typical firm that ANSWERED the same question that year?
+
+. *---------------------------------------------------------------------------
+. * Firms without an answer differ a lot from firms with one, and the years a
+. * question was asked differ, so each change is compared with the typical
+. * (median) change of the firms that answered the same question in the same year.
+. foreach f of local fams {
+  2.     foreach v in energy_va co2_va energy co2 {
+  3.         bysort start_year: egen double m_`f'_`v' = pctile(cond(ans_`f', chg_`v', .)), p(50)
+  4.         gen byte b_`f'_`v' = (chg_`v' < m_`f'_`v') if !missing(g_`f')
+  5.     }
+  6.     quietly count if !missing(g_`f') & chg_energy_va == m_`f'_energy_va
+  7.     display "   `f': changes exactly at the typical change (counted as not beating it) = " r(N)
+  8.     quietly summarize b_`f'_energy_va if ans_`f'
+  9.     if r(N) > 0 assert inrange(r(mean), 0.48, 0.52)   // about half of the answering firms beat their median
+ 10. }
+(28,489 missing values generated)
+(28,489 missing values generated)
+(28,489 missing values generated)
+(28,489 missing values generated)
+(28,489 missing values generated)
+(28,489 missing values generated)
+(28,489 missing values generated)
+(28,489 missing values generated)
+   doc: changes exactly at the typical change (counted as not beating it) = 2
+(28,489 missing values generated)
+(28,489 missing values generated)
+(28,489 missing values generated)
+(28,489 missing values generated)
+(28,489 missing values generated)
+(28,489 missing values generated)
+(28,489 missing values generated)
+(28,489 missing values generated)
+   waste: changes exactly at the typical change (counted as not beating it) = 0
+(19,958 missing values generated)
+(19,958 missing values generated)
+(19,958 missing values generated)
+(19,958 missing values generated)
+(19,958 missing values generated)
+(19,958 missing values generated)
+(19,958 missing values generated)
+(19,958 missing values generated)
+   rd: changes exactly at the typical change (counted as not beating it) = 4
+(22,131 missing values generated)
+(22,131 missing values generated)
+(22,131 missing values generated)
+(22,131 missing values generated)
+(22,131 missing values generated)
+(22,131 missing values generated)
+(22,131 missing values generated)
+(22,131 missing values generated)
+   inn: changes exactly at the typical change (counted as not beating it) = 5
+(28,461 missing values generated)
+(28,461 missing values generated)
+(28,461 missing values generated)
+(28,461 missing values generated)
+(28,461 missing values generated)
+(28,461 missing values generated)
+(28,461 missing values generated)
+(28,461 missing values generated)
+   proc: changes exactly at the typical change (counted as not beating it) = 2
+(28,489 missing values generated)
+(28,489 missing values generated)
+(28,489 missing values generated)
+(28,489 missing values generated)
+(28,489 missing values generated)
+(28,489 missing values generated)
+(28,489 missing values generated)
+(28,489 missing values generated)
+   amdal: changes exactly at the typical change (counted as not beating it) = 2
+(28,489 missing values generated)
+(28,489 missing values generated)
+(28,489 missing values generated)
+(28,489 missing values generated)
+(28,489 missing values generated)
+(28,489 missing values generated)
+(28,489 missing values generated)
+(28,489 missing values generated)
+   ukl: changes exactly at the typical change (counted as not beating it) = 1
+(28,489 missing values generated)
+(28,489 missing values generated)
+(28,489 missing values generated)
+(28,489 missing values generated)
+(28,489 missing values generated)
+(28,489 missing values generated)
+(28,489 missing values generated)
+(28,489 missing values generated)
+   sppl: changes exactly at the typical change (counted as not beating it) = 1
+
+. gen byte b_all_energy_va = (chg_energy_va < med_all_energy_va) if cmp
+(12,880 missing values generated)
+
+. xtset firm_id year
+
+Panel variable: firm_id (unbalanced)
+ Time variable: year, 2010 to 2022, but with gaps
+         Delta: 1 unit
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 5/8: share beating the typical answering firm, per answer, with 95% intervals"
+Step 5/8: share beating the typical answering firm, per answer, with 95% intervals
+
+. *---------------------------------------------------------------------------
+. tempname P
+
+. tempfile rows
+
+. postfile `P' int row_order byte in_figure str12 family str48 question str40 answers_from str30 group byte answered ///
+>     long(changes firms) str30 reference_group ///
+>     double(pct_energy_va lo_energy_va hi_energy_va gap_energy_va gap_lo_energy_va gap_hi_energy_va ///
+>            pct_co2_va lo_co2_va hi_co2_va gap_co2_va gap_lo_co2_va gap_hi_co2_va ///
+>            pct_energy lo_energy hi_energy gap_energy gap_lo_energy gap_hi_energy ///
+>            pct_co2 lo_co2 hi_co2 gap_co2 gap_lo_co2 gap_hi_co2 ///
+>            loo_min_energy_va loo_max_energy_va pct_energy_va_not_provisional pct_energy_va_vs_all_firms) ///
+>     using `rows', replace
+(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_57057.000002 not found)
+
+. local r 0
+
+. foreach f of local fams {
+  2.     if "`f'" == "doc"   local qn "Environmental permit"
+  3.     if "`f'" == "waste" local qn "Waste treatment"
+  4.     if "`f'" == "rd"    local qn "R&D activity"
+  5.     if "`f'" == "inn"   local qn "Any innovation"
+  6.     if "`f'" == "proc"  local qn "Process innovation"
+  7.     if "`f'" == "amdal" local qn "AMDAL held (any other too)"
+  8.     if "`f'" == "ukl"   local qn "UKL-UPL held"
+  9.     if "`f'" == "sppl"  local qn "SPPL held"
+ 10.     local gl `""Yes" "No" "Not recorded""'
+ 11.     if "`f'" == "doc" local gl `""AMDAL (strictest)" "UKL-UPL or SPPL only" "None of the three" "Not recorded""'
+ 12.     local K : word count `gl'
+ 13.     local ref = cond("`f'" == "doc", 3, 2)
+ 14.     local refname : word `ref' of `gl'
+ 15.     local infig = inlist("`f'", "doc", "waste", "rd", "inn", "proc")
+ 16.     forvalues k = 1/`K' {
+ 17.         quietly count if g_`f' == `k'
+ 18.         if r(N) == 0 continue
+ 19.         local ++r
+ 20.         local gname : word `k' of `gl'
+ 21.         local vals ""
+ 22.         foreach v in energy_va co2_va energy co2 {
+ 23.             quietly mean b_`f'_`v' if g_`f' == `k', vce(cluster firm_id)
+ 24.             matrix T = r(table)
+ 25.             local p  = 100 * T[1,1]
+ 26.             local lo = 100 * T[5,1]
+ 27.             local hi = 100 * T[6,1]
+ 28.             local nn = e(N)
+ 29.             local nf = e(N_clust)
+ 30.             local g = .
+ 31.             local glo = .
+ 32.             local ghi = .
+ 33.             if `k' != `ref' {
+ 34.                 quietly regress b_`f'_`v' ib`ref'.g_`f', vce(cluster firm_id)
+ 35.                 quietly lincom 100 * `k'.g_`f'
+ 36.                 local g   = r(estimate)
+ 37.                 local glo = r(lb)
+ 38.                 local ghi = r(ub)
+ 39.             }
+ 40.             local vals `vals' (`p') (`lo') (`hi') (`g') (`glo') (`ghi')
+ 41.         }
+ 42.         * leave out one start year at a time (main measure)
+.         local lmin = .
+ 43.         local lmax = .
+ 44.         local nst : word count `st_`f''
+ 45.         if `nst' > 1 {
+ 46.             foreach sy of local st_`f' {
+ 47.                 quietly summarize b_`f'_energy_va if g_`f' == `k' & start_year != `sy'
+ 48.                 if r(N) > 0 {
+ 49.                     local lmin = min(`lmin', 100 * r(mean))
+ 50.                     local lmax = cond(`lmax' == ., 100 * r(mean), max(`lmax', 100 * r(mean)))
+ 51.                 }
+ 52.             }
+ 53.         }
+ 54.         * without the provisional R&D / innovation years
+.         local pnp = .
+ 55.         if inlist("`f'", "rd", "inn", "proc") {
+ 56.             gen byte tmp_np = 1
+ 57.             foreach y of local prov_yrs {
+ 58.                 replace tmp_np = 0 if start_year == `y'
+ 59.             }
+ 60.             quietly summarize b_`f'_energy_va if g_`f' == `k' & tmp_np == 1
+ 61.             if r(N) > 0 local pnp = 100 * r(mean)
+ 62.             drop tmp_np
+ 63.         }
+ 64.         * the same change compared with ALL firms that year (the R3-02 benchmark)
+.         quietly summarize b_all_energy_va if g_`f' == `k'
+ 65.         local pall = 100 * r(mean)
+ 66.         local isans = (`k' < `K')
+ 67.         post `P' (`r') (`infig') ("`f'") ("`qn'") ("`span_`f''") ("`gname'") (`isans') (`nn') (`nf') ("`refname'") 
+> ///
+>             `vals' (`lmin') (`lmax') (`pnp') (`pall')
+ 68.     }
+ 69. }
+(2,345 real changes made)
+(2,243 real changes made)
+(2,345 real changes made)
+(2,243 real changes made)
+(2,345 real changes made)
+(2,243 real changes made)
+(2,345 real changes made)
+(2,243 real changes made)
+(2,345 real changes made)
+(2,243 real changes made)
+(2,345 real changes made)
+(2,243 real changes made)
+(2,345 real changes made)
+(2,243 real changes made)
+(2,345 real changes made)
+(2,243 real changes made)
+(2,345 real changes made)
+(2,243 real changes made)
+
+. postclose `P'
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 6/8: companion - R3-04 comparison (A) with each answer added (CSV only)"
+Step 6/8: companion - R3-04 comparison (A) with each answer added (CSV only)
+
+. *---------------------------------------------------------------------------
+. * Same traits as R3-04 (A): workers, exporter, importer, foreign-owned, own
+. * electricity, each with its own "not recorded" indicator; year, sector and
+. * province effects. Foreign status from a break year is set to "not used"
+. * (R3-04 check A_keepbreak), because the document and waste questions exist
+. * only from that year on. Firms with no answer get their own baseline in each
+. * year (year x not recorded), so a blank answer never counts as "no".
+. gen double s_lnw  = ln(L.workers) if cmp
+(12,880 missing values generated)
+
+. gen byte   exp1   = (L.export_flag == 1) if cmp
+(12,880 missing values generated)
+
+. gen byte   exp_nr = missing(L.export_flag) if cmp
+(12,880 missing values generated)
+
+. gen byte   imp1   = (L.import_flag == 1) if cmp
+(12,880 missing values generated)
+
+. gen byte   brk    = 0 if cmp
+(12,880 missing values generated)
+
+. foreach y of local fdi_skip {
+  2.     replace brk = 1 if start_year == `y' & cmp
+  3. }
+(2,247 real changes made)
+
+. gen byte   fdi1_k   = (L.fdi_10_flag == 1) & brk == 0 if cmp
+(12,880 missing values generated)
+
+. gen byte   fdi_nr_k = (missing(L.fdi_10_flag) | brk == 1) if cmp
+(12,880 missing values generated)
+
+. gen byte   own1   = (L.own_gen_positive_reported == 1) if cmp
+(12,880 missing values generated)
+
+. gen byte   own_nr = missing(L.own_gen_positive_reported) if cmp
+(12,880 missing values generated)
+
+. local X "s_lnw exp1 exp_nr imp1 fdi1_k fdi_nr_k own1 own_nr"
+
+. gen byte doc_amdal = (g_doc == 1) if !missing(g_doc)
+(28,489 missing values generated)
+
+. gen byte doc_light = (g_doc == 2) if !missing(g_doc)
+(28,489 missing values generated)
+
+. foreach f in waste rd inn proc {
+  2.     gen byte `f'_yes = (g_`f' == 1) if !missing(g_`f')
+  3. }
+(28,489 missing values generated)
+(19,958 missing values generated)
+(22,131 missing values generated)
+(28,461 missing values generated)
+
+. foreach f of local fams {
+  2.     gen byte nr_`f' = !ans_`f' if !missing(g_`f')
+  3. }
+(28,489 missing values generated)
+(28,489 missing values generated)
+(19,958 missing values generated)
+(22,131 missing values generated)
+(28,461 missing values generated)
+(28,489 missing values generated)
+(28,489 missing values generated)
+(28,489 missing values generated)
+
+. tempname E
+
+. tempfile fe
+
+. postfile `E' str12 family str10 outcome str12 term str40 term_label double(b se p pct pct_lo pct_hi) ///
+>     long(changes firms changes_with_answer) using `fe', replace
+(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_57057.000003 not found)
+
+. foreach f in doc waste rd inn proc {
+  2.     local P "`f'_yes"
+  3.     if "`f'" == "doc" local P "doc_amdal doc_light"
+  4.     quietly count if ans_`f' & !missing(s_lnw)
+  5.     if r(N) == 0 continue                         // question never answered: nothing to estimate
+  6.     foreach y in energy_va co2_va energy co2 {
+  7.         quietly reghdfe chg_`y' `X' `P' if !missing(g_`f') & !missing(s_lnw), ///
+>             absorb(start_year#nr_`f' sector province) vce(cluster firm_id)
+  8.         matrix T = r(table)
+  9.         local N = e(N)
+ 10.         local G = e(N_clust)
+ 11.         foreach t of local P {
+ 12.             local j = colnumb(T, "`t'")
+ 13.             quietly count if `t' == 1 & e(sample)
+ 14.             local ca = r(N)
+ 15.             local tl = cond("`t'" == "doc_amdal", "AMDAL (vs none of the three)", ///
+>                        cond("`t'" == "doc_light", "UKL-UPL or SPPL only (vs none)", "Yes (vs no)"))
+ 16.             if missing(T[2,`j']) | T[2,`j'] == 0 {     // answer dropped (nobody has it in this sample): blank
+ 17.                 post `E' ("`f'") ("`y'") ("`t'") ("`tl'") (.) (.) (.) (.) (.) (.) (`N') (`G') (`ca')
+ 18.             }
+ 19.             else {
+ 20.                 post `E' ("`f'") ("`y'") ("`t'") ("`tl'") (T[1,`j']) (T[2,`j']) (T[4,`j']) ///
+>                     (100*(exp(T[1,`j'])-1)) (100*(exp(T[5,`j'])-1)) (100*(exp(T[6,`j'])-1)) (`N') (`G') (`ca')
+ 21.             }
+ 22.         }
+ 23.     }
+ 24. }
+
+. postclose `E'
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 7/8: write the numbers (CSV) before drawing"
+Step 7/8: write the numbers (CSV) before drawing
+
+. *---------------------------------------------------------------------------
+. preserve
+
+. use `fe', clear
+
+. format b se %9.4f
+
+. format pct pct_lo pct_hi %7.2f
+
+. format p %6.4f
+
+. export delimited using "tables/05_motivation_proxies_fe.csv", datafmt replace
+file tables/05_motivation_proxies_fe.csv saved
+
+. list family outcome term pct pct_lo pct_hi changes firms changes_with_answer, noobs sep(0) abbreviate(24)
+
+  +---------------------------------------------------------------------------------------------------+
+  | family     outcome        term      pct   pct_lo   pct_hi   changes   firms   changes_with_answer |
+  |---------------------------------------------------------------------------------------------------|
+  |    doc   energy_va   doc_amdal    -5.07   -19.96    12.60      4558    2662                   804 |
+  |    doc   energy_va   doc_light    -8.87   -27.60    14.72      4558    2662                   345 |
+  |    doc      co2_va   doc_amdal    -7.11   -21.47     9.89      4558    2662                   804 |
+  |    doc      co2_va   doc_light   -12.02   -29.46     9.73      4558    2662                   345 |
+  |    doc      energy   doc_amdal   -12.85   -24.81     1.01      4558    2662                   804 |
+  |    doc      energy   doc_light   -11.23   -27.46     8.62      4558    2662                   345 |
+  |    doc         co2   doc_amdal   -14.72   -26.15    -1.54      4558    2662                   804 |
+  |    doc         co2   doc_light   -14.31   -29.21     3.73      4558    2662                   345 |
+  |  waste   energy_va   waste_yes    -0.50   -16.54    18.62      4558    2662                   748 |
+  |  waste      co2_va   waste_yes    -5.58   -20.41    12.02      4558    2662                   748 |
+  |  waste      energy   waste_yes    -6.73   -19.99     8.72      4558    2662                   748 |
+  |  waste         co2   waste_yes   -11.49   -23.61     2.55      4558    2662                   748 |
+  |     rd   energy_va      rd_yes     8.72    -8.24    28.81     13090    4574                   595 |
+  |     rd      co2_va      rd_yes     6.78    -9.20    25.56     13090    4574                   595 |
+  |     rd      energy      rd_yes    -2.26   -15.68    13.30     13090    4574                   595 |
+  |     rd         co2      rd_yes    -4.00   -16.51    10.37     13090    4574                   595 |
+  |    inn   energy_va     inn_yes    -9.54   -18.99     1.02     10917    4487                  1697 |
+  |    inn      co2_va     inn_yes    -9.86   -19.12     0.47     10917    4487                  1697 |
+  |    inn      energy     inn_yes   -12.39   -20.46    -3.51     10917    4487                  1697 |
+  |    inn         co2     inn_yes   -12.70   -20.57    -4.06     10917    4487                  1697 |
+  |   proc   energy_va    proc_yes   -27.36   -39.78   -12.38      4585    2631                   612 |
+  |   proc      co2_va    proc_yes   -25.63   -38.04   -10.75      4585    2631                   612 |
+  |   proc      energy    proc_yes   -27.08   -38.37   -13.71      4585    2631                   612 |
+  |   proc         co2    proc_yes   -25.34   -36.49   -12.23      4585    2631                   612 |
+  +---------------------------------------------------------------------------------------------------+
+
+. restore
+
+. use `rows', clear
+
+. format changes firms %9.0f
+
+. format pct_* lo_* hi_* gap_* loo_* %6.2f
+
+. export delimited using "tables/05_motivation_proxies.csv", datafmt replace
+file tables/05_motivation_proxies.csv saved
+
+. list row_order family group answers_from changes firms pct_energy_va lo_energy_va hi_energy_va gap_energy_va ///
+>     pct_energy gap_energy loo_min_energy_va loo_max_energy_va pct_energy_va_not_provisional pct_energy_va_vs_all_firms
+> , ///
+>     noobs sep(0) abbreviate(24)
+
+  +---------------------------------------------------------------------------------------------------------------+
+  | row_order  | family  |                group  |           answers_from  | changes  |  firms  |  pct_energy_va  |
+  |         1  |    doc  |    AMDAL (strictest)  |                2020–21  |     805  |    703  |          49.57  |
+  |---------------------------------------------------------------------------------------------------------------|
+  | lo_energy_va | hi_energy_va | gap_energy_va | pct_energy | gap_energy | loo_min_energy_va | loo_max_energy_va |
+  |        46.14 |        52.99 |         -0.00 |      51.68 |       4.28 |             48.77 |             50.38 |
+  |---------------------------------------------------------------------------------------------------------------|
+  |               pct_energy_va_not_prov~l                |               pct_energy_va_vs_all_f~s                |
+  |                                      .                |                                  54.29                |
+  +---------------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------------+
+  | row_order  | family  |                group  |           answers_from  | changes  |  firms  |  pct_energy_va  |
+  |         2  |    doc  | UKL-UPL or SPPL only  |                2020–21  |     345  |    326  |          52.17  |
+  |---------------------------------------------------------------------------------------------------------------|
+  | lo_energy_va | hi_energy_va | gap_energy_va | pct_energy | gap_energy | loo_min_energy_va | loo_max_energy_va |
+  |        46.96 |        57.39 |          2.61 |      54.49 |       7.10 |             52.12 |             52.22 |
+  |---------------------------------------------------------------------------------------------------------------|
+  |               pct_energy_va_not_prov~l                |               pct_energy_va_vs_all_f~s                |
+  |                                      .                |                                  57.68                |
+  +---------------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------------+
+  | row_order  | family  |                group  |           answers_from  | changes  |  firms  |  pct_energy_va  |
+  |         3  |    doc  |    None of the three  |                2020–21  |    1152  |    903  |          49.57  |
+  |---------------------------------------------------------------------------------------------------------------|
+  | lo_energy_va | hi_energy_va | gap_energy_va | pct_energy | gap_energy | loo_min_energy_va | loo_max_energy_va |
+  |        46.87 |        52.26 |             . |      47.40 |          . |             48.99 |             50.18 |
+  |---------------------------------------------------------------------------------------------------------------|
+  |               pct_energy_va_not_prov~l                |               pct_energy_va_vs_all_f~s                |
+  |                                      .                |                                  56.34                |
+  +---------------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------------+
+  | row_order  | family  |                group  |           answers_from  | changes  |  firms  |  pct_energy_va  |
+  |         4  |    doc  |         Not recorded  |                2020–21  |    2258  |   1504  |          36.36  |
+  |---------------------------------------------------------------------------------------------------------------|
+  | lo_energy_va | hi_energy_va | gap_energy_va | pct_energy | gap_energy | loo_min_energy_va | loo_max_energy_va |
+  |        34.50 |        38.22 |        -13.21 |      40.17 |      -7.23 |             34.35 |             38.57 |
+  |---------------------------------------------------------------------------------------------------------------|
+  |               pct_energy_va_not_prov~l                |               pct_energy_va_vs_all_f~s                |
+  |                                      .                |                                  44.02                |
+  +---------------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------------+
+  | row_order  | family  |                group  |           answers_from  | changes  |  firms  |  pct_energy_va  |
+  |         5  |  waste  |                  Yes  |                2020–21  |     749  |    657  |          50.47  |
+  |---------------------------------------------------------------------------------------------------------------|
+  | lo_energy_va | hi_energy_va | gap_energy_va | pct_energy | gap_energy | loo_min_energy_va | loo_max_energy_va |
+  |        46.91 |        54.03 |          0.69 |      51.54 |       2.27 |             49.47 |             51.48 |
+  |---------------------------------------------------------------------------------------------------------------|
+  |               pct_energy_va_not_prov~l                |               pct_energy_va_vs_all_f~s                |
+  |                                      .                |                                  55.27                |
+  +---------------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------------+
+  | row_order  | family  |                group  |           answers_from  | changes  |  firms  |  pct_energy_va  |
+  |         6  |  waste  |                   No  |                2020–21  |    1561  |   1178  |          49.78  |
+  |---------------------------------------------------------------------------------------------------------------|
+  | lo_energy_va | hi_energy_va | gap_energy_va | pct_energy | gap_energy | loo_min_energy_va | loo_max_energy_va |
+  |        47.49 |        52.06 |             . |      49.26 |          . |             49.32 |             50.26 |
+  |---------------------------------------------------------------------------------------------------------------|
+  |               pct_energy_va_not_prov~l                |               pct_energy_va_vs_all_f~s                |
+  |                                      .                |                                  55.93                |
+  +---------------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------------+
+  | row_order  | family  |                group  |           answers_from  | changes  |  firms  |  pct_energy_va  |
+  |         7  |  waste  |         Not recorded  |                2020–21  |    2250  |   1498  |          36.80  |
+  |---------------------------------------------------------------------------------------------------------------|
+  | lo_energy_va | hi_energy_va | gap_energy_va | pct_energy | gap_energy | loo_min_energy_va | loo_max_energy_va |
+  |        34.93 |        38.67 |        -12.98 |      40.49 |      -8.77 |             35.43 |             38.30 |
+  |---------------------------------------------------------------------------------------------------------------|
+  |               pct_energy_va_not_prov~l                |               pct_energy_va_vs_all_f~s                |
+  |                                      .                |                                  44.09                |
+  +---------------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------------+
+  | row_order  | family  |                group  |           answers_from  | changes  |  firms  |  pct_energy_va  |
+  |         8  |     rd  |                  Yes  |          2011, 2017–21  |     595  |    523  |          47.23  |
+  |---------------------------------------------------------------------------------------------------------------|
+  | lo_energy_va | hi_energy_va | gap_energy_va | pct_energy | gap_energy | loo_min_energy_va | loo_max_energy_va |
+  |        43.36 |        51.10 |         -2.99 |      52.10 |       2.32 |             46.37 |             49.39 |
+  |---------------------------------------------------------------------------------------------------------------|
+  |               pct_energy_va_not_prov~l                |               pct_energy_va_vs_all_f~s                |
+  |                                  45.43                |                                  45.04                |
+  +---------------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------------+
+  | row_order  | family  |                group  |           answers_from  | changes  |  firms  |  pct_energy_va  |
+  |         9  |     rd  |                   No  |          2011, 2017–21  |    6643  |   3372  |          50.22  |
+  |---------------------------------------------------------------------------------------------------------------|
+  | lo_energy_va | hi_energy_va | gap_energy_va | pct_energy | gap_energy | loo_min_energy_va | loo_max_energy_va |
+  |        49.10 |        51.34 |             . |      49.78 |          . |             50.02 |             50.31 |
+  |---------------------------------------------------------------------------------------------------------------|
+  |               pct_energy_va_not_prov~l                |               pct_energy_va_vs_all_f~s                |
+  |                                  50.33                |                                  49.71                |
+  +---------------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------------+
+  | row_order  | family  |                group  |           answers_from  | changes  |  firms  |  pct_energy_va  |
+  |        10  |     rd  |         Not recorded  |          2011, 2017–21  |    5853  |   2445  |          49.14  |
+  |---------------------------------------------------------------------------------------------------------------|
+  | lo_energy_va | hi_energy_va | gap_energy_va | pct_energy | gap_energy | loo_min_energy_va | loo_max_energy_va |
+  |        48.00 |        50.27 |         -1.08 |      52.26 |       2.48 |             41.77 |             53.84 |
+  |---------------------------------------------------------------------------------------------------------------|
+  |               pct_energy_va_not_prov~l                |               pct_energy_va_vs_all_f~s                |
+  |                                  34.06                |                                  50.79                |
+  +---------------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------------+
+  | row_order  | family  |                group  |           answers_from  | changes  |  firms  |  pct_energy_va  |
+  |        11  |    inn  |                  Yes  | 2011, 2017–18, 2020–21  |    1697  |   1333  |          50.15  |
+  |---------------------------------------------------------------------------------------------------------------|
+  | lo_energy_va | hi_energy_va | gap_energy_va | pct_energy | gap_energy | loo_min_energy_va | loo_max_energy_va |
+  |        47.83 |        52.47 |          0.26 |      51.92 |       2.69 |             49.80 |             50.44 |
+  |---------------------------------------------------------------------------------------------------------------|
+  |               pct_energy_va_not_prov~l                |               pct_energy_va_vs_all_f~s                |
+  |                                  49.85                |                                  42.90                |
+  +---------------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------------+
+  | row_order  | family  |                group  |           answers_from  | changes  |  firms  |  pct_energy_va  |
+  |        12  |    inn  |                   No  | 2011, 2017–18, 2020–21  |    4532  |   2862  |          49.89  |
+  |---------------------------------------------------------------------------------------------------------------|
+  | lo_energy_va | hi_energy_va | gap_energy_va | pct_energy | gap_energy | loo_min_energy_va | loo_max_energy_va |
+  |        48.48 |        51.30 |             . |      49.23 |          . |             49.76 |             50.03 |
+  |---------------------------------------------------------------------------------------------------------------|
+  |               pct_energy_va_not_prov~l                |               pct_energy_va_vs_all_f~s                |
+  |                                  49.99                |                                  48.96                |
+  +---------------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------------+
+  | row_order  | family  |                group  |           answers_from  | changes  |  firms  |  pct_energy_va  |
+  |        13  |    inn  |         Not recorded  | 2011, 2017–18, 2020–21  |    4689  |   2331  |          53.83  |
+  |---------------------------------------------------------------------------------------------------------------|
+  | lo_energy_va | hi_energy_va | gap_energy_va | pct_energy | gap_energy | loo_min_energy_va | loo_max_energy_va |
+  |        52.48 |        55.17 |          3.94 |      56.66 |       7.44 |             45.80 |             60.04 |
+  |---------------------------------------------------------------------------------------------------------------|
+  |               pct_energy_va_not_prov~l                |               pct_energy_va_vs_all_f~s                |
+  |                                  36.06                |                                  53.53                |
+  +---------------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------------+
+  | row_order  | family  |                group  |           answers_from  | changes  |  firms  |  pct_energy_va  |
+  |        14  |   proc  |                  Yes  |                2017–18  |     612  |    559  |          52.29  |
+  |---------------------------------------------------------------------------------------------------------------|
+  | lo_energy_va | hi_energy_va | gap_energy_va | pct_energy | gap_energy | loo_min_energy_va | loo_max_energy_va |
+  |        48.33 |        56.24 |          3.31 |      53.92 |       5.62 |             50.67 |             53.85 |
+  |---------------------------------------------------------------------------------------------------------------|
+  |               pct_energy_va_not_prov~l                |               pct_energy_va_vs_all_f~s                |
+  |                                      .                |                                  37.91                |
+  +---------------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------------+
+  | row_order  | family  |                group  |           answers_from  | changes  |  firms  |  pct_energy_va  |
+  |        15  |   proc  |                   No  |                2017–18  |    1470  |   1131  |          48.98  |
+  |---------------------------------------------------------------------------------------------------------------|
+  | lo_energy_va | hi_energy_va | gap_energy_va | pct_energy | gap_energy | loo_min_energy_va | loo_max_energy_va |
+  |        46.52 |        51.44 |             . |      48.30 |          . |             48.43 |             49.63 |
+  |---------------------------------------------------------------------------------------------------------------|
+  |               pct_energy_va_not_prov~l                |               pct_energy_va_vs_all_f~s                |
+  |                                      .                |                                  34.42                |
+  +---------------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------------+
+  | row_order  | family  |                group  |           answers_from  | changes  |  firms  |  pct_energy_va  |
+  |        16  |   proc  |         Not recorded  |                2017–18  |    2506  |   1675  |          69.31  |
+  |---------------------------------------------------------------------------------------------------------------|
+  | lo_energy_va | hi_energy_va | gap_energy_va | pct_energy | gap_energy | loo_min_energy_va | loo_max_energy_va |
+  |        67.57 |        71.06 |         20.33 |      71.15 |      22.85 |             64.55 |             73.25 |
+  |---------------------------------------------------------------------------------------------------------------|
+  |               pct_energy_va_not_prov~l                |               pct_energy_va_vs_all_f~s                |
+  |                                      .                |                                  62.05                |
+  +---------------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------------+
+  | row_order  | family  |                group  |           answers_from  | changes  |  firms  |  pct_energy_va  |
+  |        17  |  amdal  |                  Yes  |                2020–21  |     809  |    707  |          49.44  |
+  |---------------------------------------------------------------------------------------------------------------|
+  | lo_energy_va | hi_energy_va | gap_energy_va | pct_energy | gap_energy | loo_min_energy_va | loo_max_energy_va |
+  |        46.03 |        52.85 |         -0.79 |      51.55 |       2.45 |             48.53 |             50.37 |
+  |---------------------------------------------------------------------------------------------------------------|
+  |               pct_energy_va_not_prov~l                |               pct_energy_va_vs_all_f~s                |
+  |                                      .                |                                  54.02                |
+  +---------------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------------+
+  | row_order  | family  |                group  |           answers_from  | changes  |  firms  |  pct_energy_va  |
+  |        18  |  amdal  |                   No  |                2020–21  |    1497  |   1147  |          50.23  |
+  |---------------------------------------------------------------------------------------------------------------|
+  | lo_energy_va | hi_energy_va | gap_energy_va | pct_energy | gap_energy | loo_min_energy_va | loo_max_energy_va |
+  |        47.88 |        52.59 |             . |      49.10 |          . |             49.74 |             50.76 |
+  |---------------------------------------------------------------------------------------------------------------|
+  |               pct_energy_va_not_prov~l                |               pct_energy_va_vs_all_f~s                |
+  |                                      .                |                                  56.65                |
+  +---------------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------------+
+  | row_order  | family  |                group  |           answers_from  | changes  |  firms  |  pct_energy_va  |
+  |        19  |  amdal  |         Not recorded  |                2020–21  |    2254  |   1501  |          36.78  |
+  |---------------------------------------------------------------------------------------------------------------|
+  | lo_energy_va | hi_energy_va | gap_energy_va | pct_energy | gap_energy | loo_min_energy_va | loo_max_energy_va |
+  |        34.91 |        38.65 |        -13.45 |      40.37 |      -8.73 |             35.08 |             38.64 |
+  |---------------------------------------------------------------------------------------------------------------|
+  |               pct_energy_va_not_prov~l                |               pct_energy_va_vs_all_f~s                |
+  |                                      .                |                                  44.10                |
+  +---------------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------------+
+  | row_order  | family  |                group  |           answers_from  | changes  |  firms  |  pct_energy_va  |
+  |        20  |    ukl  |                  Yes  |                2020–21  |     960  |    820  |          49.79  |
+  |---------------------------------------------------------------------------------------------------------------|
+  | lo_energy_va | hi_energy_va | gap_energy_va | pct_energy | gap_energy | loo_min_energy_va | loo_max_energy_va |
+  |        46.66 |        52.92 |         -0.32 |      52.40 |       4.13 |             49.58 |             50.00 |
+  |---------------------------------------------------------------------------------------------------------------|
+  |               pct_energy_va_not_prov~l                |               pct_energy_va_vs_all_f~s                |
+  |                                      .                |                                  55.10                |
+  +---------------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------------+
+  | row_order  | family  |                group  |           answers_from  | changes  |  firms  |  pct_energy_va  |
+  |        21  |    ukl  |                   No  |                2020–21  |    1355  |   1042  |          50.11  |
+  |---------------------------------------------------------------------------------------------------------------|
+  | lo_energy_va | hi_energy_va | gap_energy_va | pct_energy | gap_energy | loo_min_energy_va | loo_max_energy_va |
+  |        47.67 |        52.55 |             . |      48.27 |          . |             50.00 |             50.21 |
+  |---------------------------------------------------------------------------------------------------------------|
+  |               pct_energy_va_not_prov~l                |               pct_energy_va_vs_all_f~s                |
+  |                                      .                |                                  56.16                |
+  +---------------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------------+
+  | row_order  | family  |                group  |           answers_from  | changes  |  firms  |  pct_energy_va  |
+  |        22  |    ukl  |         Not recorded  |                2020–21  |    2245  |   1495  |          36.88  |
+  |---------------------------------------------------------------------------------------------------------------|
+  | lo_energy_va | hi_energy_va | gap_energy_va | pct_energy | gap_energy | loo_min_energy_va | loo_max_energy_va |
+  |        35.01 |        38.75 |        -13.23 |      40.40 |      -7.86 |             35.40 |             38.50 |
+  |---------------------------------------------------------------------------------------------------------------|
+  |               pct_energy_va_not_prov~l                |               pct_energy_va_vs_all_f~s                |
+  |                                      .                |                                  44.05                |
+  +---------------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------------+
+  | row_order  | family  |                group  |           answers_from  | changes  |  firms  |  pct_energy_va  |
+  |        23  |   sppl  |                  Yes  |                2020–21  |     779  |    666  |          51.09  |
+  |---------------------------------------------------------------------------------------------------------------|
+  | lo_energy_va | hi_energy_va | gap_energy_va | pct_energy | gap_energy | loo_min_energy_va | loo_max_energy_va |
+  |        47.61 |        54.57 |          1.68 |      52.89 |       4.39 |             50.26 |             51.91 |
+  |---------------------------------------------------------------------------------------------------------------|
+  |               pct_energy_va_not_prov~l                |               pct_energy_va_vs_all_f~s                |
+  |                                      .                |                                  55.58                |
+  +---------------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------------+
+  | row_order  | family  |                group  |           answers_from  | changes  |  firms  |  pct_energy_va  |
+  |        24  |   sppl  |                   No  |                2020–21  |    1528  |   1163  |          49.41  |
+  |---------------------------------------------------------------------------------------------------------------|
+  | lo_energy_va | hi_energy_va | gap_energy_va | pct_energy | gap_energy | loo_min_energy_va | loo_max_energy_va |
+  |        47.08 |        51.74 |             . |      48.49 |          . |             48.97 |             49.87 |
+  |---------------------------------------------------------------------------------------------------------------|
+  |               pct_energy_va_not_prov~l                |               pct_energy_va_vs_all_f~s                |
+  |                                      .                |                                  55.96                |
+  +---------------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------------+
+  | row_order  | family  |                group  |           answers_from  | changes  |  firms  |  pct_energy_va  |
+  |        25  |   sppl  |         Not recorded  |                2020–21  |    2253  |   1501  |          36.31  |
+  |---------------------------------------------------------------------------------------------------------------|
+  | lo_energy_va | hi_energy_va | gap_energy_va | pct_energy | gap_energy | loo_min_energy_va | loo_max_energy_va |
+  |        34.45 |        38.17 |        -13.10 |      40.12 |      -8.37 |             34.27 |             38.55 |
+  |---------------------------------------------------------------------------------------------------------------|
+  |               pct_energy_va_not_prov~l                |               pct_energy_va_vs_all_f~s                |
+  |                                      .                |                                  43.99                |
+  +---------------------------------------------------------------------------------------------------------------+
+
+. assert lo_energy_va <= pct_energy_va & pct_energy_va <= hi_energy_va if firms >= 2
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 8/8: dot plot, four panels on one shared scale"
+Step 8/8: dot plot, four panels on one shared scale
+
+. *---------------------------------------------------------------------------
+. * numbers for the notes (read from the data, never typed)
+. yearspan `prov_yrs'
+
+. local provspan "`r(s)'"
+
+. local provnote ""
+
+. if "`prov_yrs'" != "" local provnote "R&D and innovation codes for `provspan' are provisional. "   // read from codes 
+> whose meaning is assumed
+
+. local fbnote ""
+
+. if `nq' > 0 local fbnote "In `nhi' of `nq' questions, 'Yes' firms start with more energy than 'No' firms; high starts 
+> tend to fall back, so gaps in (c)–(d) are partly automatic."
+
+. keep if in_figure
+(9 observations deleted)
+
+. sort row_order
+
+. gen double y = .
+(16 missing values generated)
+
+. local pos 0
+
+. local ylab `"0 "Answer at start (number of changes)""'
+
+. local prevf ""
+
+. forvalues i = 1/`=_N' {
+  2.     local fnm = family[`i']
+  3.     if "`fnm'" != "`prevf'" {
+  4.         if "`prevf'" != "" local ++pos
+  5.         local ++pos
+  6.         local qn  = question[`i']
+  7.         local afr = answers_from[`i']
+  8.         if `allprov_`fnm'' local afr "`afr', provisional"
+  9.         local ylab `"`ylab' `pos' "{bf:`qn'} (`afr'):""'
+ 10.         local prevf "`fnm'"
+ 11.     }
+ 12.     local ++pos
+ 13.     replace y = `pos' in `i'
+ 14.     local nstr = strtrim(string(changes[`i'], "%9.0fc"))
+ 15.     local gnm = group[`i']
+ 16.     local ylab `"`ylab' `pos' "`gnm' (`nstr')""'
+ 17. }
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+
+. local ymax = `pos' + 0.5
+
+. expand 4
+(48 observations created)
+
+. bysort row_order: gen byte panel = _n
+
+. gen double pct = cond(panel == 1, pct_energy_va, cond(panel == 2, pct_co2_va, cond(panel == 3, pct_energy, pct_co2)))
+
+. gen double lo  = cond(panel == 1, lo_energy_va,  cond(panel == 2, lo_co2_va,  cond(panel == 3, lo_energy,  lo_co2)))
+
+. gen double hi  = cond(panel == 1, hi_energy_va,  cond(panel == 2, hi_co2_va,  cond(panel == 3, hi_energy,  hi_co2)))
+
+. gen str8   plab = string(pct, "%4.1f")
+
+. gen double labx = cond(pct < 50, lo, hi)
+
+. gen byte   labp = cond(pct < 50, 9, 3)
+
+. label define panel 1 "(a) Energy per unit of VA" 2 "(b) CO2 per unit of VA" 3 "(c) Energy use (GJ)" 4 "(d) CO2 emitted
+>  (tonnes)"
+
+. label values panel panel
+
+. local n0 = _N
+
+. set obs `=_N + 8'
+Number of observations (_N) was 64, now 72.
+
+. gen double refx = 50 if _n > `n0'
+(64 missing values generated)
+
+. gen double refy = .
+(72 missing values generated)
+
+. forvalues p = 1/4 {
+  2.     replace panel = `p' in `=`n0' + 2*`p' - 1'
+  3.     replace panel = `p' in `=`n0' + 2*`p''
+  4.     replace refy = 0.5 in `=`n0' + 2*`p' - 1'
+  5.     replace refy = `ymax' in `=`n0' + 2*`p''
+  6. }
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+
+. quietly summarize lo
+
+. local dlo = 50 - r(min)
+
+. quietly summarize hi
+
+. local dhi = r(max) - 50
+
+. local half = max(10, 5 * ceil((max(`dlo', `dhi') + 3) / 5))
+
+. local xlo = 50 - `half'
+
+. local xhi = 50 + `half'
+
+. local xstep = cond(`half' > 20, 20, 10)       // fewer labels on a wide axis
+
+. local xs  = `xstep' * floor(`half' / `xstep')
+
+. display "   x range `xlo'-`xhi'"
+   x range 20-80
+
+. sort panel refy y
+
+. 
+. twoway (rspike lo hi y if answered == 1, horizontal lcolor(black) lwidth(thin)) ///
+>     (rspike lo hi y if answered == 0, horizontal lcolor(gs9) lwidth(thin)) ///
+>     (scatter y pct if answered == 1, msymbol(O) mcolor(black) msize(vsmall)) ///
+>     (scatter y pct if answered == 0, msymbol(Oh) mcolor(gs7) msize(vsmall)) ///
+>     (scatter y labx if answered == 1, msymbol(none) mlabel(plab) mlabvposition(labp) mlabgap(0.6) mlabsize(vsmall) mla
+> bcolor(gs5)) ///
+>     (scatter y labx if answered == 0, msymbol(none) mlabel(plab) mlabvposition(labp) mlabgap(0.6) mlabsize(vsmall) mla
+> bcolor(gs9)) ///
+>     (line refy refx, lpattern(dash) lcolor(gs8) lwidth(thin)), ///
+>     by(panel, rows(1) graphregion(color(white) lcolor(white) ilcolor(white)) legend(pos(6)) scale(0.8125) ///
+>         title("Figure R3-05. Do firms with environmental permits, waste treatment, R&D or innovation cut energy and CO
+> 2 more often?" ///
+>               "Share of one-year changes that fell more (or rose less) than the typical answering firm's change that y
+> ear", size(small) pos(11) span) ///
+>         note("Notes: The survey never asks why; these answers are stand-ins (rules faced, capacity to change). Shows w
+> ho, not why. GJ = gigajoules." ///
+>              "Dot = share of the group's one-year changes that fell more or rose less than the typical (median) change
+>  of firms answering the question that year." ///
+>              "50% = same as that typical firm; where a 95% interval crosses the dashed line, the group is not clearly 
+> different from it. Compare 'Yes' with 'No'." ///
+>              "Hollow gray = no answer recorded, never counted as 'No'. These records can differ in other ways, so thei
+> r distance from 50% is not a result." ///
+>              "`fbnote'" ///
+>              "`provnote'VA = value added = output minus materials, energy and services bought (current prices)." ///
+>              "`srcnote'" "`devnote'", size(vsmall) span linegap(0.6))) ///
+>     subtitle(, pos(11) nobox fcolor(white) lcolor(white) size(small)) ///
+>     yscale(reverse noline range(-0.3 `ymax')) ylabel(`ylab', angle(0) noticks tlength(0) nogrid labsize(vsmall)) ytitl
+> e("") ///
+>     xscale(range(`xlo' `xhi') lcolor(gs10)) ///
+>     xlabel(`=50 - `xs''(`xstep')`=50 + `xs'', noticks tlength(0) labsize(vsmall) grid glcolor(gs15) glwidth(vthin)) //
+> /
+>     xtitle("Changes that fell more or rose less than the typical answering firm's that year (% of the group's changes)
+> ", size(vsmall)) ///
+>     legend(order(3 "Share (%)" 1 "95% interval" 4 "No answer recorded" 7 "50% = same as the typical firm that answered
+> ") rows(1) region(lcolor(none)) ///
+>         size(vsmall) symxsize(8) keygap(1) colgap(6)) ///
+>     plotregion(style(none)) xsize(10) ysize(8.5)
+
+. 
+. graph export "figures/05_motivation_proxies.png", width(3000) replace
+file
+    /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r3-energy-emissions-correlates/figures
+    > /05_motivation_proxies.png saved as PNG format
+
+. graph export "figures/05_motivation_proxies.pdf", replace
+file
+    /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r3-energy-emissions-correlates/figures
+    > /05_motivation_proxies.pdf saved as PDF format
+
+. 
+. timer off 1
+
+. quietly timer list 1
+
+. local elapsed = strtrim(string(r(t1), "%9.1f"))
+
+. display "FINISHED: figure -> figures/05_motivation_proxies.png (elapsed `elapsed' s)"
+FINISHED: figure -> figures/05_motivation_proxies.png (elapsed 10.9 s)
+
+. quietly log close

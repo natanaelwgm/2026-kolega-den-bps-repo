@@ -12,6 +12,7 @@ Item-by-item coverage of Deasy's row and the review record: [TRACKER.md](TRACKER
 
 | `03_who_reduces_by_sector.do` → `figures/03_who_reduces_by_sector.png`, `tables/03_who_reduces_by_sector.csv`, `tables/03_who_reduces_by_sector_firm_flag.csv` | For each of the 24 manufacturing sectors: the share of one-year changes in which energy and CO2 (per unit of value added and in total) fell more, or rose less, than at the typical firm that year | "Siapa yang reduce energy use and emisi?"; "determinan motivasi" (which sectors, not why) | done, reviewed |
 | `04_trait_associations_fe.do` → `figures/04_trait_associations_fe.png`, `tables/04_trait_associations_fe.csv`, `tables/04_trait_associations_fe_all_terms.csv` | Which firm traits (size, exporting, importing, 10%+ foreign ownership, making own electricity) go with bigger one-year cuts in energy and CO2, other traits held fixed; (A) against similar firms (same year, sector, province), (B) the same firm in its other years; starting level shown separately | "determinan motivasi apa yg membuat firms respond" (traits, not motives); Strategy "FE"; "Bukan kausal" | done, reviewed |
+| `05_motivation_proxies.do` → `figures/05_motivation_proxies.png`, `tables/05_motivation_proxies.csv`, `tables/05_motivation_proxies_fe.csv` | Firms with environmental permit documents (AMDAL, UKL-UPL, SPPL), waste treatment, R&D or innovation vs firms without: share of one-year changes that fell more (or rose less) than the typical firm answering the same question that year | "determinan motivasi apa yg membuat firms respond" (closest stand-ins: rules faced, capacity to change); "Bukan kausal" | done, reviewed |
 ## Details kept out of the figures
 
 **01 — reducer shares.** A change is counted only between a firm's records exactly one year apart, with energy,
@@ -32,7 +33,9 @@ status is its own "Not recorded" row, never counted as non-exporter or domestic.
 status measured in 2020 is not used (the foreign-owned share that year is more than twice the usual). Intervals
 are 95% and allow for the same firm appearing in several years (clustered by firm). Reading: per unit of value
 added no group differs clearly from 50%; in total energy use, importers and the largest third cut more often,
-and in total CO2 foreign-owned firms do (52.6%, interval 50.1–55.2). There is no stable pattern: the importer and
+and in total CO2 foreign-owned firms do (52.6%, interval 50.1–55.2) — but in totals, changes that start from a
+high energy level fall back more often (top fifth 69% vs bottom fifth 30%), so groups that start bigger look better
+there partly automatically (sentence added to the figure notes after the R3-05 review). There is no stable pattern: the importer and
 foreign-owned gaps flip between the years before and after 2016 (columns `pct_energy_va_early` / `_late`). The
 companion `02_who_reduces_firm_flag.csv` uses the firm-level flag from 01; it depends on which years a firm is
 observed, and 259 firms whose first change starts in 2020 are left out of its foreign-ownership rows.
@@ -68,3 +71,17 @@ and the share making own electricity doubles in 2017–19 — likely a recording
 (separate model): a level twice as high goes with a ~38% bigger cut, a third to a half of which is automatic
 fall-back. The all-terms CSV has 356 coefficients from 11 variants (incl. before/after 2016, without own
 electricity, firm effects split at 2016). Hand-off: R3-06 (self-generation) must deal with the 2017 pattern.
+
+**05 — motivation stand-ins.** No survey question asks why firms cut energy; the closest stand-ins are the rules a
+firm faces (permit documents, waste treatment; asked only in 2020–2022) and its capacity to change (R&D: 2011 and
+2017–2021; any innovation: 2011, 2017–2018, 2020–2021; process innovation: 2017–2018; 2017–18 R&D and innovation
+codes are provisional). Answers are taken in the first year of each one-year change. Each change is compared with
+the typical change of firms that ANSWERED the same question that year, because blank-answer firms behave very
+differently (against all firms, innovators would look worse, 42.9% vs 49.0%; within answering firms there is no
+gap). Permits: each firm is grouped by the strictest document it holds (AMDAL, then UKL-UPL, then SPPL). Per unit of
+value added no stand-in clearly differs from "No". In totals, permit holders and innovators cut a little more often,
+but they start with 2–7× more energy and high starts fall back (67% vs 32% of changes beat the typical one, top vs
+bottom fifth); with starting energy held fixed every total-energy gap disappears or reverses. "Not recorded" rows
+are nearly the same records for every question and their distance from 50% depends on the start year — not a
+result. The FE companion (R3-04 comparison A with each answer added, blank answers given a baseline per year) is in
+`05_motivation_proxies_fe.csv`.
