@@ -22,10 +22,10 @@ missing) · **unavailable** = the dataset cannot answer it (says why) · **plann
 | R1.Q6 | Did internationally engaged firms change their environmental behaviour more strongly after the Paris Agreement? | R1-02 to R1-06, R1-08, R1-09, R1-10 | partial (R1-02 to R1-04 done: exporters, importers, foreign-owned — descriptive yearly gaps, no clear change after Paris) | partial — yearly gaps on rebuilt inputs only |  |
 | R1.O1a | VA/energy use — scope 1 | R1-05, R1-09 | partial (R1-05 done: before/after, all firms and 3 groups; R1-09 regression pending) | not done | Scope 1 = nine fuels (gj_fuel_s1). |
 | R1.O1b | VA/energy use — scope 2 | R1-05, R1-09 | partial (R1-05 done: before/after, all firms and 3 groups; R1-09 regression pending) | not done | Scope 2 = purchased electricity (gj_electricity). |
-| R1.O1c | VA/energy use — total | R1-02 to R1-06, R1-08, R1-09 | partial (R1-02 done: exporters, yearly, table); R1-05 before/after done | partial — rebuilt inputs only |  |
+| R1.O1c | VA/energy use — total | R1-02 to R1-06, R1-08, R1-09 | partial (R1-02 to R1-04: yearly, all three groups, table); R1-05 before/after done | partial — rebuilt inputs only |  |
 | R1.O2a | VA/emisi — scope 1 | R1-05, R1-09 | partial (R1-05 done: before/after, all firms and 3 groups; R1-09 regression pending) | not done |  |
 | R1.O2b | VA/emisi — scope 2 | R1-05, R1-09 | partial (R1-05 done: before/after, all firms and 3 groups; R1-09 regression pending) | not done |  |
-| R1.O2c | VA/emisi — total | R1-02 to R1-05, R1-09 | partial (R1-02 done: exporters, yearly, table); R1-05 before/after done | partial — rebuilt inputs only |  |
+| R1.O2c | VA/emisi — total | R1-02 to R1-05, R1-09 | partial (R1-02 to R1-04: yearly, all three groups, table); R1-05 before/after done | partial — rebuilt inputs only |  |
 | R1.O3a | Energi use — scope 1 | R1-05, R1-09 | partial (R1-05 done: before/after, all firms and 3 groups; R1-09 regression pending) | partial — numbers in a CSV, no exhibit |  |
 | R1.O3b | Energi use — scope 2 | R1-05, R1-07, R1-09 | partial (R1-05 done: before/after, all firms and 3 groups; R1-09 regression pending) | partial — raw kWh, few yearly cells |  |
 | R1.O3c | Energi use — total | R1-05, R1-09 | partial (R1-05 done: before/after, all firms and 3 groups; R1-09 regression pending) | partial — rebuilt inputs only |  |
@@ -35,8 +35,8 @@ missing) · **unavailable** = the dataset cannot answer it (says why) · **plann
 | R1.O5a | GJ/emisi — scope 1 | R1-05, R1-09 | partial (R1-05 done: before/after, all firms and 3 groups; R1-09 regression pending) | not done |  |
 | R1.O5b | GJ/emisi — scope 2 | R1-05 (shown as fixed by the grid factor) | done (R1-05: shown as the same for all firms, −2%) | not done — every coefficient 0.000 | The same number for every firm in a year (0.0036 ÷ grid factor): no firm difference can exist. |
 | R1.O5c | GJ/emisi — total | R1-05, R1-09 | partial (R1-05 done: before/after, all firms and 3 groups; R1-09 regression pending) | partial — CSV only |  |
-| R1.O6 | Co2/va | R1-02 to R1-06, R1-08, R1-09 | partial (R1-02 done: exporters, yearly); R1-05 before/after done | partial — CSV only |  |
-| R1.O7 | Gj/va | R1-02 to R1-06, R1-08, R1-09 | partial (R1-02 done: exporters, yearly); R1-05 before/after done | partial — CSV only |  |
+| R1.O6 | Co2/va | R1-02 to R1-06, R1-08, R1-09 | partial (R1-02 to R1-04: yearly, all three groups); R1-05 before/after done | partial — CSV only |  |
+| R1.O7 | Gj/va | R1-02 to R1-06, R1-08, R1-09 | partial (R1-02 to R1-04: yearly, all three groups); R1-05 before/after done | partial — CSV only |  |
 | R1.O8 | Electricity | R1-05, R1-07, R1-09 | partial (R1-05 done: before/after, all firms and 3 groups; R1-09 regression pending) | partial — raw kWh |  |
 | R1.O9 | Self generation | R1-05, R1-07, R1-09 | partial (R1-05 done: before/after, all firms and 3 groups; R1-09 regression pending) | partial — raw kWh |  |
 | R1.G1 | Export vs non export | R1-01 (counts), R1-02, R1-05 to R1-10 | partial (R1-01 done: group sizes) | partial — yearly exporter comparison empty (coding fault) | 2022 has no known non-exporters. |
