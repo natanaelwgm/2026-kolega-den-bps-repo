@@ -19,7 +19,7 @@ missing) · **unavailable** = the dataset cannot answer it (says why) · **plann
 | R1.Q3 | … emisi | R1-05, R1-06, R1-09 | planned | partial — same gaps as energy |  |
 | R1.Q4 | … dan juga internationalization strategy-nya? | R1-01 (yearly shares); R2-01 (export starts; import and foreign-ownership starts: table only) | partial (R1-01 done: yearly shares; starts in R2) | partial — foreign-ownership share only | Year-by-year shares here; firm-level starts are in the R2 block. |
 | R1.Q5 | Do global climate commitments reach the factory floor? | R1-05 (before/after for all firms and by group), R1-06 | planned | not done — no exhibit |  |
-| R1.Q6 | Did internationally engaged firms change their environmental behaviour more strongly after the Paris Agreement? | R1-02 to R1-06, R1-08, R1-09, R1-10 | partial (R1-02 done: exporters, descriptive yearly gap) | partial — yearly gaps on rebuilt inputs only |  |
+| R1.Q6 | Did internationally engaged firms change their environmental behaviour more strongly after the Paris Agreement? | R1-02 to R1-06, R1-08, R1-09, R1-10 | partial (R1-02, R1-03 done: exporters and importers, descriptive yearly gaps) | partial — yearly gaps on rebuilt inputs only |  |
 | R1.O1a | VA/energy use — scope 1 | R1-05, R1-09 | planned | not done | Scope 1 = nine fuels (gj_fuel_s1). |
 | R1.O1b | VA/energy use — scope 2 | R1-05, R1-09 | planned | not done | Scope 2 = purchased electricity (gj_electricity). |
 | R1.O1c | VA/energy use — total | R1-02 to R1-06, R1-08, R1-09 | partial (R1-02 done: exporters, yearly, table) | partial — rebuilt inputs only |  |
@@ -40,7 +40,7 @@ missing) · **unavailable** = the dataset cannot answer it (says why) · **plann
 | R1.O8 | Electricity | R1-05, R1-07, R1-09 | planned | partial — raw kWh |  |
 | R1.O9 | Self generation | R1-05, R1-07, R1-09 | planned | partial — raw kWh |  |
 | R1.G1 | Export vs non export | R1-01 (counts), R1-02, R1-05 to R1-10 | partial (R1-01 done: group sizes) | partial — yearly exporter comparison empty (coding fault) | 2022 has no known non-exporters. |
-| R1.G2 | Import vs non import | R1-01, R1-03, R1-05 to R1-10 | partial (R1-01 done: group sizes) | partial — 2017 jump not flagged | Import share jumps 26% → 56% in 2017. |
+| R1.G2 | Import vs non import | R1-01, R1-03, R1-05 to R1-10 | partial (R1-01 group sizes; R1-03 yearly comparison, doubtful years marked) | partial — 2017 jump not flagged | Import share jumps 26% → 56% in 2017. |
 | R1.G3 | Fdi vs non fdi | R1-01, R1-04, R1-05 to R1-10 | partial (R1-01 done: group sizes; 10%+ foreign ownership) | partial — 2020 spike kept inside estimates | Foreign-owned share 48% in 2020 vs ~10% otherwise. |
 | R1.S1 | Matching per year: export vs non export, import vs non import, fdi vs non fdi | R1-08 | planned | partial — weighting, not matching; no exporter cells |  |
 | R1.S2 | DID | R1-09 | planned | partial — yearly markers, no single before/after number |  |
@@ -62,3 +62,4 @@ house style, Tufte, and "would a non-economist understand it?") → fixes → ne
 |---|---|---|---|---|---|---|
 | R1-01 group shares and counts | done | done | FIX → fixed → PASS on re-check (all 147 support cells and 49 share rows matched an independent recount) | failed first (did not say what the chart cannot show) → fixed | gridlines drawn; notes say the firms surveyed change each year and give the Paris date; foreign ownership locked at 10%+ | done |
 | R1-02 exporters vs non-exporters, yearly | done | done | FIX → fixed → PASS on re-check (medians, gaps and counts matched an independent recount) | failed first ("below 100" read as total energy; did not say the firm mix changes) → fixed | plainer notes; template made safe for importers/foreign-owned (years with recording jumps kept in the table, not drawn) | done |
+| R1-03 importers vs non-importers, yearly | done | done | FIX → fixed → PASS on re-check (independent recount matched) | failed first (the big post-Paris fall came from doubtful records, not from who is counted) → fixed | 2019–22 drawn hollow gray with the right reason; 2017 in the table only; template notes gain a reading rule | done |

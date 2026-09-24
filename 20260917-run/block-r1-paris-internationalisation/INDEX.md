@@ -10,6 +10,7 @@ Item-by-item coverage of Deasy's row and the review record: [TRACKER.md](TRACKER
 | `01_group_shares_support.do` → `figures/01_group_shares_support.png`, `tables/01_group_shares_support.csv`, `tables/01_group_support_cells.csv` | Each year, the share of firms that export, import or have 10%+ foreign ownership, with the number of firms in, not in, and of unknown status; the support table behind every later R1 comparison | "… dan juga internationalization strategy-nya?"; "Matching per year: export vs non export, import vs non import, fdi vs non fdi" (the groups) | done, reviewed |
 
 | `02_exporters_energy_co2_per_va.do` → `figures/02_exporters_energy_co2_per_va.png`, `tables/02_exporters_energy_co2_per_va.csv` | Each year, the typical (median) exporter's and non-exporter's energy and CO2 per million of value added, and exporters as % of non-exporters with a 95% range; Paris date marked | "Did internationally engaged firms change their environmental behaviour more strongly after the Paris Agreement?"; "Gj/va", "Co2/va" (drawn); "VA/energy use … total", "VA/emisi … total" (reciprocals, table only); "matching yearly" (unmatched yearly comparison) | done, reviewed |
+| `03_importers_energy_co2_per_va.do` → `figures/03_importers_energy_co2_per_va.png`, `tables/03_importers_energy_co2_per_va.csv` | Same chart for importers vs non-importers; 2017 kept in the table only; 2019–2022 drawn hollow gray because importers' energy records are in doubt | "import vs non import"; "Gj/va", "Co2/va"; "VA/energy use … total", "VA/emisi … total" (table); "Did internationally engaged firms change … after the Paris Agreement?" | done, reviewed |
 ## Details kept out of the figures
 
 **01 — group shares.** Foreign ownership is drawn at 10% or more (`fdi_10_flag`), the usual foreign-investment
@@ -30,3 +31,13 @@ file records direct exporters only): exporter medians are in the table, no compa
 four times larger (median workers ~150 vs ~40); groups are not matched on size or industry here — R1-08 matches
 them. This file is the template for R1-03 and R1-04 (only the grouping block changes; years listed in `skip_yrs`
 are computed and kept in the table but not drawn).
+
+**03 — importers vs non-importers, yearly.** Built from the 02 template (only the grouping block differs).
+From 2017 the files count far more firms as importers (share 26% in 2015, 56% in 2017), likely a recording change.
+2017 itself is not drawn: importers' recorded energy jumps that year (median 1,404 vs 157 GJ per million of value
+added for non-importers). From 2019 about 1,300 importers with no recorded export status report roughly one-fifth
+of their earlier fuel and electricity per worker while their value added per worker stays flat — almost certainly a
+recording problem, not behaviour — so 2019–2022 are drawn hollow gray (numbers kept in the table). 2018, already with
+the enlarged importer group, shows a normal gap (59%). Template changes made with this file (02 re-run, table
+byte-identical): shorter notes with a reading rule for the 95% range ("crossing 100 = no clear difference"), years
+computed but not drawn labelled under the x axis, and optional hollow-gray years with a legend key.

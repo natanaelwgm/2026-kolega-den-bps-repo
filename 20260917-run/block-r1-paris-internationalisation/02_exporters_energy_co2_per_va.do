@@ -44,6 +44,9 @@ local gtitle  "exporters vs non-exporters"
 local gstat   "export status"
 local skip_yrs ""                  // years NOT drawn (numbers stay in the table). importers: 2017 ; foreign-owned: 2020
 local skip_why ""                  // short reason, written in the table's note column
+local flag_yrs ""                  // years drawn hollow gray: records in doubt (numbers stay in the table). importers: 2019-2022
+local flag_why ""                  // short reason, written in the table's note column
+local flag_key ""                  // legend text for the hollow gray marks
 local cav_note ""                  // one extra sentence for the notes about the group flag (empty = none)
 local min_n   30                   // a year is drawn only if both groups have at least this many firms
 local reps    999                  // random redraws of each year's firms for the 95% range
@@ -174,6 +177,11 @@ assert gap_gj_lo95 <= gap_gj & gap_gj <= gap_gj_hi95 if drawn
 assert gap_co2_lo95 <= gap_co2 & gap_co2 <= gap_co2_hi95 if drawn
 assert firms_in_year == n_dropped_zero + n_unknown + n_grp1 + n_grp0 if annual_file
 replace drawn = 0 if skipped == 1
+* years drawn hollow gray because the group's records look wrong (numbers stay in the table)
+gen byte flagged = 0
+foreach y of local flag_yrs {
+    replace flagged = 1 if year == `y' & drawn == 1
+}
 preserve
 rename (med_gj1 med_gj0 med_co21 med_co20 gap_gj gap_co2) (med_gj_grp1 med_gj_grp0 med_co2_grp1 med_co2_grp0 gap_gj_pct gap_co2_pct)
 rename (med_va_per_gj1 med_va_per_gj0 med_va_per_tco21 med_va_per_tco20) (med_va_per_gj_grp1 med_va_per_gj_grp0 med_va_per_tco2_grp1 med_va_per_tco2_grp0)
@@ -186,6 +194,7 @@ gen str80 note = ""
 replace note = "No annual file" if year == 2016
 replace note = "No comparison: fewer than `min_n' known firms in a group; group medians only, not drawn" if annual_file & !drawn & skipped != 1
 replace note = "Computed but not drawn: `skip_why'" if skipped == 1
+replace note = "Drawn hollow gray (records in doubt): `flag_why'" if flagged == 1
 order group_variable grp1_label grp0_label year annual_file drawn firms_in_year n_dropped_zero n_unknown pct_unknown ///
       n_grp1 n_grp0 med_gj_grp1 med_gj_grp0 gap_gj_pct gap_gj_lo95 gap_gj_hi95 med_co2_grp1 med_co2_grp0 gap_co2_pct ///
       gap_co2_lo95 gap_co2_hi95 med_va_per_gj_grp1 med_va_per_gj_grp0 med_va_per_tco2_grp1 med_va_per_tco2_grp0 ///
@@ -232,7 +241,7 @@ foreach v in gj co2 {
 * Notes: one text, wrapped here into lines of at most 100 characters (PDF text runs wider than the PNG)
 local unk ""
 if "`u_hi'" != "0" local unk "; unknown `gstat' (`u_lo'–`u_hi'% of firms a year) is left out"
-local ntext "Notes: (a)–(b): each group's middle (median) firm. Energy in gigajoules (GJ) and CO2 in tonnes, from nine fuels plus bought electricity. Value added = output value minus materials, energy and services bought (current prices, masked unit); price rises alone pull (a)–(b) down. (c)–(d) = the `g1s' line divided by the `g0s' line, in %; below 100 = less energy or CO2 per unit of value added; vertical line = 95% range from redrawing each year's firms at random. `cav_note' The mix of firms changes each year and no firm is followed; groups differ in size and industry`unk'. So it cannot show what caused a gap or a change after Paris."
+local ntext "Notes: (a)–(b): each group's middle (median) firm; energy = gigajoules (GJ) of fuel and bought electricity. Value added = output value minus materials, energy and services bought, at current prices, so price rises alone lower (a)–(b). (c)–(d) = `g1s' line as % of `g0s' line; below 100 = less energy or CO2 per unit of value added; vertical line = 95% range; crossing 100 = no clear difference. `cav_note' Firms differ each year (none is followed) and groups differ in size and industry`unk', so it cannot show what caused a gap or a change after Paris."
 local notelines ""
 local line ""
 foreach w of local ntext {
@@ -244,9 +253,11 @@ foreach w of local ntext {
 }
 local notelines `"`notelines' "`line'""'
 display `"   note lines: `notelines'"'
+local nlines : word count `notelines'
+if `nlines' > 8 display as error "   WARNING: the notes run to `nlines' lines (limit 8) - shorten cav_note in the grouping block"
 
 display "Step 6/6: draw: top row = the two groups, bottom row = the gap"
-keep year drawn skipped med_gj1 med_gj0 med_co21 med_co20 gap_gj gap_gj_lo95 gap_gj_hi95 gap_co2 gap_co2_lo95 gap_co2_hi95
+keep year drawn skipped flagged med_gj1 med_gj0 med_co21 med_co20 gap_gj gap_gj_lo95 gap_gj_hi95 gap_co2 gap_co2_lo95 gap_co2_hi95
 expand 4
 bysort year: gen byte panel = _n
 label define panel 1 "(a) Energy (GJ) per million of value added" ///
@@ -280,6 +291,31 @@ gen byte p1 = cond(year == fy, cond(y1 >= y0, 10, 8), cond(y1 >= y0, 2, 4)) if e
 gen byte p0 = cond(year == fy, cond(y0 >  y1, 10, 8), cond(y0 >  y1, 2, 4)) if endpt
 gen str8 lg = string(gp, "%9.0f") if endpt & inlist(panel, 3, 4)
 gen byte pg = cond(year == fy, 9, 3) if endpt
+* flagged years (flag_yrs): move the group-1 and gap marks to hollow gray layers,
+* not joined to the solid line, so they are not read as a real change
+gen double y1f  = y1  if flagged == 1
+gen double gpf  = gp  if flagged == 1
+gen double glof = glo if flagged == 1
+gen double ghif = ghi if flagged == 1
+gen str8 l1f = l1 if flagged == 1
+gen str8 lgf = lg if flagged == 1
+foreach v in y1 gp glo ghi {
+    replace `v' = . if flagged == 1
+}
+replace l1 = "" if flagged == 1
+replace lg = "" if flagged == 1
+local flaglayers ""
+local flagkey ""
+local lrows 3
+local ysz 8.5
+quietly count if flagged == 1
+if r(N) > 0 {
+    local flaglayers `"(connected y1f year, cmissing(n) lcolor(gs8) lpattern(solid) lwidth(thin) msymbol(Oh) msize(small) mcolor(gs8) mlabel(l1f) mlabvposition(p1) mlabsize(vsmall) mlabcolor(gs6))"'
+    local flaglayers `"`flaglayers' (rspike ghif glof year, lcolor(gs8) lwidth(thin)) (scatter gpf year, msymbol(Dh) msize(small) mcolor(gs8) mlabel(lgf) mlabvposition(pg) mlabsize(vsmall) mlabcolor(gs6))"'
+    local flagkey `"9 "`flag_key'""'
+    local lrows 4
+    local ysz 9            // one more legend row and note line; 9 keeps the PNG edges opaque
+}
 
 * 2016 band and Paris line (end of 2015)
 gen double band = top if year == 2016
@@ -290,9 +326,13 @@ gen double phi = top if year == 2016
 * note on years with no comparison (panel a only)
 gen str40 atx = "`blank1'" if panel == 1 & year == 2016
 replace atx = "`blank2'" if panel == 1 & year == 2015
-* years computed but not drawn: small gray label on the baseline of every panel
-gen str12 sk = "not drawn" if skipped == 1
-gen double sky = 0 if skipped == 1
+* years computed but not drawn: gray "YYYY not drawn" under the x axis of every panel,
+* on its own row below the year labels, so it never sits on the 2016 band or on a marker
+local skipopt ""
+foreach y of local skip_yrs {
+    local skipopt `"`skipopt' `y' "`y' not drawn""'
+}
+if `"`skipopt'"' != "" local skipopt `"xmlabel(`skipopt', noticks tlength(0) labsize(vsmall) labcolor(gs6) labgap(3.5))"'
 gen double ax = 2023.3 if atx != ""
 gen double ay = cond(year == 2016, 0.97, 0.88) * top if atx != ""
 
@@ -306,19 +346,18 @@ twoway (bar band year, barwidth(0.8) color(gs14) lwidth(none) base(0)) ///
         mlabel(l0) mlabvposition(p0) mlabsize(vsmall) mlabcolor(gs6)) ///
     (rspike ghi glo year, lcolor(black) lwidth(thin)) ///
     (scatter gp year, msymbol(D) msize(small) mcolor(black) mlabel(lg) mlabvposition(pg) mlabsize(vsmall) mlabcolor(black)) ///
-    (scatter ay ax, msymbol(none) mlabel(atx) mlabposition(9) mlabgap(0) mlabsize(vsmall) mlabcolor(gs6)) ///
-    (scatter sky year, msymbol(none) mlabel(sk) mlabposition(12) mlabgap(0.5) mlabsize(vsmall) mlabcolor(gs6)), ///
+    (scatter ay ax, msymbol(none) mlabel(atx) mlabposition(9) mlabgap(0) mlabsize(vsmall) mlabcolor(gs6)) `flaglayers', ///
     by(panel, cols(2) yrescale ixaxes graphregion(color(white) lcolor(white) ilcolor(white)) legend(pos(6)) ///
         title("Figure `exhibit'. Energy and CO2 per unit of value added, `gtitle'", size(small) pos(11) span) ///
         note(`notelines' "`srcnote'" "`devnote'", size(vsmall) span linegap(0.6))) ///
     subtitle(, pos(11) nobox fcolor(white) lcolor(white) size(small)) ///
     ylabel(#4, angle(0) noticks tlength(0) grid glcolor(gs15) glwidth(vthin) labsize(vsmall) format(%9.0f)) ///
     yscale(noline range(0)) ytitle("") ///
-    xlabel(2010(2)2022, noticks tlength(0) labsize(vsmall)) xscale(range(2008.6 2023.4) lcolor(gs10)) xtitle("") ///
+    xlabel(2010(2)2022, noticks tlength(0) labsize(vsmall)) `skipopt' xscale(range(2008.6 2023.4) lcolor(gs10)) xtitle("") ///
     legend(order(4 "`g1'" 5 "`g0'" 7 "`g1' as % of `g0s' (line = 95% range)" 3 "100 = same as `g0s'" ///
-                 2 "Paris Agreement adopted (December 2015)" 1 "No annual file") ///
-        rows(3) region(lcolor(none)) size(vsmall) symxsize(6) keygap(1) colgap(4) rowgap(0.3)) ///
-    plotregion(style(none)) xsize(7.5) ysize(8.5)
+                 2 "Paris Agreement adopted (December 2015)" 1 "No annual file" `flagkey') ///
+        rows(`lrows') region(lcolor(none)) size(vsmall) symxsize(6) keygap(1) colgap(4) rowgap(0.3)) ///
+    plotregion(style(none)) xsize(7.5) ysize(`ysz')
 
 graph export "figures/`fname'.png", width(2250) replace
 graph export "figures/`fname'.pdf", replace
