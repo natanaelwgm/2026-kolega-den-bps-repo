@@ -12,6 +12,7 @@ Item-by-item coverage of Deasy's row and the review record: [TRACKER.md](TRACKER
 | `02_event_time_support.do` → `figures/02_event_time_support.png`, `tables/02_event_time_support.csv` | How many export starters are seen in each year before and after their start year (by start year), and how many comparison firms (never seen exporting) exist each calendar year; sets the year window (−5 to +5, outer years grouped) that the later before/after charts use | "Stagged did" (the firm counts the design stands on) | done, reviewed |
 | `03_energy_efficiency_export_start.do` → `figures/03_energy_efficiency_export_start.png`, `tables/03_energy_efficiency_export_start.csv` | Value added per GJ of energy before and after firms start exporting, as % change since the year before the start, starters minus firms never seen exporting (firm and year fixed effects); average after the start; before-start checks | "Intertionalized and energy efficiency"; "Stagged did"; "Mirip dengan paper kita sebelumnya" (same outcome as the previous paper, ln VA per GJ) | done, reviewed |
 | `04_co2_efficiency_export_start.do` → `figures/04_co2_efficiency_export_start.png`, `tables/04_co2_efficiency_export_start.csv` | Same event study for value added per tonne of CO2 (CO2 per unit of value added in the table) | "Intertionalized and energy efficiency" (emissions side; the previous paper's ln VA per CO2); "Stagged did" | done, reviewed |
+| `05_energy_co2_va_export_start.do` → `figures/05_energy_co2_va_export_start.png`, `tables/05_energy_co2_va_export_start.csv` | The same before/after comparison for energy use, CO2 and value added separately (three panels, one scale): what moves when firms start exporting | "Intertionalized and energy efficiency" (where an efficiency change comes from); "Stagged did" | done, reviewed |
 ## Details kept out of the figures
 
 **01 — start years.** Rule A (main, "simple"): a firm starts in the first year it is seen participating after a
@@ -58,3 +59,12 @@ fuel and electricity use at standard rates (not measured), so each dot equals R2
 per GJ (exact at all 12 dots): the chart can differ from R2-03 only when firms switch fuels. Bought electricity
 uses one national factor per year (rising 2010–2014, fixed after); holding it fixed (`co2_variant_static_grid`)
 moves each dot by at most 0.016 log points.
+
+**05 — energy use, CO2 and value added separately.** Same sample, window and model as 03 and 04. Average of years
+0 to +5: energy use +9% (95% interval −7% to +28%), CO2 +8% (−8% to +26%), value added +19% (+7% to +31%). So the
+rise in value added per GJ in 03 comes from value added growing faster than energy use, not from firms using less
+energy. Warning: before the start, starters' energy use (p = 0.027) and CO2 (p = 0.022) already changed differently
+from never-exporters', while value added did not (p = 0.599), so the later energy and CO2 dots may partly continue a
+pre-existing difference. Identities checked in the file: value added minus energy use equals 03's dot and value added
+minus CO2 equals 04's (to 1e-15); when 03's and 04's tables are present the file cross-checks them and stops on any
+mismatch. The note is wrapped by estimated printed width, so real-data numbers cannot run off the page.
