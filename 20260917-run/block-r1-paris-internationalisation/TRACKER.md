@@ -19,13 +19,13 @@ missing) · **unavailable** = the dataset cannot answer it (says why) · **plann
 | R1.Q3 | … emisi | R1-05, R1-06, R1-09 | planned | partial — same gaps as energy |  |
 | R1.Q4 | … dan juga internationalization strategy-nya? | R1-01 (yearly shares); R2-01 (export starts; import and foreign-ownership starts: table only) | partial (R1-01 done: yearly shares; starts in R2) | partial — foreign-ownership share only | Year-by-year shares here; firm-level starts are in the R2 block. |
 | R1.Q5 | Do global climate commitments reach the factory floor? | R1-05 (before/after for all firms and by group), R1-06 | planned | not done — no exhibit |  |
-| R1.Q6 | Did internationally engaged firms change their environmental behaviour more strongly after the Paris Agreement? | R1-05, R1-06, R1-08, R1-09, R1-10 | planned | partial — yearly gaps on rebuilt inputs only |  |
+| R1.Q6 | Did internationally engaged firms change their environmental behaviour more strongly after the Paris Agreement? | R1-02 to R1-06, R1-08, R1-09, R1-10 | partial (R1-02 done: exporters, descriptive yearly gap) | partial — yearly gaps on rebuilt inputs only |  |
 | R1.O1a | VA/energy use — scope 1 | R1-05, R1-09 | planned | not done | Scope 1 = nine fuels (gj_fuel_s1). |
 | R1.O1b | VA/energy use — scope 2 | R1-05, R1-09 | planned | not done | Scope 2 = purchased electricity (gj_electricity). |
-| R1.O1c | VA/energy use — total | R1-02 to R1-06, R1-08, R1-09 | planned | partial — rebuilt inputs only |  |
+| R1.O1c | VA/energy use — total | R1-02 to R1-06, R1-08, R1-09 | partial (R1-02 done: exporters, yearly, table) | partial — rebuilt inputs only |  |
 | R1.O2a | VA/emisi — scope 1 | R1-05, R1-09 | planned | not done |  |
 | R1.O2b | VA/emisi — scope 2 | R1-05, R1-09 | planned | not done |  |
-| R1.O2c | VA/emisi — total | R1-02 to R1-05, R1-09 | planned | partial — rebuilt inputs only |  |
+| R1.O2c | VA/emisi — total | R1-02 to R1-05, R1-09 | partial (R1-02 done: exporters, yearly, table) | partial — rebuilt inputs only |  |
 | R1.O3a | Energi use — scope 1 | R1-05, R1-09 | planned | partial — numbers in a CSV, no exhibit |  |
 | R1.O3b | Energi use — scope 2 | R1-05, R1-07, R1-09 | planned | partial — raw kWh, few yearly cells |  |
 | R1.O3c | Energi use — total | R1-05, R1-09 | planned | partial — rebuilt inputs only |  |
@@ -35,8 +35,8 @@ missing) · **unavailable** = the dataset cannot answer it (says why) · **plann
 | R1.O5a | GJ/emisi — scope 1 | R1-05, R1-09 | planned | not done |  |
 | R1.O5b | GJ/emisi — scope 2 | R1-05 (shown as fixed by the grid factor) | planned | not done — every coefficient 0.000 | The same number for every firm in a year (0.0036 ÷ grid factor): no firm difference can exist. |
 | R1.O5c | GJ/emisi — total | R1-05, R1-09 | planned | partial — CSV only |  |
-| R1.O6 | Co2/va | R1-02 to R1-06, R1-08, R1-09 | planned | partial — CSV only |  |
-| R1.O7 | Gj/va | R1-02 to R1-06, R1-08, R1-09 | planned | partial — CSV only |  |
+| R1.O6 | Co2/va | R1-02 to R1-06, R1-08, R1-09 | partial (R1-02 done: exporters, yearly) | partial — CSV only |  |
+| R1.O7 | Gj/va | R1-02 to R1-06, R1-08, R1-09 | partial (R1-02 done: exporters, yearly) | partial — CSV only |  |
 | R1.O8 | Electricity | R1-05, R1-07, R1-09 | planned | partial — raw kWh |  |
 | R1.O9 | Self generation | R1-05, R1-07, R1-09 | planned | partial — raw kWh |  |
 | R1.G1 | Export vs non export | R1-01 (counts), R1-02, R1-05 to R1-10 | partial (R1-01 done: group sizes) | partial — yearly exporter comparison empty (coding fault) | 2022 has no known non-exporters. |
@@ -61,4 +61,4 @@ house style, Tufte, and "would a non-economist understand it?") → fixes → ne
 | Exhibit | Plan | Built and run | Review | Non-economist check | Fixes | Status |
 |---|---|---|---|---|---|---|
 | R1-01 group shares and counts | done | done | FIX → fixed → PASS on re-check (all 147 support cells and 49 share rows matched an independent recount) | failed first (did not say what the chart cannot show) → fixed | gridlines drawn; notes say the firms surveyed change each year and give the Paris date; foreign ownership locked at 10%+ | done |
-
+| R1-02 exporters vs non-exporters, yearly | done | done | FIX → fixed → PASS on re-check (medians, gaps and counts matched an independent recount) | failed first ("below 100" read as total energy; did not say the firm mix changes) → fixed | plainer notes; template made safe for importers/foreign-owned (years with recording jumps kept in the table, not drawn) | done |

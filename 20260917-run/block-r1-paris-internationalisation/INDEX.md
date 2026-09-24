@@ -9,6 +9,7 @@ Item-by-item coverage of Deasy's row and the review record: [TRACKER.md](TRACKER
 |---|---|---|---|
 | `01_group_shares_support.do` → `figures/01_group_shares_support.png`, `tables/01_group_shares_support.csv`, `tables/01_group_support_cells.csv` | Each year, the share of firms that export, import or have 10%+ foreign ownership, with the number of firms in, not in, and of unknown status; the support table behind every later R1 comparison | "… dan juga internationalization strategy-nya?"; "Matching per year: export vs non export, import vs non import, fdi vs non fdi" (the groups) | done, reviewed |
 
+| `02_exporters_energy_co2_per_va.do` → `figures/02_exporters_energy_co2_per_va.png`, `tables/02_exporters_energy_co2_per_va.csv` | Each year, the typical (median) exporter's and non-exporter's energy and CO2 per million of value added, and exporters as % of non-exporters with a 95% range; Paris date marked | "Did internationally engaged firms change their environmental behaviour more strongly after the Paris Agreement?"; "Gj/va", "Co2/va" (drawn); "VA/energy use … total", "VA/emisi … total" (reciprocals, table only); "matching yearly" (unmatched yearly comparison) | done, reviewed |
 ## Details kept out of the figures
 
 **01 — group shares.** Foreign ownership is drawn at 10% or more (`fdi_10_flag`), the usual foreign-investment
@@ -17,3 +18,15 @@ direct-export question (344 yes, 1,988 no, 845 unknown) is in the tables only. `
 for each group, year and status, how many firms have value added, energy (total, scope 1 = nine fuels, scope 2 =
 purchased electricity), CO2 (same three) and self-generation above zero — later exhibits divide by these. Whether a
 firm generates its own electricity is unknown for many firms, so self-generation shares divide by `n_selfgen_known`.
+
+**02 — exporters vs non-exporters, yearly.** Medians, because the ratios have extreme tails (a few firms would drive
+a mean). VA per GJ and VA per tonne of CO2 (Deasy's "VA/energy use" and "VA/emisi", total scope) are the exact
+reciprocals of the drawn medians and are in the table (`med_va_per_gj_*`, `med_va_per_tco2_*`); drawing them would
+repeat the same information upside down. The 95% range comes from 999 random redraws of each year's firms (seed
+20260925). One sample for both ratios: energy, CO2 and value added above zero (514 firm-years with zero energy and
+CO2 dropped). Unknown export status (29–58% of firms a year) is left out; these firms are very unlike both known
+groups, so the comparison describes only firms whose status is known. 2022 has no known non-exporters (the 2022
+file records direct exporters only): exporter medians are in the table, no comparison is drawn. Exporters are about
+four times larger (median workers ~150 vs ~40); groups are not matched on size or industry here — R1-08 matches
+them. This file is the template for R1-03 and R1-04 (only the grouping block changes; years listed in `skip_yrs`
+are computed and kept in the table but not drawn).
