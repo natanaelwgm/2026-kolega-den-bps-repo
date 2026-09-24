@@ -9,12 +9,13 @@ Item-by-item coverage of Deasy's row and the review record: [TRACKER.md](TRACKER
 |---|---|---|---|
 | `01_reducer_shares_by_year.do` → `figures/01_reducer_shares_by_year.png`, `tables/01_reducer_shares_by_year.csv`, `tables/01_reducer_firms.csv` | Share of firms whose energy use and CO2 (total, and per unit of value added) fell from the year before, each year; defines the firm-level "reducer" flag used by the later R3 files | "Siapa yang reduce energy use and emisi?" | done, reviewed |
 | `02_who_reduces_by_group.do` → `figures/02_who_reduces_by_group.png`, `tables/02_who_reduces_by_group.csv`, `tables/02_who_reduces_firm_flag.csv` | For firm size, exporters, importers and foreign-owned firms: the share of their one-year changes in which energy and CO2 (per unit of value added and in total) fell more, or rose less, than at the typical firm that year | "Siapa yang reduce energy use and emisi?"; "determinan motivasi" (who, not why); "Bukan kausal" | done, reviewed |
-
 | `03_who_reduces_by_sector.do` → `figures/03_who_reduces_by_sector.png`, `tables/03_who_reduces_by_sector.csv`, `tables/03_who_reduces_by_sector_firm_flag.csv` | For each of the 24 manufacturing sectors: the share of one-year changes in which energy and CO2 (per unit of value added and in total) fell more, or rose less, than at the typical firm that year | "Siapa yang reduce energy use and emisi?"; "determinan motivasi" (which sectors, not why) | done, reviewed |
 | `04_trait_associations_fe.do` → `figures/04_trait_associations_fe.png`, `tables/04_trait_associations_fe.csv`, `tables/04_trait_associations_fe_all_terms.csv` | Which firm traits (size, exporting, importing, 10%+ foreign ownership, making own electricity) go with bigger one-year cuts in energy and CO2, other traits held fixed; (A) against similar firms (same year, sector, province), (B) the same firm in its other years; starting level shown separately | "determinan motivasi apa yg membuat firms respond" (traits, not motives); Strategy "FE"; "Bukan kausal" | done, reviewed |
 | `05_motivation_proxies.do` → `figures/05_motivation_proxies.png`, `tables/05_motivation_proxies.csv`, `tables/05_motivation_proxies_fe.csv` | Firms with environmental permit documents (AMDAL, UKL-UPL, SPPL), waste treatment, R&D or innovation vs firms without: share of one-year changes that fell more (or rose less) than the typical firm answering the same question that year | "determinan motivasi apa yg membuat firms respond" (closest stand-ins: rules faced, capacity to change); "Bukan kausal" | done, reviewed |
 | `06_own_electricity_reducers.do` → `figures/06_own_electricity_reducers.png`, `tables/06_own_electricity_reducers_by_year.csv`, `tables/06_own_electricity_reducers_changes.csv` | A: share of reducers vs non-reducers making some of their own electricity, by year (reducers found from all changes, and without changes starting in 2017); B: share of one-year changes beating the typical change, by own electricity at the start and from start to end | "Siapa yang reduce energy use and emisi?"; brief: "electricity self-generation among reducers vs non" | done, reviewed |
 | `07_productivity_reducers.do` → `figures/07_productivity_reducers.png`, `tables/07_productivity_reducers_*.csv` | A: productivity of reducers vs non-reducers (with and without changes starting in 2017); B: share of one-year changes beating the typical change by productivity at the start | Brief: "TFP residual … of reducers vs non"; "Siapa yang reduce energy use and emisi?" | done, reviewed |
+| `08_environmental_goods_imports.do` → `tables/08_environmental_goods_imports_unavailable.csv` (no figure) | **Cannot be answered with this data.** Each firm reports only one yearly total for the imported raw materials it used, with no list of what was bought, so solar panels and other environmental goods cannot be picked out. The table says what is missing and what data would answer it (customs import records per firm, item by item, plus an agreed list of environmental goods). Files 02 and 04 here and R1's `01_group_shares_support.do` use the same total only to mark "importers of any raw material"; they say nothing about environmental goods. | "Tambahan: Siapa yang impor lebih banyak (EGs) environment goods list (termasuk solar panel, dll)" | unavailable (no data), reviewed |
+
 ## Details kept out of the figures
 
 **01 — reducer shares.** A change is counted only between a firm's records exactly one year apart, with energy,
@@ -128,10 +129,6 @@ reducers (34–39%). The 2014 gap in A is +4.5 points among recorded firms; it w
 "none".
 
 **07 — productivity and reducers.**
-
-Row: `07_productivity_reducers.do` → Are the firms that cut energy and CO2 more productive? (A: reducers vs
-non-reducers; B: do more productive firms go on to cut more often?) → "Siapa yang reduce energy use and emisi? …
-determinan motivasi …", "Bukan kausal" → done.
 
 **Which productivity measure, and why not the one in the brief (M3).** The brief asked for
 `dev_nominal_common_tfp_lp`. This exhibit uses `dev_nominal_tfp_lp` instead. Both come from the same
