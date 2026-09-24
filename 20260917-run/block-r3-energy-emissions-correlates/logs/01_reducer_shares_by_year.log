@@ -3,7 +3,7 @@
        log:  /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r3-energy-emissions-correlates/
 > logs/01_reducer_shares_by_year.log
   log type:  text
- opened on:  25 Sep 2026, 02:47:31
+ opened on:  25 Sep 2026, 03:17:48
 
 . timer clear 1
 
@@ -127,7 +127,7 @@ Step 4/6: firm-level reducer flag (used by R3-02 to R3-07)
   2.     * Year-adjusted: this firm's change minus the typical (median) change of all
 .     * compared firms in the same year, so the years a firm happens to be
 .     * observed in do not decide whether it is a reducer.
-.     bysort year: egen double med_chg_`v' = median(chg_`v')
+.     bysort year: egen double med_chg_`v' = pctile(chg_`v'), p(50)   // median; egen median() would ignore "double"
   3.     gen double rel_chg_`v' = chg_`v' - med_chg_`v'
   4.     bysort firm_id: egen int    n_chg_`v'   = count(chg_`v')
   5.     bysort firm_id: egen double avg_chg_`v' = mean(chg_`v')
@@ -170,7 +170,7 @@ Step 4/6: firm-level reducer flag (used by R3-02 to R3-07)
 . postfile `firmtab' str10 outcome byte main_flag long(firms_total firms_0_changes firms_1_change ///
 >     firms_classified reducer_firms nonreducer_firms) double pct_reducer_firms ///
 >     long reducer_adj_firms double pct_reducer_adj_firms using `firmfile', replace
-(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_18831.000002 not found)
+(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_74601.000002 not found)
 
 . foreach v in energy co2 energy_va co2_va {
   2.     quietly count
@@ -506,6 +506,6 @@ file
 . local elapsed = strtrim(string(r(t1), "%9.1f"))
 
 . display "FINISHED: figure -> figures/01_reducer_shares_by_year.png (elapsed `elapsed' s)"
-FINISHED: figure -> figures/01_reducer_shares_by_year.png (elapsed 1.9 s)
+FINISHED: figure -> figures/01_reducer_shares_by_year.png (elapsed 2.3 s)
 
 . quietly log close

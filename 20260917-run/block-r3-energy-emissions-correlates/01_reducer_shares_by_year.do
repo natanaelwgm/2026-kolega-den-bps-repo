@@ -15,6 +15,7 @@ clear all
 set more off
 set varabbrev off
 set linesize 120
+set type double                 // new variables keep full precision
 
 * ---- EDIT THESE TWO LINES IF YOUR FOLDERS ARE ELSEWHERE -------------------
 global DATA   "/Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-0-data-preparation/analysis_ready_data.dta"
@@ -98,7 +99,7 @@ foreach v in energy co2 energy_va co2_va {
     * Year-adjusted: this firm's change minus the typical (median) change of all
     * compared firms in the same year, so the years a firm happens to be
     * observed in do not decide whether it is a reducer.
-    bysort year: egen double med_chg_`v' = median(chg_`v')
+    bysort year: egen double med_chg_`v' = pctile(chg_`v'), p(50)   // median; egen median() would ignore "double"
     gen double rel_chg_`v' = chg_`v' - med_chg_`v'
     bysort firm_id: egen int    n_chg_`v'   = count(chg_`v')
     bysort firm_id: egen double avg_chg_`v' = mean(chg_`v')
