@@ -20,7 +20,7 @@ missing) · **unavailable** = the dataset cannot answer it (says why) · **plann
 | R2.S1 | Stagged did | R2-03 to R2-07 | planned | not done — equations with invented numbers |  |
 | R2.S2 | Mirip dengan paper kita sebelumnya (its estimators: imputation, Sun–Abraham, de Chaisemartin–D'Haultfœuille, Callaway–Sant'Anna) | R2-06, R2-07 | planned | not done — none run |  |
 | R2.S3 | hanya Ganti tahun (2010–2022 window) | R2-01 (both entry rules side by side) and all R2 files | partial (R2-01 done: previous rule rebuilt on 2010–2022) | partial — window handled, rest redesigned | Previous paper's entry rule kept as named rule B (29 export starters). |
-| R2.S4 | (needed for staggered DID) firms per start year and per year-from-start | R2-01, R2-02 | partial (R2-01 done: per start year) | partial — counts only in a CSV |  |
+| R2.S4 | (needed for staggered DID) firms per start year and per year-from-start | R2-01, R2-02 | done (R2-01 per start year; R2-02 per year since the start, window −5..+5) | partial — counts only in a CSV |  |
 | R2.S5 | (needed for staggered DID) no difference before the start | R2-03, R2-04, R2-07 | planned | not done — theory only |  |
 
 ## How each exhibit was made
@@ -31,3 +31,4 @@ house style, Tufte, and "would a non-economist understand it?") → fixes → ne
 | Exhibit | Plan | Built and run | Review | Non-economist check | Fixes | Status |
 |---|---|---|---|---|---|---|
 | R2-01 export start years | done | done | FIX → fixed → re-check FIX (PDF clipped the notes) → fixed → PASS (numbers matched an independent recount) | passed after notes were shortened and jargon removed | shorter notes; y-axis step scales with the counts (works on real data); PDF checked | done |
+| R2-02 support by years since the start | done (planner also drafted the file; executor read and adopted it) | done | FIX → fixed → PASS on re-check (all counts matched an independent recount) | failed first (did not say why it matters or why outer years are grouped) → fixed | notes explain the later charts, the grouping and the previous rule; consistent 2016 key | done |
