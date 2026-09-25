@@ -1,0 +1,273 @@
+% R3 pages of the R1-R3 exhibit book (block-r3-energy-emissions-correlates).
+% Every number below is taken from the block's tables/*.csv, INDEX.md or the reviews' re-check sections.
+% Development data -- obscured values, fictional firm panel. Not BPS findings.
+
+\clearpage
+\section{R3 --- Which firms cut energy use and CO2, and what goes with it}
+
+{\small\textbf{Deasy's row R3 (PIC Toar), verbatim.}}
+\begin{quote}\small
+Request: ``Siapa yang reduce energy use and emisi? Lebih ke determinan motivasi apa yg membuat firms respond to climate
+commitment.. Tambahan: Siapa yang impor lebih banyak (EGs) environment goods list (termasuk solar panel, dll)''.\\
+Strategy: ``FE''.\quad Notes: ``Bukan kausal, tp mengetahui firms mana yg respond thd climate and motivasinya apa''.
+\end{quote}
+
+{\small\textbf{Every item of the row and where it is answered} (from the block's \texttt{TRACKER.md}).}\par\smallskip
+{\footnotesize
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{1.05cm}X>{\raggedright\arraybackslash}p{3.1cm}>{\raggedright\arraybackslash}p{6.3cm}@{}}
+\toprule
+ID & Deasy's item (short) & Exhibits & Status \\
+\midrule
+R3.Q1 & Who cuts energy use & R3-01 to 04, 06, 07, 09 & done \\
+R3.Q2 & \ldots\ and emissions (CO2) & R3-01 to 04, 06, 07, 09 & done (total CO2 in every file) \\
+R3.Q3 & What makes firms respond to the climate commitment & R3-02 to 07, 09 & partial: traits, place and stand-ins; motives are never asked \\
+R3.Q3a & \quad size & R3-02, 04 & done \\
+R3.Q3b & \quad export status & R3-02, 04 & done \\
+R3.Q3c & \quad import status & R3-02, 04 & done, with caveat: the importer gap rests on changes starting in 2017 \\
+R3.Q3d & \quad foreign ownership (10\% or more) & R3-02, 04 & done (2020 status not used) \\
+R3.Q3e & \quad productivity & R3-07 & done \\
+R3.Q3f & \quad R\&D, innovation & R3-05 & done (only the years that ask) \\
+R3.Q3g & \quad environmental permits, waste treatment & R3-05 & done (asked in 2020--22 only) \\
+R3.Q3h & \quad sector & R3-03, 04 & done \\
+R3.Q3i & \quad province & R3-09, 04 & done (codes only, no names) \\
+R3.Q3m & \quad making own electricity & R3-04, 06 & done \\
+R3.Q3n & \quad starting energy level (high users fall back) & R3-01, 04 & done \\
+R3.Q3o & \quad direct motives (climate pledge, buyers, parent firm) & --- & unavailable: no survey question asks \\
+R3.Q4 & Who imports more environmental goods (solar panels etc.) & R3-08 & unavailable: no item-by-item import records \\
+R3.S1 & Strategy ``FE'' & R3-04 & done \\
+R3.N1 & ``Bukan kausal'': which firms respond, not cause & all R3 files & done (every file says association, not cause) \\
+\bottomrule
+\end{tabularx}}
+
+\medskip
+{\small\textbf{What this block says on the development data}}
+\begin{itemize}\small
+\item Each year roughly half of the firms record less energy and CO2 than the year before (36--72\% across years and
+  measures). The jumps between years come mostly from masking and from which firms are observed, so from R3-02 on each change is compared with the typical
+  change of the same year.
+\item Per unit of value added, firm size, exporting, importing and foreign ownership barely matter: every group sits
+  within 2 points of the typical firm (R3-02). Sectors do differ (R3-03); provinces do not (R3-09).
+\item The two strongest traits, making own electricity and importing, rest on the changes from 2017 to 2018, when the
+  recording of own-electricity firms' fuel shifted. Without them the gaps shrink or flip (R3-04, R3-06).
+\item Permits, waste treatment, R\&D and innovation show no clear gap per unit of value added; gaps in totals come from
+  big firms falling back after a high year (R3-05). Reducers look more productive mostly because of 2017 and because
+  value added sits in both numbers (R3-07).
+\item Imports of environmental goods cannot be measured: the file has one yearly total of imported raw materials per
+  firm, with no list of items (R3-08).
+\item Everything is association on masked values with fictional firm links: the pages test the method, not the answer.
+\end{itemize}
+
+% ---------------------------------------------------------------------------------------------------------------
+\expage{R3-01}{Share of firms whose energy use and CO2 fell, each year}{\blockIII/figures/01_reducer_shares_by_year.pdf}{\texttt{01\_reducer\_shares\_by\_year.do} $\to$ \texttt{figures/01\_reducer\_shares\_by\_year.png},\newline \texttt{tables/01\_reducer\_shares\_by\_year.csv}, \texttt{tables/01\_reducer\_firms.csv}}{0.56}
+\expart{What it is}{For every firm seen in two years in a row, whether its energy use (gigajoules) and its CO2 (tonnes)
+were lower than the year before, in total and per unit of value added (output minus materials, energy and services
+bought, current prices). Each point is the share of such firms in one year, 2011--2022: 20,169 firm pairs in all. The
+file also builds the firm-level ``reducer'' flag that R3-02 to R3-07 use.}
+\expart{How to read it}{Top panel energy, bottom panel CO2. Solid line with black dots = totals; dashed line with hollow
+squares = per unit of value added. At 50\%, as many firms fell as rose. The gray band is 2016 (no annual file), so 2017
+has no one-year change: the 2,049 firms seen in 2015 and 2017 are left out. The number under each year is the firm
+pairs compared.}
+\expart{What it shows on this data}{Before 2016 about half of the firms cut energy use each year (43.4--50.3\% in total,
+50.1--56.0\% per unit of value added). After it the share swings: 63.0\% in 2018, 69.6\% in 2019, 43.6\% in 2022. These
+swings mostly come from masking and from which firms are observed, not from behaviour. So the firm flag compares a
+firm's changes with the typical (median) change of the same years: 1,865 of the 3,709 firms with at least two changes
+(50.3\%) are reducers in energy per unit of value added, against 65.0\% by the raw count.}
+\expart{How it helps Deasy's request}{It answers the first half of ``Siapa yang reduce energy use and emisi?'': how many
+firms cut, each year, for energy and CO2, in total and per unit of value added. It does not say who they are; that
+starts in R3-02, using the flag and the year-by-year comparison built here.}
+\items{R3.Q1, R3.Q2, R3.N1}
+\expart{Keep in mind}{It counts falls, not their size (counting only falls above 5\% lowers any year by at most 2.4
+points). Price rises alone push the per-value-added share up. Firm links are fictional, so a ``firm pair'' may join two
+real firms.}
+
+% ---------------------------------------------------------------------------------------------------------------
+\expage{R3-02}{Who cuts: size, exporters, importers, foreign owners}{\blockIII/figures/02_who_reduces_by_group.pdf}{\texttt{02\_who\_reduces\_by\_group.do} $\to$ \texttt{figures/02\_who\_reduces\_by\_group.png},\newline \texttt{tables/02\_who\_reduces\_by\_group.csv}, \texttt{tables/02\_who\_reduces\_firm\_flag.csv}}{0.50}
+\expart{What it is}{The 20,169 one-year changes from R3-01, grouped by the firm's status at the start of each change:
+size third (by workers, within the year), exporter, importer, and foreign-owned (10\% or more). For each group, the share
+of its changes in which energy or CO2 fell more, or rose less, than the typical (median) firm's change that year. Four
+panels: energy and CO2 per unit of value added, and in total.}
+\expart{How to read it}{Dot = share; line = 95\% interval; dashed line at 50\% = same as the typical firm. Where the
+interval crosses 50\%, the group is not clearly different. The number in brackets is the group's changes. ``Not
+recorded'' rows are blank answers, never counted as non-exporters or domestic. Foreign status measured in 2020 is not
+used: that year the foreign-owned share is more than twice the usual.}
+\expart{What it shows on this data}{Per unit of value added every group sits within 2 points of 50\%; only non-exporters
+(51.1\%, interval 50.2--52.0) and firms with no export answer (48.9\%) differ clearly, and only slightly. Exporters 49.3\%
+against non-exporters 51.1\%, importers 50.3\% against 49.8\%, foreign-owned 48.5\% against domestic 50.1\%. In totals,
+importers (51.9\%), the largest third (51.6\%) and, for CO2, foreign-owned firms (52.6\%, interval 50.1--55.2) cut more
+often. But big starters fall back: changes from the top fifth of starting energy beat the typical change 69\% of the
+time, the bottom fifth 30\%. The importer result also flips: 46.2\% before 2016, 51.5\% after (per unit of value added).}
+\expart{How it helps Deasy's request}{It answers ``Siapa yang reduce energy use and emisi?'' for size, trade and
+ownership, and the ``determinan'' part only as who, not why. On this data the answer is ``almost no difference per unit
+of value added''.}
+\items{R3.Q1, R3.Q2, R3.Q3, R3.Q3a, R3.Q3b, R3.Q3c, R3.Q3d, R3.N1}
+\expart{Keep in mind}{Each trait is looked at alone; R3-04 holds them together. Comparing within the year stops the 2017
+jump in the importer share from creating a gap by itself. Association, not cause.}
+
+% ---------------------------------------------------------------------------------------------------------------
+\expage{R3-03}{Who cuts, by manufacturing sector}{\blockIII/figures/03_who_reduces_by_sector.pdf}{\texttt{03\_who\_reduces\_by\_sector.do} $\to$ \texttt{figures/03\_who\_reduces\_by\_sector.png},\newline \texttt{tables/03\_who\_reduces\_by\_sector.csv}, \texttt{tables/03\_who\_reduces\_by\_sector\_firm\_flag.csv}}{0.56}
+\expart{What it is}{The same measure as R3-02 for each two-digit manufacturing sector (the code at the start of each
+change), over the same 20,169 changes, sorted by panel (a). Sectors with fewer than 100 changes (refined petroleum and
+coke, 27; machine repair, 48) are named under the plot but not drawn.}
+\expart{How to read it}{Dot = share of the sector's changes that beat the typical firm's change that year; line = 95\%
+interval; dashed line = 50\%. An interval that misses 50\% marks a sector that is clearly different. Each change counts
+once, whatever the firm's size.}
+\expart{What it shows on this data}{Sectors do differ: in panel (a) 9 of 22 intervals miss 50\%, against about 1 by
+chance. Per unit of value added, textiles (53.8\%) and paper (54.8\%) beat the typical firm more often; furniture
+(43.5\%), beverages (43.0\%), computers and electronics (44.2\%) and electrical equipment (44.6\%) less often. Cement,
+glass and ceramics cut total energy (46.9\%) and CO2 (47.2\%) slightly less often. Split at 2016, furniture and textiles
+hold; steel (45.3\% before, 59.2\% after) and motor vehicles (44.0\%, 55.4\%) flip.}
+\expart{How it helps Deasy's request}{It answers ``Siapa yang reduce energy use and emisi?'' by sector, and the
+``determinan'' part as which sectors, not why. It answers the sector item fully on this data.}
+\items{R3.Q1, R3.Q2, R3.Q3, R3.Q3h, R3.N1}
+\expart{Keep in mind}{Value added is in current prices, so sectors whose prices rose faster look better in (a) and (b).
+Whether sector codes are consistent across years is not checked. Each sector's share of all energy is in the table
+only: one masked 2021 cement row holds 38.4\% of all energy, so do not name a ``biggest user''. Association, not cause.}
+
+% ---------------------------------------------------------------------------------------------------------------
+\expage{R3-04}{Which traits go with bigger cuts, other traits held fixed}{\blockIII/figures/04_trait_associations_fe.pdf}{\texttt{04\_trait\_associations\_fe.do} $\to$ \texttt{figures/04\_trait\_associations\_fe.png},\newline \texttt{tables/04\_trait\_associations\_fe.csv}, \texttt{tables/04\_trait\_associations\_fe\_all\_terms.csv}}{0.50}
+\expart{What it is}{Deasy's ``FE'' strategy. For 17,922 one-year changes of 5,176 firms, the change in energy and CO2 (per
+unit of value added, and in total) against the firm's traits at the start, all at once: workers, exporting, importing,
+foreign ownership (10\% or more), making own electricity. Fixed effects mean comparing only like with like: (A) firms in
+the same year, sector and province (main); (B) the same firm in its years with and without the trait. Changes starting
+in 2020 are left out (foreign status unusable).}
+\expart{How to read it}{Marker = how much more the measure changed for firms with the trait than for similar firms
+without it, in \%; below 0 = bigger cut. Black dot = (A), hollow triangle = (B). Line = 95\% interval; crossing 0 = no
+clear gap. Gray bar = where (A) moves when any one pair of years is left out. The bottom row, a starting level twice as
+high, is a separate model.}
+\expart{What it shows on this data}{In (A), making own electricity goes with a 36\% bigger cut in energy per unit of
+value added (interval $-$41 to $-$31) and importing with 9\% ($-$16 to $-$1); workers, exporting and foreign ownership
+show no clear gap. Both results rest on changes starting in 2017: without them own electricity is $-$18\% and the
+importer gap flips to +14\%. In 2017 own-electricity firms recorded about 31 times other firms' fuel (1.4 to 4 times in
+other years), likely a recording change. A starting level twice as high goes with a 38\% bigger cut, a third to a half
+of it automatic fall-back.}
+\expart{How it helps Deasy's request}{It follows the Strategy ``FE'' and answers ``determinan motivasi apa yg membuat
+firms respond'' in part: which traits go with cuts, each net of the others, not motives.}
+\items{R3.Q3, R3.Q3a, R3.Q3b, R3.Q3c, R3.Q3d, R3.Q3h, R3.Q3i, R3.Q3m, R3.Q3n, R3.S1, R3.N1}
+\expart{Keep in mind}{(B) rests only on firms whose trait changes (importer 1,781, own electricity 1,943 firms), and such
+switches may be recording shifts. A third version (sector-by-year and province-by-year) is in the tables only and moves
+(A) by at most 3.2 points. Association, not cause.}
+
+% ---------------------------------------------------------------------------------------------------------------
+\expage{R3-05}{Motivation stand-ins: permits, waste treatment, R\&D, innovation}{\blockIII/figures/05_motivation_proxies.pdf}{\texttt{05\_motivation\_proxies.do} $\to$ \texttt{figures/05\_motivation\_proxies.png},\newline \texttt{tables/05\_motivation\_proxies.csv}, \texttt{tables/05\_motivation\_proxies\_fe.csv}}{0.55}
+\expart{What it is}{The survey never asks why firms cut energy. The closest stand-ins are the rules a firm faces
+(environmental permit documents AMDAL, UKL-UPL, SPPL, and waste treatment, asked only in 2020--22) and its capacity to
+change (R\&D, any innovation, process innovation, asked in some years only). Each one-year change is grouped by the
+answer at its start and compared with the typical change of firms that answered the same question that year.}
+\expart{How to read it}{Black dot = share of the group's changes that beat that typical change; line = 95\% interval;
+dashed line = 50\%. Compare ``Yes'' with ``No''. Hollow gray = no answer recorded, never counted as ``No''; these firms
+differ in other ways, so their distance from 50\% is not a result. Permits: each firm sits under the strictest document
+it holds (AMDAL, then UKL-UPL, then SPPL). 2017--18 R\&D and innovation codes are provisional.}
+\expart{What it shows on this data}{Per unit of value added no stand-in clearly differs from ``No'': AMDAL 49.6\% against
+none 49.6\%, waste treatment 50.5\% against 49.8\%, R\&D 47.2\% against 50.2\%, any innovation 50.1\% against 49.9\%. In
+totals, permit holders and innovators cut a little more often (UKL-UPL or SPPL 54.5\% against 47.4\% in energy use), but
+they start with 2--7 times more energy and high starts fall back; with starting energy held fixed, every total-energy
+gap disappears or reverses.}
+\expart{How it helps Deasy's request}{It is the closest this data gets to ``determinan motivasi apa yg membuat firms
+respond to climate commitment''. It answers in part: rules faced and capacity to change, not motives. Direct motives
+(climate pledge, buyer pressure, parent policy) are not asked (R3.Q3o).}
+\items{R3.Q3, R3.Q3f, R3.Q3g, R3.N1}
+\expart{Keep in mind}{Few years and only answering firms: against all firms, innovators would look worse (42.9\% against
+49.0\%), within answering firms there is no gap. Association, not cause.}
+
+% ---------------------------------------------------------------------------------------------------------------
+\expage{R3-06}{Own electricity: reducers against non-reducers}{\blockIII/figures/06_own_electricity_reducers.pdf}{\texttt{06\_own\_electricity\_reducers.do} $\to$ \texttt{figures/06\_own\_electricity\_reducers.png},\newline \texttt{tables/06\_own\_electricity\_reducers\_by\_year.csv}, \texttt{tables/06\_own\_electricity\_reducers\_changes.csv}}{0.60}
+\expart{What it is}{Part A: the share of reducers and non-reducers (firm flag from R3-01) that make some of their own
+electricity, each year; left with all changes, right without changes starting in 2017. Part B: the share of one-year
+changes that beat the typical firm's change, by own electricity at the start and from start to end.}
+\expart{How to read it}{A: black dots = reducers, hollow squares = non-reducers, gray band = no 2016 file. B: black
+dots = all changes, triangles = without changes starting in 2017, line = 95\% interval, dashed line = 50\%; hollow gray =
+status not recorded (2014--15 only), not a result.}
+\expart{What it shows on this data}{Reducers make own electricity more often: 66.7\% against 36.0\% in 2017, 27.1\%
+against 16.6\% in 2022, +10.1 points over all years. This is mostly the 2017 recording change: that year own-electricity
+firms recorded 31 times other firms' fuel, so their 2017-to-2018 changes look like big cuts. Without changes starting in
+2017 the gap falls to +2.4 points, and in B(a) own-electricity firms beat the typical change in 49.0\% of changes
+against 50.1\%. Holding the starting level fixed gives +4.3 points (energy per unit of value added) or $-$6.0 (energy use): no
+difference that holds up either way.}
+\expart{How it helps Deasy's request}{It answers ``Siapa yang reduce energy use and emisi?'' for self-generation
+and the self-generation item under ``determinan motivasi'' (R3.Q3m). Answered on this data: the gap is mostly recording.}
+\items{R3.Q1, R3.Q2, R3.Q3, R3.Q3m, R3.N1}
+\expart{Keep in mind}{Self-made power is not in energy use, but starting to make it does not fake cuts: starters beat
+the typical energy-use change in 47.9\% of changes. Own-electricity firms start with 4.4 times the energy, so gaps in
+(c)--(d) are partly automatic. Association, not cause.}
+
+% ---------------------------------------------------------------------------------------------------------------
+\expage{R3-07}{Productivity of reducers against non-reducers}{\blockIII/figures/07_productivity_reducers.pdf}{\texttt{07\_productivity\_reducers.do} $\to$ \texttt{figures/07\_productivity\_reducers.png},\newline \texttt{tables/07\_productivity\_reducers\_firms.csv}, \texttt{tables/07\_productivity\_reducers\_changes.csv}}{0.61}
+\expart{What it is}{Productivity = value added beyond what the firm's workers and last year's capital predict
+(Levinsohn--Petrin method), against firms of the same sector and year. A: average productivity of reducers against
+non-reducers (flags from R3-01). B: one-year changes in four equal productivity groups at the start. Covered: 2,740 of
+3,709 flagged firms, 7,115 of 20,169 changes (12 of 24 sectors, never 2010 or 2017).}
+\expart{How to read it}{A: dot = \% difference in productivity, reducers against non-reducers; triangle = reducers found
+without changes starting in 2017; line = 95\% interval; crossing 0 = no clear difference. B: read as R3-02, one row per
+productivity group.}
+\expart{What it shows on this data}{Reducers in energy per unit of value added look 51\% more productive (interval 37 to
+67), but only 13\% (2 to 26) without changes starting in 2017; for energy use and CO2 the gap becomes $-$7\% and $-$8\%,
+not clear. Value added is in both numbers, so a good year raises productivity and lowers energy per value added at once.
+B: the least productive group beat the typical change in 56.7\% of changes, the most productive 42.6\%, because high
+value added falls back; in energy use there is no pattern (48.7, 53.0, 47.2, 50.0\%).}
+\expart{How it helps Deasy's request}{It answers the productivity item under ``determinan motivasi'' (R3.Q3e).
+Answered on this data: reducers look more productive mostly because of 2017 and arithmetic; productive firms do not go
+on to cut energy use more often.}
+\items{R3.Q1, R3.Q2, R3.Q3, R3.Q3e, R3.N1}
+\expart{Keep in mind}{The file's other productivity measure (the ``common'' one) exists for only 665 firm-years; with it the gap is
+25.6\% ($-$4.1 to 64.4), too uncertain to read. Covered firms are smaller (median 38 workers against 57). Nominal
+values, fictional firm links. Association, not cause.}
+
+% ---------------------------------------------------------------------------------------------------------------
+\expage{R3-08}{Imports of environmental goods: not available in this data}{}{\texttt{08\_environmental\_goods\_imports.do} $\to$ \texttt{tables/08\_environmental\_goods\_imports\_unavailable.csv} (no figure)}{0.50}
+{\footnotesize
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{3.6cm}X@{}}
+\toprule
+Field (from the CSV) & Content \\
+\midrule
+Deasy's request & ``Tambahan: Siapa yang impor lebih banyak (EGs) environment goods list (termasuk solar panel, dll)'' \\
+Status & unavailable \\
+Answer & Not available in this dataset. Each firm reports only one yearly total for the imported raw materials it used,
+  with no list of what was bought, so solar panels and other environmental goods cannot be picked out. \\
+What is missing & A record of what each firm imported, item by item (customs product codes such as the 6-digit HS code),
+  with the amount paid, for each year. \\
+What exists instead & One yearly total per firm of imported raw materials used (\texttt{import\_value\_nominal};
+  \texttt{import\_flag} = 1 when above zero), with no product, country or date detail. \\
+Why the total cannot stand in & It mixes every imported item and cannot be split by product; the survey field is
+  ``imported raw material used'', so imported machines such as solar panels are probably not in it at all. \\
+What would be needed & (1) Customs import records per firm, item by item, linkable to this survey; (2) an agreed list of
+  environmental goods with product codes, e.g.\ the APEC list of 54 products; (3) a table translating product codes
+  between versions (HS, Indonesia's BTKI). \\
+Not an answer & R1-01, R3-02 and R3-04 use the same total only to mark importers of any raw material. \\
+Search result & Candidates found: none. Firm-years 33,049, of which 12,206 with imports; years 2010--2015, 2017--2022. \\
+\bottomrule
+\end{tabularx}}
+\expart{What it is}{A one-row table that records why the environmental-goods question cannot be answered from this file,
+what exists instead, and what data would answer it. The do-file searches every import variable, including Indonesian
+labels, and finds no item-level import record.}
+\expart{How to read it}{Each line is one column of the CSV. ``Answer'' is the plain reply to Deasy; ``What would be
+needed'' is the shopping list for a future request to BPS or customs.}
+\expart{What it shows on this data}{No firm-by-product import data: the only import number is a yearly total of imported
+raw materials, above zero in 12,206 of 33,049 firm-years. It says nothing about solar panels or other environmental
+goods.}
+\expart{How it helps Deasy's request}{It answers ``Siapa yang impor lebih banyak (EGs) environment goods list'' with
+``not possible here'', says why, and names the data that would make it possible (customs records per firm plus an agreed
+list, such as the 54 products listed by APEC, the Asia-Pacific Economic Cooperation forum).}
+\items{R3.Q4}
+\expart{Keep in mind}{The importer rows in R1-01, R3-02 and R3-04 are importers of any raw material, not of
+environmental goods. The importer share also jumps partway through the period, likely a recording change.}
+
+% ---------------------------------------------------------------------------------------------------------------
+\expage{R3-09}{Who cuts, by province and island group}{\blockIII/figures/09_who_reduces_by_province.pdf}{\texttt{09\_who\_reduces\_by\_province.do} $\to$ \texttt{figures/09\_who\_reduces\_by\_province.png},\newline \texttt{tables/09\_who\_reduces\_by\_province.csv}, \texttt{tables/09\_who\_reduces\_by\_province\_firm\_flag.csv}}{0.56}
+\expart{What it is}{The same measure as R3-02 and R3-03 for each province (the code at the start of each change; the
+file has no province names), grouped by island: first digit 1--2 Sumatra, 3 Java, 5--9 other islands. Provinces with at
+least 100 changes are drawn on their own (12); smaller ones are pooled within their island (Sumatra 6 provinces, 305
+changes; other islands 16 provinces, 474 changes).}
+\expart{How to read it}{Black dot = province; black diamond = whole island group; hollow circle = smaller provinces
+pooled. Line = 95\% interval; dashed line = 50\%, the typical firm. Java holds 88\% of the 20,169 changes, so its rows have
+the narrowest intervals.}
+\expart{What it shows on this data}{Per unit of value added no province differs: in panel (a) 0 of 14 rows miss 50\%,
+against about 1 by chance, and the island groups sit at 49.0\% (Sumatra), 50.1\% (Java) and 49.8\% (other islands). In
+totals a few rows miss 50\%. The largest, province 14 (58.8\% in energy use, interval 50.9 to 66.7), is mostly start
+size: its changes start at 11.3 times the typical firm's energy that year, and within the same fifth of starting energy
+it drops to 45.9\%.}
+\expart{How it helps Deasy's request}{It answers ``Siapa yang reduce energy use and emisi?'' by place, and the
+``determinan'' part as where, not why. The province item is answered on this data, by code only.}
+\items{R3.Q1, R3.Q2, R3.Q3, R3.Q3i, R3.N1}
+\expart{Keep in mind}{Codes are as recorded each year, with no boundary changes applied (code 65 appears only from
+2015). Each province's share of all energy is in the table only: one masked row can dominate (province 63 holds 38.5\%
+of all energy on 51 changes). Association, not cause.}

@@ -1,0 +1,90 @@
+% R1-R3 exhibit book: one page per exhibit, with what it is, how to read it,
+% what it shows on this data, and how it answers Deasy's request row.
+% Build: latexmk -pdf r123_exhibit_book.tex   (figures are read from the three block folders)
+% Development data -- obscured values, fictional firm panel. Not BPS findings.
+\documentclass[10pt,a4paper]{article}
+\usepackage[a4paper,margin=1.7cm,top=1.5cm,bottom=1.6cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{mathptmx}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage[hidelinks]{hyperref}
+\usepackage{microtype}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{3pt}
+\setlist{nosep,leftmargin=1.2em}
+\definecolor{rule}{gray}{0.55}
+\definecolor{soft}{gray}{0.35}
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0pt}
+\fancyfoot[L]{\footnotesize\color{soft}Development data --- obscured values, fictional firm panel. Not BPS findings.}
+\fancyfoot[R]{\footnotesize\color{soft}\thepage}
+
+\titleformat{\section}{\large\bfseries}{}{0pt}{}
+\titlespacing*{\section}{0pt}{0pt}{6pt}
+
+% Paths to the three blocks (relative to this folder)
+\newcommand{\blockI}{../block-r1-paris-internationalisation}
+\newcommand{\blockII}{../block-r2-internationalisation-energy-efficiency}
+\newcommand{\blockIII}{../block-r3-energy-emissions-correlates}
+
+% One exhibit page.
+% #1 exhibit ID (e.g. R1-02)   #2 short title   #3 figure path (PDF), or empty for a table-only page
+% #4 files line (do-file -> outputs)   #5 max figure height as a fraction of the text height (e.g. 0.55)
+\newcommand{\expage}[5]{%
+  \clearpage
+  \phantomsection\addcontentsline{toc}{subsection}{#1\quad #2}\label{ex:#1}%
+  {\large\bfseries #1\quad #2}\par
+  {\footnotesize\color{soft}#4}\par\vspace{2pt}
+  {\color{rule}\hrule}\vspace{4pt}
+  \if\relax\detokenize{#3}\relax\else
+    \begin{center}\includegraphics[width=\linewidth,height=#5\textheight,keepaspectratio]{#3}\end{center}\vspace{-4pt}
+  \fi
+}
+% Labelled text blocks under the figure
+\newcommand{\expart}[2]{\par\smallskip{\small\textbf{#1.}\ #2}\par}
+\newcommand{\items}[1]{{\footnotesize\color{soft}Deasy's items answered (see the block's TRACKER.md): #1}\par}
+
+\begin{document}
+
+\begin{titlepage}
+\vspace*{3cm}
+{\LARGE\bfseries Deasy's requests R1--R3: every exhibit, one page each}\par\vspace{10pt}
+{\large Project 1014 (Deasy--Imed paper): firm panel of Indonesian manufacturing, 2010--2022}\par\vspace{24pt}
+\begin{minipage}{0.85\linewidth}\small
+Each page shows one chart or table built from \texttt{analysis\_ready\_data.dta} with one standalone Stata do-file, and says
+in plain words what it is, how to read it, what it shows on this file, and which part of Deasy's request it answers.
+Every number was re-computed independently by a reviewer before the exhibit was accepted.\par\medskip
+\textbf{This is development data}: values are obscured and the firm links are fictional (a firm's later records may belong to
+another real firm). The pages test the method and the wording. They are not findings about Indonesian firms; the same
+do-files run on the real BPS files.\par\medskip
+Where to find things: \texttt{20260917-run/block-r1-paris-internationalisation/}, \texttt{block-r2-internationalisation-energy-efficiency/},
+\texttt{block-r3-energy-emissions-correlates/}. Each block has \texttt{00\_run.do} (runs everything), one do-file per exhibit,
+\texttt{INDEX.md} (details kept out of the figures) and \texttt{TRACKER.md} (every item of Deasy's row and its status).
+\end{minipage}
+\vfill
+{\small 25 September 2026}
+\end{titlepage}
+\setcounter{page}{2}
+
+\input{request_map}
+\clearpage
+\tableofcontents
+\clearpage
+
+\input{r1_pages}
+\input{r2_pages}
+\input{r3_pages}
+
+\end{document}

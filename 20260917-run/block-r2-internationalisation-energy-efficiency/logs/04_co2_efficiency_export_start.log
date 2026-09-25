@@ -1,0 +1,783 @@
+------------------------------------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r2-internationalisation-energy-
+> efficiency/logs/04_co2_efficiency_export_start.log
+  log type:  text
+ opened on:  25 Sep 2026, 04:07:01
+
+. timer clear 1
+
+. timer on 1
+
+. display _newline "=== [`exhibit'] STARTING: `yshort' before and after the export start ==="
+
+=== [R2-04] STARTING: value added per tonne of CO2 before and after the export start ===
+
+. 
+. * ---- chart style (identical block in every file) ----
+. set scheme s1mono
+
+. capture graph set window fontface "Times New Roman"   // GUI Stata; console Stata keeps its default font
+
+. * Note: this changes your Stata graph font permanently; undo with: graph set window fontface default
+. local devnote "Development data — obscured values, fictional firm panel. Not BPS findings."
+
+. local srcnote "Source: SI/IBS annual files 2010–2022 (masked), analysis_ready_data.dta."
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 1/7: load export status, energy, CO2 and value added"
+Step 1/7: load export status, energy, CO2 and value added
+
+. *---------------------------------------------------------------------------
+. * export_flag         = any export activity (1 yes, 0 no, missing = unknown)
+. * total_gj_s1         = energy use in GJ (nine fuels + purchased electricity)
+. * co2_total_s1        = CO2 tonnes from the same fuels and electricity
+. * value_added_nominal = value added, current prices (masked money unit)
+. use firm_id year export_flag total_gj_s1 co2_total_s1 value_added_nominal using "$DATA", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. isid firm_id year
+
+. assert year != 2016
+
+. sort firm_id year
+
+. tsset firm_id year                 // L. and F. below mean exact calendar years
+
+Panel variable: firm_id (unbalanced)
+ Time variable: year, 2010 to 2022, but with gaps
+         Delta: 1 unit
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 2/7: date each firm's export start under two rules (same code in every R2 file)"
+Step 2/7: date each firm's export start under two rules (same code in every R2 file)
+
+. *---------------------------------------------------------------------------
+. * Missing status is unknown, never read as "not participating".
+. * Rule A, simple first entry (main): the first year the firm is seen
+. *   participating, if it was seen NOT participating in some earlier year.
+. *   Firms participating when first seen cannot be dated and are left out.
+. * Rule B, previous paper's sustained entry (variant): the first year t with
+. *   participation in t, none in t-1 AND t-2, and participation again in t+1
+. *   (exact calendar years; the missing 2016 file breaks the pattern).
+. * Comparison group for BOTH rules: firms never seen participating.
+. * Row keys: 9001 never seen participating · 9002 already participating when first
+. * seen (rule A, excluded) · 9003 status never observed · 9004 seen participating
+. * without the sustained pattern (rule B, excluded) · 8000 all entrants · 9999 all firms.
+. local x export_flag
+
+.     * --- Rule A ---
+.     by firm_id: egen int first_yes = min(cond(`x' == 1, year, .))
+(21,821 missing values generated)
+
+.     by firm_id: egen int first_no  = min(cond(`x' == 0, year, .))
+(7,833 missing values generated)
+
+.     by firm_id: egen int n_known   = total(!missing(`x'))
+
+.     gen int keyA = .
+(33,049 missing values generated)
+
+.     replace keyA = 9003 if n_known == 0                                     // status never observed
+(4,817 real changes made)
+
+.     replace keyA = 9001 if n_known > 0 & missing(first_yes)                 // never seen participating
+(17,004 real changes made)
+
+.     replace keyA = 9002 if n_known > 0 & !missing(first_yes) & (missing(first_no) | first_no > first_yes)
+(5,800 real changes made)
+
+.     replace keyA = first_yes if n_known > 0 & !missing(first_yes) & !missing(first_no) & first_no < first_yes
+(5,428 real changes made)
+
+.     assert !missing(keyA)
+
+.     gen int gA = keyA if keyA < 9000                                        // entry year, rule A
+(27,621 missing values generated)
+
+.     by firm_id: egen int last_no_before = max(cond(`x' == 0 & year < gA, year, .))
+(7,833 missing values generated)
+
+.     gen byte exactA = !missing(gA) & last_no_before == gA - 1               // seen "no" the year just before
+
+.     by firm_id: egen int first_stop = min(cond(!missing(gA) & `x' == 0 & year > gA, year, .))
+(29,872 missing values generated)
+
+.     gen byte stopA = !missing(first_stop)                                   // later seen not participating
+
+.     by firm_id: egen byte reenterA = max(!missing(first_stop) & `x' == 1 & year > first_stop)
+
+. 
+.     * --- Rule B ---
+.     gen byte cleanB = (`x' == 1 & L1.`x' == 0 & L2.`x' == 0 & F1.`x' == 1)
+
+.     by firm_id: egen int gB = min(cond(cleanB == 1, year, .))               // entry year, rule B
+(32,781 missing values generated)
+
+.     by firm_id: egen byte earlier_yesB = max(`x' == 1 & year < gB & !missing(gB))
+
+.     gen int keyB = cond(!missing(gB), gB, cond(n_known == 0, 9003, cond(missing(first_yes), 9001, 9004)))
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 3/7: set the year window (R2-02's rule) and check it against R2-02's table if present"
+Step 3/7: set the year window (R2-02's rule) and check it against R2-02's table if present
+
+. *---------------------------------------------------------------------------
+. * Years since the start = calendar year minus start year (0 = start year,
+. * -1 = the year before). A firm's 2016 is simply missing (no file).
+. gen int kA = year - gA                                  // missing for non-starters
+(27,621 missing values generated)
+
+. * Usable row = energy, CO2 and value added all above zero, so every log exists
+. * (the same rows in R2-03, R2-04 and R2-05). A zero is left out, not read as "none".
+. gen byte usable = total_gj_s1 > 0 & co2_total_s1 > 0 & value_added_nominal > 0 ///
+>     & !missing(total_gj_s1, co2_total_s1, value_added_nominal)
+
+. by firm_id: egen int first_seen = min(year)             // first year the firm is in the file
+
+. tempfile fy est
+
+. save `fy'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_66166.000001 saved as .dta format
+
+. * Which years since the start get their own point: R2-02's rule, computed here so
+. * this file also runs on its own. A year passes when `minfirms'+ starters have a
+. * usable row in it, from starts both before and after 2016; take the widest
+. * window -K..+K in which every year passes (further out = grouped ends).
+. local minfirms 30
+
+. use `fy', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if !missing(gA) & usable
+(27,667 observations deleted)
+
+. gen byte early = gA < 2016
+
+. gen byte late  = gA > 2016
+
+. collapse (count) n = firm_id (max) early late, by(kA)
+
+. gen byte passes = n >= `minfirms' & early & late
+
+. assert passes if inlist(kA, -1, 0)
+
+. local K 0
+
+. local go 1
+
+. while `go' {
+  2.     local kk = `K' + 1
+  3.     quietly count if passes & inlist(kA, -`kk', `kk')
+  4.     if r(N) == 2 local K = `kk'
+  5.     else local go 0
+  6. }
+
+. local wlo = -`K'
+
+. local whi = `K'
+
+. * If R2-02's table is present, it must show the same window.
+. capture confirm file "tables/02_event_time_support.csv"
+
+. if !_rc {
+.     import delimited using "tables/02_event_time_support.csv", clear varnames(1)
+(encoding automatically selected: ISO-8859-1)
+(22 vars, 260 obs)
+.     if window_first[1] != `wlo' | window_last[1] != `whi' | min_firms[1] != `minfirms' {
+.         display as error "tables/02_event_time_support.csv shows another year window: re-run 02_event_time_support.do.
+> "
+.         exit 459
+.     }
+. }
+
+. local nout = `whi' + 1                                  // first grouped year on each side
+
+. display "   window (R2-02's rule, computed here): each year from `wlo' to +`whi' on its own; `nout'+ years before or a
+> fter grouped"
+   window (R2-02's rule, computed here): each year from -5 to +5 on its own; 6+ years before or after grouped
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 4/7: the firms compared, and one on/off marker per year since the start"
+Step 4/7: the firms compared, and one on/off marker per year since the start
+
+. *---------------------------------------------------------------------------
+. use `fy', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. * Keep the starters (rule A) and the firms never seen exporting (the comparison
+. * group, all their rows). Left out: firms already exporting when first seen
+. * (start year unknown) and firms whose export status is never recorded.
+. keep if !missing(gA) | keyA == 9001
+(10,617 observations deleted)
+
+. keep if usable
+(345 observations deleted)
+
+. gen double y = `yexpr'
+
+. if `"`mexpr'"' != "" gen double ym = `mexpr'
+
+. * The previous paper's control, used in one variant only: firm "age" squared,
+. * where age = years since the firm first appears in the file (the file has no
+. * founding year).
+. gen double age2 = (year - first_seen + 1)^2
+
+. * One marker per year since the start inside the window, except -1 (the year
+. * before the start = the reference, 0 by definition), plus one marker for each
+. * grouped end. Comparison firms are 0 on every marker.
+. gen byte ev_lo = !missing(kA) & kA < `wlo'
+
+. local terms "ev_lo"
+
+. local pre   "ev_lo"
+
+. local post  ""
+
+. local pre_in ""
+
+. forvalues k = `wlo'/`whi' {
+  2.     if `k' == -1 continue
+  3.     local nm = cond(`k' < 0, "ev_m" + string(-`k'), "ev_p" + string(`k'))
+  4.     gen byte `nm' = (kA == `k')
+  5.     local terms `terms' `nm'
+  6.     if `k' < -1 local pre `pre' `nm'
+  7.     if `k' < -1 local pre_in `pre_in' `nm'              // years before the start, grouped end left out
+  8.     if `k' >= 0 local post `post' `nm'
+  9. }
+
+. gen byte ev_hi = !missing(kA) & kA > `whi'
+
+. local terms `terms' ev_hi
+
+. gen byte ev_ref = (kA == -1)                            // for the counts only
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 5/7: estimate with firm and year fixed effects (clustered by firm), four versions"
+Step 5/7: estimate with firm and year fixed effects (clustered by firm), four versions
+
+. *---------------------------------------------------------------------------
+. * Log outcome on the markers, removing each firm's own average level (firm fixed
+. * effects) and each year's average (year fixed effects, set mostly by the
+. * comparison firms). A firm with one usable year cannot be compared with itself;
+. * reghdfe drops it and reports the number. Coefficient b = log difference from
+. * the firm's year before the start, net of the comparison firms' change; drawn
+. * as 100 x (exp(b) - 1) = % difference.
+. * Versions (the figure shows "main"; the others are in the table):
+. *   age2   = adds the previous paper's control (age squared, see Step 4)
+. *   no2017 = drops the 2017 starters (no 2016 file: they may have started in 2016)
+. *   exact  = keeps only starters seen not exporting the year just before
+. local v1 "main"
+
+. local v2 "age2"
+
+. local v3 "no2017"
+
+. local v4 "exact"
+
+. local c2 "age2"
+
+. local if3 "if gA != 2017"                               // comparison firms (gA missing) stay
+
+. local if4 "if missing(gA) | exactA == 1"
+
+. local lc = subinstr("`post'", " ", " + ", .)            // years 0..+`whi', for the average
+
+. local np : word count `post'
+
+. tempname h
+
+. postfile `h' str8 version str8 term int event_time byte(grouped reference) ///
+>     double(b se lo hi p) long(firms rows firms_early firms_late start_years) using `est'
+
+. forvalues s = 1/4 {
+  2.     quietly reghdfe y `terms' `c`s'' `if`s'', absorb(firm_id year) vce(cluster firm_id)
+  3.     local df = e(df_r)
+  4.     local N`s'  = e(N)
+  5.     local G`s'  = e(N_clust)
+  6.     local sg`s' = e(num_singletons)
+  7.     capture drop es
+  8.     gen byte es = e(sample)
+  9.     * Joint test: all years before the start (with and without the grouped end) are 0.
+.     quietly test `pre'
+ 10.     local F`s'  = r(F)
+ 11.     local Fd`s' = r(df)
+ 12.     local Fp`s' = r(p)
+ 13.     quietly test `pre_in'
+ 14.     local Fq`s' = r(p)
+ 15.     * Average over the start year and the years after it inside the window.
+.     quietly lincom (`lc') / `np'
+ 16.     local a`s'  = r(estimate)
+ 17.     local al`s' = r(estimate) - invttail(`df', 0.025) * r(se)
+ 18.     local ah`s' = r(estimate) + invttail(`df', 0.025) * r(se)
+ 19.     egen byte ftag = tag(firm_id) if es
+ 20.     quietly count if ftag == 1 & !missing(gA)
+ 21.     local st`s' = r(N)
+ 22.     quietly count if ftag == 1 & keyA == 9001
+ 23.     local cf`s' = r(N)
+ 24.     drop ftag
+ 25.     foreach t in `terms' ev_ref {
+ 26.         if "`t'" == "ev_lo"       local k = `wlo' - 1
+ 27.         else if "`t'" == "ev_hi"  local k = `whi' + 1
+ 28.         else if "`t'" == "ev_ref" local k = -1
+ 29.         else local k = cond(substr("`t'", 4, 1) == "m", -1, 1) * real(substr("`t'", 5, .))
+ 30.         * starters behind each point (a firm counts once in a grouped end)
+.         egen byte ft = tag(firm_id) if es & `t'
+ 31.         quietly count if ft == 1
+ 32.         local nf = r(N)
+ 33.         quietly count if es & `t'
+ 34.         local nr = r(N)
+ 35.         quietly count if ft == 1 & gA < 2016
+ 36.         local ne = r(N)
+ 37.         quietly count if ft == 1 & gA > 2016
+ 38.         local nl = r(N)
+ 39.         quietly levelsof gA if es & `t'
+ 40.         local ny : word count `r(levels)'
+ 41.         drop ft
+ 42.         if "`t'" == "ev_ref" {
+ 43.             post `h' ("`v`s''") ("`t'") (`k') (0) (1) (0) (.) (0) (0) (.) (`nf') (`nr') (`ne') (`nl') (`ny')
+ 44.         }
+ 45.         else {
+ 46.             local b  = _b[`t']
+ 47.             local se = _se[`t']
+ 48.             post `h' ("`v`s''") ("`t'") (`k') (inlist("`t'", "ev_lo", "ev_hi")) (0) (`b') (`se') ///
+>                 (`b' - invttail(`df', 0.025) * `se') (`b' + invttail(`df', 0.025) * `se') ///
+>                 (2 * ttail(`df', abs(`b' / `se'))) (`nf') (`nr') (`ne') (`nl') (`ny')
+ 49.         }
+ 50.     }
+ 51.     display "   `v`s'': " %6.0fc `N`s'' " rows, " %5.0fc `G`s'' " firms (" `st`s'' " starters), " ///
+>         %5.0fc `sg`s'' " one-year firms dropped; before-start test p = " %5.3f `Fp`s''
+ 52.     if `s' == 1 & `"`mexpr'"' != "" {
+ 53.         * The mirror outcome is minus the drawn one, so every coefficient flips sign exactly.
+.         matrix bmain = e(b)
+ 54.         quietly reghdfe ym `terms', absorb(firm_id year) vce(cluster firm_id)
+ 55.         foreach t of local terms {
+ 56.             assert reldif(_b[`t'], -bmain[1, "`t'"]) < 1e-6
+ 57.         }
+ 58.     }
+ 59. }
+   main: 20,070 rows, 3,574 firms (742 starters), 2,017 one-year firms dropped; before-start test p = 0.276
+   age2: 20,070 rows, 3,574 firms (742 starters), 2,017 one-year firms dropped; before-start test p = 0.303
+   no2017: 19,787 rows, 3,537 firms (705 starters), 2,017 one-year firms dropped; before-start test p = 0.125
+   exact: 18,121 rows, 3,343 firms (511 starters), 2,017 one-year firms dropped; before-start test p = 0.000
+
+. postclose `h'
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 6/7: percentages, the mirror, and the CSV (numbers written before drawing)"
+Step 6/7: percentages, the mirror, and the CSV (numbers written before drawing)
+
+. *---------------------------------------------------------------------------
+. use `est', clear
+
+. gen byte vorder = 1*(version == "main") + 2*(version == "age2") + 3*(version == "no2017") + 4*(version == "exact")
+
+. gen str70 version_label = ""
+(52 missing values generated)
+
+. replace version_label = "Main: all starters vs never exporters; firm and year fixed effects" if vorder == 1
+(13 real changes made)
+
+. replace version_label = "Adds the previous paper's control: age squared (years in the file)" if vorder == 2
+(13 real changes made)
+
+. replace version_label = "Without the 2017 starters (they may have started in 2016)"         if vorder == 3
+(13 real changes made)
+
+. replace version_label = "Only starters seen not exporting the year just before"             if vorder == 4
+(13 real changes made)
+
+. gen str24 column = cond(event_time > 0, "+", "") + string(event_time)
+
+. replace column = "`=`wlo'-1' or earlier (grouped)" if term == "ev_lo"
+(4 real changes made)
+
+. replace column = "+`nout' or later (grouped)"      if term == "ev_hi"
+(4 real changes made)
+
+. * % difference = 100 x (exp(b) - 1); the interval ends are converted the same way.
+. gen double pct    = 100 * (exp(b)  - 1)
+
+. gen double pct_lo = 100 * (exp(lo) - 1)
+
+. gen double pct_hi = 100 * (exp(hi) - 1)
+
+. * Mirror outcome: log coefficient -b, so its % = 100 x (exp(-b) - 1).
+. gen double mirror_b      = -b
+
+. gen double mirror_pct    = 100 * (exp(-b)  - 1)
+
+. gen double mirror_pct_lo = 100 * (exp(-hi) - 1)
+
+. gen double mirror_pct_hi = 100 * (exp(-lo) - 1)
+
+. if `"`mexpr'"' == "" {
+.     foreach v in mirror_b mirror_pct mirror_pct_lo mirror_pct_hi {
+  2.         replace `v' = .
+  3.     }
+. }
+
+. * Numbers for the whole version (repeated on each of its rows).
+. foreach v in n_rows n_firms n_starters n_comparison n_one_year_dropped before_df {
+  2.     gen long `v' = .
+  3. }
+(52 missing values generated)
+(52 missing values generated)
+(52 missing values generated)
+(52 missing values generated)
+(52 missing values generated)
+(52 missing values generated)
+
+. foreach v in before_F before_p before_p_no_grouped avg_after_b avg_after_pct avg_after_pct_lo avg_after_pct_hi {
+  2.     gen double `v' = .
+  3. }
+(52 missing values generated)
+(52 missing values generated)
+(52 missing values generated)
+(52 missing values generated)
+(52 missing values generated)
+(52 missing values generated)
+(52 missing values generated)
+
+. forvalues s = 1/4 {
+  2.     replace n_rows              = `N`s''  if vorder == `s'
+  3.     replace n_firms             = `G`s''  if vorder == `s'
+  4.     replace n_starters          = `st`s'' if vorder == `s'
+  5.     replace n_comparison        = `cf`s'' if vorder == `s'
+  6.     replace n_one_year_dropped  = `sg`s'' if vorder == `s'
+  7.     replace before_F            = `F`s''  if vorder == `s'
+  8.     replace before_df           = `Fd`s'' if vorder == `s'
+  9.     replace before_p            = `Fp`s'' if vorder == `s'
+ 10.     replace before_p_no_grouped = `Fq`s'' if vorder == `s'
+ 11.     replace avg_after_b         = `a`s''  if vorder == `s'
+ 12.     replace avg_after_pct       = 100 * (exp(`a`s'')  - 1) if vorder == `s'
+ 13.     replace avg_after_pct_lo    = 100 * (exp(`al`s'') - 1) if vorder == `s'
+ 14.     replace avg_after_pct_hi    = 100 * (exp(`ah`s'') - 1) if vorder == `s'
+ 15. }
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+
+. assert n_starters + n_comparison == n_firms
+
+. assert firms_early + firms_late == firms
+
+. gen int window_first = `wlo'
+
+. gen int window_last  = `whi'
+
+. gen str60 outcome        = "`yexpr'"
+
+. gen str60 mirror_outcome = "`mexpr'"
+
+. gen str90 note = ""
+(52 missing values generated)
+
+. replace note = "Reference year: 0 by definition" if reference
+(4 real changes made)
+
+. replace note = "Grouped end: all years before `wlo'; each firm counted once" if term == "ev_lo"
+(4 real changes made)
+
+. replace note = "Grouped end: all years after +`whi'; each firm counted once" if term == "ev_hi"
+(4 real changes made)
+
+. sort vorder event_time
+
+. order version version_label column event_time grouped reference b se lo hi p pct pct_lo pct_hi ///
+>       mirror_b mirror_pct mirror_pct_lo mirror_pct_hi firms rows firms_early firms_late start_years ///
+>       n_rows n_firms n_starters n_comparison n_one_year_dropped before_F before_df before_p ///
+>       before_p_no_grouped avg_after_b avg_after_pct avg_after_pct_lo avg_after_pct_hi ///
+>       window_first window_last outcome mirror_outcome note
+
+. drop term vorder
+
+. format b se lo hi mirror_b avg_after_b before_F %9.4f
+
+. format pct pct_lo pct_hi mirror_pct mirror_pct_lo mirror_pct_hi avg_after_pct avg_after_pct_lo avg_after_pct_hi %9.1f
+
+. format p before_p before_p_no_grouped %9.3f
+
+. format firms rows firms_early firms_late start_years n_rows n_firms n_starters n_comparison n_one_year_dropped before_
+> df %9.0f
+
+. export delimited using "tables/`fname'.csv", datafmt replace
+file tables/04_co2_efficiency_export_start.csv saved
+
+. list version column pct pct_lo pct_hi p firms firms_early firms_late if version == "main", noobs sep(0) abbreviate(24)
+>  clean
+
+    version                    column    pct   pct_lo   pct_hi       p   firms   firms_early   firms_late  
+       main   -6 or earlier (grouped)   23.3     -6.9     63.3   0.145     122             0          122  
+       main                        -5   28.7     -3.3     71.3   0.084     185            56          129  
+       main                        -4    5.5    -15.8     32.2   0.644     271           133          138  
+       main                        -3   14.7     -7.7     42.4   0.216     357           188          169  
+       main                        -2   -2.8    -18.5     15.9   0.749     467           275          192  
+       main                        -1    0.0      0.0      0.0       .     700           419          281  
+       main                         0   -6.3    -19.2      8.7   0.391     736           418          318  
+       main                        +1    6.0    -11.7     27.4   0.532     465           251          214  
+       main                        +2   10.8    -13.1     41.4   0.409     384           229          155  
+       main                        +3   15.8     -9.9     48.8   0.252     336           239           97  
+       main                        +4   -2.8    -25.3     26.5   0.832     278           218           60  
+       main                        +5   44.7      6.8     96.0   0.017     188           169           19  
+       main     +6 or later (grouped)   13.9    -13.1     49.2   0.347     196           196            0  
+
+. list version before_p before_p_no_grouped avg_after_pct avg_after_pct_lo avg_after_pct_hi n_rows n_starters ///
+>     if column == "0", noobs sep(0) abbreviate(24) clean
+
+    version   before_p   before_p_no_grouped   avg_after_pct   avg_after_pct_lo   avg_after_pct_hi   n_rows   n_starters
+>   
+       main      0.276                 0.266            10.2               -6.2               29.5    20070          742
+>   
+       age2      0.303                 0.276             9.4               -6.9               28.5    20070          742
+>   
+     no2017      0.125                 0.119            11.6               -5.1               31.2    19787          705
+>   
+      exact      0.000                 0.000             8.6               -9.0               29.6    18121          511
+>   
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 7/7: dot-and-whisker chart of the main version"
+Step 7/7: dot-and-whisker chart of the main version
+
+. *---------------------------------------------------------------------------
+. * Numbers for the notes, read from the table (never typed). The stricter version's
+. * before-start test is read first, because only the main version is drawn.
+. quietly summarize before_p if version == "exact"
+
+. local pex = r(mean)
+
+. keep if version == "main"
+(39 observations deleted)
+
+. local pp = cond(before_p[1] < 0.001, "p < 0.001", "p = " + string(before_p[1], "%5.3f"))
+
+. local px = cond(`pex' < 0.001, "p < 0.001", "p = " + string(`pex', "%5.3f"))
+
+. local t1 = cond(before_p[1] >= 0.05, "no clear difference", "a clear difference, a warning sign")
+
+. local t2 = cond(`pex' >= 0.05, "no clear difference", "a clear difference, a warning sign")
+
+. local a  = avg_after_pct[1]
+
+. local al = avg_after_pct_lo[1]
+
+. local ah = avg_after_pct_hi[1]
+
+. local avgtxt = cond(`a' > 0, "+", "") + string(`a', "%9.0f") + "% (95% interval " + cond(`al' > 0, "+", "") + string(`
+> al', "%9.0f") ///
+>     + "% to " + cond(`ah' > 0, "+", "") + string(`ah', "%9.0f") + "%)"
+
+. gen double x = event_time
+
+. gen double pr = round(pct)
+
+. gen str6 lbl = cond(pr > 0, "+", "") + string(pr, "%9.0f") if !reference
+(1 missing value generated)
+
+. gen str9 reflbl = "reference" if reference
+(12 missing values generated)
+
+. gen double refx = x - 0.2 if reference                  // label sits just left of the start line
+(12 missing values generated)
+
+. * x-axis: two lines per year: years since the start, then the number of starters.
+. local xlab ""
+
+. forvalues i = 1/`=_N' {
+  2.     local p = x[`i']
+  3.     local s = cond(`p' > 0, "+", "") + string(`p')
+  4.     if grouped[`i'] & `p' < 0 local s "≤ `p'"
+  5.     if grouped[`i'] & `p' > 0 local s "≥ +`p'"
+  6.     local n = string(firms[`i'], "%9.0fc")
+  7.     local xlab `"`xlab' `p' `""`s'" "`n'""'"'
+  8. }
+
+. * y-axis: a round step that grows with the numbers; 0 always inside.
+. quietly summarize pct_lo
+
+. local ymin = min(r(min), 0)
+
+. quietly summarize pct_hi
+
+. local ymax = max(r(max), 0)
+
+. local rng = `ymax' - `ymin'
+
+. local step = 10^floor(log10(`rng'))
+
+. if `rng'/`step' < 2       local step = `step'/5
+
+. else if `rng'/`step' < 5  local step = `step'/2
+
+. local ybot = `step' * floor(`ymin'/`step')
+
+. local ytop = `step' * ceil(`ymax'/`step')
+
+. local yfmt = cond(`step' >= 1, "%9.0f", "%9.1f")           // no repeated labels if the step is below 1
+
+. local xl = `wlo' - 1.6
+
+. local xr = `whi' + 1.6
+
+. * Notes as one text, wrapped below at 135 characters (the PDF runs wider than the PNG).
+. local mtxt ""
+
+. if `"`mexpr'"' != "" local mtxt "The table also has `mshort' (same result, other way up)."
+
+. local txt "Notes: Start = first year a firm is seen exporting after a year seen not exporting (it stays a starter if i
+> t stops later)."
+
+. local txt "`txt' Each dot is the starters' change since their year before the start, minus the same years' change amon
+> g never-exporters"
+
+. local txt "`txt' (firms never seen exporting). Bars = 95% intervals; a bar crossing 0 = no clear difference. Average o
+> f years 0 to +`whi':"
+
+. local txt "`txt' `avgtxt'. Before the start, all years taken together show `t1' (`pp'; below 0.05 would be clear); sta
+> rters"
+
+. local txt "`txt' seen not exporting in the year just before show `t2' (`px'). Shows timing, not proof of cause. Value 
+> added ="
+
+. local txt "`txt' output value minus materials, energy and services bought (current prices); `defs'. `mtxt'"
+
+. local txt "`txt' Firm links are fictional: this tests the method, not a finding."
+
+. local nl 0
+
+. local line ""
+
+. foreach w of local txt {
+  2.     if udstrlen(`"`line' `w'"') > 135 & `"`line'"' != "" {
+  3.         local ++nl
+  4.         local L`nl' `"`line'"'
+  5.         local line `"`w'"'
+  6.     }
+  7.     else local line = strtrim(`"`line' `w'"')
+  8. }
+
+. local ++nl
+
+. local L`nl' `"`line'"'
+
+. local notes ""
+
+. forvalues j = 1/`nl' {
+  2.     display "   note line `j': " udstrlen(`"`L`j''"') " characters"
+  3.     local notes `"`notes' "`L`j''""'
+  4. }
+   note line 1: 134 characters
+   note line 2: 124 characters
+   note line 3: 132 characters
+   note line 4: 135 characters
+   note line 5: 131 characters
+   note line 6: 132 characters
+   note line 7: 131 characters
+   note line 8: 92 characters
+
+. twoway (pci 0 `xl' 0 `xr', lcolor(gs8) lwidth(thin)) ///
+>     (pci `ybot' -0.5 `ytop' -0.5, lcolor(gs6) lpattern(dash) lwidth(thin)) ///
+>     (rspike pct_hi pct_lo x if !reference, lcolor(black) lwidth(thin)) ///
+>     (scatter pct x if !reference & !grouped, msymbol(O) msize(small) mcolor(black) ///
+>         mlabel(lbl) mlabposition(3) mlabgap(0.8) mlabsize(vsmall) mlabcolor(black)) ///
+>     (scatter pct x if grouped, msymbol(Oh) msize(small) mcolor(black) ///
+>         mlabel(lbl) mlabposition(3) mlabgap(0.8) mlabsize(vsmall) mlabcolor(black)) ///
+>     (scatter pct x if reference, msymbol(D) msize(small) mcolor(gs8)) ///
+>     (scatter pct refx if reference, msymbol(none) mlabel(reflbl) mlabposition(6) mlabgap(1.5) ///
+>         mlabsize(vsmall) mlabcolor(gs6)), ///
+>     xscale(range(`xl' `xr') noline) xlabel(`xlab', labsize(small) noticks tlength(0) labgap(1)) ///
+>     xtitle("Years since the start (0 = start year); second row = number of starter firms", size(small) margin(t+1)) //
+> /
+>     yscale(range(`ybot' `ytop') noline) ///
+>     ylabel(`ybot'(`step')`ytop', angle(0) labsize(small) noticks tlength(0) grid glcolor(gs14) glwidth(vthin) format(`
+> yfmt')) ///
+>     ytitle("") subtitle("`yaxis': % change since the year before the start, starters minus never-exporters", size(smal
+> l) position(11) justification(left) span) ///
+>     legend(order(4 "Each single year before or after the start" 5 "Years `nout'+ before or after, combined" ///
+>                  6 "Year before the start (reference = 0)" 3 "95% interval" ///
+>                  1 "0 = no difference" 2 "Start of exporting") ///
+>         cols(2) position(6) region(lstyle(none)) size(vsmall) symxsize(5) keygap(1) colgap(4) rowgap(0.3)) ///
+>     title("Figure `exhibit'. `ftitle'", size(medium) position(11) justification(left) span) ///
+>     note(`notes' "`srcnote'" "`devnote'", size(vsmall) span linegap(0.6)) ///
+>     graphregion(color(white) lcolor(white) margin(r+3)) plotregion(style(none)) ///
+>     xsize(9) ysize(7.5)
+
+. 
+. graph export "figures/`fname'.png", width(2700) replace
+file
+    /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r2-internationalisation-energy-efficie
+    > ncy/figures/04_co2_efficiency_export_start.png saved as PNG format
+
+. graph export "figures/`fname'.pdf", replace
+file
+    /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r2-internationalisation-energy-efficie
+    > ncy/figures/04_co2_efficiency_export_start.pdf saved as PDF format
+
+. 
+. timer off 1
+
+. quietly timer list 1
+
+. local elapsed = strtrim(string(r(t1), "%9.1f"))
+
+. display "FINISHED: figure -> figures/`fname'.png (elapsed `elapsed' s)"
+FINISHED: figure -> figures/04_co2_efficiency_export_start.png (elapsed 3.5 s)
+
+. quietly log close          // keeps FINISHED as the last output line of the log

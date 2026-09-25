@@ -1,0 +1,899 @@
+------------------------------------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r3-energy-emissions-correlates/
+> logs/03_who_reduces_by_sector.log
+  log type:  text
+ opened on:  25 Sep 2026, 03:43:46
+
+. timer clear 1
+
+. timer on 1
+
+. display _newline "=== [R3-03] STARTING: which sectors cut energy and CO2 more often than the typical firm ==="
+
+=== [R3-03] STARTING: which sectors cut energy and CO2 more often than the typical firm ===
+
+. 
+. * ---- chart style (identical block in every file) ----
+. set scheme s1mono
+
+. capture graph set window fontface "Times New Roman"   // GUI Stata; console Stata keeps its default font
+
+. * Note: this changes your Stata graph font permanently; undo with: graph set window fontface default
+. local devnote "Development data — obscured values, fictional firm panel. Not BPS findings."
+
+. local srcnote "Source: SI/IBS annual files 2010–2022 (masked), analysis_ready_data.dta."
+
+. local minchg 100                 // a sector is drawn only with at least this many one-year changes
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 1/7: load; sector code as a number; each sector's share of all energy and CO2 (table only)"
+Step 1/7: load; sector code as a number; each sector's share of all energy and CO2 (table only)
+
+. *---------------------------------------------------------------------------
+. * industry2_reported = first two digits of the reported industry code (24 manufacturing
+. * sectors, 10-33); whether codes are consistent across years is not verified.
+. use firm_id year industry2_reported total_gj_s1 co2_total_s1 value_added_nominal using "$DATA", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. isid firm_id year
+
+. gen int sector = real(industry2_reported)
+
+. quietly count if missing(sector)
+
+. display "   rows with no readable sector code: " r(N)
+   rows with no readable sector code: 0
+
+. replace sector = 99 if missing(sector)
+(0 real changes made)
+
+. preserve
+
+. collapse (sum) gj = total_gj_s1 tco2 = co2_total_s1 (count) rows = firm_id, by(sector)
+
+. quietly summarize gj
+
+. gen double pct_all_energy = 100 * gj / r(sum)
+
+. quietly summarize tco2
+
+. gen double pct_all_co2 = 100 * tco2 / r(sum)
+
+. keep sector rows pct_all_energy pct_all_co2
+
+. tempfile shares
+
+. save `shares'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_23887.000002 saved as .dta format
+
+. restore
+
+. * Largest single firm-year share of that year's energy: on masked data one row can dominate
+. * a year, so the sector shares of energy are a rough reading aid only (logged, not drawn).
+. preserve
+
+. bysort year: egen double tot = total(total_gj_s1)
+
+. gen double sh1 = 100 * total_gj_s1 / tot
+
+. collapse (max) top_row_pct = sh1, by(year)
+
+. list, noobs sep(0) abbreviate(24)
+
+  +--------------------+
+  | year   top_row_pct |
+  |--------------------|
+  | 2010     9.0517885 |
+  | 2011     15.249348 |
+  | 2012     16.574749 |
+  | 2013     60.547486 |
+  | 2014     40.457274 |
+  | 2015     62.807507 |
+  | 2017     34.896198 |
+  | 2018     21.601888 |
+  | 2019     19.802081 |
+  | 2020     29.550776 |
+  | 2021     99.106708 |
+  | 2022      45.86869 |
+  +--------------------+
+
+. restore
+
+. xtset firm_id year
+
+Panel variable: firm_id (unbalanced)
+ Time variable: year, 2010 to 2022, but with gaps
+         Delta: 1 unit
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 2/7: one-year changes, as in R3-01 (same code)"
+Step 2/7: one-year changes, as in R3-01 (same code)
+
+. *---------------------------------------------------------------------------
+. gen double energy    = total_gj_s1
+
+. gen double co2       = co2_total_s1
+
+. gen double energy_va = total_gj_s1  / value_added_nominal
+
+. gen double co2_va    = co2_total_s1 / value_added_nominal
+
+. gen byte pair1 = !missing(L.total_gj_s1)                        // firm is in last year's file
+
+. gen byte cmp = pair1 & total_gj_s1>0 & L.total_gj_s1>0 & co2_total_s1>0 & L.co2_total_s1>0 ///
+>                & value_added_nominal>0 & L.value_added_nominal>0
+
+. assert pair1 == 0 if year == 2017                               // no 2016 file
+
+. foreach v in energy co2 energy_va co2_va {
+  2.     gen double chg_`v' = ln(`v') - ln(L.`v') if cmp
+  3. }
+(12,880 missing values generated)
+(12,880 missing values generated)
+(12,880 missing values generated)
+(12,880 missing values generated)
+
+. foreach v in energy co2 energy_va co2_va {
+  2.     * Year-adjusted: this firm's change minus the typical (median) change of all
+.     * compared firms in the same year, so the years a firm happens to be
+.     * observed in do not decide whether it is a reducer.
+.     bysort year: egen double med_chg_`v' = pctile(chg_`v'), p(50)   // median; egen median() would ignore "double"
+  3.     gen double rel_chg_`v' = chg_`v' - med_chg_`v'
+  4.     bysort firm_id: egen int    n_chg_`v'   = count(chg_`v')
+  5.     bysort firm_id: egen double avg_chg_`v' = mean(chg_`v')
+  6.     bysort firm_id: egen double avg_rel_`v' = mean(rel_chg_`v')
+  7.     gen byte reducer_`v'     = (avg_chg_`v' < 0) if n_chg_`v' >= 2
+  8.     gen byte reducer_adj_`v' = (avg_rel_`v' < 0) if n_chg_`v' >= 2
+  9. }
+(5,691 missing values generated)
+(12,880 missing values generated)
+(5,402 missing values generated)
+(5,402 missing values generated)
+(8,713 missing values generated)
+(8,713 missing values generated)
+(5,691 missing values generated)
+(12,880 missing values generated)
+(5,402 missing values generated)
+(5,402 missing values generated)
+(8,713 missing values generated)
+(8,713 missing values generated)
+(5,691 missing values generated)
+(12,880 missing values generated)
+(5,402 missing values generated)
+(5,402 missing values generated)
+(8,713 missing values generated)
+(8,713 missing values generated)
+(5,691 missing values generated)
+(12,880 missing values generated)
+(5,402 missing values generated)
+(5,402 missing values generated)
+(8,713 missing values generated)
+(8,713 missing values generated)
+
+. xtset firm_id year                // the bysort calls above changed the sort order
+
+Panel variable: firm_id (unbalanced)
+ Time variable: year, 2010 to 2022, but with gaps
+         Delta: 1 unit
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 3/7: did each change beat the typical firm? sector at the start of each change"
+Step 3/7: did each change beat the typical firm? sector at the start of each change
+
+. *---------------------------------------------------------------------------
+. * beat = the change was below the typical (median) change that year: it fell more or rose less.
+. foreach v in energy_va co2_va energy co2 {
+  2.     gen byte beat_`v' = (rel_chg_`v' < 0) if cmp
+  3.     quietly count if cmp & rel_chg_`v' == 0
+  4.     display "   `v': changes exactly at the typical change (counted as not beating it) = " r(N)
+  5. }
+(12,880 missing values generated)
+   energy_va: changes exactly at the typical change (counted as not beating it) = 7
+(12,880 missing values generated)
+   co2_va: changes exactly at the typical change (counted as not beating it) = 7
+(12,880 missing values generated)
+   energy: changes exactly at the typical change (counted as not beating it) = 7
+(12,880 missing values generated)
+   co2: changes exactly at the typical change (counted as not beating it) = 7
+
+. quietly summarize beat_energy_va
+
+. assert inrange(r(mean), 0.49, 0.51)            // about half beat the median by construction
+
+. gen int g_sec = L.sector if cmp                 // sector in the first year of the change
+(12,880 missing values generated)
+
+. quietly count if cmp & g_sec != sector
+
+. display "   changes whose two-digit sector differs between the two years: " r(N)
+   changes whose two-digit sector differs between the two years: 0
+
+. quietly count if cmp
+
+. local n_cmp_num = r(N)
+
+. local n_cmp = strtrim(string(r(N), "%9.0fc"))
+
+. assert !missing(g_sec) if cmp
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 4/7: share per sector with 95% intervals (clustered by firm)"
+Step 4/7: share per sector with 95% intervals (clustered by firm)
+
+. *---------------------------------------------------------------------------
+. * The interval allows for the same firm appearing in several years.
+. tempname P
+
+. tempfile rows
+
+. postfile `P' int sector long(changes firms) ///
+>     double(pct_energy_va lo_energy_va hi_energy_va pct_co2_va lo_co2_va hi_co2_va ///
+>            pct_energy lo_energy hi_energy pct_co2 lo_co2 hi_co2 pct_energy_va_early) ///
+>     long changes_early double pct_energy_va_late long changes_late using `rows', replace
+(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_23887.000004 not found)
+
+. quietly levelsof g_sec if cmp, local(ss)
+
+. foreach s of local ss {
+  2.     local vals ""
+  3.     foreach v in energy_va co2_va energy co2 {
+  4.         quietly mean beat_`v' if cmp & g_sec == `s', vce(cluster firm_id)
+  5.         matrix T = r(table)
+  6.         local p  = 100 * T[1,1]
+  7.         local lo = 100 * T[5,1]
+  8.         local hi = 100 * T[6,1]
+  9.         local nn = e(N)
+ 10.         local nf = e(N_clust)
+ 11.         local vals `vals' (`p') (`lo') (`hi')
+ 12.     }
+ 13.     quietly summarize beat_energy_va if cmp & g_sec == `s' & year < 2016
+ 14.     local pe = 100 * r(mean)
+ 15.     local ne = r(N)
+ 16.     quietly summarize beat_energy_va if cmp & g_sec == `s' & year > 2016
+ 17.     local pl = 100 * r(mean)
+ 18.     local nl = r(N)
+ 19.     post `P' (`s') (`nn') (`nf') `vals' (`pe') (`ne') (`pl') (`nl')
+ 20. }
+
+. postclose `P'
+
+. foreach v in energy_va energy co2 co2_va {
+  2.     quietly regress beat_`v' i.g_sec if cmp, vce(cluster firm_id)
+  3.     quietly testparm i.g_sec
+  4.     display "   `v': do sectors differ at all? F(" r(df) ", " r(df_r) ") = " %6.2f r(F) ", p = " %6.4f r(p)
+  5. }
+   energy_va: do sectors differ at all? F(23, 5278) =   4.56, p = 0.0000
+   energy: do sectors differ at all? F(23, 5278) =   5.93, p = 0.0000
+   co2: do sectors differ at all? F(23, 5278) =   7.04, p = 0.0000
+   co2_va: do sectors differ at all? F(23, 5278) =   5.11, p = 0.0000
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 5/7: firm-level companion (the R3 reducer flag), sector at each firm's first change"
+Step 5/7: firm-level companion (the R3 reducer flag), sector at each firm's first change
+
+. *---------------------------------------------------------------------------
+. preserve
+
+. bysort firm_id: egen int first_cmp = min(cond(cmp, year, .))
+(5,402 missing values generated)
+
+. bysort firm_id: egen int f_sec = max(cond(year == first_cmp, g_sec, .))
+(5,402 missing values generated)
+
+. bysort firm_id: keep if _n == 1
+(22,586 observations deleted)
+
+. keep if !missing(reducer_adj_energy_va)         // firms with at least two changes
+(6,754 observations deleted)
+
+. tempname F
+
+. tempfile firmrows
+
+. postfile `F' int sector long(firms changes reducer_adj_firms) double(pct_reducer_adj lo hi) using `firmrows', replace
+(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_23887.000006 not found)
+
+. quietly levelsof f_sec, local(fs)
+
+. foreach s of local fs {
+  2.     quietly count if f_sec == `s' & reducer_adj_energy_va == 1
+  3.     local nr = r(N)
+  4.     quietly summarize n_chg_energy_va if f_sec == `s'
+  5.     local nch = r(sum)
+  6.     local nf  = r(N)
+  7.     if `nf' >= 2 {
+  8.         quietly ci proportions reducer_adj_energy_va if f_sec == `s', wilson
+  9.         post `F' (`s') (`nf') (`nch') (`nr') (100 * r(proportion)) (100 * r(lb)) (100 * r(ub))
+ 10.     }
+ 11.     else post `F' (`s') (`nf') (`nch') (`nr') (100 * `nr' / `nf') (.) (.)
+ 12. }
+
+. postclose `F'
+
+. restore
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 6/7: names, drawing rule, order -> CSVs (numbers written before drawing)"
+Step 6/7: names, drawing rule, order -> CSVs (numbers written before drawing)
+
+. *---------------------------------------------------------------------------
+. use `rows', clear
+
+. merge 1:1 sector using `shares', nogen
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                                24  
+    -----------------------------------------
+
+. replace changes = 0 if missing(changes)
+(0 real changes made)
+
+. replace firms = 0 if missing(firms)
+(0 real changes made)
+
+. label define secname 10 "Food products" 11 "Beverages" 12 "Tobacco" 13 "Textiles" 14 "Clothing" ///
+>     15 "Leather and footwear" 16 "Wood products" 17 "Paper" 18 "Printing" 19 "Refined petroleum, coke" ///
+>     20 "Chemicals" 21 "Medicines" 22 "Rubber and plastics" 23 "Cement, glass, ceramics" ///
+>     24 "Steel and other metals" 25 "Metal products" 26 "Computers, electronics" 27 "Electrical equipment" ///
+>     28 "Machinery" 29 "Motor vehicles" 30 "Motorcycles, other vehicles" 31 "Furniture" 32 "Other manufacturing" ///
+>     33 "Machine repair" 99 "Not recorded"
+
+. label values sector secname
+
+. decode sector, gen(sector_name)
+
+. gen str100 isic4_title = ""
+(24 missing values generated)
+
+. local t10 "Food products"
+
+. local t11 "Beverages"
+
+. local t12 "Tobacco products"
+
+. local t13 "Textiles"
+
+. local t14 "Wearing apparel"
+
+. local t15 "Leather and related products"
+
+. local t16 "Wood and products of wood and cork, except furniture; articles of straw and plaiting materials"
+
+. local t17 "Paper and paper products"
+
+. local t18 "Printing and reproduction of recorded media"
+
+. local t19 "Coke and refined petroleum products"
+
+. local t20 "Chemicals and chemical products"
+
+. local t21 "Pharmaceuticals, medicinal chemical and botanical products"
+
+. local t22 "Rubber and plastics products"
+
+. local t23 "Other non-metallic mineral products"
+
+. local t24 "Basic metals"
+
+. local t25 "Fabricated metal products, except machinery and equipment"
+
+. local t26 "Computer, electronic and optical products"
+
+. local t27 "Electrical equipment"
+
+. local t28 "Machinery and equipment n.e.c."
+
+. local t29 "Motor vehicles, trailers and semi-trailers"
+
+. local t30 "Other transport equipment"
+
+. local t31 "Furniture"
+
+. local t32 "Other manufacturing"
+
+. local t33 "Repair and installation of machinery and equipment"
+
+. forvalues c = 10/33 {
+  2.     replace isic4_title = "`t`c''" if sector == `c'
+  3. }
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+
+. replace sector_name = "Code " + string(sector) if sector_name == ""
+(0 real changes made)
+
+. label values sector
+
+. gen byte in_figure = changes >= `minchg'        // too few changes: kept in the table, named under the plot
+
+. quietly summarize changes
+
+. assert r(sum) == `n_cmp_num'                    // every change sits in exactly one sector
+
+. assert lo_energy_va <= pct_energy_va & pct_energy_va <= hi_energy_va if firms >= 2
+
+. gsort -in_figure -pct_energy_va sector
+
+. gen int row_order = _n
+
+. order row_order in_figure sector sector_name isic4_title changes firms rows pct_all_energy pct_all_co2
+
+. format pct_* lo_* hi_* %6.2f
+
+. export delimited using "tables/03_who_reduces_by_sector.csv", datafmt replace
+file tables/03_who_reduces_by_sector.csv saved
+
+. list row_order sector sector_name changes firms pct_all_energy pct_energy_va lo_energy_va hi_energy_va pct_energy pct_
+> co2, noobs sep(0) abbreviate(24)
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | row_order | sector |                 sector_name | changes | firms | pct_all_energy | pct_energy_va | lo_energy_va |
+  |         1 |     24 |      Steel and other metals |     210 |    96 |           0.44 |         55.71 |        49.82 |
+  |--------------------------------------------------------------------------------------------------------------------|
+  |              hi_energy_va              |              pct_energy              |              pct_co2               |
+  |                     61.61              |                   55.24              |                57.62               |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | row_order | sector |                 sector_name | changes | firms | pct_all_energy | pct_energy_va | lo_energy_va |
+  |         2 |     17 |                       Paper |     425 |   139 |           1.78 |         54.82 |        50.71 |
+  |--------------------------------------------------------------------------------------------------------------------|
+  |              hi_energy_va              |              pct_energy              |              pct_co2               |
+  |                     58.94              |                   51.53              |                50.59               |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | row_order | sector |                 sector_name | changes | firms | pct_all_energy | pct_energy_va | lo_energy_va |
+  |         3 |     13 |                    Textiles |    2026 |   419 |          18.07 |         53.75 |        52.02 |
+  |--------------------------------------------------------------------------------------------------------------------|
+  |              hi_energy_va              |              pct_energy              |              pct_co2               |
+  |                     55.48              |                   55.33              |                55.48               |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | row_order | sector |                 sector_name | changes | firms | pct_all_energy | pct_energy_va | lo_energy_va |
+  |         4 |     25 |              Metal products |     846 |   262 |           0.89 |         53.31 |        50.46 |
+  |--------------------------------------------------------------------------------------------------------------------|
+  |              hi_energy_va              |              pct_energy              |              pct_co2               |
+  |                     56.16              |                   51.54              |                51.77               |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | row_order | sector |                 sector_name | changes | firms | pct_all_energy | pct_energy_va | lo_energy_va |
+  |         5 |     29 |              Motor vehicles |     367 |   114 |           0.16 |         52.32 |        48.25 |
+  |--------------------------------------------------------------------------------------------------------------------|
+  |              hi_energy_va              |              pct_energy              |              pct_co2               |
+  |                     56.38              |                   56.40              |                57.77               |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | row_order | sector |                 sector_name | changes | firms | pct_all_energy | pct_energy_va | lo_energy_va |
+  |         6 |     15 |        Leather and footwear |     531 |   173 |           0.11 |         51.79 |        48.09 |
+  |--------------------------------------------------------------------------------------------------------------------|
+  |              hi_energy_va              |              pct_energy              |              pct_co2               |
+  |                     55.49              |                   54.05              |                53.48               |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | row_order | sector |                 sector_name | changes | firms | pct_all_energy | pct_energy_va | lo_energy_va |
+  |         7 |     10 |               Food products |    5336 |  1074 |           7.46 |         50.94 |        49.88 |
+  |--------------------------------------------------------------------------------------------------------------------|
+  |              hi_energy_va              |              pct_energy              |              pct_co2               |
+  |                     51.99              |                   50.47              |                50.67               |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | row_order | sector |                 sector_name | changes | firms | pct_all_energy | pct_energy_va | lo_energy_va |
+  |         8 |     18 |                    Printing |     441 |   157 |           0.21 |         50.79 |        46.52 |
+  |--------------------------------------------------------------------------------------------------------------------|
+  |              hi_energy_va              |              pct_energy              |              pct_co2               |
+  |                     55.07              |                   50.57              |                53.06               |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | row_order | sector |                 sector_name | changes | firms | pct_all_energy | pct_energy_va | lo_energy_va |
+  |         9 |     28 |                   Machinery |     296 |   128 |           0.04 |         50.68 |        45.87 |
+  |--------------------------------------------------------------------------------------------------------------------|
+  |              hi_energy_va              |              pct_energy              |              pct_co2               |
+  |                     55.48              |                   50.34              |                51.35               |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | row_order | sector |                 sector_name | changes | firms | pct_all_energy | pct_energy_va | lo_energy_va |
+  |        10 |     21 |                   Medicines |     166 |    65 |           0.07 |         50.00 |        43.64 |
+  |--------------------------------------------------------------------------------------------------------------------|
+  |              hi_energy_va              |              pct_energy              |              pct_co2               |
+  |                     56.36              |                   52.41              |                52.41               |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | row_order | sector |                 sector_name | changes | firms | pct_all_energy | pct_energy_va | lo_energy_va |
+  |        11 |     20 |                   Chemicals |     917 |   272 |           4.74 |         49.95 |        47.27 |
+  |--------------------------------------------------------------------------------------------------------------------|
+  |              hi_energy_va              |              pct_energy              |              pct_co2               |
+  |                     52.62              |                   50.71              |                51.25               |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | row_order | sector |                 sector_name | changes | firms | pct_all_energy | pct_energy_va | lo_energy_va |
+  |        12 |     22 |         Rubber and plastics |    1632 |   414 |           0.76 |         49.75 |        47.72 |
+  |--------------------------------------------------------------------------------------------------------------------|
+  |              hi_energy_va              |              pct_energy              |              pct_co2               |
+  |                     51.79              |                   50.61              |                50.55               |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | row_order | sector |                 sector_name | changes | firms | pct_all_energy | pct_energy_va | lo_energy_va |
+  |        13 |     12 |                     Tobacco |     662 |   154 |           0.06 |         48.94 |        45.78 |
+  |--------------------------------------------------------------------------------------------------------------------|
+  |              hi_energy_va              |              pct_energy              |              pct_co2               |
+  |                     52.10              |                   46.07              |                45.32               |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | row_order | sector |                 sector_name | changes | firms | pct_all_energy | pct_energy_va | lo_energy_va |
+  |        14 |     16 |               Wood products |     733 |   244 |           1.01 |         48.84 |        45.87 |
+  |--------------------------------------------------------------------------------------------------------------------|
+  |              hi_energy_va              |              pct_energy              |              pct_co2               |
+  |                     51.81              |                   49.39              |                48.16               |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | row_order | sector |                 sector_name | changes | firms | pct_all_energy | pct_energy_va | lo_energy_va |
+  |        15 |     14 |                    Clothing |    1865 |   417 |           1.11 |         48.15 |        46.33 |
+  |--------------------------------------------------------------------------------------------------------------------|
+  |              hi_energy_va              |              pct_energy              |              pct_co2               |
+  |                     49.97              |                   48.20              |                47.45               |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | row_order | sector |                 sector_name | changes | firms | pct_all_energy | pct_energy_va | lo_energy_va |
+  |        16 |     32 |         Other manufacturing |     476 |   159 |           0.02 |         48.11 |        44.31 |
+  |--------------------------------------------------------------------------------------------------------------------|
+  |              hi_energy_va              |              pct_energy              |              pct_co2               |
+  |                     51.91              |                   48.74              |                46.85               |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | row_order | sector |                 sector_name | changes | firms | pct_all_energy | pct_energy_va | lo_energy_va |
+  |        17 |     23 |     Cement, glass, ceramics |    1232 |   323 |          62.74 |         48.05 |        45.98 |
+  |--------------------------------------------------------------------------------------------------------------------|
+  |              hi_energy_va              |              pct_energy              |              pct_co2               |
+  |                     50.12              |                   46.92              |                47.16               |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | row_order | sector |                 sector_name | changes | firms | pct_all_energy | pct_energy_va | lo_energy_va |
+  |        18 |     27 |        Electrical equipment |     267 |    98 |           0.05 |         44.57 |        39.89 |
+  |--------------------------------------------------------------------------------------------------------------------|
+  |              hi_energy_va              |              pct_energy              |              pct_co2               |
+  |                     49.25              |                   44.19              |                46.82               |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | row_order | sector |                 sector_name | changes | firms | pct_all_energy | pct_energy_va | lo_energy_va |
+  |        19 |     30 | Motorcycles, other vehicles |     253 |    85 |           0.02 |         44.27 |        38.98 |
+  |--------------------------------------------------------------------------------------------------------------------|
+  |              hi_energy_va              |              pct_energy              |              pct_co2               |
+  |                     49.56              |                   49.41              |                49.41               |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | row_order | sector |                 sector_name | changes | firms | pct_all_energy | pct_energy_va | lo_energy_va |
+  |        20 |     26 |      Computers, electronics |     190 |    65 |           0.04 |         44.21 |        39.21 |
+  |--------------------------------------------------------------------------------------------------------------------|
+  |              hi_energy_va              |              pct_energy              |              pct_co2               |
+  |                     49.21              |                   44.21              |                44.21               |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | row_order | sector |                 sector_name | changes | firms | pct_all_energy | pct_energy_va | lo_energy_va |
+  |        21 |     31 |                   Furniture |     988 |   257 |           0.02 |         43.52 |        41.29 |
+  |--------------------------------------------------------------------------------------------------------------------|
+  |              hi_energy_va              |              pct_energy              |              pct_co2               |
+  |                     45.75              |                   41.80              |                41.40               |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | row_order | sector |                 sector_name | changes | firms | pct_all_energy | pct_energy_va | lo_energy_va |
+  |        22 |     11 |                   Beverages |     235 |   113 |           0.09 |         42.98 |        37.42 |
+  |--------------------------------------------------------------------------------------------------------------------|
+  |              hi_energy_va              |              pct_energy              |              pct_co2               |
+  |                     48.54              |                   42.13              |                39.57               |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | row_order | sector |                 sector_name | changes | firms | pct_all_energy | pct_energy_va | lo_energy_va |
+  |        23 |     19 |     Refined petroleum, coke |      27 |    17 |           0.04 |         51.85 |        38.25 |
+  |--------------------------------------------------------------------------------------------------------------------|
+  |              hi_energy_va              |              pct_energy              |              pct_co2               |
+  |                     65.46              |                   59.26              |                59.26               |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | row_order | sector |                 sector_name | changes | firms | pct_all_energy | pct_energy_va | lo_energy_va |
+  |        24 |     33 |              Machine repair |      48 |    34 |           0.04 |         37.50 |        22.62 |
+  |--------------------------------------------------------------------------------------------------------------------|
+  |              hi_energy_va              |              pct_energy              |              pct_co2               |
+  |                     52.38              |                   43.75              |                43.75               |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+. 
+. preserve
+
+. use `firmrows', clear
+
+. merge 1:1 sector using `shares', keepusing(sector) nogen keep(match)
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                                24  
+    -----------------------------------------
+
+. label define secname2 10 "Food products" 11 "Beverages" 12 "Tobacco" 13 "Textiles" 14 "Clothing" ///
+>     15 "Leather and footwear" 16 "Wood products" 17 "Paper" 18 "Printing" 19 "Refined petroleum, coke" ///
+>     20 "Chemicals" 21 "Medicines" 22 "Rubber and plastics" 23 "Cement, glass, ceramics" ///
+>     24 "Steel and other metals" 25 "Metal products" 26 "Computers, electronics" 27 "Electrical equipment" ///
+>     28 "Machinery" 29 "Motor vehicles" 30 "Motorcycles, other vehicles" 31 "Furniture" 32 "Other manufacturing" ///
+>     33 "Machine repair" 99 "Not recorded"
+
+. label values sector secname2
+
+. decode sector, gen(sector_name)
+
+. replace sector_name = "Code " + string(sector) if sector_name == ""
+(0 real changes made)
+
+. label values sector
+
+. order sector sector_name firms changes reducer_adj_firms pct_reducer_adj lo hi
+
+. sort sector
+
+. format pct_reducer_adj lo hi %6.2f
+
+. export delimited using "tables/03_who_reduces_by_sector_firm_flag.csv", datafmt replace
+file tables/03_who_reduces_by_sector_firm_flag.csv saved
+
+. list, noobs sep(0) abbreviate(24)
+
+  +--------------------------------------------------------------------------------------------------------------+
+  | sector                   sector_name   firms   changes   reducer_adj_firms   pct_reducer_adj      lo      hi |
+  |--------------------------------------------------------------------------------------------------------------|
+  |     10                 Food products     824      5086                 426             51.70   48.29   55.10 |
+  |     11                     Beverages      51       173                  19             37.25   25.32   50.97 |
+  |     12                       Tobacco     122       630                  65             53.28   44.46   61.90 |
+  |     13                      Textiles     333      1940                 210             63.06   57.76   68.07 |
+  |     14                      Clothing     345      1793                 192             55.65   50.38   60.80 |
+  |     15          Leather and footwear     112       470                  60             53.57   44.37   62.54 |
+  |     16                 Wood products     148       637                  65             43.92   36.18   51.97 |
+  |     17                         Paper      96       382                  60             62.50   52.51   71.53 |
+  |     18                      Printing      97       381                  71             73.20   63.62   81.00 |
+  |     19       Refined petroleum, coke       7        17                   4             57.14   25.05   84.18 |
+  |     20                     Chemicals     176       821                  94             53.41   46.05   60.63 |
+  |     21                     Medicines      46       147                  20             43.48   30.21   57.75 |
+  |     22           Rubber and plastics     302      1520                 132             43.71   38.23   49.35 |
+  |     23       Cement, glass, ceramics     217      1126                  84             38.71   32.48   45.33 |
+  |     24        Steel and other metals      48       162                  30             62.50   48.36   74.78 |
+  |     25                Metal products     172       756                  98             56.98   49.50   64.14 |
+  |     26        Computers, electronics      38       163                  13             34.21   21.21   50.11 |
+  |     27          Electrical equipment      61       230                  24             39.34   28.07   51.88 |
+  |     28                     Machinery      68       236                  32             47.06   35.67   58.76 |
+  |     29                Motor vehicles      81       334                  50             61.73   50.84   71.55 |
+  |     30   Motorcycles, other vehicles      57       225                  15             26.32   16.65   38.98 |
+  |     31                     Furniture     187       918                  54             28.88   22.86   35.75 |
+  |     32           Other manufacturing     112       429                  43             38.39   29.91   47.64 |
+  |     33                Machine repair       9        23                   4             44.44   18.88   73.33 |
+  +--------------------------------------------------------------------------------------------------------------+
+
+. restore
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 7/7: dot plot, four panels on one shared scale, sectors sorted by panel (a)"
+Step 7/7: dot plot, four panels on one shared scale, sectors sorted by panel (a)
+
+. *---------------------------------------------------------------------------
+. * y positions: header row 0, drawn sectors 1..K, then a block naming the sectors with too few changes
+. quietly count if in_figure
+
+. local K = r(N)
+
+. gen double y = row_order if in_figure
+(2 missing values generated)
+
+. local ylab `"0 "Sector (number of one-year changes)""'
+
+. forvalues i = 1/`K' {
+  2.     local nstr = strtrim(string(changes[`i'], "%9.0fc"))
+  3.     local lab = sector_name[`i'] + " (`nstr')"
+  4.     local ylab `"`ylab' `i' "`lab'""'
+  5. }
+
+. local ymax = `K' + 0.5
+
+. local nsmall = _N - `K'
+
+. if `nsmall' > 0 {
+.     local pos = `K' + 2
+.     local ylab `"`ylab' `pos' "{bf:Too few changes to draw (under `minchg'):}""'
+.     forvalues i = `=`K'+1'/`=_N' {
+  2.         local ++pos
+  3.         local nstr = strtrim(string(changes[`i'], "%9.0fc"))
+  4.         local lab = sector_name[`i'] + " (`nstr')"
+  5.         local ylab `"`ylab' `pos' "`lab'""'
+  6.     }
+.     local ymax = `pos' + 0.5
+. }
+
+. * numbers for the notes (read from the data, never typed)
+. quietly count if in_figure & !missing(lo_energy_va, hi_energy_va) & (lo_energy_va > 50 | hi_energy_va < 50)
+
+. local nmiss = r(N)
+
+. local nexp = max(1, round(`K' / 20))
+
+. keep if in_figure
+(2 observations deleted)
+
+. expand 4
+(66 observations created)
+
+. bysort row_order: gen byte panel = _n
+
+. gen double pct = cond(panel == 1, pct_energy_va, cond(panel == 2, pct_co2_va, cond(panel == 3, pct_energy, pct_co2)))
+
+. gen double lo  = cond(panel == 1, lo_energy_va,  cond(panel == 2, lo_co2_va,  cond(panel == 3, lo_energy,  lo_co2)))
+
+. gen double hi  = cond(panel == 1, hi_energy_va,  cond(panel == 2, hi_co2_va,  cond(panel == 3, hi_energy,  hi_co2)))
+
+. gen str8   plab = string(pct, "%4.1f")
+
+. gen double labx = cond(pct < 50, lo, hi)
+
+. gen byte   labp = cond(pct < 50, 9, 3)
+
+. label define panel 1 "(a) Energy per unit of VA" 2 "(b) CO2 per unit of VA" 3 "(c) Energy use (GJ)" 4 "(d) CO2 emitted
+>  (tonnes)"
+
+. label values panel panel
+
+. local n0 = _N
+
+. set obs `=_N + 8'
+Number of observations (_N) was 88, now 96.
+
+. gen double refx = 50 if _n > `n0'
+(88 missing values generated)
+
+. gen double refy = .
+(96 missing values generated)
+
+. forvalues p = 1/4 {
+  2.     replace panel = `p' in `=`n0' + 2*`p' - 1'
+  3.     replace panel = `p' in `=`n0' + 2*`p''
+  4.     replace refy = 0.5 in `=`n0' + 2*`p' - 1'
+  5.     replace refy = `K' + 0.5 in `=`n0' + 2*`p''
+  6. }
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+
+. quietly summarize lo
+
+. local dlo = 50 - r(min)
+
+. quietly summarize hi
+
+. local dhi = r(max) - 50
+
+. local half = max(10, 5 * ceil((max(`dlo', `dhi') + 3) / 5))
+
+. local xlo = 50 - `half'
+
+. local xhi = 50 + `half'
+
+. local xs  = 10 * floor(`half' / 10)
+
+. display "   x range `xlo'-`xhi'"
+   x range 30-70
+
+. sort panel refy y
+
+. 
+. twoway (rspike lo hi y, horizontal lcolor(black) lwidth(thin)) ///
+>     (scatter y pct, msymbol(O) mcolor(black) msize(vsmall)) ///
+>     (scatter y labx, msymbol(none) mlabel(plab) mlabvposition(labp) mlabgap(0.6) mlabsize(vsmall) mlabcolor(gs5)) ///
+>     (line refy refx, lpattern(dash) lcolor(gs8) lwidth(thin)), ///
+>     by(panel, rows(1) graphregion(color(white) lcolor(white) ilcolor(white)) legend(pos(6)) scale(0.8125) ///
+>         title("Figure R3-03. Share of yearly changes in which energy and CO2 fell more (or rose less) than at the typi
+> cal firm," ///
+>               "by manufacturing sector, sorted by panel (a)", size(small) pos(11) span) ///
+>         note("Notes: Each dot = share of the sector's one-year changes that fell more or rose less than the typical (m
+> edian) change of all firms that year." ///
+>              "50% = same as the typical firm. Where the 95% interval crosses the dashed line, the sector is not clearl
+> y different. In panel (a), `nmiss' of `K'" ///
+>              "intervals do not cross it, against about `nexp' by chance alone. Each change counts once, whatever the f
+> irm's size. Shows which sectors, not why." ///
+>              "Sector = two-digit industry code at the start of each change (`n_cmp' changes); codes are not checked fo
+> r consistency across years. GJ = gigajoules." ///
+>              "VA = value added = output minus materials, energy and services bought (current prices); sectors whose pr
+> ices rose faster look better in (a) and (b)." ///
+>              "`srcnote'" "`devnote'", size(vsmall) span linegap(0.6))) ///
+>     subtitle(, pos(11) nobox fcolor(white) lcolor(white) size(small)) ///
+>     yscale(reverse noline range(-0.3 `ymax')) ylabel(`ylab', angle(0) noticks tlength(0) nogrid labsize(vsmall)) ytitl
+> e("") ///
+>     xscale(range(`xlo' `xhi') lcolor(gs10)) ///
+>     xlabel(`=50 - `xs''(10)`=50 + `xs'', noticks tlength(0) labsize(vsmall) grid glcolor(gs15) glwidth(vthin)) ///
+>     xtitle("Changes that fell more or rose less than the typical firm's that year (% of the sector's changes)", size(v
+> small)) ///
+>     legend(order(2 "Share (%)" 1 "95% interval" 4 "50% = same as the typical firm") rows(1) region(lcolor(none)) ///
+>         size(vsmall) symxsize(8) keygap(1) colgap(6)) ///
+>     plotregion(style(none)) xsize(9.5) ysize(8)
+
+. 
+. graph export "figures/03_who_reduces_by_sector.png", width(2850) replace
+file
+    /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r3-energy-emissions-correlates/figures
+    > /03_who_reduces_by_sector.png saved as PNG format
+
+. graph export "figures/03_who_reduces_by_sector.pdf", replace
+file
+    /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r3-energy-emissions-correlates/figures
+    > /03_who_reduces_by_sector.pdf saved as PDF format
+
+. timer off 1
+
+. quietly timer list 1
+
+. local elapsed = strtrim(string(r(t1), "%9.1f"))
+
+. display "FINISHED: figure -> figures/03_who_reduces_by_sector.png (elapsed `elapsed' s)"
+FINISHED: figure -> figures/03_who_reduces_by_sector.png (elapsed 6.1 s)
+
+. quietly log close

@@ -1,0 +1,235 @@
+% R2 part of the R1--R3 exhibit book: row summary + one page per exhibit (R2-01 to R2-10).
+% Numbers from block-r2 INDEX.md, TRACKER.md, tables/*.csv and the reviews' re-checks (Sun--Abraham rows as corrected).
+\clearpage
+\section{R2 --- Starting to export, import or get a foreign owner, and energy efficiency}
+
+{\small\textbf{Deasy's row R2} (PIC Toar), verbatim:}
+\begin{quote}\small
+Request: ``Intertionalized and energy efficiency''.\quad Strategy: ``Stagged did''.\quad
+Notes: ``Mirip dengan paper kita sebelumnya hanya Ganti tahun\ldots'' (= like our previous paper, only change the years).
+\end{quote}
+
+{\small\textbf{Every item in the row and where it is answered} (from the block's \texttt{TRACKER.md}; items in brackets are what a
+design with firms starting in different years needs).}\par\smallskip
+{\footnotesize
+\begin{tabularx}{\linewidth}{@{}l>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{4.4cm}>{\raggedright\arraybackslash}p{5.2cm}@{}}
+\toprule
+ID & Deasy's item (short) & Exhibits & Status \\
+\midrule
+R2.Q1 & ``Intertionalized and energy efficiency'' & R2-03 to R2-10 & done on this dataset: export starts no clear change; import starts +29\%, clear; foreign-owner starts not clear \\
+R2.T1 & (internationalised =) starting to export & R2-01 to R2-07, R2-09 & done \\
+R2.T2 & (internationalised =) starting to import & R2-01 (table), R2-08 (a), R2-10 (a) & done \\
+R2.T3 & (internationalised =) getting a foreign owner, 10\%+ & R2-01 (table), R2-08 (b), R2-10 (b) & done \\
+R2.O1 & Energy efficiency as in the previous paper (its six measures) & R2-03, 04, 05, 07, 08, 09 & done \\
+R2.S1 & ``Stagged did'' & R2-03 to R2-10 & done (every start event: export, import, foreign owner, any trade) \\
+R2.S2 & ``Mirip dengan paper kita sebelumnya'': its four methods & R2-06, 07, 08, 10 & done \\
+R2.S3 & ``hanya Ganti tahun'': 2010--2022 window, its start rule & R2-01, every R2 file & done (its rule leaves 29 export starters) \\
+R2.S4 & (needed) firms per start year and per year since the start & R2-01, 02, 06 & done \\
+R2.S5 & (needed) no difference before the start & R2-03, 04, 05, 07, 08, 09, 10 & done: checks run for every exhibit, mixed results (pass for all starters; several stricter checks fail) \\
+\bottomrule
+\end{tabularx}}
+
+\medskip
+{\small\textbf{What this block says on the development data}}
+\begin{itemize}\small
+\item Firms that start exporting show no clear change in value added per GJ of energy: +9\% (95\% interval $-$8\% to +28\%), and
+  +4\% to +10\% under the previous paper's four methods. Starts before and after Paris do not differ clearly.
+\item The small, unclear rise in exporters' value added per GJ comes from value added growing (+19\%, clear), not from
+  using less energy (energy use +9\%, not clear).
+\item Firms that start importing show a clear rise, +29\% (+14\% to +46\%), in every version and under every method (+29\% to
+  +36\%); but under one method's check over all earlier years they were already changing before the start.
+\item Getting a foreign owner (10\%+ of capital) shows no clear change: +4\% ($-$12\% to +22\%); 0\% to +13\% by method.
+\item Of the previous paper's six measures, only value added per GJ of bought electricity is clearly up after the export start
+  (+27\%), and not against the average of the five years before the start (+17\%, not clear).
+\item Three recording problems are repaired: import starts dated 2017, all 2020 foreign-ownership answers, and doubtful
+  energy records in 2017 and 2019--2022. Firm links are fictional: every page tests the method; none is a finding.
+\end{itemize}
+
+% ---------------------------------------------------------------- R2-01
+\expage{R2-01}{Firms that start exporting, by start year}{\blockII/figures/01_export_entry_cohorts.pdf}{\texttt{01\_export\_entry\_cohorts.do} $\to$ \texttt{figures/01\_\ldots.png}, \texttt{tables/01\_\ldots.csv}}{0.56}
+\expart{What it is}{The number of firms that start exporting in each year 2011--2022. A firm ``starts'' in the first year it is seen
+exporting after a year it was seen not exporting. The table repeats the count for starting to import, for getting a foreign owner
+(10\%+), and under the previous paper's stricter rule.}
+\expart{How to read it}{Bar height and the label on top = all starters that year. Dark part = seen not exporting the year just
+before (start year exact); white part = last seen not exporting two or more years before (start year approximate). 2010 is the first
+file, so no start can be seen. The gray band is 2016: no annual file, so the 2017 bar also holds 2016 starts and is all white.}
+\expart{What it shows on this data}{743 export starters, 511 with an exact year; 37 to 113 per year. 362 of them are later seen not
+exporting again. Not in the bars: 4,945 firms never seen exporting (the comparison group of the later pages), 1,794 already
+exporting when first seen (start unknown, left out) and 2,981 with no known export status. The stricter rule (no exports in both
+years before, exports again the year after) leaves only 29 starters. In the table, 459 import starts fall in 2017 and 854
+foreign-owner starts in 2020, both inflated by recording problems.}
+\expart{How it helps Deasy's request}{``Stagged did'' needs a start year for every firm: this page gives it, fully. For ``Mirip
+dengan paper kita sebelumnya hanya Ganti tahun'' it rebuilds the previous paper's rule on 2010--2022 and shows that it leaves too
+few firms, so the simple rule is the main one.}
+\items{R2.T1, R2.T2, R2.T3, R2.S3, R2.S4}
+\expart{Keep in mind}{Firm links are fictional, so a firm's ``no'' and ``yes'' years may belong to different real firms. The 2022
+file asks only about direct exports.}
+
+% ---------------------------------------------------------------- R2-02
+\expage{R2-02}{Firms seen before and after they start exporting}{\blockII/figures/02_event_time_support.pdf}{\texttt{02\_event\_time\_support.do} $\to$ \texttt{figures/02\_\ldots.png}, \texttt{tables/02\_\ldots.csv}}{0.60}
+\expart{What it is}{Panel A counts the export starters seen in each year before and after their start year: one row per start
+year, one column per year since the start ($\le -6$ to $\ge +6$). Panel B counts the comparison firms, never seen exporting, in each
+calendar year.}
+\expart{How to read it}{In A, a cell = starters of that start year seen that many years from their start; gray cells = the missing
+2016 file. Between the dashed lines each column has 30+ starters with data, from start years both before and after 2016; further out
+only early or only late starters are seen, so those years are grouped. The ``Previous rule'' row is the previous paper's stricter
+rule. In B, dark = seen not exporting that year; white = export status not recorded.}
+\expart{What it shows on this data}{The year-by-year window is $-5$ to +5: 743 starters are seen in their start year, 706 the year
+before and 189 at +5. The edges are thin: at $-5$ the only early starters are the 57 firms that started in 2015; at +5 the only
+late starters are the 20 that started in 2017. The comparison group has 1,210--1,660 firms a year, and 2,832 of its 4,945 firms have two or
+more years with data, which is needed to see a change. In 2022 no firm is seen not exporting (direct exports only). The previous rule
+never passes 29 firms in a column.}
+\expart{How it helps Deasy's request}{``Stagged did'' compares each starter with its own year before the start. This page shows how
+many firms every later point stands on and fixes the window used by R2-03 to R2-09. It fully answers the ``firms per start year
+and per year since the start'' item, and shows why the previous rule cannot give year-by-year points.}
+\items{R2.S4, R2.S3}
+\expart{Keep in mind}{Counts only, no energy result. Firm links are fictional.}
+
+% ---------------------------------------------------------------- R2-03
+\expage{R2-03}{Energy efficiency before and after the export start}{\blockII/figures/03_energy_efficiency_export_start.pdf}{\texttt{03\_energy\_efficiency\_export\_start.do} $\to$ \texttt{figures/03\_\ldots.png}, \texttt{tables/03\_\ldots.csv}}{0.56}
+\expart{What it is}{Value added per GJ of energy (fuels burned plus bought electricity) for 742 export starters, as \% change since
+their year before the start, minus the change in the same years among 2,832 never-exporters. Each firm is compared with itself and
+each year's common change is removed (``firm and year fixed effects''); 20,070 firm-years. It is the previous paper's main measure
+(log value added per GJ).}
+\expart{How to read it}{Black dot = one year since the start; hollow dot = 6 or more years before or after, grouped; gray diamond = the year before the start
+(set to 0). Bars = 95\% intervals: a bar crossing 0 = no clear difference. The number under each year = starters behind the dot.
+Dots left of the dashed line are the before-start check: they should sit near 0.}
+\expart{What it shows on this data}{Average of years 0 to +5: +9\% (95\% interval $-$8\% to +28\%), no clear change. Only year +5
+is clearly above 0 (+45\%), and it rests on 169 starters from before 2016 and 19 from 2017. Before the start, all starters show no
+clear difference (p = 0.245; below 0.05 would be clear), but starters seen not exporting the year just before do (p $<$ 0.001),
+a warning sign.}
+\expart{How it helps Deasy's request}{It answers ``Intertionalized and energy efficiency'' for exporting, with the ``Stagged did''
+design and the previous paper's outcome (``Mirip dengan paper kita sebelumnya''). In part: exporting only and one way of combining
+start years; R2-06 and R2-07 check that, R2-08 adds importing and foreign owners.}
+\items{R2.Q1, R2.T1, R2.O1, R2.S1, R2.S5}
+\expart{Keep in mind}{Timing, not proof of cause. Export status is unknown in 193 of the 700 reference-year rows, so ``never seen
+exporting'' can include firms that exported in unknown years. Value added is in current prices. Firm links are fictional.}
+
+% ---------------------------------------------------------------- R2-04
+\expage{R2-04}{CO2 efficiency before and after the export start}{\blockII/figures/04_co2_efficiency_export_start.pdf}{\texttt{04\_co2\_efficiency\_export\_start.do} $\to$ \texttt{figures/04\_\ldots.png}, \texttt{tables/04\_\ldots.csv}}{0.56}
+\expart{What it is}{The R2-03 comparison with value added per tonne of CO2 instead of per GJ: 742 export starters against 2,832
+never-exporters, \% change since the year before the start, years $-5$ to +5. Same firms, rows and model as R2-03.}
+\expart{How to read it}{As R2-03: black dots = single years, hollow dots = 6 or more years before or after, grouped, gray diamond = reference year (0),
+bars = 95\% intervals (crossing 0 = no clear difference), numbers under the axis = starters behind each dot.}
+\expart{What it shows on this data}{Average of years 0 to +5: +10\% (95\% interval $-$6\% to +29\%), no clear change. The dots follow
+R2-03 almost one for one (year +5 again +45\%). Before the start: no clear difference for all starters (p = 0.276), a clear one for
+starters seen not exporting the year just before (p $<$ 0.001), a warning sign. The reason for the likeness: CO2 here is calculated
+from fuel and electricity use at standard rates, not measured, so it can differ from R2-03 only when firms switch fuels.}
+\expart{How it helps Deasy's request}{It covers the emissions side of ``Intertionalized and energy efficiency'' with the previous
+paper's second measure (log value added per CO2). It answers that item for export starts, but it adds little beyond R2-03, because
+the CO2 figures are built from the energy figures.}
+\items{R2.Q1, R2.O1, R2.S1, R2.S5}
+\expart{Keep in mind}{Bought electricity uses one national CO2 rate per year (rising 2010--2014, fixed after); holding it fixed
+barely moves the dots. Timing, not cause; firm links are fictional.}
+
+% ---------------------------------------------------------------- R2-05
+\expage{R2-05}{Energy use, CO2 and value added separately}{\blockII/figures/05_energy_co2_va_export_start.pdf}{\texttt{05\_energy\_co2\_va\_export\_start.do} $\to$ \texttt{figures/05\_\ldots.png}, \texttt{tables/05\_\ldots.csv}}{0.66}
+\expart{What it is}{The R2-03 comparison split into its parts: energy use (GJ), CO2 (tonnes) and value added, each as \% change since
+the year before the export start, starters minus never-exporters. Same firms, window and model; one scale in all three panels.}
+\expart{How to read it}{Marks as in R2-03. Value added per GJ (R2-03) rises where the value-added dot sits above the energy dot. If
+the energy dot is not below 0, that rise is more value added, not less energy.}
+\expart{What it shows on this data}{Average of years 0 to +5: energy use +9\% ($-$7\% to +28\%), CO2 +8\% ($-$8\% to +26\%), value
+added +19\% (+7\% to +31\%, clear). So starters do not use less energy; their value added grows faster. Warning: before the start,
+starters' energy use (p = 0.027) and CO2 (p = 0.022) were already changing differently from never-exporters' ($-31$\% at $-5$,
+$-18$\% at $-3$), while value added was not (p = 0.599). The energy and CO2 dots after the start may partly continue that.}
+\expart{How it helps Deasy's request}{Deasy's row asks about energy efficiency; this page shows where a change in it would come from,
+for both energy and emissions. It completes R2-03 and R2-04 for export starts.}
+\items{R2.Q1, R2.O1, R2.S1, R2.S5}
+\expart{Keep in mind}{Value added is in current prices; CO2 is calculated, not measured. Timing, not cause; firm links are fictional.}
+
+% ---------------------------------------------------------------- R2-06
+\expage{R2-06}{Energy efficiency after the export start, one start year at a time}{\blockII/figures/06_efficiency_by_start_year.pdf}{\texttt{06\_efficiency\_by\_start\_year.do} $\to$ \texttt{figures/06\_\ldots.png}, \texttt{tables/06\_\ldots.csv}}{0.56}
+\expart{What it is}{For each start year, value added per GJ after the export start against before it (up to five years each side),
+starters of that year minus never-exporters. Earlier starters are never the comparison. Then averages over start years, weighted by
+starters: before Paris (2011--15), after Paris (2017--22) and all.}
+\expart{How to read it}{Black dot = one start year; black diamond = an average; bars = 95\% intervals (crossing 0 = no clear
+difference). Hollow gray = without doubtful energy records. Second row = starters seen before and after (30+ for a dot). Dashed line
+= Paris Agreement adopted (December 2015); gray band = no 2016 file, so 2016 starts count as 2017.}
+\expart{What it shows on this data}{All start years: $-4$\% ($-16$\% to +10\%). Before Paris +1\%, after $-10$\%: no clear difference
+(p = 0.436). The only clear start year is 2022 ($-53$\%): it has one year after the start and its file asks only about direct
+exports; without it the average is +2\%. Without doubtful records: +1\%. Before the start: no clear difference (p = 0.116), but a
+clear one for starters seen not exporting the year just before (p $<$ 0.001).}
+\expart{How it helps Deasy's request}{It is the clean building block of ``Stagged did'': each start year is compared only with firms
+that never export, weighted by starters as Callaway--Sant'Anna do (``Mirip dengan paper kita sebelumnya''). It also splits starts
+before and after Paris. It differs from R2-03's +9\% mainly in how years are weighted: here the start year itself (735 firms, $-7$\%)
+counts most. Both averages cross 0.}
+\items{R2.Q1, R2.S1, R2.S2, R2.S4}
+\expart{Keep in mind}{Each start year has only 37 to 111 starters. Timing, not cause; firm links are fictional.}
+
+% ---------------------------------------------------------------- R2-07
+\expage{R2-07}{Energy efficiency after the export start, by method}{\blockII/figures/07_efficiency_by_method.pdf}{\texttt{07\_efficiency\_by\_method.do} $\to$ \texttt{figures/07\_\ldots.png}, \texttt{tables/07\_\ldots.csv}}{0.60}
+\expart{What it is}{Value added per GJ after the export start, average of years 0 to +5, starters minus never-exporters, under five
+ways of combining firms that start in different years: R2-03's single regression and the previous paper's four methods
+(Callaway--Sant'Anna, Sun--Abraham, Borusyak--Jaravel--Spiess, de Chaisemartin--D'Haultf\oe uille). Two reference rows: R2-06's
+average and the previous paper's stricter start rule.}
+\expart{How to read it}{Black dot = the average, each year counting equally; hollow gray diamond = the previous paper's own summary
+number; black diamond = another kind of average (gray text under the row name). Bars = 95\% intervals, crossing 0 = no clear
+difference. Right: starters used, and the before-start check (p below 0.05 = starters were already changing differently).}
+\expart{What it shows on this data}{+9\%, +8\%, +10\%, +4\% and +8\%: none is clear, so the answer does not depend on the method.
+Before-start checks pass (p = 0.119 to 0.326), but Callaway--Sant'Anna's check over all years before the start gives p = 0.009, a
+warning sign. Sun--Abraham has to leave out the 37 starters of 2017 (no file the year before); R2-03's model on the same starters
+also gives +10\%. The stricter rule: $-21$\% ($-59$\% to +53\%) on 29 starters, too few to say anything.}
+\expart{How it helps Deasy's request}{``Stagged did'' and ``Mirip dengan paper kita sebelumnya hanya Ganti tahun'': the previous
+paper's four methods and its start rule, run on 2010--2022. Fully answered for export starts.}
+\items{R2.Q1, R2.S1, R2.S2, R2.S3, R2.S5}
+\expart{Keep in mind}{Unlike the previous paper, only never-exporters are the comparison and there is no age control.
+Callaway--Sant'Anna and de Chaisemartin--D'Haultf\oe uille cannot measure 2017 starters either. Timing, not cause; firm links are
+fictional.}
+
+% ---------------------------------------------------------------- R2-08
+\expage{R2-08}{Importing, foreign owners and energy efficiency}{\blockII/figures/08_efficiency_import_foreign_start.pdf}{\texttt{08\_efficiency\_import\_foreign\_start.do} $\to$ \texttt{figures/08\_\ldots.png}, \texttt{tables/08\_\ldots.csv}}{0.60}
+\expart{What it is}{The R2-03 comparison for two other ways of becoming international: (a) starting to import, 1,253 starters against
+1,808 firms never seen importing; (b) getting a foreign owner with 10\%+ of the capital, 760 starters against 3,397 firms never
+foreign-owned. Value added per GJ, \% change since the year before the start, years $-4$ to +4.}
+\expart{How to read it}{Black dots = records repaired; gray triangles = every start and record as filed. The two lines above each
+panel give the average of years 0 to +4 and the before-start check for both. Repairs: import starts dated 2017 are left out
+(importers jump from 26\% of firms in 2015 to 56\% in 2017); all 2020 foreign-ownership answers are unknown (47\% of firms marked
+foreign-owned, about 9\% in other years); energy records of importers with unknown export status in 2017 and 2019--2022 are left
+out (they jump or drop far from other years).}
+\expart{What it shows on this data}{(a) Importing: +29\% (+14\% to +46\%), clear, with no difference before the start (p = 0.395). It
+holds as filed (+27\%), with starts before 2016 only (+33\%) and with start years kept apart (Sun--Abraham +35\%). It comes from less
+energy ($-13$\%) and more value added (+12\%), but value added was already changing before the start (p $<$ 0.001). (b) Foreign owner:
++4\% ($-12$\% to +22\%), not clear; Sun--Abraham 0\%. As filed +12\%, but those starters fail the before-start check (p $<$ 0.001).}
+\expart{How it helps Deasy's request}{It extends ``Intertionalized'' beyond exporting, using the previous paper's import-start and
+foreign-owner-start events and its measure. It answers both items; R2-10 adds its four methods.}
+\items{R2.Q1, R2.T2, R2.T3, R2.O1, R2.S1, R2.S2, R2.S5}
+\expart{Keep in mind}{A starter stays a starter if it stops later: 30--69\% of import starters are seen importing the next year. The
+repairs are judgments on recording problems. Timing, not cause; firm links are fictional.}
+
+% ---------------------------------------------------------------- R2-09
+\expage{R2-09}{The previous paper's six efficiency measures}{\blockII/figures/09_other_efficiency_measures.pdf}{\texttt{09\_other\_efficiency\_measures.do} $\to$ \texttt{figures/09\_\ldots.png}, \texttt{tables/09\_\ldots.csv}}{0.59}
+\expart{What it is}{The R2-03 comparison (export starters minus never-exporters, average of years 0 to +5) for each of the previous
+paper's six measures: value added and output per GJ of energy, value added and output per tonne of CO2, and value added per GJ of
+bought electricity and per GJ of fuels.}
+\expart{How to read it}{Black dot = the average; hollow gray = without doubtful energy records; bars = 95\% intervals, crossing 0 =
+no clear difference. Right: starters, never-exporters, before-start check (p below 0.05 = already changing differently). Rows 1 and 3
+are exactly R2-03 and R2-04.}
+\expart{What it shows on this data}{+9\%, +4\%, +10\%, +6\%, +27\% and $-1$\%. Only value added per GJ of bought electricity is clearly
+up (+27\%, +7\% to +50\%), and it is not electricity saved: value added grows (+20\%) while bought electricity use does not clearly
+change ($-5$\%). Against the average of the five years before the start, instead of the year just before, it is +17\%, not clear:
+borderline. All six pass the before-start check (p = 0.228 to 0.788).}
+\expart{How it helps Deasy's request}{``Mirip dengan paper kita sebelumnya hanya Ganti tahun'': all six of its outcomes on
+2010--2022, for export starts. This completes the ``energy efficiency'' item for exporting.}
+\items{R2.Q1, R2.O1, R2.S1, R2.S5}
+\expart{Keep in mind}{Current prices: the previous paper divided value added and output by a sector wholesale price index, which this
+file does not have. Starters seen not exporting the year just before fail the before-start check in 5 of 6 rows. Timing, not cause;
+firm links are fictional.}
+
+% ---------------------------------------------------------------- R2-10
+\expage{R2-10}{Importing, foreign owners and any trade, by method}{\blockII/figures/10_methods_import_foreign_start.pdf}{\texttt{10\_methods\_import\_foreign\_start.do} $\to$ \texttt{figures/10\_\ldots.png}, \texttt{tables/10\_\ldots.csv}}{0.60}
+\expart{What it is}{Value added per GJ after the start, average of years 0 to +4, starters minus firms that never start, under
+R2-08's single regression and the previous paper's four methods, for (a) starting to import, (b) getting a foreign owner (10\%+) and
+(c) starting to trade at all, by exporting or importing (the previous paper's third start event).}
+\expart{How to read it}{Black dot = the average, each year counting equally; gray triangle = every start and record as filed (single
+regression); bars = 95\% intervals, crossing 0 = no clear difference. Right: starters and the before-start check; ``all years'' =
+Callaway--Sant'Anna's check over every year before the start.}
+\expart{What it shows on this data}{(a) Importing: +29\% to +36\%, all clear. (b) Foreign owner: 0\% to +13\%, none clear. (c) Any
+trade: +24\% to +40\%, all clear, but 70\% of these starters start by importing, so (c) largely repeats (a). All 15 before-start checks
+pass (p = 0.148 to 0.931); Callaway--Sant'Anna's all-years check fails for importing and any trade (p $<$ 0.001), so part of the rise
+may continue an earlier difference.}
+\expart{How it helps Deasy's request}{``Mirip dengan paper kita sebelumnya hanya Ganti tahun'': its four methods and its import,
+foreign-owner and any-trade start events on 2010--2022. With R2-07 this fully covers the methods item; the import answer does not
+depend on the method.}
+\items{R2.Q1, R2.T2, R2.T3, R2.S1, R2.S2, R2.S5}
+\expart{Keep in mind}{Same repairs as R2-08. With no 2016 file, three methods leave out 2017 starts (Sun--Abraham: 81 foreign-owner
+and 26 any-trade starters). Timing, not cause; firm links are fictional.}

@@ -1,0 +1,1323 @@
+------------------------------------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r3-energy-emissions-correlates/
+> logs/06_own_electricity_reducers.log
+  log type:  text
+ opened on:  25 Sep 2026, 05:41:45
+
+. timer clear 1
+
+. timer on 1
+
+. display _newline "=== [R3-06] STARTING: do the firms that cut energy make their own electricity? ==="
+
+=== [R3-06] STARTING: do the firms that cut energy make their own electricity? ===
+
+. 
+. * ---- chart style (identical block in every file) ----
+. set scheme s1mono
+
+. capture graph set window fontface "Times New Roman"   // GUI Stata; console Stata keeps its default font
+
+. * Note: this changes your Stata graph font permanently; undo with: graph set window fontface default
+. local devnote "Development data — obscured values, fictional firm panel. Not BPS findings."
+
+. local srcnote "Source: SI/IBS annual files 2010–2022 (masked), analysis_ready_data.dta."
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 1/8: load the variables we need"
+Step 1/8: load the variables we need
+
+. *---------------------------------------------------------------------------
+. * own_gen_positive_reported = 1 if the firm made some of its own electricity
+. *   that year (kWh above zero), 0 if it made none, blank if not recorded
+. *   (blank is never counted as "none").
+. * total_gj_s1 = fuel (gj_fuel_s1) + BOUGHT electricity (gj_electricity).
+. *   Self-made electricity is NOT in it; fuel burnt to make it is, if reported.
+. use firm_id year total_gj_s1 co2_total_s1 value_added_nominal gj_fuel_s1 gj_electricity ///
+>     elec_pln_kwh elec_nonpln_kwh elec_owngen_kwh own_gen_positive_reported using "$DATA", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. isid firm_id year
+
+. gen byte own = own_gen_positive_reported
+(2,125 missing values generated)
+
+. quietly count if !missing(own) & own != (elec_owngen_kwh > 0 & !missing(elec_owngen_kwh))
+
+. display "   rows where the own-electricity flag and the kWh disagree (expected 0): " r(N)
+   rows where the own-electricity flag and the kWh disagree (expected 0): 0
+
+. quietly count if missing(own)
+
+. display "   rows with own electricity not recorded: " r(N)
+   rows with own electricity not recorded: 2125
+
+. xtset firm_id year
+
+Panel variable: firm_id (unbalanced)
+ Time variable: year, 2010 to 2022, but with gaps
+         Delta: 1 unit
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 2/8: one-year changes and the R3 reducer flag (same code as R3-01)"
+Step 2/8: one-year changes and the R3 reducer flag (same code as R3-01)
+
+. *---------------------------------------------------------------------------
+. gen double energy    = total_gj_s1
+
+. gen double co2       = co2_total_s1
+
+. gen double energy_va = total_gj_s1  / value_added_nominal
+
+. gen double co2_va    = co2_total_s1 / value_added_nominal
+
+. gen byte pair1 = !missing(L.total_gj_s1)                        // firm is in last year's file
+
+. gen byte cmp = pair1 & total_gj_s1>0 & L.total_gj_s1>0 & co2_total_s1>0 & L.co2_total_s1>0 ///
+>                & value_added_nominal>0 & L.value_added_nominal>0
+
+. assert pair1 == 0 if year == 2017                               // no 2016 file
+
+. foreach v in energy co2 energy_va co2_va {
+  2.     gen double chg_`v' = ln(`v') - ln(L.`v') if cmp
+  3. }
+(12,880 missing values generated)
+(12,880 missing values generated)
+(12,880 missing values generated)
+(12,880 missing values generated)
+
+. foreach v in energy co2 energy_va co2_va {
+  2.     * Year-adjusted: this firm's change minus the typical (median) change of all
+.     * compared firms in the same year, so the years a firm happens to be
+.     * observed in do not decide whether it is a reducer.
+.     bysort year: egen double med_chg_`v' = pctile(chg_`v'), p(50)   // median; egen median() would ignore "double"
+  3.     gen double rel_chg_`v' = chg_`v' - med_chg_`v'
+  4.     bysort firm_id: egen int    n_chg_`v'   = count(chg_`v')
+  5.     bysort firm_id: egen double avg_chg_`v' = mean(chg_`v')
+  6.     bysort firm_id: egen double avg_rel_`v' = mean(rel_chg_`v')
+  7.     gen byte reducer_`v'     = (avg_chg_`v' < 0) if n_chg_`v' >= 2
+  8.     gen byte reducer_adj_`v' = (avg_rel_`v' < 0) if n_chg_`v' >= 2
+  9. }
+(5,691 missing values generated)
+(12,880 missing values generated)
+(5,402 missing values generated)
+(5,402 missing values generated)
+(8,713 missing values generated)
+(8,713 missing values generated)
+(5,691 missing values generated)
+(12,880 missing values generated)
+(5,402 missing values generated)
+(5,402 missing values generated)
+(8,713 missing values generated)
+(8,713 missing values generated)
+(5,691 missing values generated)
+(12,880 missing values generated)
+(5,402 missing values generated)
+(5,402 missing values generated)
+(8,713 missing values generated)
+(8,713 missing values generated)
+(5,691 missing values generated)
+(12,880 missing values generated)
+(5,402 missing values generated)
+(5,402 missing values generated)
+(8,713 missing values generated)
+(8,713 missing values generated)
+
+. xtset firm_id year                // the bysort calls above changed the sort order
+
+Panel variable: firm_id (unbalanced)
+ Time variable: year, 2010 to 2022, but with gaps
+         Delta: 1 unit
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 3/8: own electricity at the start and end of each change"
+Step 3/8: own electricity at the start and end of each change
+
+. *---------------------------------------------------------------------------
+. * beat = the change was below the typical (median) change that year: it fell more or rose less.
+. foreach v in energy_va co2_va energy co2 {
+  2.     gen byte beat_`v' = (rel_chg_`v' < 0) if cmp
+  3. }
+(12,880 missing values generated)
+(12,880 missing values generated)
+(12,880 missing values generated)
+(12,880 missing values generated)
+
+. gen int  start_year = year - 1 if cmp
+(12,880 missing values generated)
+
+. gen byte own0 = L.own if cmp                    // start of the change
+(13,675 missing values generated)
+
+. gen byte own1 = own   if cmp                    // end of the change
+(14,367 missing values generated)
+
+. * g_start: 1 makes some, 2 makes none, 3 not recorded
+. gen byte g_start = cond(own0 == 1, 1, cond(own0 == 0, 2, 3)) if cmp
+(12,880 missing values generated)
+
+. * g_path:  1 none in both years, 2 starts making some, 3 stops making it,
+. *          4 some in both years, 5 not recorded in one of the two years
+. gen byte g_path = cond(missing(own0) | missing(own1), 5, 1 + 2*own0 + own1) if cmp
+(12,880 missing values generated)
+
+. * Checks: did bought electricity fall more than the typical firm's? how did value added move?
+. gen double chg_bought = ln(gj_electricity) - ln(L.gj_electricity) if cmp & gj_electricity > 0 & L.gj_electricity > 0
+(13,932 missing values generated)
+
+. gen double chg_va     = ln(value_added_nominal) - ln(L.value_added_nominal) if cmp
+(12,880 missing values generated)
+
+. gen double s_lnE      = ln(L.total_gj_s1) if cmp            // starting energy (log)
+(12,880 missing values generated)
+
+. foreach v in bought va {
+  2.     bysort year: egen double med_chg_`v' = pctile(chg_`v'), p(50)
+  3.     gen double rel_chg_`v' = chg_`v' - med_chg_`v'
+  4. }
+(5,691 missing values generated)
+(13,932 missing values generated)
+(5,691 missing values generated)
+(12,880 missing values generated)
+
+. gen byte beat_bought = (rel_chg_bought < 0) if !missing(rel_chg_bought)
+(13,932 missing values generated)
+
+. xtset firm_id year
+
+Panel variable: firm_id (unbalanced)
+ Time variable: year, 2010 to 2022, but with gaps
+         Delta: 1 unit
+
+. quietly count if cmp
+
+. local n_cmp_num = r(N)
+
+. local n_cmp = strtrim(string(r(N), "%9.0fc"))
+
+. foreach d in start path {
+  2.     quietly count if cmp & !missing(g_`d')
+  3.     assert r(N) == `n_cmp_num'                  // every change sits in exactly one group
+  4. }
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 4/8: which start year drives the own-electricity gap? (leave one out)"
+Step 4/8: which start year drives the own-electricity gap? (leave one out)
+
+. *---------------------------------------------------------------------------
+. * Gap = share beating the typical change (energy per unit of VA), firms making
+. * some own electricity at the start minus firms making none. The start year
+. * whose removal moves the gap most is shown separately in A and B.
+. quietly summarize beat_energy_va if g_start == 1
+
+. local a1 = r(mean)
+
+. quietly summarize beat_energy_va if g_start == 2
+
+. local gap_all = 100 * (`a1' - r(mean))
+
+. quietly levelsof start_year if cmp, local(sys)
+
+. local best = -1
+
+. local yx = .
+
+. foreach s of local sys {
+  2.     quietly summarize beat_energy_va if g_start == 1 & start_year != `s'
+  3.     local a1 = r(mean)
+  4.     quietly summarize beat_energy_va if g_start == 2 & start_year != `s'
+  5.     local d = abs(100 * (`a1' - r(mean)) - `gap_all')
+  6.     display "   without changes starting in `s': gap moves by " %5.2f `d' " points"
+  7.     if `d' > `best' {
+  8.         local best = `d'
+  9.         local yx = `s'
+ 10.     }
+ 11. }
+   without changes starting in 2010: gap moves by  0.43 points
+   without changes starting in 2011: gap moves by  0.62 points
+   without changes starting in 2012: gap moves by  0.13 points
+   without changes starting in 2013: gap moves by  0.72 points
+   without changes starting in 2014: gap moves by  0.24 points
+   without changes starting in 2017: gap moves by  4.99 points
+   without changes starting in 2018: gap moves by  1.04 points
+   without changes starting in 2019: gap moves by  1.59 points
+   without changes starting in 2020: gap moves by  1.45 points
+   without changes starting in 2021: gap moves by  0.53 points
+
+. display "   start year shown separately: `yx'"
+   start year shown separately: 2017
+
+. * Fuel recorded by firms making own electricity, relative to firms making none,
+. * each year (ratio of typical fuel amounts, geometric means)
+. preserve
+
+. keep if gj_fuel_s1 > 0 & !missing(own)
+(5,282 observations deleted)
+
+. gen double lnf = ln(gj_fuel_s1)
+
+. collapse (mean) lnf, by(year own)
+
+. reshape wide lnf, i(year) j(own)
+(j = 0 1)
+
+Data                               Long   ->   Wide
+-----------------------------------------------------------------------------
+Number of observations               24   ->   12          
+Number of variables                   3   ->   3           
+j variable (2 values)               own   ->   (dropped)
+xij variables:
+                                    lnf   ->   lnf0 lnf1
+-----------------------------------------------------------------------------
+
+. gen double fuel_ratio_own_vs_none = exp(lnf1 - lnf0)
+
+. keep year fuel_ratio_own_vs_none
+
+. list, noobs sep(0) abbreviate(24)
+
+  +-------------------------------+
+  | year   fuel_ratio_own_vs_none |
+  |-------------------------------|
+  | 2010                 3.523268 |
+  | 2011                2.9514519 |
+  | 2012                 2.956015 |
+  | 2013                 2.607443 |
+  | 2014                2.0611816 |
+  | 2015                1.4325599 |
+  | 2017                30.762389 |
+  | 2018                3.1413438 |
+  | 2019                2.6251015 |
+  | 2020                2.8314157 |
+  | 2021                4.0455622 |
+  | 2022                3.5355645 |
+  +-------------------------------+
+
+. quietly summarize fuel_ratio_own_vs_none if year == `yx'
+
+. local r_yx = r(mean)
+
+. quietly summarize fuel_ratio_own_vs_none if year != `yx'
+
+. local r_lo = r(min)
+
+. local r_hi = r(max)
+
+. tempfile fuel
+
+. save `fuel'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_34118.000002 saved as .dta format
+
+. restore
+
+. * Starting energy of firms making own electricity vs none, same start year
+. * (used in the notes: changes that start high tend to fall back, which moves panels (c)-(d))
+. local e_ratio = .
+
+. capture regress s_lnE ib2.g_start i.start_year if g_start < 3
+
+. if _rc == 0 {
+.     local e_ratio = exp(_b[1.g_start])
+.     display "   starting energy, makes some vs none (same start year): " %4.1f `e_ratio' " times"
+   starting energy, makes some vs none (same start year):  4.4 times
+. }
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 5/8: A - share making own electricity, reducers vs non-reducers, per year"
+Step 5/8: A - share making own electricity, reducers vs non-reducers, per year
+
+. *---------------------------------------------------------------------------
+. * Flag rebuilt without the changes starting in `yx' (same rule otherwise).
+. gen double rel_x = rel_chg_energy_va if start_year != `yx'
+(15,225 missing values generated)
+
+. bysort firm_id: egen int    n_x   = count(rel_x)
+
+. bysort firm_id: egen double avg_x = mean(rel_x)
+(5,942 missing values generated)
+
+. gen byte reducer_x = (avg_x < 0) if n_x >= 2
+(9,333 missing values generated)
+
+. gen byte reducer_m = reducer_adj_energy_va       // main R3 flag
+(8,713 missing values generated)
+
+. xtset firm_id year
+
+Panel variable: firm_id (unbalanced)
+ Time variable: year, 2010 to 2022, but with gaps
+         Delta: 1 unit
+
+. * classified firms per flag (firm level, for the panel titles)
+. egen byte tagf = tag(firm_id)
+
+. foreach f in m x {
+  2.     quietly count if tagf & reducer_`f' == 1
+  3.     local fr_`f' = strtrim(string(r(N), "%9.0fc"))
+  4.     quietly count if tagf & reducer_`f' == 0
+  5.     local fn_`f' = strtrim(string(r(N), "%9.0fc"))
+  6. }
+
+. * pooled over all years (firm-years; the interval allows for the same firm in many years)
+. foreach f in m x {
+  2.     quietly regress own ib0.reducer_`f', vce(cluster firm_id)
+  3.     quietly lincom 100 * 1.reducer_`f'
+  4.     local g_`f'   = r(estimate)
+  5.     local glo_`f' = r(lb)
+  6.     local ghi_`f' = r(ub)
+  7.     quietly summarize own if reducer_`f' == 1
+  8.     local p1_`f' = 100 * r(mean)
+  9.     local n1_`f' = r(N)
+ 10.     local o1_`f' = r(sum)
+ 11.     quietly summarize own if reducer_`f' == 0
+ 12.     local p0_`f' = 100 * r(mean)
+ 13.     local n0_`f' = r(N)
+ 14.     local o0_`f' = r(sum)
+ 15. }
+
+. display "   all years, share making own electricity: reducers " %4.1f `p1_m' "%, non-reducers " %4.1f `p0_m' "%"
+   all years, share making own electricity: reducers 37.1%, non-reducers 27.0%
+
+. display "   same, flag without changes starting in `yx': " %4.1f `p1_x' "% vs " %4.1f `p0_x' "%"
+   same, flag without changes starting in 2017: 33.1% vs 30.7%
+
+. preserve
+
+. gen double selfmade_pct = 100 * elec_owngen_kwh / (elec_owngen_kwh + elec_pln_kwh + elec_nonpln_kwh) if own == 1
+(23,251 missing values generated)
+
+. gen byte nr = missing(own)
+
+. foreach f in m x {
+  2.     gen byte own_red_`f' = own if reducer_`f' == 1
+  3.     gen byte own_non_`f' = own if reducer_`f' == 0
+  4. }
+(21,326 missing values generated)
+(22,051 missing values generated)
+(22,609 missing values generated)
+(21,337 missing values generated)
+
+. collapse (count) firms_status_recorded = own firms_reducer = own_red_m firms_nonreducer = own_non_m ///
+>                  firms_reducer_x = own_red_x firms_nonreducer_x = own_non_x ///
+>          (sum)   firms_status_not_recorded = nr n_own_all = own own_reducer = own_red_m own_nonreducer = own_non_m ///
+>                  own_reducer_x = own_red_x own_nonreducer_x = own_non_x ///
+>          (median) median_selfmade_pct_makers = selfmade_pct, by(year)
+
+. gen double pct_own_all_firms = 100 * n_own_all / firms_status_recorded if firms_status_recorded > 0
+
+. foreach s in "" "_x" {
+  2.     * a year's share is drawn only with at least 30 firms in the group
+.     gen double pct_own_reducer`s'    = 100 * own_reducer`s'    / firms_reducer`s'    if firms_reducer`s'    >= 30
+  3.     gen double pct_own_nonreducer`s' = 100 * own_nonreducer`s' / firms_nonreducer`s' if firms_nonreducer`s' >= 30
+  4.     gen double gap_pts`s' = pct_own_reducer`s' - pct_own_nonreducer`s'
+  5.     gen double gap_lo`s' = .
+  6.     gen double gap_hi`s' = .
+  7. }
+(12 missing values generated)
+(12 missing values generated)
+(12 missing values generated)
+(12 missing values generated)
+
+. merge 1:1 year using `fuel', nogen keep(master match)
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                                12  
+    -----------------------------------------
+
+. * 2016: an explicit empty row (no annual file), never a zero
+. gen byte annual_file = 1
+
+. set obs `=_N + 1'
+Number of observations (_N) was 12, now 13.
+
+. replace year = 2016 in L
+(1 real change made)
+
+. replace annual_file = 0 in L
+(1 real change made)
+
+. sort year
+
+. gen str10 period = string(year, "%4.0f")
+
+. gen str24 unit = "firms in the year"
+
+. * pooled row at the bottom (firm-years)
+. set obs `=_N + 1'
+Number of observations (_N) was 13, now 14.
+
+. replace period = "All years" in L
+(1 real change made)
+
+. replace unit   = "firm-years, all years" in L
+(1 real change made)
+
+. foreach f in m x {
+  2.     local s = cond("`f'" == "m", "", "_x")
+  3.     replace firms_reducer`s'      = `n1_`f''  in L
+  4.     replace own_reducer`s'        = `o1_`f''  in L
+  5.     replace pct_own_reducer`s'    = `p1_`f''  in L
+  6.     replace firms_nonreducer`s'   = `n0_`f''  in L
+  7.     replace own_nonreducer`s'     = `o0_`f''  in L
+  8.     replace pct_own_nonreducer`s' = `p0_`f''  in L
+  9.     replace gap_pts`s'            = `g_`f''   in L
+ 10.     replace gap_lo`s'             = `glo_`f'' in L
+ 11.     replace gap_hi`s'             = `ghi_`f'' in L
+ 12. }
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+
+. gen int left_out_start_year = `yx'
+
+. order period year annual_file unit firms_status_recorded firms_status_not_recorded pct_own_all_firms ///
+>       median_selfmade_pct_makers fuel_ratio_own_vs_none ///
+>       firms_reducer own_reducer pct_own_reducer firms_nonreducer own_nonreducer pct_own_nonreducer gap_pts gap_lo gap_
+> hi ///
+>       left_out_start_year firms_reducer_x own_reducer_x pct_own_reducer_x firms_nonreducer_x own_nonreducer_x ///
+>       pct_own_nonreducer_x gap_pts_x gap_lo_x gap_hi_x
+
+. keep period-gap_hi_x
+
+. format firms_* own_* %9.0f
+
+. format pct_* gap_* median_* %6.2f
+
+. format fuel_ratio_own_vs_none %7.2f
+
+. tempfile byyear
+
+. save `byyear'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_34118.000004 saved as .dta format
+
+. restore
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 6/8: B - share of changes beating the typical firm, per group, with 95% intervals"
+Step 6/8: B - share of changes beating the typical firm, per group, with 95% intervals
+
+. *---------------------------------------------------------------------------
+. * The interval allows for the same firm appearing in several years (clustered by firm).
+. tempname P
+
+. tempfile rows
+
+. postfile `P' int row_order byte recorded str48 block str32 group str32 reference_group ///
+>     long(changes firms changes_x) int left_out_start_year ///
+>     double(pct_energy_va lo_energy_va hi_energy_va gap_energy_va gap_lo_energy_va gap_hi_energy_va pct_energy_va_x lo_
+> energy_va_x hi_energy_va_x ///
+>            pct_co2_va lo_co2_va hi_co2_va gap_co2_va gap_lo_co2_va gap_hi_co2_va pct_co2_va_x lo_co2_va_x hi_co2_va_x 
+> ///
+>            pct_energy lo_energy hi_energy gap_energy gap_lo_energy gap_hi_energy pct_energy_x lo_energy_x hi_energy_x 
+> ///
+>            pct_co2 lo_co2 hi_co2 gap_co2 gap_lo_co2 gap_hi_co2 pct_co2_x lo_co2_x hi_co2_x ///
+>            pct_energy_va_early) long changes_early double pct_energy_va_late long changes_late ///
+>     double pct_bought_fell_more long changes_bought double median_va_change_vs_typical_pct using `rows', replace
+(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_34118.000005 not found)
+
+. local r 0
+
+. foreach d in start path {
+  2.     if "`d'" == "start" local dn "Own electricity at the start of the change"
+  3.     if "`d'" == "path"  local dn "Own electricity from start to end of the change"
+  4.     if "`d'" == "start" local gl `""Makes some" "Makes none" "Not recorded""'
+  5.     if "`d'" == "path"  local gl `""None in both years" "Starts making some" "Stops making it" "Some in both years"
+>  "Not recorded in a year""'
+  6.     local ref = cond("`d'" == "start", 2, 1)
+  7.     local nrg = cond("`d'" == "start", 3, 5)           // the "not recorded" group
+  8.     local refname : word `ref' of `gl'
+  9.     quietly count if cmp & g_`d' == `ref'
+ 10.     local refok = r(N) > 0
+ 11.     forvalues k = 1/`nrg' {
+ 12.         quietly count if cmp & g_`d' == `k'
+ 13.         if r(N) == 0 continue
+ 14.         local ++r
+ 15.         local gname : word `k' of `gl'
+ 16.         local vals ""
+ 17.         foreach v in energy_va co2_va energy co2 {
+ 18.             quietly mean beat_`v' if cmp & g_`d' == `k', vce(cluster firm_id)
+ 19.             matrix T = r(table)
+ 20.             local p  = 100 * T[1,1]
+ 21.             local lo = 100 * T[5,1]
+ 22.             local hi = 100 * T[6,1]
+ 23.             local nn = e(N)
+ 24.             local nf = e(N_clust)
+ 25.             local g = .
+ 26.             local glo = .
+ 27.             local ghi = .
+ 28.             if `k' != `ref' & `refok' {
+ 29.                 quietly regress beat_`v' ib`ref'.g_`d' if cmp, vce(cluster firm_id)
+ 30.                 quietly lincom 100 * `k'.g_`d'
+ 31.                 local g   = r(estimate)
+ 32.                 local glo = r(lb)
+ 33.                 local ghi = r(ub)
+ 34.             }
+ 35.             * the same, without the changes starting in `yx'
+.             local px = .
+ 36.             local lox = .
+ 37.             local hix = .
+ 38.             local nx = 0
+ 39.             quietly count if cmp & g_`d' == `k' & start_year != `yx'
+ 40.             if r(N) > 1 {
+ 41.                 quietly mean beat_`v' if cmp & g_`d' == `k' & start_year != `yx', vce(cluster firm_id)
+ 42.                 matrix T = r(table)
+ 43.                 local px  = 100 * T[1,1]
+ 44.                 local lox = 100 * T[5,1]
+ 45.                 local hix = 100 * T[6,1]
+ 46.                 local nx  = e(N)
+ 47.             }
+ 48.             local vals `vals' (`p') (`lo') (`hi') (`g') (`glo') (`ghi') (`px') (`lox') (`hix')
+ 49.         }
+ 50.         * main measure before and after the missing 2016 file
+.         quietly summarize beat_energy_va if cmp & g_`d' == `k' & year < 2016
+ 51.         local pe = 100 * r(mean)
+ 52.         local ne = r(N)
+ 53.         quietly summarize beat_energy_va if cmp & g_`d' == `k' & year > 2016
+ 54.         local pl = 100 * r(mean)
+ 55.         local nl = r(N)
+ 56.         * checks: bought electricity fell more than the typical firm's; value added vs typical
+.         quietly summarize beat_bought if cmp & g_`d' == `k'
+ 57.         local pb = 100 * r(mean)
+ 58.         local nb = r(N)
+ 59.         quietly summarize rel_chg_va if cmp & g_`d' == `k', detail
+ 60.         local mva = 100 * (exp(r(p50)) - 1)
+ 61.         post `P' (`r') ((`k' != `nrg')) ("`dn'") ("`gname'") ("`refname'") (`nn') (`nf') (`nx') (`yx') ///
+>             `vals' (`pe') (`ne') (`pl') (`nl') (`pb') (`nb') (`mva')
+ 62.     }
+ 63. }
+
+. postclose `P'
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 7/8: numbers -> two CSV files (written before drawing)"
+Step 7/8: numbers -> two CSV files (written before drawing)
+
+. *---------------------------------------------------------------------------
+. use `byyear', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. export delimited using "tables/06_own_electricity_reducers_by_year.csv", datafmt replace
+file tables/06_own_electricity_reducers_by_year.csv saved
+
+. list period firms_reducer pct_own_reducer firms_nonreducer pct_own_nonreducer gap_pts gap_lo gap_hi, noobs sep(0) abbr
+> eviate(24)
+
+  +-----------------------------------------------------------------------------------------------------------------+
+  |    period   firms_reducer   pct_own_reducer   firms_nonreducer   pct_own_nonreducer   gap_pts   gap_lo   gap_hi |
+  |-----------------------------------------------------------------------------------------------------------------|
+  |      2010             772             14.77                757                14.40      0.37        .        . |
+  |      2011             858             15.03                846                15.60     -0.57        .        . |
+  |      2012             944             17.58                930                18.92     -1.34        .        . |
+  |      2013             957             22.05                931                20.84      1.21        .        . |
+  |      2014             588             41.16                475                36.63      4.52        .        . |
+  |      2015             666             39.19                513                39.77     -0.58        .        . |
+  |      2016               .                 .                  .                    .         .        .        . |
+  |      2017            1201             66.69               1125                36.00     30.69        .        . |
+  |      2018            1198             58.60               1109                37.69     20.91        .        . |
+  |      2019            1241             54.07               1156                39.27     14.80        .        . |
+  |      2020            1215             34.90               1146                26.27      8.63        .        . |
+  |      2021            1106             32.64               1056                22.82      9.82        .        . |
+  |      2022             977             27.12                954                16.56     10.56        .        . |
+  | All years           11723             37.08              10998                26.97     10.11     8.32    11.91 |
+  +-----------------------------------------------------------------------------------------------------------------+
+
+. list period firms_reducer_x pct_own_reducer_x firms_nonreducer_x pct_own_nonreducer_x gap_pts_x gap_lo_x gap_hi_x, ///
+>     noobs sep(0) abbreviate(24)
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  |    period | firms_reducer_x | pct_own_reducer_x | firms_nonreducer_x | pct_own_nonreducer_x | gap_pts_x | gap_lo_x |
+  |      2010 |             710 |             14.08 |                819 |                15.02 |     -0.93 |        . |
+  |--------------------------------------------------------------------------------------------------------------------|
+  |                                                      gap_hi_x                                                      |
+  |                                                             .                                                      |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  |    period | firms_reducer_x | pct_own_reducer_x | firms_nonreducer_x | pct_own_nonreducer_x | gap_pts_x | gap_lo_x |
+  |      2011 |             797 |             15.18 |                907 |                15.44 |     -0.25 |        . |
+  |--------------------------------------------------------------------------------------------------------------------|
+  |                                                      gap_hi_x                                                      |
+  |                                                             .                                                      |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  |    period | firms_reducer_x | pct_own_reducer_x | firms_nonreducer_x | pct_own_nonreducer_x | gap_pts_x | gap_lo_x |
+  |      2012 |             874 |             17.85 |                999 |                18.62 |     -0.77 |        . |
+  |--------------------------------------------------------------------------------------------------------------------|
+  |                                                      gap_hi_x                                                      |
+  |                                                             .                                                      |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  |    period | firms_reducer_x | pct_own_reducer_x | firms_nonreducer_x | pct_own_nonreducer_x | gap_pts_x | gap_lo_x |
+  |      2013 |             885 |             21.24 |               1002 |                21.66 |     -0.41 |        . |
+  |--------------------------------------------------------------------------------------------------------------------|
+  |                                                      gap_hi_x                                                      |
+  |                                                             .                                                      |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  |    period | firms_reducer_x | pct_own_reducer_x | firms_nonreducer_x | pct_own_nonreducer_x | gap_pts_x | gap_lo_x |
+  |      2014 |             510 |             41.37 |                533 |                37.15 |      4.22 |        . |
+  |--------------------------------------------------------------------------------------------------------------------|
+  |                                                      gap_hi_x                                                      |
+  |                                                             .                                                      |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  |    period | firms_reducer_x | pct_own_reducer_x | firms_nonreducer_x | pct_own_nonreducer_x | gap_pts_x | gap_lo_x |
+  |      2015 |             562 |             40.39 |                569 |                38.49 |      1.90 |        . |
+  |--------------------------------------------------------------------------------------------------------------------|
+  |                                                      gap_hi_x                                                      |
+  |                                                             .                                                      |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  |    period | firms_reducer_x | pct_own_reducer_x | firms_nonreducer_x | pct_own_nonreducer_x | gap_pts_x | gap_lo_x |
+  |      2016 |               . |                 . |                  . |                    . |         . |        . |
+  |--------------------------------------------------------------------------------------------------------------------|
+  |                                                      gap_hi_x                                                      |
+  |                                                             .                                                      |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  |    period | firms_reducer_x | pct_own_reducer_x | firms_nonreducer_x | pct_own_nonreducer_x | gap_pts_x | gap_lo_x |
+  |      2017 |            1012 |             54.15 |               1136 |                50.00 |      4.15 |        . |
+  |--------------------------------------------------------------------------------------------------------------------|
+  |                                                      gap_hi_x                                                      |
+  |                                                             .                                                      |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  |    period | firms_reducer_x | pct_own_reducer_x | firms_nonreducer_x | pct_own_nonreducer_x | gap_pts_x | gap_lo_x |
+  |      2018 |            1009 |             50.05 |               1120 |                46.88 |      3.17 |        . |
+  |--------------------------------------------------------------------------------------------------------------------|
+  |                                                      gap_hi_x                                                      |
+  |                                                             .                                                      |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  |    period | firms_reducer_x | pct_own_reducer_x | firms_nonreducer_x | pct_own_nonreducer_x | gap_pts_x | gap_lo_x |
+  |      2019 |            1061 |             49.29 |               1195 |                45.19 |      4.10 |        . |
+  |--------------------------------------------------------------------------------------------------------------------|
+  |                                                      gap_hi_x                                                      |
+  |                                                             .                                                      |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  |    period | firms_reducer_x | pct_own_reducer_x | firms_nonreducer_x | pct_own_nonreducer_x | gap_pts_x | gap_lo_x |
+  |      2020 |            1109 |             31.11 |               1250 |                30.40 |      0.71 |        . |
+  |--------------------------------------------------------------------------------------------------------------------|
+  |                                                      gap_hi_x                                                      |
+  |                                                             .                                                      |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  |    period | firms_reducer_x | pct_own_reducer_x | firms_nonreducer_x | pct_own_nonreducer_x | gap_pts_x | gap_lo_x |
+  |      2021 |            1013 |             29.32 |               1149 |                26.54 |      2.77 |        . |
+  |--------------------------------------------------------------------------------------------------------------------|
+  |                                                      gap_hi_x                                                      |
+  |                                                             .                                                      |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  |    period | firms_reducer_x | pct_own_reducer_x | firms_nonreducer_x | pct_own_nonreducer_x | gap_pts_x | gap_lo_x |
+  |      2022 |             898 |             25.61 |               1033 |                18.68 |      6.93 |        . |
+  |--------------------------------------------------------------------------------------------------------------------|
+  |                                                      gap_hi_x                                                      |
+  |                                                             .                                                      |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  |    period | firms_reducer_x | pct_own_reducer_x | firms_nonreducer_x | pct_own_nonreducer_x | gap_pts_x | gap_lo_x |
+  | All years |           10440 |             33.06 |              11712 |                30.69 |      2.37 |     0.50 |
+  |--------------------------------------------------------------------------------------------------------------------|
+  |                                                      gap_hi_x                                                      |
+  |                                                          4.24                                                      |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+. list period pct_own_all_firms median_selfmade_pct_makers fuel_ratio_own_vs_none, noobs sep(0) abbreviate(24)
+
+  +-----------------------------------------------------------------------------------+
+  |    period   pct_own_all_firms   median_selfmade_pct_ma~s   fuel_ratio_own_vs_none |
+  |-----------------------------------------------------------------------------------|
+  |      2010               16.45                      21.17                     3.52 |
+  |      2011               17.46                      24.56                     2.95 |
+  |      2012               19.42                      24.19                     2.96 |
+  |      2013               22.41                      19.44                     2.61 |
+  |      2014               39.38                      27.16                     2.06 |
+  |      2015               41.27                      18.60                     1.43 |
+  |      2016                   .                          .                        . |
+  |      2017               49.99                       6.92                    30.76 |
+  |      2018               47.26                       4.54                     3.14 |
+  |      2019               46.82                       6.88                     2.63 |
+  |      2020               29.19                       2.41                     2.83 |
+  |      2021               26.51                       1.49                     4.05 |
+  |      2022               20.14                       1.37                     3.54 |
+  | All years                   .                          .                        . |
+  +-----------------------------------------------------------------------------------+
+
+. use `rows', clear
+
+. format changes* firms %9.0f
+
+. format pct_* lo_* hi_* gap_* median_* %6.2f
+
+. export delimited using "tables/06_own_electricity_reducers_changes.csv", datafmt replace
+file tables/06_own_electricity_reducers_changes.csv saved
+
+. list row_order group changes pct_energy_va lo_energy_va hi_energy_va pct_energy_va_x pct_energy pct_energy_x, ///
+>     noobs sep(0) abbreviate(24)
+
+  +--------------------------------------------------------------------------------------------------------------+
+  | row_order |                  group | changes | pct_energy_va | lo_energy_va | hi_energy_va | pct_energy_va_x |
+  |         1 |             Makes some |    6414 |         52.39 |        51.25 |        53.52 |           48.99 |
+  |--------------------------------------------------------------------------------------------------------------|
+  |                     pct_energy                      |                      pct_energy_x                      |
+  |                          54.37                      |                             51.05                      |
+  +--------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------+
+  | row_order |                  group | changes | pct_energy_va | lo_energy_va | hi_energy_va | pct_energy_va_x |
+  |         2 |             Makes none |   12960 |         48.50 |        47.78 |        49.23 |           50.10 |
+  |--------------------------------------------------------------------------------------------------------------|
+  |                     pct_energy                      |                      pct_energy_x                      |
+  |                          47.73                      |                             49.43                      |
+  +--------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------+
+  | row_order |                  group | changes | pct_energy_va | lo_energy_va | hi_energy_va | pct_energy_va_x |
+  |         3 |           Not recorded |     795 |         54.72 |        51.25 |        58.18 |           54.72 |
+  |--------------------------------------------------------------------------------------------------------------|
+  |                     pct_energy                      |                      pct_energy_x                      |
+  |                          51.32                      |                             51.32                      |
+  +--------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------+
+  | row_order |                  group | changes | pct_energy_va | lo_energy_va | hi_energy_va | pct_energy_va_x |
+  |         4 |     None in both years |    9866 |         47.86 |        47.01 |        48.71 |           49.58 |
+  |--------------------------------------------------------------------------------------------------------------|
+  |                     pct_energy                      |                      pct_energy_x                      |
+  |                          47.35                      |                             49.05                      |
+  +--------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------+
+  | row_order |                  group | changes | pct_energy_va | lo_energy_va | hi_energy_va | pct_energy_va_x |
+  |         5 |     Starts making some |    2276 |         51.85 |        49.79 |        53.90 |           53.85 |
+  |--------------------------------------------------------------------------------------------------------------|
+  |                     pct_energy                      |                      pct_energy_x                      |
+  |                          47.93                      |                             50.26                      |
+  +--------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------+
+  | row_order |                  group | changes | pct_energy_va | lo_energy_va | hi_energy_va | pct_energy_va_x |
+  |         6 |        Stops making it |    2791 |         48.23 |        46.37 |        50.08 |           46.14 |
+  |--------------------------------------------------------------------------------------------------------------|
+  |                     pct_energy                      |                      pct_energy_x                      |
+  |                          52.28                      |                             50.06                      |
+  +--------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------+
+  | row_order |                  group | changes | pct_energy_va | lo_energy_va | hi_energy_va | pct_energy_va_x |
+  |         7 |     Some in both years |    3428 |         56.33 |        54.78 |        57.88 |           52.08 |
+  |--------------------------------------------------------------------------------------------------------------|
+  |                     pct_energy                      |                      pct_energy_x                      |
+  |                          56.24                      |                             51.92                      |
+  +--------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------+
+  | row_order |                  group | changes | pct_energy_va | lo_energy_va | hi_energy_va | pct_energy_va_x |
+  |         8 | Not recorded in a year |    1808 |         49.89 |        47.85 |        51.93 |           49.89 |
+  |--------------------------------------------------------------------------------------------------------------|
+  |                     pct_energy                      |                      pct_energy_x                      |
+  |                          51.49                      |                             51.49                      |
+  +--------------------------------------------------------------------------------------------------------------+
+
+. list row_order group pct_energy_va_early pct_energy_va_late pct_bought_fell_more median_va_change_vs_typical_pct, ///
+>     noobs sep(0) abbreviate(24)
+
+  +------------------------------------------------------------------------------------------------------+
+  | row_order |                  group | pct_energy_va_early | pct_energy_va_late | pct_bought_fell_more |
+  |         1 |             Makes some |               47.78 |              54.06 |                50.58 |
+  |------------------------------------------------------------------------------------------------------|
+  |                                       median_va_change_vs_ty~t                                       |
+  |                                                          -5.38                                       |
+  +------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------+
+  | row_order |                  group | pct_energy_va_early | pct_energy_va_late | pct_bought_fell_more |
+  |         2 |             Makes none |               49.99 |              47.08 |                49.58 |
+  |------------------------------------------------------------------------------------------------------|
+  |                                       median_va_change_vs_ty~t                                       |
+  |                                                           1.78                                       |
+  +------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------+
+  | row_order |                  group | pct_energy_va_early | pct_energy_va_late | pct_bought_fell_more |
+  |         3 |           Not recorded |               54.72 |                  . |                51.92 |
+  |------------------------------------------------------------------------------------------------------|
+  |                                       median_va_change_vs_ty~t                                       |
+  |                                                          12.65                                       |
+  +------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------+
+  | row_order |                  group | pct_energy_va_early | pct_energy_va_late | pct_bought_fell_more |
+  |         4 |     None in both years |               49.91 |              46.12 |                49.39 |
+  |------------------------------------------------------------------------------------------------------|
+  |                                       median_va_change_vs_ty~t                                       |
+  |                                                           0.10                                       |
+  +------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------+
+  | row_order |                  group | pct_energy_va_early | pct_energy_va_late | pct_bought_fell_more |
+  |         5 |     Starts making some |               52.88 |              51.05 |                51.18 |
+  |------------------------------------------------------------------------------------------------------|
+  |                                       median_va_change_vs_ty~t                                       |
+  |                                                          18.65                                       |
+  +------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------+
+  | row_order |                  group | pct_energy_va_early | pct_energy_va_late | pct_bought_fell_more |
+  |         6 |        Stops making it |               48.48 |              48.12 |                49.31 |
+  |------------------------------------------------------------------------------------------------------|
+  |                                       median_va_change_vs_ty~t                                       |
+  |                                                         -18.34                                       |
+  +------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------+
+  | row_order |                  group | pct_energy_va_early | pct_energy_va_late | pct_bought_fell_more |
+  |         7 |     Some in both years |               48.41 |              58.33 |                51.69 |
+  |------------------------------------------------------------------------------------------------------|
+  |                                       median_va_change_vs_ty~t                                       |
+  |                                                           3.93                                       |
+  +------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------+
+  | row_order |                  group | pct_energy_va_early | pct_energy_va_late | pct_bought_fell_more |
+  |         8 | Not recorded in a year |               49.89 |                  . |                49.61 |
+  |------------------------------------------------------------------------------------------------------|
+  |                                       median_va_change_vs_ty~t                                       |
+  |                                                          -3.63                                       |
+  +------------------------------------------------------------------------------------------------------+
+
+. assert lo_energy_va <= pct_energy_va & pct_energy_va <= hi_energy_va
+
+. 
+. * numbers for the notes (read from the data, never typed)
+. local p_some = .
+
+. local p_none = .
+
+. local p_st = .
+
+. local lo_st = .
+
+. quietly summarize pct_energy_va_x if row_order == 1 & group == "Makes some"
+
+. if r(N) local p_some = r(mean)
+
+. quietly summarize pct_energy_va_x if group == "Makes none"
+
+. if r(N) local p_none = r(mean)
+
+. quietly summarize pct_energy if group == "Starts making some"
+
+. if r(N) local p_st = r(mean)
+
+. quietly summarize lo_energy if group == "Starts making some"
+
+. if r(N) local lo_st = r(mean)
+
+. local s_some   = strtrim(string(`p_some', "%4.1f"))
+
+. local s_none   = strtrim(string(`p_none', "%4.1f"))
+
+. local s_st     = strtrim(string(`p_st', "%4.1f"))
+
+. local s_ryx = strtrim(string(`r_yx', "%4.0f"))
+
+. local s_rlo = strtrim(string(`r_lo', "%3.1f"))
+
+. local s_rhi = strtrim(string(`r_hi', "%3.1f"))
+
+. local yx1 = `yx' + 1
+
+. local recnote ""
+
+. if !missing(`r_yx') & `r_yx' > 2 * `r_hi' local recnote ": likely a recording change, so `yx' to `yx1' looks like big 
+> cuts"
+
+. local fuelnote "In `yx', own-electricity firms recorded `s_ryx' times the fuel of other firms (`s_rlo'–`s_rhi' in othe
+> r years)`recnote'."
+
+. local loonote "Without changes starting in `yx' (A right, B triangles), the shares in (a) are `s_some'% (makes some) a
+> nd `s_none'% (makes none)."
+
+. * start size: firms that start high tend to fall back, so gaps in totals are partly automatic
+. local fbnote ""
+
+. if !missing(`e_ratio') & abs(ln(`e_ratio')) > ln(1.5) {          // only when starting sizes clearly differ
+.     local s_er = strtrim(string(`e_ratio', "%4.1f"))
+.     local hl = cond(`e_ratio' >= 1, "high starts tend to fall back", "low starts tend to rise back")
+.     local fbnote "Own-electricity firms start with `s_er' times the energy of other firms in the same year; `hl', so g
+> aps in (c)–(d) are partly automatic."
+. }
+
+. * self-made power is not in energy use: does starting to make it look like a cut in (c)?
+. local enote "Self-made power is not in energy use, so starting to make it could fake a cut."
+
+. if !missing(`p_st') & !(`lo_st' > 50) local enote "Self-made power is not in energy use, so starting to make it could 
+> fake a cut; but starters' energy use fell more than the typical firm's in only `s_st'% of changes."
+
+. else if !missing(`p_st') local enote "Self-made power is not in energy use, so starting to make it could fake a cut; s
+> tarters' energy use fell more than the typical firm's in `s_st'% of changes: partly not real."
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 8/8: draw A (lines per year) and B (dot plot), then combine"
+Step 8/8: draw A (lines per year) and B (dot plot), then combine
+
+. *---------------------------------------------------------------------------
+. * graph combine shrinks relative text sizes unevenly between parts, so text is
+. * set in points: 13pt = "small", 10pt = "vsmall" in the other R3 figures.
+. local sm "13pt"
+
+. local vs "10pt"
+
+. * ---- A: share making own electricity, reducers vs non-reducers ----
+. * Two panels side by side in one plain twoway (graph combine handles plain
+. * graphs better than by() graphs): the right panel's years are shifted by `sh'.
+. local sh = 15
+
+. use `byyear', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if !missing(year)
+(1 observation deleted)
+
+. keep year pct_own_reducer pct_own_nonreducer pct_own_reducer_x pct_own_nonreducer_x
+
+. expand 2
+(13 observations created)
+
+. bysort year: gen byte flag = _n
+
+. gen double red = cond(flag == 1, pct_own_reducer,    pct_own_reducer_x)
+(2 missing values generated)
+
+. gen double non = cond(flag == 1, pct_own_nonreducer, pct_own_nonreducer_x)
+(2 missing values generated)
+
+. gen double x = year + (flag == 2) * `sh'
+
+. * endpoint labels: first and last year with data, higher line labelled above
+. bysort flag: egen fy = min(cond(!missing(red), year, .))
+
+. bysort flag: egen ly = max(cond(!missing(red), year, .))
+
+. gen byte endpt = inlist(year, fy, ly)
+
+. gen str8 lab_red = string(red, "%4.1f") if endpt
+(22 missing values generated)
+
+. gen str8 lab_non = string(non, "%4.1f") if endpt
+(22 missing values generated)
+
+. gen byte pos_red = cond(year == fy, cond(red >= non, 10, 8), cond(red >= non, 2, 4)) if endpt
+(22 missing values generated)
+
+. gen byte pos_non = cond(year == fy, cond(non >  red, 10, 8), cond(non >  red, 2, 4)) if endpt
+(22 missing values generated)
+
+. egen double mx = rowmax(red non)
+(2 missing values generated)
+
+. quietly summarize mx
+
+. local atop = 20 * ceil(1.1 * r(max) / 20)
+
+. gen double band = `atop' if year == 2016                       // "No annual file" band
+(24 missing values generated)
+
+. sort flag year
+
+. * panel titles, firm counts, faint gridlines and x labels, drawn per panel
+. local ttl1 "Reducers found from all one-year changes"
+
+. local ttl2 "Reducers found without changes starting in `yx'"
+
+. local cnt1 "`fr_m' reducers, `fn_m' non-reducers"
+
+. local cnt2 "`fr_x' reducers, `fn_x' non-reducers"
+
+. local grid ""
+
+. local xl ""
+
+. local txt ""
+
+. forvalues f = 1/2 {
+  2.     local o = (`f' - 1) * `sh'
+  3.     forvalues g = 20(20)`atop' {
+  4.         local grid `grid' `g' `=2009.4 + `o'' `g' `=2022.6 + `o''
+  5.     }
+  6.     forvalues y = 2010(2)2022 {
+  7.         local xl `"`xl' `=`y' + `o'' "`y'""'
+  8.     }
+  9.     local txt `"`txt' text(`=1.25 * `atop'' `=2009.3 + `o'' "`ttl`f''", place(e) size(`sm'))"'
+ 10.     local txt `"`txt' text(`=1.10 * `atop'' `=2009.3 + `o'' "`cnt`f''", place(e) size(`vs') color(gs6))"'
+ 11. }
+
+. twoway (pci `grid', lcolor(gs15) lwidth(vthin)) ///
+>     (bar band x, barwidth(0.9) color(gs14) lwidth(none) base(0)) ///
+>     (connected red x if flag == 1, lcolor(black) lpattern(solid) lwidth(0.8pt) msymbol(O) mcolor(black) ///
+>         msize(5pt) cmissing(n) mlabel(lab_red) mlabvposition(pos_red) mlabsize(`vs') mlabcolor(black)) ///
+>     (connected non x if flag == 1, lcolor(gs5) lpattern(dash) lwidth(0.8pt) msymbol(Sh) mcolor(gs5) ///
+>         msize(5pt) cmissing(n) mlabel(lab_non) mlabvposition(pos_non) mlabsize(`vs') mlabcolor(gs5)) ///
+>     (connected red x if flag == 2, lcolor(black) lpattern(solid) lwidth(0.8pt) msymbol(O) mcolor(black) ///
+>         msize(5pt) cmissing(n) mlabel(lab_red) mlabvposition(pos_red) mlabsize(`vs') mlabcolor(black)) ///
+>     (connected non x if flag == 2, lcolor(gs5) lpattern(dash) lwidth(0.8pt) msymbol(Sh) mcolor(gs5) ///
+>         msize(5pt) cmissing(n) mlabel(lab_non) mlabvposition(pos_non) mlabsize(`vs') mlabcolor(gs5)), ///
+>     `txt' ///
+>     ytitle("% of the group's firms that year", size(`vs')) ///
+>     ylabel(0(20)`atop', angle(0) noticks tlength(0) nogrid labsize(`vs')) ///
+>     yscale(noline range(0 `=1.28 * `atop'')) ///
+>     xlabel(`xl', noticks tlength(0) labsize(`vs')) xscale(noline range(2009.2 `=2022.8 + `sh'')) xtitle("") ///
+>     legend(order(3 "Reducers" 4 "Non-reducers" 2 "No annual file") pos(6) ///
+>         rows(1) region(lcolor(none) margin(zero)) size(`vs') symxsize(7) symysize(2.5) keygap(1) colgap(4)) ///
+>     subtitle("A. Firms making some of their own electricity: reducers vs non-reducers", size(`sm') pos(11) nobox span)
+>  ///
+>     graphregion(color(white) lcolor(white)) plotregion(style(none)) fysize(40) name(pA, replace) nodraw
+
+. 
+. * ---- B: dot plot, four panels on one shared scale ----
+. use `rows', clear
+
+. sort row_order
+
+. gen double y = .
+(8 missing values generated)
+
+. local pos 0
+
+. local ylab `"0 "Own electricity (number of changes)""'
+
+. local prevb ""
+
+. forvalues i = 1/`=_N' {
+  2.     local bnm = block[`i']
+  3.     if "`bnm'" != "`prevb'" {
+  4.         if "`prevb'" != "" local ++pos
+  5.         local ++pos
+  6.         local bshort = cond(strpos("`bnm'", "start to end"), "From start to end of the change:", "At the start of t
+> he change:")
+  7.         local ylab `"`ylab' `pos' "{bf:`bshort'}""'
+  8.         local prevb "`bnm'"
+  9.     }
+ 10.     local ++pos
+ 11.     replace y = `pos' in `i'
+ 12.     local nstr = strtrim(string(changes[`i'], "%9.0fc"))
+ 13.     local gnm = group[`i']
+ 14.     local ylab `"`ylab' `pos' "`gnm' (`nstr')""'
+ 15. }
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+
+. local ymax = `pos' + 0.5
+
+. expand 4
+(24 observations created)
+
+. bysort row_order: gen byte panel = _n
+
+. foreach s in "" "_x" {
+  2.     gen double pct`s' = cond(panel == 1, pct_energy_va`s', cond(panel == 2, pct_co2_va`s', cond(panel == 3, pct_ene
+> rgy`s', pct_co2`s')))
+  3.     gen double lo`s'  = cond(panel == 1, lo_energy_va`s',  cond(panel == 2, lo_co2_va`s',  cond(panel == 3, lo_ener
+> gy`s',  lo_co2`s')))
+  4.     gen double hi`s'  = cond(panel == 1, hi_energy_va`s',  cond(panel == 2, hi_co2_va`s',  cond(panel == 3, hi_ener
+> gy`s',  hi_co2`s')))
+  5. }
+
+. * recorded rows: all changes just above the row line, without `yx' just below;
+. * not-recorded rows (same with or without `yx'): one hollow gray dot on the line
+. gen double ya = cond(recorded, y - 0.17, y)
+
+. gen double yb = y + 0.17
+
+. * value label (all changes only) past the whisker end that points away from 50%
+. gen str8   plab = string(pct, "%4.1f")
+
+. gen double labx = cond(pct < 50, lo, hi)
+
+. gen byte   labp = cond(pct < 50, 9, 3)
+
+. label define panel 1 "(a) Energy per unit of VA" 2 "(b) CO2 per unit of VA" 3 "(c) Energy use (GJ)" 4 "(d) CO2 emitted
+>  (tonnes)"
+
+. label values panel panel
+
+. * dashed reference line at 50% in each panel
+. local n0 = _N
+
+. set obs `=_N + 8'
+Number of observations (_N) was 32, now 40.
+
+. gen double refx = 50 if _n > `n0'
+(32 missing values generated)
+
+. gen double refy = .
+(40 missing values generated)
+
+. forvalues p = 1/4 {
+  2.     replace panel = `p' in `=`n0' + 2*`p' - 1'
+  3.     replace panel = `p' in `=`n0' + 2*`p''
+  4.     replace refy = 0.5 in `=`n0' + 2*`p' - 1'
+  5.     replace refy = `ymax' in `=`n0' + 2*`p''
+  6. }
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+
+. * symmetric x range around 50: whiskers plus room for the value labels, steps of 5
+. egen double xl = rowmin(lo lo_x)
+(8 missing values generated)
+
+. egen double xh = rowmax(hi hi_x)
+(8 missing values generated)
+
+. quietly summarize xl
+
+. local dlo = 50 - r(min)
+
+. quietly summarize xh
+
+. local dhi = r(max) - 50
+
+. local half = max(10, 5 * ceil((max(`dlo', `dhi') + 4) / 5))
+
+. local xlo = 50 - `half'
+
+. local xhi = 50 + `half'
+
+. local xstep = cond(`half' > 20, 20, 10)
+
+. local xs  = `xstep' * floor(`half' / `xstep')
+
+. display "   x range `xlo'-`xhi'"
+   x range 35-65
+
+. sort panel refy y
+
+. twoway (rspike lo hi ya if recorded == 1, horizontal lcolor(black) lwidth(0.6pt)) ///
+>     (rspike lo_x hi_x yb if recorded == 1, horizontal lcolor(gs8) lwidth(0.6pt)) ///
+>     (rspike lo hi ya if recorded == 0, horizontal lcolor(gs10) lwidth(0.6pt)) ///
+>     (scatter ya pct if recorded == 1, msymbol(O) mcolor(black) msize(4.5pt)) ///
+>     (scatter yb pct_x if recorded == 1, msymbol(Th) mcolor(gs5) msize(5.5pt)) ///
+>     (scatter ya pct if recorded == 0, msymbol(Oh) mcolor(gs8) msize(4.5pt)) ///
+>     (scatter ya labx if recorded == 1, msymbol(none) mlabel(plab) mlabvposition(labp) mlabgap(0.6) mlabsize(`vs') mlab
+> color(black)) ///
+>     (scatter ya labx if recorded == 0, msymbol(none) mlabel(plab) mlabvposition(labp) mlabgap(0.6) mlabsize(`vs') mlab
+> color(gs9)) ///
+>     (line refy refx, lpattern(dash) lcolor(gs8) lwidth(0.6pt)), ///
+>     by(panel, rows(1) note("") graphregion(color(white) lcolor(white) ilcolor(white)) legend(pos(6)) ///
+>         title("B. Share of one-year changes that fell more (or rose less) than the typical firm's that year, by own el
+> ectricity", ///
+>               size(`sm') pos(11) span)) ///
+>     subtitle(, pos(11) nobox fcolor(white) lcolor(white) size(`sm')) ///
+>     yscale(reverse noline range(-0.3 `ymax')) ylabel(`ylab', angle(0) noticks tlength(0) nogrid labsize(`vs')) ytitle(
+> "") ///
+>     xscale(range(`xlo' `xhi') lcolor(gs10)) ///
+>     xlabel(`=50 - `xs''(`xstep')`=50 + `xs'', noticks tlength(0) labsize(`vs') grid glcolor(gs15) glwidth(vthin)) ///
+>     xtitle("Changes that fell more or rose less than the typical firm's that year (% of the group's changes)", size(`v
+> s')) ///
+>     legend(order(4 "All one-year changes" 5 "Without changes starting in `yx'" 1 "95% interval" ///
+>                  6 "Not recorded" 9 "50% = same as the typical firm") rows(1) region(lcolor(none)) ///
+>         size(`vs') symxsize(8) keygap(1) colgap(5)) ///
+>     plotregion(style(none)) fysize(60) name(pB, replace) nodraw
+
+. 
+. graph combine pA pB, cols(1) iscale(1) imargin(0 0 1 1) ///
+>     title("Figure R3-06. Do the firms that cut energy and CO2 make their own electricity?", size(`sm') pos(11) span) /
+> //
+>     note("Notes: Own electricity = the firm made some of its own power that year. Not recorded: left out of A; hollow 
+> gray in B, not a result. Shows who, not why." ///
+>          "A: reducer = firm with 2+ one-year changes whose energy per unit of VA fell on average more, or rose less, t
+> han the typical firm's in the same years." ///
+>          "B: dot = share of the group's one-year changes that fell more (or rose less) than the typical firm's that ye
+> ar; interval crossing 50% = no clear gap." ///
+>          "`fuelnote'" ///
+>          "`loonote'" ///
+>          "`fbnote'" ///
+>          "`enote'" ///
+>          "A gap in (a) but not in (c) comes from value added (VA = output minus materials, energy and services bought,
+>  current prices). GJ = gigajoules." ///
+>          "`srcnote'" "`devnote'", size(`vs') span linegap(0.6)) ///
+>     graphregion(color(white) lcolor(white) margin(r+2)) xsize(10.5) ysize(12)
+
+. 
+. graph export "figures/06_own_electricity_reducers.png", width(3150) replace
+file
+    /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r3-energy-emissions-correlates/figures
+    > /06_own_electricity_reducers.png saved as PNG format
+
+. graph export "figures/06_own_electricity_reducers.pdf", replace
+file
+    /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r3-energy-emissions-correlates/figures
+    > /06_own_electricity_reducers.pdf saved as PDF format
+
+. 
+. timer off 1
+
+. quietly timer list 1
+
+. local elapsed = strtrim(string(r(t1), "%9.1f"))
+
+. display "FINISHED: figure -> figures/06_own_electricity_reducers.png (elapsed `elapsed' s)"
+FINISHED: figure -> figures/06_own_electricity_reducers.png (elapsed 9.3 s)
+
+. quietly log close
