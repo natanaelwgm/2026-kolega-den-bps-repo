@@ -15,6 +15,7 @@ Item-by-item coverage of Deasy's row and the review record: [TRACKER.md](TRACKER
 | `06_own_electricity_reducers.do` → `figures/06_own_electricity_reducers.png`, `tables/06_own_electricity_reducers_by_year.csv`, `tables/06_own_electricity_reducers_changes.csv` | A: share of reducers vs non-reducers making some of their own electricity, by year (reducers found from all changes, and without changes starting in 2017); B: share of one-year changes beating the typical change, by own electricity at the start and from start to end | "Siapa yang reduce energy use and emisi?"; brief: "electricity self-generation among reducers vs non" | done, reviewed |
 | `07_productivity_reducers.do` → `figures/07_productivity_reducers.png`, `tables/07_productivity_reducers_*.csv` | A: productivity of reducers vs non-reducers (with and without changes starting in 2017); B: share of one-year changes beating the typical change by productivity at the start | Brief: "TFP residual … of reducers vs non"; "Siapa yang reduce energy use and emisi?" | done, reviewed |
 | `08_environmental_goods_imports.do` → `tables/08_environmental_goods_imports_unavailable.csv` (no figure) | **Cannot be answered with this data.** Each firm reports only one yearly total for the imported raw materials it used, with no list of what was bought, so solar panels and other environmental goods cannot be picked out. The table says what is missing and what data would answer it (customs import records per firm, item by item, plus an agreed list of environmental goods). Files 02 and 04 here and R1's `01_group_shares_support.do` use the same total only to mark "importers of any raw material"; they say nothing about environmental goods. | "Tambahan: Siapa yang impor lebih banyak (EGs) environment goods list (termasuk solar panel, dll)" | unavailable (no data), reviewed |
+| `09_who_reduces_by_province.do` → `figures/09_who_reduces_by_province.png`, `tables/09_who_reduces_by_province.csv`, `tables/09_who_reduces_by_province_firm_flag.csv` | For each province (shown by code: the file has no province names) and each island group: the share of one-year changes in which energy and CO2 (per unit of value added and in total) fell more, or rose less, than at the typical firm that year; provinces with fewer than 100 changes are shown together within their island group | "Siapa yang reduce energy use and emisi?"; "determinan motivasi" (where, not why); "Bukan kausal" | done, reviewed |
 
 ## Details kept out of the figures
 
@@ -169,3 +170,26 @@ starts before 2016 vs 2018–21: 56.2 / 57.2% (least productive) and 41.4 / 43.9
 **Considered and rejected.** Productivity at the end of the change (value added in both numbers: 39.9% → 57.9% by
 group, pure arithmetic); productivity a year before the start (4,776 changes, needs four consecutive years; value added
 still falls back 42.3% → 52.3%, so the link is not removed).
+
+**09 — who reduces, by province.** Same unit, measure, intervals and chart form as 02 and 03. The file has no
+province names (no value label or name variable; codes as recorded each year, with no boundary harmonisation — code
+65 appears only from 2015), so rows show codes; island group = first digit of the code (1–2 Sumatra, 3 Java, 5–9
+other islands). Province = code at the start of each change; no change switches province in this file (the fictional
+firm link is drawn within province and sector). Provinces with at least 100 changes are drawn on their own (12 here);
+smaller ones are drawn together within their island group (Sumatra: 11 13 15 16 17 19, 305 changes; other islands: 16
+codes, 474 changes), and each keeps its own share in the table without an interval. Java holds 88% of the 20,169
+changes. Per unit of value added no province differs: in panel (a) 0 of 14 rows miss 50% (about 1 by chance), joint
+test F(13, 5278) = 1.16, p = 0.30 (CO2 per VA 1.44, p = 0.13); island groups F(2, 5278) = 0.43 — unlike sectors
+(03: 9 of 22, F = 4.56). In totals 3 rows miss 50% in (c) and 4 in (d) (F = 2.64 and 2.78); the largest, province 14
+(58.8 [50.9, 66.7]), is mostly start size: its changes start at 11.3 times the typical firm's energy that year, and big
+starts fall back (30% vs 69% of changes beat the typical change, lowest vs highest fifth of starting energy); in the
+same fifth of starting energy it drops to 45.9 [37.6, 54.2]. Holding the starting level fixed does separate provinces
+(F = 6.35 in (a)): 36 (55.6 [53.4, 57.8]) and 31 (53.9) above 50%, 18 (38.3 [31.2, 45.4]), 12 (43.8) and Sumatra as a
+whole (45.1 [42.7, 47.5]) below — kept in the table (`st_*` columns), not drawn, so the chart stays comparable with 03.
+Holding sector fixed moves no drawn row in (a) by more than 1.9 points (`sf_*`); leaving out changes that start in 2017,
+by at most 3.5 (province 51, only 22 such changes). A firm-level bootstrap (999 redraws) gives the same intervals as the
+clustered ones (province 21: [43.6, 58.2] vs [43.3, 58.0]). Each province's share of all energy and CO2 is in the table
+only: one masked row can dominate (province 63 holds 38.5% of all energy on 51 changes), so do not call a province "the
+biggest energy user" from it. Firm-level companion (3,709 firms, province at each firm's first change): other islands
+42.7% [36.2, 49.4] against 50–51% in Sumatra and Java; province 32 56.8%, 35 44.0% — it differs from the change view
+because it depends on which years a firm is observed.
