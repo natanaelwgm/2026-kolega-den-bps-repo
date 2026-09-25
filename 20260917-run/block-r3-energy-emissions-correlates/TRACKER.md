@@ -12,8 +12,8 @@ missing) · **unavailable** = the dataset cannot answer it (says why) · **plann
 
 | ID | Deasy's item (verbatim) | Our exhibit(s) | Status | Earlier Codex/Devin report | Note |
 |---|---|---|---|---|---|
-| R3.Q1 | Siapa yang reduce energy use | R3-01 (definition, yearly shares), R3-02, R3-03, R3-04 | partial (R3-01 to R3-03 done: how many; which size/trade/ownership groups; which sectors) | partial — traits only, no share of firms, no groups or sectors |  |
-| R3.Q2 | … and emisi | R3-01, R3-02, R3-03, R3-04 | partial (R3-01 to R3-03 done; total CO2 included) | partial — same; no scope split |  |
+| R3.Q1 | Siapa yang reduce energy use | R3-01 to R3-04, R3-06, R3-07 | done (R3-01 how many firms cut energy use each year; R3-02 which size, trade and ownership groups; R3-03 which sectors; R3-04 traits held together; R3-06 own electricity; R3-07 productivity) | partial — traits only, no share of firms, no groups or sectors |  |
+| R3.Q2 | … and emisi | R3-01 to R3-04, R3-06, R3-07 | done (as R3.Q1, for CO2: total CO2 in every R3 file) | partial — same; no scope split |  |
 | R3.Q3 | Lebih ke determinan motivasi apa yg membuat firms respond to climate commitment | R3-02 to R3-07 | partial (R3-02 to R3-05 done: traits and stand-ins; motives themselves not asked) | partial — associations with a few traits |  |
 | R3.Q3a | … size | R3-02, R3-04 | done (R3-02 shares; R3-04 FE: no clear size gap per unit of VA) | fulfilled |  |
 | R3.Q3b | … export status | R3-02, R3-04 | done (R3-02, R3-04: no clear exporter gap) | fulfilled |  |
@@ -29,7 +29,7 @@ missing) · **unavailable** = the dataset cannot answer it (says why) · **plann
 | R3.Q3o | … direct motivation (climate commitment, buyer pressure, parent policy) | — | unavailable | blocked | No survey question measures motivation. |
 | R3.Q4 | Tambahan: Siapa yang impor lebih banyak (EGs) environment goods list (termasuk solar panel, dll) | R3-08 (unavailable exhibit) | unavailable (exhibit built, reviewed): total imports are imported raw materials only; not used as a stand-in. R1-01, R3-02, R3-04 show importers of any raw material, not environmental goods | blocked | No firm-by-product import records in this file. |
 | R3.S1 | FE | R3-04 | done (year+sector+province, firm+year, sector×year+province×year) | fulfilled |  |
-| R3.N1 | Bukan kausal, tp mengetahui firms mana yg respond thd climate and motivasinya apa | All R3 files (association wording); R3-01 to R3-03 answer 'which firms' | partial (R3-01 to R3-03 done) | fulfilled for framing; 'which firms' not answered |  |
+| R3.N1 | Bukan kausal, tp mengetahui firms mana yg respond thd climate and motivasinya apa | All R3 files | done (every R3 file says association, not cause; 'which firms' answered by R3-01 to R3-04, R3-06, R3-07; motives only through stand-ins in R3-05) | fulfilled for framing; 'which firms' not answered |  |
 
 ## How each exhibit was made
 
