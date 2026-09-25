@@ -15,7 +15,7 @@ global OUTDIR "/Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917
 * The two paths above are passed to every exhibit file, so you edit them once here.
 
 * Exhibit files, in order (added as each exhibit passes review).
-local files "01_group_shares_support 02_exporters_energy_co2_per_va 03_importers_energy_co2_per_va 04_foreign_owned_energy_co2_per_va 05_before_after_paris 06_frozen_pre_paris_groups 07_electricity_own_generation 09_frozen_groups_regression"
+local files "01_group_shares_support 02_exporters_energy_co2_per_va 03_importers_energy_co2_per_va 04_foreign_owned_energy_co2_per_va 05_before_after_paris 06_frozen_pre_paris_groups 07_electricity_own_generation 08_matched_gaps_by_year 09_frozen_groups_regression"
 
 local n : word count `files'
 local i 0

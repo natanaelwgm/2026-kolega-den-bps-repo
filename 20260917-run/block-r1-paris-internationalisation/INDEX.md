@@ -16,6 +16,7 @@ Item-by-item coverage of Deasy's row and the review record: [TRACKER.md](TRACKER
 | `05_before_after_paris.do` → `figures/05_before_after_paris.png`, `tables/05_before_after_paris.csv` | Before (2013–14) vs after (2018) the Paris Agreement for every outcome in Deasy's list (energy and CO2 per unit of value added, energy used, CO2 emitted, GJ per tonne — scope 1, 2 and total; electricity; own electricity), for all firms and for each group against other firms, with the % change or gap printed on the chart | "Do global climate commitments reach the factory floor?"; "Did internationally engaged firms change their environmental behaviour more strongly after the Paris Agreement?"; the full outcome list | done, reviewed |
 | `06_frozen_pre_paris_groups.do` → `figures/06_frozen_pre_paris_groups.png`, `tables/06_frozen_pre_paris_groups.csv` | Each firm put once into a group from its 2013–14 records (exporter or not, importer or not, 10%+ foreign-owned or not), then followed 2010–2022: the typical (median) firm's energy and CO2 per unit of value added as % of its group's own 2013–14 level, and the 2018 difference between each group and the other firms, with a 95% range; 2015 marked as the transition year, 2017 in the table only, 2019–2022 light gray | "Freeze internationalisation status sebelum Paris, misalnya average 2013–14: pre exporters x year; 2015 transition year; 2016+ post"; "Did internationally engaged firms change their environmental behaviour more strongly after the Paris Agreement?"; "Gj/va", "Co2/va"; "Energi use … total" (table) | done (descriptive; the regression is R1-09) |
 | `07_electricity_own_generation.do` → `figures/07_electricity_own_generation.png`, `tables/07_electricity_own_generation.csv` | Each year, the middle (median) firm's bought electricity per million of value added, the share of firms making some of their own electricity, and own electricity as % of the electricity used by firms that make some, for exporters, importers and 10%+ foreign-owned firms each against other firms; own-electricity rows leave out 2014–15 (too few firms recorded); doubtful years hollow gray, as in R1-03 and R1-04 | "Electricity"; "Self generation"; "Energi use … scope 2" (per unit of value added; amount per firm in the table); "export vs non export, import vs non import, fdi vs non fdi"; "Did internationally engaged firms change their environmental behaviour more strongly after the Paris Agreement?" | done |
+| `08_matched_gaps_by_year.do` → `figures/08_matched_gaps_by_year.png`, `tables/08_matched_gaps_by_year.csv` | Each year, exporters, importers and 10%+ foreign-owned firms compared only with other firms of the same year, 2-digit industry and size band (workers): the typical group firm's energy and CO2 per unit of value added as % of its similar firms', with a 95% range, next to the same comparison without matching; per panel, the 2013–14 and 2018 values and their change; importers 2017 and foreign-owned 2020 in the table only, doubtful years light gray | "Matching per year: export vs non export, import vs non import, fdi vs non fdi"; "… kita bs coba dengan method matching yearly.. dan dicompare bagaimana behaviour mereka toward energy use, emisi"; "Did internationally engaged firms change their environmental behaviour more strongly after the Paris Agreement?"; "Gj/va", "Co2/va" (drawn); "VA/energy use … total", "VA/emisi … total" (reciprocals, table only) | done, reviewed |
 | `09_frozen_groups_regression.do` → `figures/09_frozen_groups_regression.png`, `tables/09_frozen_groups_regression.csv` | R1-06's groups (fixed once from 2013–14 records) in a regression. For every outcome in Deasy's list: how much more each group's measure changed from 2013–14 to 2018 than that of firms in the same industry and province, each firm against its own average, with a 95% interval; the same for 2010–12 as a before-Paris check. The table adds 2015, Deasy's literal "2016+" (2017–22 together, against 2010–14), firm + year averages only, the stricter and 2013–14-average groupings, a version without doubtful importer records, a 2013–14-and-2018-only version, and one estimate per year for total energy and CO2 per unit of value added | "DID"; "Freeze internationalisation status sebelum Paris, misalnya average 2013–14: pre exporters x year; 2015 transition year; 2016+ post; Firm FE + industry×year FE + province×year FE"; "Did internationally engaged firms change their environmental behaviour more strongly after the Paris Agreement?"; every listed outcome ("VA/energy use", "VA/emisi": mirror columns, table) | done (association only) |
 
 ## Details kept out of the figures
@@ -202,6 +203,46 @@ this file (02 and 03 re-run, tables byte-identical): optional light-gray marks f
       read from the table.
 - **Units.** "Per million of value added" means per million Rp000 on the real files; value added is at current prices.
   Runtime is about 90 s.
+
+**08 — each group against similar firms, yearly (matching).**
+- **Matching rule.** Each year, each group firm is compared only with the other firms in its cell. A cell = same year, same 2-digit industry (`industry2_reported`) and same size band (under 50, 50–99, 100–249, 250–499, 500+ workers).
+  - Only cells that hold both kinds of firm are used: 92–100% of group firms find similar firms (59–107 cells a year).
+  - Each group firm's energy or CO2 per unit of value added is set against the average of its cell's other firms. These comparisons are then averaged over the group's firms, so the answer is about the group's own firms.
+  - Unknown status is left out (export status is unknown for 29–58% of firms a year).
+  - Sample: energy, CO2 and value added above zero, plus a known number of workers (28 rows in 2022 lack it).
+- **"Typical" is an average of ratios, not the median.** A firm at half and one at double cancel out. Differences in logs can be averaged within cells, and medians cannot. The circle ("not matched") uses the same average against all other firms that year, so diamond against circle shows only what matching changes.
+  - The circles equal the `gmean_*` ratios in the R1-02 to R1-04 tables. They are not the medians drawn there. Exporters 2018: 85 here against 73 in R1-02; importers 2015: 93 against 81.
+- **What matching changes.**
+  - Typical workers, exporters against non-exporters: 145–207 against 41–55 unmatched; 130–196 against 128–179 matched.
+  - Unmatched, exporters look leaner in 2010–11 (74 and 87); matched, they are 96 and 110. Size alone explains about half of this (84 and 98 when matching on size only; column `chk_size_pct`).
+  - Foreign-owned firms move the same way: 55 unmatched, 72 matched in 2010.
+  - The effective number of other firms is smaller than the count, because cells weigh their other firms unevenly: exporters 168–329 of 884–1,173 (`n_other_effective`).
+  - Checks (`chk_*`): industry only, size only, also the same province (loses about 40% of group firms), finer size bands, and firms with a known export status only.
+- **Results, matched (energy; CO2 alike).**
+  - **Exporters** use about as much as similar non-exporters: 70–125 in 2010–15, clearly lower only in 2015 (70, energy). After Paris they are clearly lower in 2019 (68 and 70), not in other years.
+  - **Importers** use clearly less: 70–90, clear in every year 2010–15 except 2012; 2018: 70 and 67, clear.
+  - **Foreign-owned firms (10%+):** 63–83 in 2010–14, clearly lower only in 2012 (both) and 2013 (energy). About the same from 2015 (101 and 107); 2018: 92 and 99.
+- **Before (2013–14 average) against after (2018), matched.** No change is clear in any panel. The 95% ranges come from 999 redraws of whole firms with all their years, matching again each time (seed 20260925).
+
+  | | Energy | CO2 |
+  |---|---|---|
+  | Exporters | 89 → 91, +1 (−29 to +48) | 92 → 93, 0 (−30 to +50) |
+  | Importers | 77 → 70, −7 (−22 to +8) | 79 → 67, −12 (−28 to +3) |
+  | Foreign-owned | 75 → 92, +17 (−7 to +43) | 80 → 99, +19 (−9 to +48) |
+
+  Without matching, importers' falls are clear: −15 (−27 to −3) and −20 (−33 to −8). Matching on size and industry makes them unclear.
+- **Wider window** (all years before 2015 against all solid later years: exporters 2017–21; importers and foreign-owned 2018 only):
+  - exporters −8 and −7;
+  - importers −7 and −12;
+  - foreign-owned +21 (−1 to +46) and +24 (+0.2 to +52). The last is clear only just: a reviewer's separate 299-draw run gave +0.4 to +51, and the normal approximation −1 to +49.
+  - Treat it as not clear.
+- **Doubtful years** (same as R1-03 and R1-04; matching does not fix them):
+  - Importers 2017 (gap 658) and foreign-owned 2020 (307) are in the table only. Importers 2019–22 (18–26) and foreign-owned 2017, 2019, 2021, 2022 are light gray.
+  - Among firms with a known export status, importers are 88 in 2017 and 43, 74, 92, 108 in 2019–22 (`chk_knownx_pct`). So the jump and most of the drop come from importers with no export answer (lesson 16).
+  - Foreign-owned 2021–22 are 119 and 129 matched against 76 and 80 unmatched, and 102 and 75 among firms with a known export status: do not interpret them.
+- **Exporters 2022.** No known non-exporters (the 2022 file records direct exporters only): no comparison.
+- **Runtime and add-ons.** About 20 s. Built-in Stata only: the redraw arithmetic runs in Mata, which ships with Stata, and draw 0 is checked against the plain-Stata calculation.
+- **Units.** "Per million of value added" means per million Rp000 on the real files; value added is at current prices. This shows differences between firms of the same year, industry and size, not their cause.
 
 **09 — groups fixed before Paris, as a regression.**
 - **Groups.** R1-06's rule and code:
