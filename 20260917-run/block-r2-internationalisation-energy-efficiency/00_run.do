@@ -16,7 +16,7 @@ global OUTDIR "/Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917
 * Needs Stata add-ons (install once, see INDEX.md): reghdfe ftools require csdid drdid eventstudyinteract avar did_imputation did_multiplegt_dyn gtools
 
 * Exhibit files, in order (added as each exhibit passes review).
-local files "01_export_entry_cohorts 02_event_time_support 03_energy_efficiency_export_start 04_co2_efficiency_export_start 05_energy_co2_va_export_start 06_efficiency_by_start_year 07_efficiency_by_method 08_efficiency_import_foreign_start"
+local files "01_export_entry_cohorts 02_event_time_support 03_energy_efficiency_export_start 04_co2_efficiency_export_start 05_energy_co2_va_export_start 06_efficiency_by_start_year 07_efficiency_by_method 08_efficiency_import_foreign_start 09_other_efficiency_measures"
 
 local n : word count `files'
 local i 0

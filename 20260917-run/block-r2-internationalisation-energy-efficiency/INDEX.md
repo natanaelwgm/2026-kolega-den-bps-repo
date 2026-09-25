@@ -21,6 +21,7 @@ R2-08 method add-ons is missing, that method gets an "unavailable" row and the f
 | `06_efficiency_by_start_year.do` → `figures/06_efficiency_by_start_year.png`, `tables/06_efficiency_by_start_year.csv` | Each start year compared only with never-exporters (never with earlier starters): value added per GJ after vs before the start, per start year, with averages for all, before-Paris and after-Paris starters; a version without doubtful energy records | "Stagged did" (the clean building block of a staggered design); "Mirip dengan paper kita sebelumnya" | done, reviewed |
 | `07_efficiency_by_method.do` → `figures/07_efficiency_by_method.png`, `tables/07_efficiency_by_method.csv` | Value added per GJ after the export start under the previous paper's four methods (Callaway–Sant'Anna, Sun–Abraham, Borusyak–Jaravel–Spiess, de Chaisemartin–D'Haultfœuille) next to Figure R2-03's single regression, with Figure R2-06's average and the previous paper's stricter start rule as reference rows; each method's before-start check; each method's year-by-year path in the table | "Stagged did"; "Mirip dengan paper kita sebelumnya hanya Ganti tahun" (its four methods and its start rule on 2010–2022) | done, reviewed |
 | `08_efficiency_import_foreign_start.do` → `figures/08_efficiency_import_foreign_start.png`, `tables/08_efficiency_import_foreign_start.csv` | Value added per GJ before and after firms start importing (a) or get a foreign owner with 10%+ of the capital (b), as % change since the year before the start, starters minus firms that never start (R2-03's model); each panel's average after the start and before-start check, for the repaired records (black) and for every start and record as filed (gray); value added per CO2, energy use and value added in the table | "Intertionalized and energy efficiency" (internationalisation beyond exporting); "Stagged did"; "Mirip dengan paper kita sebelumnya hanya Ganti tahun" (its import-start and foreign-owner-start treatments, ln VA per GJ) | done, reviewed |
+| `09_other_efficiency_measures.do` → `figures/09_other_efficiency_measures.png`, `tables/09_other_efficiency_measures.csv` | The previous paper's six efficiency measures after the export start, one row each on one scale: value added and output per GJ of energy, value added and output per tonne of CO2, value added per GJ of bought electricity and per GJ of fuels; average of years 0 to +5 in R2-03's model, with and without doubtful energy records; firms per row; each row's before-start check; year-by-year paths, six more versions, an average against all years before the start, and three helper series in the table | "Intertionalized and energy efficiency"; "Stagged did"; "Mirip dengan paper kita sebelumnya hanya Ganti tahun" (its six outcomes: ln VA per GJ, ln output per GJ, ln VA per CO2, ln output per CO2, ln VA per electricity GJ, ln VA per fuel GJ) | done, reviewed |
 
 ## Details kept out of the figures
 
@@ -181,3 +182,43 @@ Differences from the previous paper:
 - never-starters are the only comparison;
 - of its four methods, only Sun–Abraham is run here;
 - its "any trade" start is not built.
+
+**09 — the previous paper's six efficiency measures.**
+
+Setup:
+- Same starters (simple rule), never-exporters, rows, year window (−5 to +5) and model as R2-03. Rows 1 and 3 are exactly R2-03 and
+  R2-04 (the file checks all 52 + 52 coefficients when their tables are present).
+- The measures are the previous paper's (its `_s1` = the first set of conversion and emission factors, not "scope 1"). Energy =
+  nine fuels + bought electricity. CO2 = both, at standard rates. Bought electricity = PLN + other suppliers, own generation
+  excluded. Output = value added + inputs bought + an accounting gap, never below value added.
+- The previous paper divided value added and output by a sector wholesale price index. This file has none, so current prices are
+  used; year effects remove only the all-industry price change.
+- The electricity and fuel rows leave out years with none recorded (5% and 10% of rows): 19,146 rows, 719 starters, 2,703
+  never-exporters (electricity); 18,001 rows, 725 starters, 2,621 never-exporters (fuel). Mostly comparison firms drop.
+
+Results (average of years 0 to +5, 95% interval, before-start p):
+
+| Measure | Main | Without doubtful records | Firm-years with all six | Against the 5 years before the start |
+|---|---|---|---|---|
+| Value added per GJ | +9% (−8 to +28), p = 0.245 | +9% | +5% | +3% (−14 to +22) |
+| Output per GJ | +4% (−11 to +22), p = 0.228 | +4% | −1% | 0% (−15 to +19) |
+| Value added per CO2 | +10% (−6 to +30), p = 0.276 | +10% | +7% | +2% (−14 to +20) |
+| Output per CO2 | +6% (−9 to +23), p = 0.307 | +5% | +1% | −1% (−16 to +17) |
+| Value added per GJ of bought electricity | **+27% (+7 to +50)**, p = 0.788 | +24% (+4 to +48) | +24% (+4 to +47) | +17% (−2 to +41), p = 0.083 |
+| Value added per GJ of fuels | −1% (−18 to +21), p = 0.333 | 0% | +3% | +5% (−14 to +27) |
+
+- Output rows sit about 4 points below value-added rows: value added's share of output rises a little after the start (−4%,
+  −10 to +1).
+- **Bought electricity: borderline.**
+  - The rise comes from value added growing (+20%) while bought electricity use does not clearly change (−5%, −19 to +11).
+  - Starters' bought electricity is high in the year before the start and in the start year (+27%), then falls back. So the
+    answer depends on the base: +27% against the year just before, +17% (not clear, p = 0.083) against the average of the 5
+    years before. With the previous paper's imputation method (Borusyak–Jaravel–Spiess, review check) it is +19% (+1 to +40).
+  - Without the 2017 starters: +29% (and +22% against the years before, clear).
+  - Exact-dated starters: +36%, but they fail the before-start check (p = 0.002), and against the years before only 0%.
+- Fuels: value added per GJ of fuels is flat because fuel burned rises with value added (+19%, −1 to +44).
+- Before-start checks pass for all six (p = 0.228 to 0.788). Starters seen not exporting in the year just before fail in 5 of 6
+  (p < 0.001 rows 1–4, 0.002 electricity; fuel 0.076).
+- Also in the table: the previous paper's age² control and without the 2017 starters change no answer. Without every 2017 record
+  (the year own-generation firms report far more fuel, mostly doubtful rows), value added per GJ of bought electricity is +29%.
+- Identities checked in the file: output rows = value-added rows + output per unit of value added, marker by marker.
