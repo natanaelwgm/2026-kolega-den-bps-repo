@@ -36,7 +36,8 @@ cannot create a gap by themselves. Group = status in the first year of each chan
 status is its own "Not recorded" row, never counted as non-exporter or domestic. Foreign ownership = 10% or more;
 status measured in 2020 is not used (the foreign-owned share that year is more than twice the usual). Intervals
 are 95% and allow for the same firm appearing in several years (clustered by firm). Reading: per unit of value
-added no group differs clearly from 50%; in total energy use, importers and the largest third cut more often,
+added every group is within 2 points of 50%; only non-exporters (51.1%, interval 50.2–52.0) and firms with no
+export answer (48.9%, 48.0–49.9) are clearly, though slightly, different, and exporters themselves are not (49.3%); in total energy use, importers and the largest third cut more often,
 and in total CO2 foreign-owned firms do (52.6%, interval 50.1–55.2) — but in totals, changes that start from a
 high energy level fall back more often (top fifth 69% vs bottom fifth 30%), so groups that start bigger look better
 there partly automatically (sentence added to the figure notes after the R3-05 review). There is no stable pattern: the importer and
