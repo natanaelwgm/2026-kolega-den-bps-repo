@@ -8,8 +8,8 @@ Item-by-item coverage of Deasy's row and the review record: [TRACKER.md](TRACKER
 **Stata add-ons this block needs** (install once; no file installs or updates anything; on a computer without internet, copy the
 add-on folder from one that has them): `ssc install reghdfe`, `ssc install ftools`, `ssc install require` (all files from R2-03 on);
 for R2-07 also `ssc install csdid`, `ssc install drdid`, `ssc install eventstudyinteract`, `ssc install avar`,
-`ssc install did_imputation`, `ssc install did_multiplegt_dyn`, `ssc install gtools`. If one of the R2-07 method add-ons is
-missing, that method gets an "unavailable" row and the file still finishes.
+`ssc install did_imputation`, `ssc install did_multiplegt_dyn`, `ssc install gtools`. R2-08 uses `eventstudyinteract` and `avar` for its Sun–Abraham row only. If one of the R2-07 or
+R2-08 method add-ons is missing, that method gets an "unavailable" row and the file still finishes.
 
 | File | What it shows | Deasy's words it answers | Status |
 |---|---|---|---|
@@ -20,6 +20,7 @@ missing, that method gets an "unavailable" row and the file still finishes.
 | `05_energy_co2_va_export_start.do` → `figures/05_energy_co2_va_export_start.png`, `tables/05_energy_co2_va_export_start.csv` | The same before/after comparison for energy use, CO2 and value added separately (three panels, one scale): what moves when firms start exporting | "Intertionalized and energy efficiency" (where an efficiency change comes from); "Stagged did" | done, reviewed |
 | `06_efficiency_by_start_year.do` → `figures/06_efficiency_by_start_year.png`, `tables/06_efficiency_by_start_year.csv` | Each start year compared only with never-exporters (never with earlier starters): value added per GJ after vs before the start, per start year, with averages for all, before-Paris and after-Paris starters; a version without doubtful energy records | "Stagged did" (the clean building block of a staggered design); "Mirip dengan paper kita sebelumnya" | done, reviewed |
 | `07_efficiency_by_method.do` → `figures/07_efficiency_by_method.png`, `tables/07_efficiency_by_method.csv` | Value added per GJ after the export start under the previous paper's four methods (Callaway–Sant'Anna, Sun–Abraham, Borusyak–Jaravel–Spiess, de Chaisemartin–D'Haultfœuille) next to Figure R2-03's single regression, with Figure R2-06's average and the previous paper's stricter start rule as reference rows; each method's before-start check; each method's year-by-year path in the table | "Stagged did"; "Mirip dengan paper kita sebelumnya hanya Ganti tahun" (its four methods and its start rule on 2010–2022) | done, reviewed |
+| `08_efficiency_import_foreign_start.do` → `figures/08_efficiency_import_foreign_start.png`, `tables/08_efficiency_import_foreign_start.csv` | Value added per GJ before and after firms start importing (a) or get a foreign owner with 10%+ of the capital (b), as % change since the year before the start, starters minus firms that never start (R2-03's model); each panel's average after the start and before-start check, for the repaired records (black) and for every start and record as filed (gray); value added per CO2, energy use and value added in the table | "Intertionalized and energy efficiency" (internationalisation beyond exporting); "Stagged did"; "Mirip dengan paper kita sebelumnya hanya Ganti tahun" (its import-start and foreign-owner-start treatments, ln VA per GJ) | done, reviewed |
 
 ## Details kept out of the figures
 
@@ -122,3 +123,61 @@ that exported before their 0-0-1-1 pattern: −16% (−64% to +97%). Too few fir
 Differences from the previous paper: never-exporters are the only comparison (it also used firms not yet started for
 Callaway–Sant'Anna and de Chaisemartin–D'Haultfœuille), no age² control, and Sun–Abraham's outer years are grouped (its code put
 them into the reference year).
+
+**08 — importing and foreign owners.**
+
+Setup:
+- Same start rule (simple rule A), model and year-window rule as R2-03. Comparison firms are firms never seen importing (a), or never
+  seen with 10%+ foreign ownership (b). A firm stays a starter if it stops later, and many do: 30–69% of import starters are seen
+  importing the next year.
+- Both panels use years −4 to +4 (outer years grouped):
+  - imports allow only −4 to +4, because with the 2017 starts left out no starter after the missing 2016 file reaches +5;
+  - foreign owners allow −5 to +5.
+- The average after the start is years 0 to +4, not 0 to +5 as in R2-03.
+
+Three repairs of known recording problems. Each is re-checked in the file, with a WARNING if the data no longer show it:
+1. **Import starts dated 2017 (459 firms) are left out completely.** Importers rise from 26% of firms in 2015 to 56% in 2017 and
+   stay near 50%. Among firms not importing in both 2015 and 2018, 32% are recorded as importing in 2017, against 9–12% for such
+   one-year blips in 2012–2014. Every other import start is seen not importing the year just before.
+2. **All 2020 foreign-ownership answers are treated as unknown.** 47% of firms are marked foreign-owned in 2020, about 9% in other
+   years. The 2020 answer says nothing about the firm: among firms not foreign-owned in both 2019 and 2021, 52% are marked
+   foreign-owned in 2020, and among firms foreign-owned in both years only 50% are. Of the 854 starts dated 2020 as filed, 798
+   become never foreign-owned (678 of them answer "no" after 2020) and 56 get a later start year (27 in 2021, 29 in 2022). That
+   leaves 844 starters, 760 of them in the estimate.
+3. **Doubtful energy records are left out: R2-06's definition, used differently.** The definition is importers with unknown export
+   status in 2017 and 2019–2022, whose middle energy per unit of value added is 13× (2017) or 0.13–0.22× (2019–2022) the other rows'.
+   - R2-03 to R2-07 keep them, because for export starts they fall on both sides of the comparison.
+   - Here, in (a) they can only be starters' rows after the start (1,712 rows, 29% of those), so keeping them would put distorted
+     records on one side only.
+   - In (b) they are 25% of starters' rows and 18% of comparison rows.
+
+Results (average of years 0 to +4, 95% interval, before-start check):
+
+| Version | (a) Import | (b) Foreign owner |
+|---|---|---|
+| Main (black dots) | +29% (+14 to +46), p = 0.395 | +4% (−12 to +22), p = 0.409 |
+| As filed (gray triangles) | +27% (+13 to +44), p = 0.202 | +12% (−2 to +28), p < 0.001, a warning sign |
+| Doubtful records kept | +25% (+10 to +42) | +19% (+1 to +40), p = 0.078 |
+| Starts and years before the missing file only (no known recording problem) | +33% (+10 to +59), 773 starters | −1% (−21 to +25), 368 starters |
+| Start years kept apart (Sun–Abraham) | +35% (+19 to +54) | +4% (−13 to +24) |
+
+- The import answer holds in every version.
+- The foreign-owner answer is clear only when doubtful records are kept. Kept but given their own yearly average (review check), it
+  is +10% (−6 to +28). So that +19% comes from the distorted records.
+- Where the import rise comes from: less energy (−13%, −23 to −1; before-start p = 0.424) and more value added (+12%, +4 to +22).
+  Value added was already changing differently before the start (p < 0.001), so that part may continue an earlier difference.
+- Value added per CO2: +24% (import), +3% (foreign owner).
+
+Review checks (not in the table):
+- Non-importers with unknown export status in 2019–2021 show the same low energy records (0.14–0.30×) but are few (181 rows in (a),
+  240 in (b)). Leaving them out too gives +29% / +6%. Leaving out every unknown-export row in 2017 and 2019–2022 gives +31% / +9%.
+- Other 2020 repairs:
+  - only "yes" answers unknown: +3%;
+  - a 2020 "yes" counts when 2019 or 2021 agrees: +6%;
+  - start years as filed with doubtful records out: +10%, but it fails the before-start check (p < 0.001).
+
+Differences from the previous paper:
+- simple start rule. Its stricter 0-0-1-1 rule dates 262 import and 105 foreign-owner starters (R2-01);
+- never-starters are the only comparison;
+- of its four methods, only Sun–Abraham is run here;
+- its "any trade" start is not built.
