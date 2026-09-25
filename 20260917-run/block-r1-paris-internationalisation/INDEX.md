@@ -5,6 +5,8 @@ Development data — obscured values, fictional firm panel. Not BPS findings.
 Run all: open `00_run.do`, check the two paths at the top, press Do. Each file below also runs on its own.
 Item-by-item coverage of Deasy's row and the review record: [TRACKER.md](TRACKER.md).
 
+**Stata add-ons R1-09 needs** (install once; no file installs anything): `ssc install reghdfe`, `ssc install ftools`, `ssc install require`.
+
 | File | What it shows | Deasy's words it answers | Status |
 |---|---|---|---|
 | `01_group_shares_support.do` → `figures/01_group_shares_support.png`, `tables/01_group_shares_support.csv`, `tables/01_group_support_cells.csv` | Each year, the share of firms that export, import or have 10%+ foreign ownership, with the number of firms in, not in, and of unknown status; the support table behind every later R1 comparison | "… dan juga internationalization strategy-nya?"; "Matching per year: export vs non export, import vs non import, fdi vs non fdi" (the groups) | done, reviewed |
@@ -14,6 +16,7 @@ Item-by-item coverage of Deasy's row and the review record: [TRACKER.md](TRACKER
 | `05_before_after_paris.do` → `figures/05_before_after_paris.png`, `tables/05_before_after_paris.csv` | Before (2013–14) vs after (2018) the Paris Agreement for every outcome in Deasy's list (energy and CO2 per unit of value added, energy used, CO2 emitted, GJ per tonne — scope 1, 2 and total; electricity; own electricity), for all firms and for each group against other firms, with the % change or gap printed on the chart | "Do global climate commitments reach the factory floor?"; "Did internationally engaged firms change their environmental behaviour more strongly after the Paris Agreement?"; the full outcome list | done, reviewed |
 | `06_frozen_pre_paris_groups.do` → `figures/06_frozen_pre_paris_groups.png`, `tables/06_frozen_pre_paris_groups.csv` | Each firm put once into a group from its 2013–14 records (exporter or not, importer or not, 10%+ foreign-owned or not), then followed 2010–2022: the typical (median) firm's energy and CO2 per unit of value added as % of its group's own 2013–14 level, and the 2018 difference between each group and the other firms, with a 95% range; 2015 marked as the transition year, 2017 in the table only, 2019–2022 light gray | "Freeze internationalisation status sebelum Paris, misalnya average 2013–14: pre exporters x year; 2015 transition year; 2016+ post"; "Did internationally engaged firms change their environmental behaviour more strongly after the Paris Agreement?"; "Gj/va", "Co2/va"; "Energi use … total" (table) | done (descriptive; the regression is R1-09) |
 | `07_electricity_own_generation.do` → `figures/07_electricity_own_generation.png`, `tables/07_electricity_own_generation.csv` | Each year, the middle (median) firm's bought electricity per million of value added, the share of firms making some of their own electricity, and own electricity as % of the electricity used by firms that make some, for exporters, importers and 10%+ foreign-owned firms each against other firms; own-electricity rows leave out 2014–15 (too few firms recorded); doubtful years hollow gray, as in R1-03 and R1-04 | "Electricity"; "Self generation"; "Energi use … scope 2" (per unit of value added; amount per firm in the table); "export vs non export, import vs non import, fdi vs non fdi"; "Did internationally engaged firms change their environmental behaviour more strongly after the Paris Agreement?" | done |
+| `09_frozen_groups_regression.do` → `figures/09_frozen_groups_regression.png`, `tables/09_frozen_groups_regression.csv` | R1-06's groups (fixed once from 2013–14 records) in a regression. For every outcome in Deasy's list: how much more each group's measure changed from 2013–14 to 2018 than that of firms in the same industry and province, each firm against its own average, with a 95% interval; the same for 2010–12 as a before-Paris check. The table adds 2015, Deasy's literal "2016+" (2017–22 together, against 2010–14), firm + year averages only, the stricter and 2013–14-average groupings, a version without doubtful importer records, a 2013–14-and-2018-only version, and one estimate per year for total energy and CO2 per unit of value added | "DID"; "Freeze internationalisation status sebelum Paris, misalnya average 2013–14: pre exporters x year; 2015 transition year; 2016+ post; Firm FE + industry×year FE + province×year FE"; "Did internationally engaged firms change their environmental behaviour more strongly after the Paris Agreement?"; every listed outcome ("VA/energy use", "VA/emisi": mirror columns, table) | done (association only) |
 
 ## Details kept out of the figures
 
@@ -199,3 +202,46 @@ this file (02 and 03 re-run, tables byte-identical): optional light-gray marks f
       read from the table.
 - **Units.** "Per million of value added" means per million Rp000 on the real files; value added is at current prices.
   Runtime is about 90 s.
+
+**09 — groups fixed before Paris, as a regression.**
+- **Groups.** R1-06's rule and code:
+  - exporters 592 against 1,727, importers 891 against 2,140, foreign-owned 397 against 2,634;
+  - left out: 7,432 firms without a 2013–14 record and 712 without a known export answer.
+- **Model.**
+  - The log of each outcome on group × period, with firm averages and industry × year and province × year averages (Deasy's "Firm FE + industry×year FE + province×year FE").
+  - 95% intervals are clustered by firm.
+  - Periods: 2010–12 (before-Paris check), 2013–14 (comparison years, Deasy's freeze years), 2015 (transition), 2017 (records jump), 2018 (drawn), 2019–22 (records in doubt).
+  - Each period has its own term, so the 2017 jump and the 2019–22 records do not enter the 2018 number. Using only the 2013, 2014 and 2018 records (`window`) gives nearly the same answers: exporters' energy used −26% [−43, −5], energy per value added 0%.
+- **Outcomes and units.**
+  - R1-05's rows: % = 100 × (exp(b) − 1); electricity rows in percentage points.
+  - "VA/energy use" and "VA/emisi" are the `mirror_diff*` columns.
+  - Scope-2 CO2 repeats scope-2 energy exactly (one grid factor a year). GJ per tonne of scope-2 CO2 is the same for every firm and is not estimated.
+  - Own-electricity rows compare with 2013 only: in 2014–15, only 57–61% of frozen firms have it recorded.
+- **Support.**
+  - A period is shown only with at least 30 firms of the group and 30 other firms in each of its years and each comparison year.
+  - Only the stricter foreign-owned group falls short (2010–12, 2019–22).
+- **2018 against 2013–14 (drawn).**
+  - Energy and CO2 per unit of value added: no group differs clearly. Total energy per value added: exporters −3% [−25, +26], importers +8% [−12, +32], foreign-owned +10% [−18, +46]. CO2: −5%, +12%, +5%.
+  - Exporters used 27% less energy [−43, −7] and emitted 29% less CO2 [−44, −10] than similar firms (clear). But their value added fell 25% [−38, −10] and their workers 14%. Before Paris, their value added was already 28% lower and their workers 19% lower (clear). The group was large in 2013–14, the years it was picked in, and smaller on both sides: a size effect, not a Paris response. Without importers' records that have no export answer, the energy-used result is −23% [−45, +8], not clear.
+  - Importers' electricity: the bought share is up 6.4 points [2.2, 10.6]; firms making their own are down 12.1 points [−19.2, −4.9]; own electricity as a share is down 4.4 points [−7.1, −1.7]. Before Paris, the same rows were already −22.8 and −6.2 points (clear).
+  - Clear results: 10 of the 51 drawn after-Paris markers (7 of 45 on Deasy's outcomes alone). 18 of 51 before-Paris markers are clear.
+- **Before Paris, and the choice of comparison years.**
+  - In 2010–12, exporters' and importers' energy per value added were +31% [+8, +60] and +27% [+8, +48] above their 2013–14 level, compared with other firms. They were falling faster before Paris.
+  - One estimate per year (`yearly`) shows exporters sliding steadily against other firms: +53% (2010), +23% (2012), +9% (2015), −3% (2018), −24% (2022). There is no break at Paris.
+  - Measured against 2010–12 instead of 2013–14, exporters' 2018 energy per value added is −26% [−43, −5] (review check). That is the same slide continuing.
+  - 2015: importers +28% [+8, +53], clear (R1-06: +20.6 points).
+- **Stricter rule** (flagged in every known 2013–14 year): 16 of 51 are clear.
+  - Exporters: energy used −32% [−50, −9], value added −30%.
+  - Foreign-owned (42 firms): energy used −54% [−74, −18] and CO2 −58% [−77, −25], but value added −36% and workers −43%.
+  - Taking the 2013–14 average itself as the group measure: foreign-owned energy used −38% [−60, −3].
+  - The answer depends on the grouping rule, as in R1-06, and the stricter groups shrink too.
+- **Deasy's literal version** ("2016+" = 2017–22 together, 2015 as the transition year, against 2010–14).
+  - Totals show no clear difference: energy per value added −5% [−23, +17] for exporters, +6% for importers, −1% for foreign-owned.
+  - With firm + year averages only, energy used is clearly lower for exporters (−23%) and foreign-owned firms (−34%).
+  - 2017–22 pooled mixes the 2017 recording jump (energy per value added +72% for exporters, +105% for importers) with the doubtful 2019–22 years. That is why 2018 is drawn.
+- **Matching on industry and province matters** (○ = firm + year averages only).
+  - Foreign-owned scope-2 energy per value added: −26% against −4% with the matching.
+  - Foreign-owned energy used: −34% against −19%.
+- **Fictional links.** Still so recorded in 2018: 39% of answering exporters (53 of 136), 71% of importers (333 of 466), 15% of foreign-owned firms (22 of 150).
+- **Takeaway.** Firms that exported, imported or were foreign-owned in 2013–14 did not clearly change their energy or CO2 per unit of value added differently from similar firms by 2018. Where energy used fell more (exporters), the group's value added and workforce fell too. Several gaps were already opening before Paris. Nothing here links a change to the Paris Agreement.
+- **Run.** About 1 minute and ~500 regressions on the development file; longer on the full files. Needs reghdfe, ftools and require.
