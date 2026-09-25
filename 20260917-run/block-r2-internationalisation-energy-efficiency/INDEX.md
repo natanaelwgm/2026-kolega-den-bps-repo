@@ -7,9 +7,10 @@ Item-by-item coverage of Deasy's row and the review record: [TRACKER.md](TRACKER
 
 **Stata add-ons this block needs** (install once; no file installs or updates anything; on a computer without internet, copy the
 add-on folder from one that has them): `ssc install reghdfe`, `ssc install ftools`, `ssc install require` (all files from R2-03 on);
-for R2-07 also `ssc install csdid`, `ssc install drdid`, `ssc install eventstudyinteract`, `ssc install avar`,
-`ssc install did_imputation`, `ssc install did_multiplegt_dyn`, `ssc install gtools`. R2-08 uses `eventstudyinteract` and `avar` for its Sun–Abraham row only. If one of the R2-07 or
-R2-08 method add-ons is missing, that method gets an "unavailable" row and the file still finishes.
+for R2-07 and R2-10 also `ssc install csdid`, `ssc install drdid`, `ssc install eventstudyinteract`, `ssc install avar`,
+`ssc install did_imputation`, `ssc install did_multiplegt_dyn`, `ssc install gtools`. R2-08 uses `eventstudyinteract` and `avar` for
+its Sun–Abraham row only. If one of the R2-07, R2-08 or R2-10 method add-ons is missing, that method gets an "unavailable" row and
+the file still finishes.
 
 | File | What it shows | Deasy's words it answers | Status |
 |---|---|---|---|
@@ -22,6 +23,7 @@ R2-08 method add-ons is missing, that method gets an "unavailable" row and the f
 | `07_efficiency_by_method.do` → `figures/07_efficiency_by_method.png`, `tables/07_efficiency_by_method.csv` | Value added per GJ after the export start under the previous paper's four methods (Callaway–Sant'Anna, Sun–Abraham, Borusyak–Jaravel–Spiess, de Chaisemartin–D'Haultfœuille) next to Figure R2-03's single regression, with Figure R2-06's average and the previous paper's stricter start rule as reference rows; each method's before-start check; each method's year-by-year path in the table | "Stagged did"; "Mirip dengan paper kita sebelumnya hanya Ganti tahun" (its four methods and its start rule on 2010–2022) | done, reviewed |
 | `08_efficiency_import_foreign_start.do` → `figures/08_efficiency_import_foreign_start.png`, `tables/08_efficiency_import_foreign_start.csv` | Value added per GJ before and after firms start importing (a) or get a foreign owner with 10%+ of the capital (b), as % change since the year before the start, starters minus firms that never start (R2-03's model); each panel's average after the start and before-start check, for the repaired records (black) and for every start and record as filed (gray); value added per CO2, energy use and value added in the table | "Intertionalized and energy efficiency" (internationalisation beyond exporting); "Stagged did"; "Mirip dengan paper kita sebelumnya hanya Ganti tahun" (its import-start and foreign-owner-start treatments, ln VA per GJ) | done, reviewed |
 | `09_other_efficiency_measures.do` → `figures/09_other_efficiency_measures.png`, `tables/09_other_efficiency_measures.csv` | The previous paper's six efficiency measures after the export start, one row each on one scale: value added and output per GJ of energy, value added and output per tonne of CO2, value added per GJ of bought electricity and per GJ of fuels; average of years 0 to +5 in R2-03's model, with and without doubtful energy records; firms per row; each row's before-start check; year-by-year paths, six more versions, an average against all years before the start, and three helper series in the table | "Intertionalized and energy efficiency"; "Stagged did"; "Mirip dengan paper kita sebelumnya hanya Ganti tahun" (its six outcomes: ln VA per GJ, ln output per GJ, ln VA per CO2, ln output per CO2, ln VA per electricity GJ, ln VA per fuel GJ) | done, reviewed |
+| `10_methods_import_foreign_start.do` → `figures/10_methods_import_foreign_start.png`, `tables/10_methods_import_foreign_start.csv` | Value added per GJ after firms start importing (a), get a foreign owner with 10%+ of the capital (b), or start trading at all, exporting or importing (c), under the previous paper's four methods (Callaway–Sant'Anna, Sun–Abraham, Borusyak–Jaravel–Spiess, de Chaisemartin–D'Haultfœuille) next to Figure R2-08's single regression, starters minus firms that never start; each method's before-start check; the single regression on every start and record as filed (gray); year-by-year paths and each method's own single summary number in the table | "Intertionalized and energy efficiency" (internationalisation beyond exporting); "Stagged did"; "Mirip dengan paper kita sebelumnya hanya Ganti tahun" (its four methods; its import-start, foreign-owner-start and "any trade" start events; ln VA per GJ) | done, reviewed |
 
 ## Details kept out of the figures
 
@@ -177,8 +179,7 @@ Review checks (not in the table):
 Differences from the previous paper:
 - simple start rule. Its stricter 0-0-1-1 rule dates 262 import and 105 foreign-owner starters (R2-01);
 - never-starters are the only comparison;
-- of its four methods, only Sun–Abraham is run here;
-- its "any trade" start is not built.
+- of its four methods, only Sun–Abraham is run here (all four, and its "any trade" start: R2-10).
 
 **09 — the previous paper's six efficiency measures.**
 
@@ -219,3 +220,56 @@ Results (average of years 0 to +5, 95% interval, before-start p):
 - Also in the table: the previous paper's age² control and without the 2017 starters change no answer. Without every 2017 record
   (the year own-generation firms report far more fuel, mostly doubtful rows), value added per GJ of bought electricity is +29%.
 - Identities checked in the file: output rows = value-added rows + output per unit of value added, marker by marker.
+
+**10 — the previous paper's four methods for import, foreign-owner and "any trade" starts.**
+
+Setup:
+- R2-07's five rows (same code) on R2-08's start events, repairs and year window. Start = rule A (first year seen participating after
+  a year seen not participating); a starter stays a starter if it stops later. Comparison = firms never seen participating.
+  Outcome = log value added per GJ; firm and year effects; clustered by firm; no control variables. Main number = average of years
+  0 to +4, each year counting equally (imports allow only −4 to +4, so all three panels use it).
+- (c) "Any trade" = the previous paper's third start event: 1 = exports or imports; 0 = both answers known and "no"; otherwise
+  unknown (the previous paper also counted "no import, export unknown" as not trading). 1,494 starters, 3,122 firms never seen
+  trading, 4,613 already trading when first seen (left out), 1,234 with no known answer. 2022 has no "not trading" answer (no firm
+  is recorded as not exporting that year). Importing in the start year always makes it the firm's import start too.
+- Repairs (main version, black): (a) import starts dated 2017 left out (459 firms); (b) all 2020 foreign-ownership answers unknown
+  (854 starts dated 2020: 798 become never foreign-owned, 56 get a later start year); (c) any-trade starts dated 2017 that come with
+  importing left out (274 of 300; the 26 that start by exporting only stay, as export starts do in R2-03 to R2-07). All three leave
+  out doubtful energy records (importers with unknown export status in 2017 and 2019–2022); in (c), as in (a), these are only
+  starters' rows after the start (1,316 rows), none among never-traders. As filed (gray): every start and record, single regression
+  only (the four methods as filed would add about 100 s).
+- In (c), 758 of the 1,085 starters in the estimate (70%) start by importing, so (c) largely repeats (a).
+
+Results (average of years 0 to +4, 95% interval, before-start p; starters behind the average):
+
+| Row | (a) Import | (b) Foreign owner | (c) Any trade |
+|---|---|---|---|
+| One regression (R2-08's model) | +29% (+14 to +46), p = 0.395, 1,175 | +4% (−12 to +22), 0.409, 697 | +24% (+8 to +42), 0.491, 1,085 |
+| Callaway–Sant'Anna | +36% (+19 to +56), 0.415; all years < 0.001 | +2% (−15 to +23), 0.931; all years 0.087 | +40% (+21 to +62), 0.148; all years < 0.001 |
+| Sun–Abraham | +35% (+19 to +54), 0.157 | 0% (−15 to +19), 0.171 | +34% (+17 to +54), 0.538 |
+| Borusyak–Jaravel–Spiess | +36% (+20 to +54), 0.317 | +13% (−4 to +33), 0.281 | +33% (+16 to +52), 0.355 |
+| de Chaisemartin–D'Haultfœuille | +36% (+19 to +56), 0.267 | +2% (−15 to +24), 0.701 | +40% (+21 to +62), 0.446 |
+| As filed (one regression) | +27% (+13 to +44), 0.202, 1,802 | +12% (−2 to +28), p < 0.001, a warning sign, 1,647 | +27% (+11 to +45), 0.549, 1,483 |
+
+- Imports and any trade: every method clear, +29% to +36% and +24% to +40%. Foreign owners: none clear, 0% to +13%.
+- Before-start checks pass in all 15 main rows (p = 0.148–0.931). Callaway–Sant'Anna's check over all years before the start (not
+  only the four shown) fails for imports and any trade (p < 0.001): starters were already changing differently several years before,
+  so part of the rise may continue that. It passes for foreign owners (p = 0.087).
+- Callaway–Sant'Anna = de Chaisemartin–D'Haultfœuille exactly in each panel, as expected with never-starters as the only comparison
+  and no control variables.
+- The previous paper's own single summary numbers (table only): one on/off marker +31% / +17% (+3 to +33, the only clear foreign-owner
+  number: it mixes start years) / +21%; Callaway–Sant'Anna simple average +44% / +6% / +42%; Borusyak–Jaravel–Spiess one average
+  +43% / +14% / +35%; de Chaisemartin–D'Haultfœuille average total effect +34% / +8% / +34%.
+- Review checks: every average above recomputed with independent code (single regression, Borusyak–Jaravel–Spiess, Callaway–
+  Sant'Anna and Sun–Abraham by hand; exact). With the previous paper's any-trade coding ("no import, export unknown" = not trading),
+  the single regression gives +24% (+10 to +41), p = 0.461, 1,354 starters: the same answer.
+
+Missing 2016 file: starters of 2017 have no row one year before their start. Callaway–Sant'Anna and de Chaisemartin–D'Haultfœuille
+leave them out by construction. For Sun–Abraham such a start year has no reference year: `eventstudyinteract` would silently drop one
+of its markers and measure those starters against their last years, and the answer would then change with the order the markers are
+listed in. So this file, like R2-07 and R2-08, leaves out start years with no row one year before the start before running it:
+81 foreign-owner starters and 26 any-trade starters; none for imports. The single regression and Borusyak–Jaravel–Spiess keep them.
+
+Differences from the previous paper: simple start rule (its stricter 0-0-1-1 rule dates 262 import and 105 foreign-owner starters,
+R2-01); never-starters are the only comparison; "export unknown" stays unknown in "any trade"; no age² control; outer years grouped.
+Run time about 90 s.

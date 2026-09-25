@@ -1,0 +1,1627 @@
+------------------------------------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r2-internationalisation-energy-
+> efficiency/logs/10_methods_import_foreign_start.log
+  log type:  text
+ opened on:  25 Sep 2026, 09:23:28
+
+. timer clear 1
+
+. timer on 1
+
+. display _newline "=== [`exhibit'] STARTING: value added per GJ after import, foreign-owner and any-trade starts, five 
+> methods ==="
+
+=== [R2-10] STARTING: value added per GJ after import, foreign-owner and any-trade starts, five methods ===
+
+. 
+. * ---- chart style (identical block in every file) ----
+. set scheme s1mono
+
+. capture graph set window fontface "Times New Roman"   // GUI Stata; console Stata keeps its default font
+
+. * Note: this changes your Stata graph font permanently; undo with: graph set window fontface default
+. local devnote "Development data — obscured values, fictional firm panel. Not BPS findings."
+
+. local srcnote "Source: SI/IBS annual files 2010–2022 (masked), analysis_ready_data.dta."
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 1/7: load trade and ownership status, energy, CO2 and value added; re-check the known problems; check th
+> e method packages"
+Step 1/7: load trade and ownership status, energy, CO2 and value added; re-check the known problems; check the method pa
+> ckages
+
+. *---------------------------------------------------------------------------
+. * import_flag         = imports reported above zero (1 yes, 0 no; never missing)
+. * fdi_10_flag         = foreign ownership of 10% or more (the previous paper's rule)
+. * export_flag         = any export activity (1 yes, 0 no, missing = unknown)
+. * total_gj_s1         = energy use in GJ (nine fuels + purchased electricity)
+. * co2_total_s1        = CO2 tonnes (only used to keep the same rows as R2-03 to R2-08)
+. * value_added_nominal = value added, current prices (masked money unit)
+. use firm_id year import_flag fdi_10_flag export_flag total_gj_s1 co2_total_s1 value_added_nominal using "$DATA", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. isid firm_id year
+
+. assert year != 2016
+
+. sort firm_id year
+
+. tsset firm_id year                 // L. and F. below mean exact calendar years
+
+Panel variable: firm_id (unbalanced)
+ Time variable: year, 2010 to 2022, but with gaps
+         Delta: 1 unit
+
+. * The calendar year with no annual file (found in the data, never typed).
+. quietly summarize year
+
+. local gapyr ""
+
+. forvalues t = `r(min)'/`r(max)' {
+  2.     quietly count if year == `t'
+  3.     if r(N) == 0 local gapyr `gapyr' `t'
+  4. }
+
+. local gapyr = strtrim("`gapyr'")
+
+. local gap1 : word 1 of `gapyr'
+
+. if "`gap1'" == "" local gap1 = 9999
+
+. display "   calendar years with no file: `gapyr'"
+   calendar years with no file: 2016
+
+. * Guards (R2-08's, unchanged): the problems at the top must still show in the data.
+. preserve
+
+. collapse (mean) sh_imp = import_flag sh_fdi = fdi_10_flag, by(year)
+
+. quietly summarize year if year < `imp_bad'
+
+. local imp_prev = r(max)
+
+. quietly summarize sh_imp if year == `imp_prev'
+
+. local shi0 = r(mean)
+
+. quietly summarize sh_imp if year == `imp_bad'
+
+. local shi1 = r(mean)
+
+. if `shi1' < 1.5 * `shi0' display "   WARNING: import share `imp_prev' -> `imp_bad' does not jump (" %4.2f `shi0' " -> 
+> " %4.2f `shi1' ") - re-check imp_bad at the top"
+
+. else display "   import share `imp_prev' -> `imp_bad': " %4.2f `shi0' " -> " %4.2f `shi1' " (import starts dated `imp_
+> bad' left out)"
+   import share 2015 -> 2017: 0.26 -> 0.56 (import starts dated 2017 left out)
+
+. quietly summarize sh_fdi if year != `fdi_bad', detail
+
+. local shf0 = r(p50)
+
+. quietly summarize sh_fdi if year == `fdi_bad'
+
+. local shf1 = r(mean)
+
+. if `shf1' < 2 * `shf0' display "   WARNING: foreign-owned share in `fdi_bad' looks normal (" %4.2f `shf1' " vs " %4.2f
+>  `shf0' ") - re-check fdi_bad at the top"
+
+. else display "   foreign-owned share: `fdi_bad' " %4.2f `shf1' " vs middle of other years " %4.2f `shf0' " (`fdi_bad' 
+> answers treated as unknown)"
+   foreign-owned share: 2020 0.47 vs middle of other years 0.09 (2020 answers treated as unknown)
+
+. restore
+
+. * Usable row = energy, CO2 and value added all above zero, so every log exists
+. * (as in R2-03 to R2-08). A zero is left out, not read as "none".
+. gen byte usable = total_gj_s1 > 0 & co2_total_s1 > 0 & value_added_nominal > 0 ///
+>     & !missing(total_gj_s1, co2_total_s1, value_added_nominal)
+
+. * Doubtful energy records (R2-06's definition): importers whose export status is
+. * unknown, in the years listed at the top. Left out of the main version.
+. local dlist = subinstr(strtrim(itrim("`doubt_yrs'")), " ", ",", .)
+
+. gen byte doubt = missing(export_flag) & import_flag == 1 & inlist(year, `dlist')
+
+. gen double gjva = total_gj_s1 / value_added_nominal if usable
+(514 missing values generated)
+
+. foreach yy of local doubt_yrs {
+  2.     quietly summarize gjva if doubt & year == `yy', detail
+  3.     local md = r(p50)
+  4.     local nd = r(N)
+  5.     quietly summarize gjva if !doubt & year == `yy', detail
+  6.     local ratio = `md' / r(p50)
+  7.     if `nd' == 0 display "   WARNING: no doubtful rows in `yy' - re-check doubt_yrs at the top"
+  8.     else if inrange(`ratio', 0.5, 2) display "   WARNING: in `yy' doubtful rows look normal (median ratio " %4.2f `
+> ratio' ") - re-check doubt_yrs"
+  9.     else display "   `yy': " %5.0fc `nd' " doubtful rows; their middle energy per unit of value added = " %5.2f `ra
+> tio' " x the other rows'"
+ 10. }
+   2017: 1,688 doubtful rows; their middle energy per unit of value added = 13.15 x the other rows'
+   2019: 1,320 doubtful rows; their middle energy per unit of value added =  0.13 x the other rows'
+   2020: 1,121 doubtful rows; their middle energy per unit of value added =  0.16 x the other rows'
+   2021: 1,298 doubtful rows; their middle energy per unit of value added =  0.16 x the other rows'
+   2022:   972 doubtful rows; their middle energy per unit of value added =  0.22 x the other rows'
+
+. drop gjva
+
+. * Foreign ownership with the `fdi_bad' answers treated as unknown (main version).
+. gen byte fdi_fixed = fdi_10_flag
+(311 missing values generated)
+
+. replace fdi_fixed = . if year == `fdi_bad'
+(2,936 real changes made, 2,936 to missing)
+
+. * Any trade (the previous paper's "any trade" start): 1 = exports or imports;
+. * 0 = seen doing neither (both answers known and "no"); otherwise unknown.
+. * (The previous paper also counted "no import, export unknown" as 0.)
+. gen byte any_trade = .
+(33,049 missing values generated)
+
+. replace any_trade = 1 if export_flag == 1 | import_flag == 1
+(14,557 real changes made)
+
+. replace any_trade = 0 if export_flag == 0 & import_flag == 0
+(12,509 real changes made)
+
+. * The four methods are user-written Stata commands (install once, e.g.
+. * -ssc install csdid-). Each needs its helper command(s). A missing one is
+. * recorded and its method gets an "unavailable" row.
+. local need_cs   "csdid drdid"
+
+. local need_sa   "eventstudyinteract avar"
+
+. local need_bjs  "did_imputation"
+
+. local need_dcdh "did_multiplegt_dyn gtools"
+
+. foreach m in cs sa bjs dcdh {
+  2.     local ok_`m' 1
+  3.     local miss_`m' ""
+  4.     foreach c of local need_`m' {
+  5.         capture which `c'
+  6.         if _rc {
+  7.             local ok_`m' 0
+  8.             local miss_`m' "`miss_`m'' `c'"
+  9.         }
+ 10.     }
+ 11.     if !`ok_`m'' display "   NOTE: not installed:`miss_`m'' - that method gets an 'unavailable' row"
+ 12. }
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 2/7: date each firm's start (rule A, same code as every R2 file) for the three events"
+Step 2/7: date each firm's start (rule A, same code as every R2 file) for the three events
+
+. *---------------------------------------------------------------------------
+. * Missing status is unknown, never read as "not participating".
+. * Rule A, simple first entry: the first year the firm is seen participating,
+. *   if it was seen NOT participating in some earlier year. Firms participating
+. *   when first seen cannot be dated and are left out. A starter stays a
+. *   starter if it stops later.
+. * Comparison group: firms never seen participating.
+. * Row keys: 9001 never seen participating · 9002 already participating when first
+. * seen (excluded) · 9003 status never observed (excluded).
+. * Events: imp = importing; fdi = foreign owner 10%+ with the `fdi_bad' answers
+. * unknown (main); fdiraw = the same, answers as filed (as-filed version);
+. * any = exporting or importing.
+. foreach m in imp fdi fdiraw any {
+  2.     if "`m'" == "imp"    local x import_flag
+  3.     if "`m'" == "fdi"    local x fdi_fixed
+  4.     if "`m'" == "fdiraw" local x fdi_10_flag
+  5.     if "`m'" == "any"    local x any_trade
+  6.     * --- Rule A ---
+.     by firm_id: egen int first_yes = min(cond(`x' == 1, year, .))
+  7.     by firm_id: egen int first_no  = min(cond(`x' == 0, year, .))
+  8.     by firm_id: egen int n_known   = total(!missing(`x'))
+  9.     gen int keyA = .
+ 10.     replace keyA = 9003 if n_known == 0                                     // status never observed
+ 11.     replace keyA = 9001 if n_known > 0 & missing(first_yes)                 // never seen participating
+ 12.     replace keyA = 9002 if n_known > 0 & !missing(first_yes) & (missing(first_no) | first_no > first_yes)
+ 13.     replace keyA = first_yes if n_known > 0 & !missing(first_yes) & !missing(first_no) & first_no < first_yes
+ 14.     assert !missing(keyA)
+ 15.     gen int gA = keyA if keyA < 9000                                        // start year, rule A
+ 16.     rename (keyA gA) (key_`m' g_`m')
+ 17.     drop first_yes first_no n_known
+ 18. }
+(10,740 missing values generated)
+(4,337 missing values generated)
+(33,049 missing values generated)
+(0 real changes made)
+(10,740 real changes made)
+(9,476 real changes made)
+(12,833 real changes made)
+(20,216 missing values generated)
+(24,333 missing values generated)
+(1,356 missing values generated)
+(33,049 missing values generated)
+(398 real changes made)
+(23,935 real changes made)
+(3,099 real changes made)
+(5,617 real changes made)
+(27,432 missing values generated)
+(17,404 missing values generated)
+(1,095 missing values generated)
+(33,049 missing values generated)
+(32 real changes made)
+(17,372 real changes made)
+(3,668 real changes made)
+(11,977 real changes made)
+(21,072 missing values generated)
+(8,277 missing values generated)
+(9,725 missing values generated)
+(33,049 missing values generated)
+(1,349 real changes made)
+(6,928 real changes made)
+(14,082 real changes made)
+(10,690 real changes made)
+(22,359 missing values generated)
+
+. * Does an any-trade start come with importing (= it is also the firm's import start)?
+. by firm_id: egen byte any_imp0 = max(year == g_any & import_flag == 1)
+
+. by firm_id: egen byte any_exp0 = max(year == g_any & export_flag == 1)
+
+. assert g_any == g_imp if any_imp0                                           // importing at the start = import start
+
+. * Starts moved by the repairs (CSV and log), counted per firm.
+. egen byte ftag = tag(firm_id)
+
+. quietly count if ftag & g_imp == `imp_bad'
+
+. local n_impbad = r(N)
+
+. quietly count if ftag & g_fdiraw == `fdi_bad'
+
+. local n_fdibad = r(N)
+
+. quietly count if ftag & g_fdiraw == `fdi_bad' & key_fdi == 9001
+
+. local n_fdibad_never = r(N)
+
+. quietly count if ftag & g_fdiraw == `fdi_bad' & !missing(g_fdi)
+
+. local n_fdibad_redated = r(N)
+
+. quietly count if ftag & g_any == `imp_bad'
+
+. local n_anybad = r(N)
+
+. quietly count if ftag & g_any == `imp_bad' & any_imp0
+
+. local n_anybad_out = r(N)
+
+. display "   import starts dated `imp_bad' (left out): `n_impbad'"
+   import starts dated 2017 (left out): 459
+
+. display "   foreign-owner starts dated `fdi_bad' as filed: `n_fdibad' (`n_fdibad_never' become never foreign-owned, `n
+> _fdibad_redated' get a later start year)"
+   foreign-owner starts dated 2020 as filed: 854 (798 become never foreign-owned, 56 get a later start year)
+
+. display "   any-trade starts dated `imp_bad': `n_anybad' (`n_anybad_out' come with importing and are left out; `=`n_an
+> ybad'-`n_anybad_out'' start by exporting only and stay)"
+   any-trade starts dated 2017: 300 (274 come with importing and are left out; 26 start by exporting only and stay)
+
+. drop ftag
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 3/7: the year window (R2-02's rule) for each main sample; all panels use the narrowest"
+Step 3/7: the year window (R2-02's rule) for each main sample; all panels use the narrowest
+
+. *---------------------------------------------------------------------------
+. * Main samples (black dots): starters (repaired as above) plus firms never seen
+. * participating; usable rows; doubtful energy records left out.
+. * As-filed samples (gray triangles): every start and every usable record as filed.
+. gen byte main_imp  = usable & !doubt & ((!missing(g_imp) & g_imp != `imp_bad') | key_imp == 9001)
+
+. gen byte main_fdi  = usable & !doubt & (!missing(g_fdi) | key_fdi == 9001)
+
+. gen byte main_any  = usable & !doubt & ((!missing(g_any) & !(g_any == `imp_bad' & any_imp0)) | key_any == 9001)
+
+. gen byte filed_imp = usable & (!missing(g_imp) | key_imp == 9001)
+
+. gen byte filed_fdi = usable & (!missing(g_fdiraw) | key_fdiraw == 9001)
+
+. gen byte filed_any = usable & (!missing(g_any) | key_any == 9001)
+
+. tempfile fy est
+
+. save `fy'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_22139.000002 saved as .dta format
+
+. local K 99
+
+. foreach m in imp fdi any {
+  2.     use `fy', clear
+  3.     keep if main_`m' & !missing(g_`m')
+  4.     gen int k = year - g_`m'
+  5.     gen byte early = g_`m' < `gap1'
+  6.     gen byte late  = g_`m' > `gap1'
+  7.     collapse (count) n = firm_id (max) early late, by(k)
+  8.     gen byte passes = n >= `minfirms' & early & late
+  9.     assert passes if inlist(k, -1, 0)
+ 10.     local K_`m' 0
+ 11.     local go 1
+ 12.     while `go' {
+ 13.         local kk = `K_`m'' + 1
+ 14.         quietly count if passes & inlist(k, -`kk', `kk')
+ 15.         if r(N) == 2 local K_`m' = `kk'
+ 16.         else local go 0
+ 17.     }
+ 18.     local K = min(`K', `K_`m'')
+ 19.     display "   `m': R2-02's rule allows -`K_`m'' to +`K_`m''"
+ 20. }
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(25,563 observations deleted)
+   imp: R2-02's rule allows -4 to +4
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(28,869 observations deleted)
+   fdi: R2-02's rule allows -5 to +5
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(26,014 observations deleted)
+   any: R2-02's rule allows -5 to +5
+
+. local wlo = -`K'
+
+. local whi = `K'
+
+. local nout = `whi' + 1
+
+. display "   window used in every panel: each year from `wlo' to +`whi' on its own; `nout'+ years before or after group
+> ed"
+   window used in every panel: each year from -4 to +4 on its own; 5+ years before or after grouped
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 4/7: each start event and version under each method"
+Step 4/7: each start event and version under each method
+
+. *---------------------------------------------------------------------------
+. * All five: log value added per GJ, firm and year effects, starters compared
+. * with firms never seen participating, clustered by firm, no control variables.
+. * What differs is how start years and years since the start are combined
+. * (R2-07). Main number per method = average of years 0 to +`whi' with each year
+. * counting equally; each method's own single overall number is kept too.
+. * Counts behind each estimate: starters with a row from the start year on,
+. * comparison firms and rows, all inside the estimation sample (variable es).
+. capture program drop r210_used
+
+. program define r210_used, rclass
+  1.     quietly {
+  2.         egen byte r210_fs = tag(firm_id) if es & !never & year >= gA
+  3.         count if r210_fs == 1
+  4.         return scalar starters = r(N)
+  5.         egen byte r210_fc = tag(firm_id) if es & never
+  6.         count if r210_fc == 1
+  7.         return scalar comp = r(N)
+  8.         count if es
+  9.         return scalar rows = r(N)
+ 10.         drop r210_fs r210_fc
+ 11.     }
+ 12. end
+
+. tempname h
+
+. postfile `h' str3 event byte version byte morder str8 method str12 row_type int event_time double(b se df) ///
+>     long(starters comp_firms rows) str80 status str120 note double pin using `est'
+
+. timer clear 2
+
+. timer on 2
+
+. local enum 0
+
+. foreach e in imp fdi any {
+  2.     local ++enum
+  3.     forvalues v = 1/2 {
+  4.         * ---- the sample of this event and version ----
+.         use `fy', clear
+  5.         local gv "g_`e'"
+  6.         local kv "key_`e'"
+  7.         if `v' == 2 & "`e'" == "fdi" {
+  8.             local gv "g_fdiraw"
+  9.             local kv "key_fdiraw"
+ 10.         }
+ 11.         if `v' == 1 keep if main_`e'
+ 12.         else        keep if filed_`e'
+ 13.         gen int gA = `gv'
+ 14.         gen byte never = missing(gA)
+ 15.         assert `kv' == 9001 if never                        // comparison = never seen participating only
+ 16.         gen int kA = year - gA
+ 17.         gen double y = ln(value_added_nominal / total_gj_s1) // log value added per GJ (R2-03's outcome)
+ 18.         * R2-03's markers: one per year since the start inside the window, except -1
+.         * (the year before the start = the reference), plus one for each grouped end.
+.         gen byte ev_lo = !missing(kA) & kA < `wlo'
+ 19.         local terms "ev_lo"
+ 20.         local pre   "ev_lo"
+ 21.         local post  ""
+ 22.         forvalues k = `wlo'/`whi' {
+ 23.             if `k' == -1 continue
+ 24.             local nm = cond(`k' < 0, "ev_m" + string(-`k'), "ev_p" + string(`k'))
+ 25.             gen byte `nm' = (kA == `k')
+ 26.             local terms `terms' `nm'
+ 27.             if `k' < -1 local pre `pre' `nm'
+ 28.             if `k' >= 0 local post `post' `nm'
+ 29.         }
+ 30.         gen byte ev_hi = !missing(kA) & kA > `whi'
+ 31.         local terms `terms' ev_hi
+ 32.         foreach t of local terms {
+ 33.             quietly count if `t'
+ 34.             assert r(N) > 0                                 // every marker has starter rows (window rule)
+ 35.         }
+ 36.         local lc = subinstr("`post'", " ", " + ", .)         // years 0..+`whi', for the average
+ 37.         local np : word count `post'
+ 38.         keep firm_id year gA kA y never any_imp0 `terms'
+ 39.         sort firm_id year
+ 40.         tempfile smp
+ 41.         save `smp'
+ 42.         display "   [`e' version `v'] sample ready"
+ 43. 
+.         * ---- (1) one regression, all start years together (R2-03/R2-08's model) ----
+.         quietly reghdfe y `terms', absorb(firm_id year) vce(cluster firm_id)
+ 44.         local df = e(df_r)
+ 45.         capture drop es
+ 46.         gen byte es = e(sample)
+ 47.         r210_used
+ 48.         local st = r(starters)
+ 49.         local cf = r(comp)
+ 50.         local rw = r(rows)
+ 51.         * (c) only: how many of these starters start by importing (the rest by exporting only).
+.         if "`e'" == "any" & `v' == 1 {
+ 52.             egen byte fti = tag(firm_id) if es & !never & year >= gA & any_imp0
+ 53.             quietly count if fti == 1
+ 54.             local any_imp_n = r(N)
+ 55.             local any_imp_sh = r(N) / `st'
+ 56.             drop fti
+ 57.         }
+ 58.         foreach t of local terms {
+ 59.             if "`t'" == "ev_lo"      local k = `wlo' - 1
+ 60.             else if "`t'" == "ev_hi" local k = `whi' + 1
+ 61.             else local k = cond(substr("`t'", 4, 1) == "m", -1, 1) * real(substr("`t'", 5, .))
+ 62.             local nt = cond(inlist("`t'", "ev_lo", "ev_hi"), "grouped end", "")
+ 63.             post `h' ("`e'") (`v') (1) ("twfe") ("event") (`k') (_b[`t']) (_se[`t']) (`df') (.) (.) (.) ("ok") ("`n
+> t'") (.)
+ 64.         }
+ 65.         quietly lincom (`lc') / `np'
+ 66.         local tw_`e'`v' = r(estimate)
+ 67.         post `h' ("`e'") (`v') (1) ("twfe") ("avg") (.) (r(estimate)) (r(se)) (`df') (`st') (`cf') (`rw') ("ok") ("
+> reghdfe, R2-03's markers") (.)
+ 68.         quietly test `pre'
+ 69.         local twp_`e'`v' = r(p)
+ 70.         post `h' ("`e'") (`v') (1) ("twfe") ("before_check") (.) (.) (.) (.) (.) (.) (.) ("ok") ("F test, years bef
+> ore the start (grouped end included) = 0; p in column p") (r(p))
+ 71.         gen byte after = !never & year >= gA
+ 72.         quietly reghdfe y after, absorb(firm_id year) vce(cluster firm_id)
+ 73.         post `h' ("`e'") (`v') (1) ("twfe") ("own_overall") (.) (_b[after]) (_se[after]) (e(df_r)) (.) (.) (e(N)) (
+> "ok") ("one on/off marker from the start year on (the previous paper's two-way model)") (.)
+ 74.         * As filed: the one regression only (R2-08's gray triangles), to keep the
+.         * run time short; the four methods run on the main version.
+.         if `v' == 2 {
+ 75.             display "   [`e' as filed] one regression done"
+ 76.             continue
+ 77.         }
+ 78. 
+.         * ---- (2) Callaway-Sant'Anna (csdid): each start year vs never-starters ----
+.         * csdid lays out calendar years one by one, so the year with no file is a
+.         * real gap: starters whose year before the start has no file get no
+.         * after-start estimate. Its before-start check compares each year before
+.         * the start with the year before that, inside the window.
+.         if !`ok_cs' {
+ 79.             post `h' ("`e'") (`v') (2) ("cs") ("avg") (.) (.) (.) (.) (.) (.) (.) ("unavailable: package not instal
+> led (`=strtrim("`miss_cs'")')") ("ssc install csdid; ssc install drdid") (.)
+ 80.         }
+ 81.         else {
+ 82.             use `smp', clear
+ 83.             gen int gcs = cond(never, 0, gA)                 // csdid wants 0 = never started
+ 84.             capture quietly csdid y, ivar(firm_id) time(year) gvar(gcs)
+ 85.             if _rc {
+ 86.                 post `h' ("`e'") (`v') (2) ("cs") ("avg") (.) (.) (.) (.) (.) (.) (.) ("failed: csdid stopped with 
+> error r(`=_rc')") ("") (.)
+ 87.             }
+ 88.             else {
+ 89.                 capture drop es
+ 90.                 gen byte es = e(sample)
+ 91.                 r210_used
+ 92.                 local st = r(starters)
+ 93.                 local cf = r(comp)
+ 94.                 local rw = r(rows)
+ 95.                 quietly estat simple
+ 96.                 matrix bb = r(b)
+ 97.                 matrix vv = r(V)
+ 98.                 post `h' ("`e'") (`v') (2) ("cs") ("own_overall") (.) (bb[1,1]) (sqrt(vv[1,1])) (.) (.) (.) (.) ("o
+> k") ("estat simple: all years after the start, weighted by start-year size") (.)
+ 99.                 quietly estat event, window(`wlo' `whi')
+100.                 matrix bb = r(b)
+101.                 matrix vv = r(V)
+102.                 local cn : colnames bb
+103.                 foreach c of local cn {
+104.                     local j = colnumb(bb, "`c'")
+105.                     if "`c'" == "Post_avg" {
+106.                         post `h' ("`e'") (`v') (2) ("cs") ("avg") (.) (bb[1,`j']) (sqrt(vv[`j',`j'])) (.) (`st') (`
+> cf') (`rw') ("ok") ("estat event Post_avg: years 0 to +`whi', each counts equally") (.)
+107.                     }
+108.                     else if inlist(substr("`c'", 1, 2), "Tm", "Tp") {
+109.                         local k = cond(substr("`c'", 2, 1) == "m", -1, 1) * real(substr("`c'", 3, .))
+110.                         local nt = cond(`k' < 0, "change from the year before (csdid's own base for years before th
+> e start)", "vs the year before the start")
+111.                         post `h' ("`e'") (`v') (2) ("cs") ("event") (`k') (bb[1,`j']) (sqrt(vv[`j',`j'])) (.) (.) (
+> .) (.) ("ok") ("`nt'") (.)
+112.                     }
+113.                 }
+114.                 capture quietly estat pretrend, window(`wlo' -1)
+115.                 local ptxt "estat pretrend inside the window"
+116.                 if _rc {
+117.                     quietly estat pretrend                    // older csdid: no window option
+118.                     local ptxt "estat pretrend, all years before the start"
+119.                 }
+120.                 post `h' ("`e'") (`v') (2) ("cs") ("before_check") (.) (.) (.) (.) (.) (.) (.) ("ok") ("`ptxt'; p i
+> n column p") (r(pchi2))
+121.                 if "`ptxt'" == "estat pretrend inside the window" {
+122.                     quietly estat pretrend
+123.                     post `h' ("`e'") (`v') (2) ("cs") ("before_all") (.) (.) (.) (.) (.) (.) (.) ("ok") ("estat pre
+> trend, all years before the start (table only); p in column p") (r(pchi2))
+124.                 }
+125.             }
+126.         }
+127. 
+.         * ---- (3) Sun-Abraham (eventstudyinteract): R2-03's markers, start years kept apart ----
+.         if !`ok_sa' {
+128.             post `h' ("`e'") (`v') (3) ("sa") ("avg") (.) (.) (.) (.) (.) (.) (.) ("unavailable: package not instal
+> led (`=strtrim("`miss_sa'")')") ("ssc install eventstudyinteract; ssc install avar") (.)
+129.         }
+130.         else {
+131.             use `smp', clear
+132.             * A start year whose year before has no file (the year after the missing
+.             * file) has no reference year: the package would silently measure those
+.             * starters against their grouped last years instead (it drops one of their
+.             * markers). Leave such start years out, as Callaway-Sant'Anna and
+.             * de Chaisemartin-D'Haultfoeuille do by construction.
+.             bysort gA: egen byte has_ref = max(kA == -1)
+133.             egen byte ft0 = tag(firm_id) if !never & !has_ref
+134.             quietly count if ft0 == 1
+135.             local sa_out = r(N)
+136.             drop if !never & !has_ref
+137.             drop ft0 has_ref
+138.             local sa_terms ""
+139.             foreach t of local terms {
+140.                 quietly count if `t'
+141.                 if r(N) > 0 local sa_terms `sa_terms' `t'
+142.             }
+143.             assert "`sa_terms'" == "`terms'"                 // every marker still has starter rows
+144.             capture quietly eventstudyinteract y `terms', cohort(gA) control_cohort(never) absorb(i.firm_id i.year)
+>  vce(cluster firm_id)
+145.             if _rc {
+146.                 post `h' ("`e'") (`v') (3) ("sa") ("avg") (.) (.) (.) (.) (.) (.) (.) ("failed: eventstudyinteract 
+> stopped with error r(`=_rc')") ("") (.)
+147.             }
+148.             else {
+149.                 capture drop es
+150.                 gen byte es = e(sample)
+151.                 r210_used
+152.                 local st = r(starters)
+153.                 local cf = r(comp)
+154.                 local rw = r(rows)
+155.                 local df = e(df_r)
+156.                 matrix bsa = e(b_iw)
+157.                 matrix vsa = e(V_iw)
+158.                 ereturn post bsa vsa, dof(`df')
+159.                 foreach t of local terms {
+160.                     if "`t'" == "ev_lo"      local k = `wlo' - 1
+161.                     else if "`t'" == "ev_hi" local k = `whi' + 1
+162.                     else local k = cond(substr("`t'", 4, 1) == "m", -1, 1) * real(substr("`t'", 5, .))
+163.                     local nt = cond(inlist("`t'", "ev_lo", "ev_hi"), "grouped end", "")
+164.                     post `h' ("`e'") (`v') (3) ("sa") ("event") (`k') (_b[`t']) (_se[`t']) (`df') (.) (.) (.) ("ok"
+> ) ("`nt'") (.)
+165.                 }
+166.                 quietly lincom (`lc') / `np'
+167.                 local sa_`e'`v' = r(estimate)
+168.                 local sa_out_`e' = `sa_out'
+169.                 post `h' ("`e'") (`v') (3) ("sa") ("avg") (.) (r(estimate)) (r(se)) (`df') (`st') (`cf') (`rw') ("o
+> k") ("years 0 to +`whi', each counts equally; `sa_out' starters with no file the year before the start left out") (.)
+170.                 quietly test `pre'
+171.                 post `h' ("`e'") (`v') (3) ("sa") ("before_check") (.) (.) (.) (.) (.) (.) (.) ("ok") ("F test, yea
+> rs before the start (grouped end included) = 0; p in column p") (r(p))
+172.             }
+173.         }
+174. 
+.         * ---- (4) Borusyak-Jaravel-Spiess (did_imputation) ----
+.         * Fits firm and year effects on rows not yet (or never) participating,
+.         * predicts each starter's path without the start, and averages actual
+.         * minus predicted. Its before-start check asks whether the years just
+.         * before the start already differ from the firm's earlier years.
+.         if !`ok_bjs' {
+175.             post `h' ("`e'") (`v') (4) ("bjs") ("avg") (.) (.) (.) (.) (.) (.) (.) ("unavailable: package not insta
+> lled (`=strtrim("`miss_bjs'")')") ("ssc install did_imputation") (.)
+176.         }
+177.         else {
+178.             use `smp', clear
+179.             gen int Ei = gA                                  // start year; missing = never started
+180.             * minn(0): report every year; the window rule already needs 30+ starters per year.
+.             capture quietly did_imputation y firm_id year Ei, horizons(0/`whi') pretrends(`=-`wlo'') autosample minn(0
+> )
+181.             if _rc {
+182.                 post `h' ("`e'") (`v') (4) ("bjs") ("avg") (.) (.) (.) (.) (.) (.) (.) ("failed: did_imputation sto
+> pped with error r(`=_rc')") ("") (.)
+183.             }
+184.             else {
+185.                 capture drop es
+186.                 gen byte es = e(sample)
+187.                 r210_used
+188.                 local st = r(starters)
+189.                 local cf = r(comp)
+190.                 local rw = r(rows)
+191.                 local p_bjs = e(pre_p)
+192.                 forvalues k = 0/`whi' {
+193.                     post `h' ("`e'") (`v') (4) ("bjs") ("event") (`k') (_b[tau`k']) (_se[tau`k']) (.) (.) (.) (.) (
+> "ok") ("vs predicted path without the start") (.)
+194.                 }
+195.                 forvalues k = 1/`=-`wlo'' {
+196.                     post `h' ("`e'") (`v') (4) ("bjs") ("event") (-`k') (_b[pre`k']) (_se[pre`k']) (.) (.) (.) (.) 
+> ("ok") ("before-start check: vs the firm's earlier years") (.)
+197.                 }
+198.                 local lcb "tau0"
+199.                 forvalues k = 1/`whi' {
+200.                     local lcb "`lcb' + tau`k'"
+201.                 }
+202.                 quietly lincom (`lcb') / `=`whi' + 1'
+203.                 post `h' ("`e'") (`v') (4) ("bjs") ("avg") (.) (r(estimate)) (r(se)) (.) (`st') (`cf') (`rw') ("ok"
+> ) ("years 0 to +`whi', each counts equally") (.)
+204.                 post `h' ("`e'") (`v') (4) ("bjs") ("before_check") (.) (.) (.) (.) (.) (.) (.) ("ok") ("joint test
+>  of the `=-`wlo'' years before the start; p in column p") (`p_bjs')
+205.                 capture quietly did_imputation y firm_id year Ei, autosample minn(0)
+206.                 if !_rc post `h' ("`e'") (`v') (4) ("bjs") ("own_overall") (.) (_b[tau]) (_se[tau]) (.) (.) (.) (e(
+> N)) ("ok") ("one average over all starter rows from the start on") (.)
+207.             }
+208.         }
+209. 
+.         * ---- (5) de Chaisemartin-D'Haultfoeuille (did_multiplegt_dyn) ----
+.         * It numbers periods as they appear in the data, so every calendar year
+.         * missing inside a firm's span (the year with no file included) gets an
+.         * empty row with the start status filled in (R2-07's fix). Only
+.         * never-starters are comparisons; starters whose year before the start
+.         * has no row drop out. "Effect_1" = the start year (year 0), Effect_2 =
+.         * year +1, ...; "Placebo_1" = year -2, Placebo_2 = -3, ...
+.         if !`ok_dcdh' {
+210.             post `h' ("`e'") (`v') (5) ("dcdh") ("avg") (.) (.) (.) (.) (.) (.) (.) ("unavailable: package not inst
+> alled (`=strtrim("`miss_dcdh'")')") ("ssc install did_multiplegt_dyn; ssc install gtools") (.)
+211.         }
+212.         else {
+213.             use `smp', clear
+214.             * Starters with no usable row from their start year on would look like
+.             * firms that never start: leave them out (as the other methods do).
+.             bysort firm_id: egen byte has_after = max(!never & year >= gA)
+215.             drop if !never & !has_after
+216.             keep firm_id year y gA never
+217.             tsset firm_id year
+218.             tsfill                                          // empty rows for missing years inside each firm's span
+219.             bysort firm_id (gA): replace gA = gA[1]
+220.             bysort firm_id (never): replace never = never[1]
+221.             gen byte D = !never & year >= gA                // start status: on from the start year, stays on
+222.             keep firm_id year y D
+223.             local ne  = `whi' + 1                           // Effect_1..Effect_`ne' = years 0..+`whi'
+224.             local npl = -`wlo' - 1                          // Placebo_1..Placebo_`npl' = years -2..`wlo'
+225.             * The package updates itself from the internet in 1 run in 100 unless
+.             * told not to. This file never installs or updates anything.
+.             capture quietly did_multiplegt_dyn y firm_id year D, effects(`ne') placebo(`npl') only_never_switchers gra
+> ph_off _no_updates
+226.             if _rc == 198 capture quietly did_multiplegt_dyn y firm_id year D, effects(`ne') placebo(`npl') only_ne
+> ver_switchers graph_off no_updates
+227.             if _rc == 198 {
+228.                 post `h' ("`e'") (`v') (5) ("dcdh") ("avg") (.) (.) (.) (.) (.) (.) (.) ("failed: this did_multiple
+> gt_dyn version cannot switch off its self-update") ("update it once: ssc install did_multiplegt_dyn, replace") (.)
+229.             }
+230.             else if _rc {
+231.                 post `h' ("`e'") (`v') (5) ("dcdh") ("avg") (.) (.) (.) (.) (.) (.) (.) ("failed: did_multiplegt_dy
+> n stopped with error r(`=_rc')") ("") (.)
+232.             }
+233.             else {
+234.                 local st = e(N_switchers_effect_1)
+235.                 local rw = e(N_effect_1)
+236.                 local p_dcdh = e(p_jointplacebo)
+237.                 forvalues l = 1/`ne' {
+238.                     post `h' ("`e'") (`v') (5) ("dcdh") ("event") (`l' - 1) (e(Effect_`l')) (e(se_effect_`l')) (.) 
+> (e(N_switchers_effect_`l')) (.) (e(N_effect_`l')) ("ok") ("Effect_`l' (package name) = year `=`l'-1' since the start")
+>  (.)
+239.                 }
+240.                 forvalues l = 1/`npl' {
+241.                     post `h' ("`e'") (`v') (5) ("dcdh") ("event") (-1 - `l') (e(Placebo_`l')) (e(se_placebo_`l')) (
+> .) (e(N_switchers_placebo_`l')) (.) (e(N_placebo_`l')) ("ok") ("Placebo_`l' (package name) = year `=-1-`l'' vs the yea
+> r before the start") (.)
+242.                 }
+243.                 post `h' ("`e'") (`v') (5) ("dcdh") ("own_overall") (.) (e(Av_tot_effect)) (e(se_avg_total_effect))
+>  (.) (.) (.) (e(N_avg_total_effect)) ("ok") ("average total effect: all its effects, weighted by starters behind each"
+> ) (.)
+244.                 post `h' ("`e'") (`v') (5) ("dcdh") ("before_check") (.) (.) (.) (.) (.) (.) (.) ("ok") ("joint tes
+> t of its placebos (years -2 to `wlo'); p in column p") (`p_dcdh')
+245.                 local lcd "Effect_1"
+246.                 forvalues l = 2/`ne' {
+247.                     local lcd "`lcd' + Effect_`l'"
+248.                 }
+249.                 capture quietly lincom (`lcd') / `ne'
+250.                 if !_rc post `h' ("`e'") (`v') (5) ("dcdh") ("avg") (.) (r(estimate)) (r(se)) (.) (`st') (.) (`rw')
+>  ("ok") ("years 0 to +`whi', each counts equally; starters and rows = those behind year 0") (.)
+251.                 else    post `h' ("`e'") (`v') (5) ("dcdh") ("avg") (.) (.) (.) (.) (`st') (.) (`rw') ("failed: no 
+> covariances in this package version") ("update: ssc install did_multiplegt_dyn, replace") (.)
+252.             }
+253.         }
+254.         timer off 2
+255.         quietly timer list 2
+256.         display "   [`e'] five methods done (" %5.1f r(t2) " s so far)"
+257.         timer on 2
+258.     }
+259. }
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(15,114 observations deleted)
+(10,449 missing values generated)
+(10,449 missing values generated)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_22139.000004 saved as .dta format
+   [imp version 1] sample ready
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(0 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,449 missing values generated)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(395 observations deleted)
+
+Panel variable: firm_id (unbalanced)
+ Time variable: year, 2010 to 2022, but with gaps
+         Delta: 1 unit
+(1,465 real changes made)
+(1,898 real changes made)
+   [imp] five methods done ( 29.3 s so far)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(9,899 observations deleted)
+(10,449 missing values generated)
+(10,449 missing values generated)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_22139.000005 saved as .dta format
+   [imp version 2] sample ready
+   [imp as filed] one regression done
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(9,472 observations deleted)
+(19,397 missing values generated)
+(19,397 missing values generated)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_22139.000006 saved as .dta format
+   [fdi version 1] sample ready
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(426 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(19,397 missing values generated)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(312 observations deleted)
+
+Panel variable: firm_id (unbalanced)
+ Time variable: year, 2010 to 2022, but with gaps
+         Delta: 1 unit
+(938 real changes made)
+(3,544 real changes made)
+   [fdi] five methods done ( 65.8 s so far)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(4,116 observations deleted)
+(17,077 missing values generated)
+(17,077 missing values generated)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_22139.000007 saved as .dta format
+   [fdi version 2] sample ready
+   [fdi as filed] one regression done
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(19,269 observations deleted)
+(6,745 missing values generated)
+(6,745 missing values generated)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_22139.000008 saved as .dta format
+   [any version 1] sample ready
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(180 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(6,745 missing values generated)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(306 observations deleted)
+
+Panel variable: firm_id (unbalanced)
+ Time variable: year, 2010 to 2022, but with gaps
+         Delta: 1 unit
+(1,296 real changes made)
+(1,586 real changes made)
+   [any] five methods done ( 88.7 s so far)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(15,731 observations deleted)
+(6,745 missing values generated)
+(6,745 missing values generated)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_22139.000009 saved as .dta format
+   [any version 2] sample ready
+   [any as filed] one regression done
+
+. postclose `h'
+
+. timer off 2
+
+. * If R2-08's table is present (same window), its averages must be reproduced here:
+. * one regression, main and as filed, and Sun-Abraham (main). An R2-08 table made
+. * before R2-08 also left out start years with no year-before file can differ in
+. * its Sun-Abraham row only where such start years exist: then a line says so.
+. preserve
+
+. capture confirm file "tables/08_efficiency_import_foreign_start.csv"
+
+. if !_rc {
+.     import delimited using "tables/08_efficiency_import_foreign_start.csv", clear varnames(1)
+(encoding automatically selected: ISO-8859-1)
+(48 vars, 188 obs)
+.     quietly summarize window_last if panel == "imp"
+.     if r(mean) != `whi' display "   R2-08 table uses another year window: cross-check skipped"
+.     else {
+.         local nold 0
+.         foreach e in imp fdi {
+  2.             foreach vv in 1 2 5 {
+  3.                 quietly summarize avg_b if panel == "`e'" & version == `vv' & outcome == 1
+  4.                 local r8 = r(mean)
+  5.                 local mine = cond(`vv' == 5, "`sa_`e'1'", cond(`vv' == 1, "`tw_`e'1'", "`tw_`e'2'"))
+  6.                 if "`mine'" == "" | missing(`r8') continue  // method not run here or there
+  7.                 if abs(`r8' - `mine') <= 0.00005 + 1e-9 continue
+  8.                 if `vv' == 5 & "`sa_out_`e''" != "0" {
+  9.                     display "   `e': Sun-Abraham " %7.4f `mine' " here vs " %7.4f `r8' " in R2-08's table, which st
+> ill keeps the `sa_out_`e'' starters with no file the year before the start: re-run the updated 08_efficiency_import_fo
+> reign_start.do"
+ 10.                     local ++nold
+ 11.                     continue
+ 12.                 }
+ 13.                 display as error "tables/08_efficiency_import_foreign_start.csv shows another average (`e', version
+>  `vv'): re-run 08_efficiency_import_foreign_start.do."
+ 14.                 exit 459
+ 15.             }
+ 16.         }
+.         if `nold' == 0 display "   R2-08 table: its averages reproduced (one regression, main and as filed; Sun-Abraha
+> m)"
+   R2-08 table: its averages reproduced (one regression, main and as filed; Sun-Abraham)
+.         else display "   R2-08 table: its averages reproduced (one regression, main and as filed; Sun-Abraham where th
+> e samples match)"
+.     }
+. }
+
+. else display "   tables/08_efficiency_import_foreign_start.csv not found: cross-check skipped"
+
+. restore
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 5/7: intervals, percentages and the CSV (numbers written before drawing)"
+Step 5/7: intervals, percentages and the CSV (numbers written before drawing)
+
+. *---------------------------------------------------------------------------
+. use `est', clear
+
+. * 95% interval and p: t with the model's degrees of freedom where the package
+. * gives them (reghdfe-based rows), otherwise normal, as the package reports.
+. gen double crit = cond(missing(df), invnormal(0.975), invttail(df, 0.025))
+
+. gen double lo = b - crit * se
+(21 missing values generated)
+
+. gen double hi = b + crit * se
+(21 missing values generated)
+
+. gen double p  = cond(missing(df), 2 * normal(-abs(b / se)), 2 * ttail(df, abs(b / se)))
+(21 missing values generated)
+
+. replace p = pin if inlist(row_type, "before_check", "before_all")
+(21 real changes made)
+
+. gen str6 ci_basis = cond(missing(se), "", cond(missing(df), "normal", "t"))
+(21 missing values generated)
+
+. * % difference = 100 x (exp(b) - 1); the interval ends are converted the same way.
+. gen double pct    = 100 * (exp(b)  - 1)
+(21 missing values generated)
+
+. gen double pct_lo = 100 * (exp(lo) - 1)
+(21 missing values generated)
+
+. gen double pct_hi = 100 * (exp(hi) - 1)
+(21 missing values generated)
+
+. gen str60 event_label = ""
+(222 missing values generated)
+
+. replace event_label = "Starting to import"                          if event == "imp"
+(74 real changes made)
+
+. replace event_label = "Getting a foreign owner (10%+ of capital)"   if event == "fdi"
+(74 real changes made)
+
+. replace event_label = "Starting to trade (exporting or importing)"  if event == "any"
+(74 real changes made)
+
+. gen str70 version_label = cond(version == 1, "Main: repaired starts, doubtful energy records left out (black)", ///
+>     "Every start and record as filed (gray triangles)")
+
+. gen str80 method_label = ""
+(222 missing values generated)
+
+. replace method_label = "One regression, all start years together (R2-03/R2-08's model, reghdfe)"         if method == 
+> "twfe"
+(78 real changes made)
+
+. replace method_label = "Callaway-Sant'Anna (csdid): each start year vs never-starters"                  if method == "
+> cs"
+(39 real changes made)
+
+. replace method_label = "Sun-Abraham (eventstudyinteract): R2-03's markers, start years kept apart"      if method == "
+> sa"
+(36 real changes made)
+
+. replace method_label = "Borusyak-Jaravel-Spiess (did_imputation): predicted path without the start"     if method == "
+> bjs"
+(36 real changes made)
+
+. replace method_label = "de Chaisemartin-D'Haultfoeuille (did_multiplegt_dyn): change from the year before" if method =
+> = "dcdh"
+variable method_label was str80 now str81
+(33 real changes made)
+
+. gen str70 row_label = ""
+(222 missing values generated)
+
+. replace row_label = "Average of years 0 to +`whi', each year counts equally"      if row_type == "avg"
+(18 real changes made)
+
+. replace row_label = "Previous paper's summary: one average of all years after the start" if row_type == "own_overall"
+(15 real changes made)
+
+. replace row_label = "One year since the start"                                  if row_type == "event"
+(168 real changes made)
+
+. replace row_label = "Before-start check (p only)"                               if row_type == "before_check"
+(18 real changes made)
+
+. replace row_label = "Before-start check, all years before the start (p only)"   if row_type == "before_all"
+(3 real changes made)
+
+. gen int window_first = `wlo'
+
+. gen int window_last  = `whi'
+
+. * The repairs, repeated on every main-version row of their event: starts dated in
+. * the problem year as filed, and where they went (left out / later start / never / kept).
+. gen long problem_year_starts = cond(event == "imp", `n_impbad', cond(event == "fdi", `n_fdibad', `n_anybad'))  if vers
+> ion == 1
+(39 missing values generated)
+
+. gen long starts_left_out     = cond(event == "imp", `n_impbad', cond(event == "fdi", 0, `n_anybad_out'))      if versi
+> on == 1
+(39 missing values generated)
+
+. gen long starts_redated      = cond(event == "fdi", `n_fdibad_redated', 0)                                     if vers
+> ion == 1
+(39 missing values generated)
+
+. gen long moved_to_never      = cond(event == "fdi", `n_fdibad_never', 0)                                       if vers
+> ion == 1
+(39 missing values generated)
+
+. gen long starts_kept         = cond(event == "any", `n_anybad' - `n_anybad_out', 0)                            if vers
+> ion == 1
+(39 missing values generated)
+
+. assert problem_year_starts == starts_left_out + starts_redated + moved_to_never + starts_kept if version == 1
+
+. * (c) only: starters that start by importing (the rest start by exporting only).
+. gen long starters_importing = `any_imp_n' if event == "any" & version == 1 & method == "twfe" & row_type == "avg"
+(221 missing values generated)
+
+. gen byte eorder = cond(event == "imp", 1, cond(event == "fdi", 2, 3))
+
+. gen byte rorder = 1*(row_type == "avg") + 2*(row_type == "own_overall") + 3*(row_type == "before_check") ///
+>     + 4*(row_type == "before_all") + 6*(row_type == "event")
+
+. sort eorder version morder rorder event_time
+
+. rename morder method_order
+
+. order event event_label version version_label method_order method method_label row_type row_label event_time ///
+>       b se lo hi p pct pct_lo pct_hi ci_basis starters comp_firms rows window_first window_last ///
+>       problem_year_starts starts_left_out starts_redated moved_to_never starts_kept starters_importing status note
+
+. drop rorder eorder crit pin df
+
+. format b se lo hi %9.4f
+
+. format pct pct_lo pct_hi %9.1f
+
+. format p %9.3f
+
+. format starters comp_firms rows problem_year_starts starts_left_out starts_redated moved_to_never starts_kept starters
+> _importing %9.0f
+
+. export delimited using "tables/`fname'.csv", datafmt replace
+file tables/10_methods_import_foreign_start.csv saved
+
+. list event version method row_type b pct pct_lo pct_hi p starters comp_firms rows status if inlist(row_type, "avg", "o
+> wn_overall", "before_check", "before_all"), ///
+>     noobs sepby(event version) abbreviate(24) clean
+
+    event   version   method       row_type         b     pct   pct_lo   pct_hi       p   starters   comp_firms    rows 
+>   status  
+      imp         1     twfe            avg    0.2521    28.7     13.8     45.5   0.000       1175         1808   14511 
+>       ok  
+      imp         1     twfe    own_overall    0.2724    31.3     18.3     45.7   0.000          .            .   14511 
+>       ok  
+      imp         1     twfe   before_check         .       .        .        .   0.395          .            .       . 
+>       ok  
+      imp         1       cs            avg    0.3090    36.2     18.9     56.0   0.000       1162         1757   14260 
+>       ok  
+      imp         1       cs    own_overall    0.3676    44.4     25.7     66.0   0.000          .            .       . 
+>       ok  
+      imp         1       cs   before_check         .       .        .        .   0.415          .            .       . 
+>       ok  
+      imp         1       cs     before_all         .       .        .        .   0.000          .            .       . 
+>       ok  
+      imp         1       sa            avg    0.3025    35.3     19.1     53.8   0.000       1175         1808   14511 
+>       ok  
+      imp         1       sa   before_check         .       .        .        .   0.157          .            .       . 
+>       ok  
+      imp         1      bjs            avg    0.3044    35.6     19.5     53.8   0.000       1171         5138   16899 
+>       ok  
+      imp         1      bjs    own_overall    0.3543    42.5     25.3     62.1   0.000          .            .   17911 
+>       ok  
+      imp         1      bjs   before_check         .       .        .        .   0.317          .            .       . 
+>       ok  
+      imp         1     dcdh            avg    0.3090    36.2     18.9     56.0   0.000       1014            .    5895 
+>       ok  
+      imp         1     dcdh    own_overall    0.2914    33.8     18.5     51.1   0.000          .            .    8324 
+>       ok  
+      imp         1     dcdh   before_check         .       .        .        .   0.267          .            .       . 
+>       ok  
+      imp         2     twfe            avg    0.2408    27.2     12.6     43.7   0.000       1802         1808   19810 
+>       ok  
+      imp         2     twfe    own_overall    0.0917     9.6     -0.7     21.0   0.069          .            .   19810 
+>       ok  
+      imp         2     twfe   before_check         .       .        .        .   0.202          .            .       . 
+>       ok  
+      fdi         1     twfe            avg    0.0351     3.6    -12.0     22.0   0.674        697         3397   19756 
+>       ok  
+      fdi         1     twfe    own_overall    0.1550    16.8      2.6     32.9   0.019          .            .   19756 
+>       ok  
+      fdi         1     twfe   before_check         .       .        .        .   0.409          .            .       . 
+>       ok  
+      fdi         1       cs            avg    0.0235     2.4    -15.1     23.4   0.805        534         3281   18867 
+>       ok  
+      fdi         1       cs    own_overall    0.0569     5.9    -11.7     26.9   0.537          .            .       . 
+>       ok  
+      fdi         1       cs   before_check         .       .        .        .   0.931          .            .       . 
+>       ok  
+      fdi         1       cs     before_all         .       .        .        .   0.087          .            .       . 
+>       ok  
+      fdi         1       sa            avg    0.0027     0.3    -15.4     18.9   0.975        624         3397   19334 
+>       ok  
+      fdi         1       sa   before_check         .       .        .        .   0.171          .            .       . 
+>       ok  
+      fdi         1      bjs            avg    0.1229    13.1     -3.6     32.6   0.130        682         7146   23161 
+>       ok  
+      fdi         1      bjs    own_overall    0.1333    14.3     -0.9     31.7   0.066          .            .   23507 
+>       ok  
+      fdi         1      bjs   before_check         .       .        .        .   0.281          .            .       . 
+>       ok  
+      fdi         1     dcdh            avg    0.0235     2.4    -15.2     23.6   0.807        507            .   10201 
+>       ok  
+      fdi         1     dcdh    own_overall    0.0808     8.4     -7.9     27.6   0.332          .            .   13142 
+>       ok  
+      fdi         1     dcdh   before_check         .       .        .        .   0.701          .            .       . 
+>       ok  
+      fdi         2     twfe            avg    0.1117    11.8     -2.4     28.1   0.106       1647         3074   24915 
+>       ok  
+      fdi         2     twfe    own_overall   -0.2458   -21.8    -29.6    -13.2   0.000          .            .   24915 
+>       ok  
+      fdi         2     twfe   before_check         .       .        .        .   0.000          .            .       . 
+>       ok  
+      any         1     twfe            avg    0.2130    23.7      8.2     41.5   0.002       1085         1267   11950 
+>       ok  
+      any         1     twfe    own_overall    0.1930    21.3      8.3     35.8   0.001          .            .   11950 
+>       ok  
+      any         1     twfe   before_check         .       .        .        .   0.491          .            .       . 
+>       ok  
+      any         1       cs            avg    0.3334    39.6     20.6     61.5   0.000       1049         1241   11675 
+>       ok  
+      any         1       cs    own_overall    0.3471    41.5     21.3     65.0   0.000          .            .       . 
+>       ok  
+      any         1       cs   before_check         .       .        .        .   0.148          .            .       . 
+>       ok  
+      any         1       cs     before_all         .       .        .        .   0.000          .            .       . 
+>       ok  
+      any         1       sa            avg    0.2931    34.1     16.7     53.9   0.000       1059         1267   11770 
+>       ok  
+      any         1       sa   before_check         .       .        .        .   0.538          .            .       . 
+>       ok  
+      any         1      bjs            avg    0.2859    33.1     16.3     52.3   0.000       1084         3033   12755 
+>       ok  
+      any         1      bjs    own_overall    0.3033    35.4     18.0     55.5   0.000          .            .   13768 
+>       ok  
+      any         1      bjs   before_check         .       .        .        .   0.355          .            .       . 
+>       ok  
+      any         1     dcdh            avg    0.3334    39.6     20.6     61.5   0.000        923            .    4348 
+>       ok  
+      any         1     dcdh    own_overall    0.2956    34.4     18.0     53.0   0.000          .            .    6425 
+>       ok  
+      any         1     dcdh   before_check         .       .        .        .   0.446          .            .       . 
+>       ok  
+      any         2     twfe            avg    0.2365    26.7     10.9     44.7   0.000       1483         1267   15545 
+>       ok  
+      any         2     twfe    own_overall    0.0974    10.2     -1.0     22.8   0.076          .            .   15545 
+>       ok  
+      any         2     twfe   before_check         .       .        .        .   0.549          .            .       . 
+>       ok  
+
+. 
+. 
+. *---------------------------------------------------------------------------
+. display "Step 6/7: numbers for the rows, panels and notes (read from the table, never typed)"
+Step 6/7: numbers for the rows, panels and notes (read from the table, never typed)
+
+. *---------------------------------------------------------------------------
+. local nb = uchar(160)                                   // no-break space: "p < 0.001" stays on one line
+
+. foreach e in imp fdi any {
+  2.     foreach m in twfe cs sa bjs dcdh {
+  3.         quietly summarize p if event == "`e'" & version == 1 & method == "`m'" & row_type == "before_check"
+  4.         local bp_`e'_`m' = cond(r(N) > 0, r(mean), .)
+  5.     }
+  6.     quietly summarize p if event == "`e'" & version == 1 & method == "cs" & row_type == "before_all"
+  7.     local bpall_`e' = cond(r(N) > 0, r(mean), .)
+  8.     quietly summarize p if event == "`e'" & version == 2 & method == "twfe" & row_type == "before_check"
+  9.     local bp_`e'_filed = cond(r(N) > 0, r(mean), .)
+ 10.     quietly summarize comp_firms if event == "`e'" & version == 1 & method == "twfe" & row_type == "avg"
+ 11.     local cf_`e' = string(r(mean), "%9.0fc")
+ 12. }
+
+. keep if row_type == "avg"
+(204 observations deleted)
+
+. * Rows per panel: 1-5 = the five methods (main version); 6 = as filed (one regression).
+. gen byte row = cond(version == 1, method_order, 6)
+
+. gen byte pnl = cond(event == "imp", 1, cond(event == "fdi", 2, 3))
+
+. gen byte ok = status == "ok" & !missing(b)
+
+. * Per panel: the range of the five averages and how many are clearly different from 0.
+. local words "none one two three four five"
+
+. foreach e in imp fdi any {
+  2.     quietly summarize pct if event == "`e'" & row <= 5 & ok
+  3.     local nav = r(N)
+  4.     local s_min = cond(round(r(min)) > 0, "+", "") + string(round(r(min)), "%9.0f") + "%"
+  5.     local s_max = cond(round(r(max)) > 0, "+", "") + string(round(r(max)), "%9.0f") + "%"
+  6.     quietly count if event == "`e'" & row <= 5 & ok & (pct_lo > 0 | pct_hi < 0)
+  7.     local nclr = r(N)
+  8.     local wc : word `=`nclr' + 1' of `words'
+  9.     local clr = cond(`nclr' == `nav', "all clear", cond(`nclr' == 0, "none clear", "`wc' of `nav' clear"))
+ 10.     local rng_`e' = cond(`nav' == 0, "not estimated", "`s_min' to `s_max', `clr'")
+ 11. }
+
+. * Shares quoted in the panel lines (whole %), from Step 1 and Step 4.
+. local s_i0 = string(100 * `shi0', "%9.0f")
+
+. local s_i1 = string(100 * `shi1', "%9.0f")
+
+. local s_f1 = string(100 * `shf1', "%9.0f")
+
+. local s_f0 = string(100 * `shf0', "%9.0f")
+
+. local s_ai = string(100 * `any_imp_sh', "%9.0f")
+
+. * The doubtful years as text: runs of consecutive files joined by a dash
+. * (the missing file counts as a break), e.g. "2017 and 2019–2022" (R2-08's code).
+. local runs ""
+
+. local r0 ""
+
+. local rp ""
+
+. foreach yy of local doubt_yrs {
+  2.     local nxt = `rp' + 1
+  3.     if "`r0'" != "" & `yy' == `nxt' local rp `yy'
+  4.     else {
+  5.         if "`r0'" != "" local runs `"`runs' "`=cond(`rp' > `r0', "`r0'–`rp'", "`r0'")'""'
+  6.         local r0 `yy'
+  7.         local rp `yy'
+  8.     }
+  9. }
+> invalid name
+
+. local runs `"`runs' "`=cond(`rp' > `r0', "`r0'–`rp'", "`r0'")'""'
+
+. local nr : word count `runs'
+
+. local dtxt ""
+
+. forvalues j = 1/`nr' {
+  2.     local rj : word `j' of `runs'
+  3.     local sep = cond(`j' == 1, "", cond(`j' == `nr', " and ", ", "))
+  4.     local dtxt "`dtxt'`sep'`rj'"
+  5. }
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 7/7: dot-and-whisker chart, one row per method, one block per start event, one scale"
+Step 7/7: dot-and-whisker chart, one row per method, one block per start event, one scale
+
+. *---------------------------------------------------------------------------
+. * Vertical layout (y units): panel header at yh, its gray line 0.75 below, the
+. * five method rows 1 unit apart (a little more room under row 2 for its gray
+. * second line), the as-filed row a little further down.
+. gen double yh   = 25.5 - 8.5 * (pnl - 1)
+
+. gen double ypos = yh - 1.7 - (row - 1) - 0.3 * (row >= 3) - 0.2 * (row == 6)
+
+. gen double ysub = ypos - 0.6                            // gray second line under a row
+
+. * x-axis: a round step (1, 2 or 5 times a power of 10) that grows with the
+. * numbers; 0 always inside; at most 6 steps, so the tick labels never touch.
+. quietly summarize pct_lo if ok
+
+. local xmin = min(r(min), 0)
+
+. quietly summarize pct_hi if ok
+
+. local xmax = max(r(max), 0)
+
+. local rng = `xmax' - `xmin'
+
+. local step = 10^floor(log10(`rng'))
+
+. if `rng'/`step' < 2       local step = `step'/5
+
+. else if `rng'/`step' < 5  local step = `step'/2
+
+. local xbot = `step' * floor(`xmin'/`step')
+
+. local xtop = `step' * ceil(`xmax'/`step')
+
+. while (`xtop' - `xbot')/`step' > 6 {
+  2.     local mant = round(`step' / 10^floor(log10(`step')))    // 1, 2 or 5
+  3.     local step = cond(`mant' == 2, 2.5, 2) * `step'         // 1 -> 2 -> 5 -> 10 ...
+  4.     local xbot = `step' * floor(`xmin'/`step')
+  5.     local xtop = `step' * ceil(`xmax'/`step')
+  6. }
+
+. local xfmt = cond(`step' >= 1, "%9.0f", "%9.1f")
+
+. * Tick labels with a % sign and a + for rises (0 = no difference).
+. local xlab ""
+
+. forvalues xx = `xbot'(`step')`xtop' {
+  2.     local s = cond(`xx' > 0, "+", "") + strtrim(string(`xx', "`xfmt'")) + "%"
+  3.     local xlab `"`xlab' `xx' "`s'""'
+  4. }
+
+. local span = `xtop' - `xbot'
+
+. * Left to right (x-axis units): row names, the dots (xbot..xtop, the only part
+. * with an axis), then two columns: starters, and the before-start check.
+. local xn  = `xbot' - 1.2 * `span'                       // row names start here (left-aligned)
+
+. quietly summarize pct_hi if ok
+
+. local xc1 = max(`xtop' + 0.27 * `span', r(max) + 0.45 * `span')  // column: starters (right-aligned; clear of the % la
+> bels)
+
+. local xc2 = `xc1' + 0.07 * `span'                       // column: before-start check (left-aligned)
+
+. local xr  = `xc1' + 0.51 * `span'
+
+. * Faint vertical gridlines and the 0 line, drawn inside each panel only.
+. local grid ""
+
+. local zero ""
+
+. forvalues p = 1/3 {
+  2.     local yt = 25.5 - 8.5 * (`p' - 1) - 1.2
+  3.     local yb = 25.5 - 8.5 * (`p' - 1) - 7.6
+  4.     forvalues xx = `xbot'(`step')`xtop' {
+  5.         if abs(`xx') > 1e-9 local grid `grid' `yt' `xx' `yb' `xx'
+  6.     }
+  7.     local zero `zero' `yt' 0 `yb' 0
+  8. }
+
+. * Columns: starters behind each average; before-start check (p below 0.05 =
+. * starters were already changing differently: "differs").
+. gen str12 c1 = string(starters, "%9.0fc") if ok
+
+. gen str40 c2 = ""
+(18 missing values generated)
+
+. gen str40 c2b = ""
+(18 missing values generated)
+
+. foreach e in imp fdi any {
+  2.     foreach m in twfe cs sa bjs dcdh filed {
+  3.         local q = cond("`m'" == "filed", `bp_`e'_filed', `bp_`e'_`m'')
+  4.         if missing(`q') continue
+  5.         local qs = cond(`q' < 0.001, "<`nb'0.001", string(`q', "%5.3f"))
+  6.         if `q' < 0.05 local qs "`qs', differs"
+  7.         if "`m'" == "filed" replace c2 = "`qs'" if event == "`e'" & row == 6 & ok
+  8.         else                replace c2 = "`qs'" if event == "`e'" & method == "`m'" & row <= 5 & ok
+  9.     }
+ 10.     * Callaway-Sant'Anna's check over all years before the start, as a gray second line.
+.     if !missing(`bpall_`e'') {
+ 11.         local qs = cond(`bpall_`e'' < 0.001, "<`nb'0.001", string(`bpall_`e'', "%5.3f"))
+ 12.         if `bpall_`e'' < 0.05 local qs "`qs', differs"
+ 13.         replace c2b = "all years: `qs'" if event == "`e'" & method == "cs" & row == 2 & ok
+ 14.     }
+ 15. }
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+
+. gen str90 nolbl = status if !ok
+(18 missing values generated)
+
+. gen double xc1 = `xc1'
+
+. gen double xc2 = `xc2'
+
+. gen double xnr = `xbot'
+
+. gen double xnm = `xn'
+
+. * Each average is written at the right end of its interval (whole %).
+. gen double pr = round(pct)
+
+. gen str8 lbl = cond(pr > 0, "+", "") + string(pr, "%9.0f") + "%" if ok
+
+. * Row names (left-aligned text; the as-filed row in gray).
+. gen str60 nm  = ""
+(18 missing values generated)
+
+. replace nm  = "One regression (Figure R2-08's model)"      if row == 1
+(3 real changes made)
+
+. replace nm  = "Callaway–Sant'Anna"                         if row == 2
+(3 real changes made)
+
+. replace nm  = "Sun–Abraham"                                if row == 3
+(3 real changes made)
+
+. replace nm  = "Borusyak–Jaravel–Spiess"                    if row == 4
+(3 real changes made)
+
+. replace nm  = "de Chaisemartin–D'Haultfœuille"             if row == 5
+(3 real changes made)
+
+. replace nm  = "As filed, nothing left out (one regression)" if row == 6
+(3 real changes made)
+
+. * Panel titles (on each panel's first row) and one gray line on what was repaired.
+. gen str120 ph = ""
+(18 missing values generated)
+
+. gen str160 ps = ""
+(18 missing values generated)
+
+. replace ph = "(a) Starting to import, vs `cf_imp' firms never seen importing"                      if row == 1 & pnl =
+> = 1
+(1 real change made)
+
+. replace ph = "(b) Getting a foreign owner (10%+ of capital), vs `cf_fdi' firms never foreign-owned"  if row == 1 & pnl
+>  == 2
+(1 real change made)
+
+. replace ph = "(c) Starting to trade (export or import), vs `cf_any' firms never seen trading"       if row == 1 & pnl 
+> == 3
+(1 real change made)
+
+. replace ps = "Import starts dated `imp_bad' left out: importers rise from `s_i0'% of firms in `imp_prev' to `s_i1'% in
+>  `imp_bad' (likely a recording change)." if row == 1 & pnl == 1
+(1 real change made)
+
+. replace ps = "All `fdi_bad' answers treated as unknown: `s_f1'% of firms are marked foreign-owned in `fdi_bad', about 
+> `s_f0'% in other years." if row == 1 & pnl == 2
+(1 real change made)
+
+. replace ps = "`s_ai'% of these starters start by importing; starts dated `imp_bad' that come with importing are left o
+> ut, as in (a)." if row == 1 & pnl == 3
+(1 real change made)
+
+. gen double yph = yh
+
+. gen double yps = yh - 0.75
+
+. gen double yhdr = 26.7                                  // column headers
+
+. gen str6 hdr = "Method" if _n == 1
+(17 missing values generated)
+
+. * Notes as one text, wrapped by printed width (R2-05's rule; widths in em).
+. local g1 : word 1 of `gapyr'
+
+. local txt "Notes: Each row: starters' change in value added per GJ from the year before the start (average of years 0 
+> to +`whi'),"
+
+. local txt "`txt' minus the same change among firms never seen doing the same. Start = first year seen importing (a), w
+> ith a foreign"
+
+. local txt "`txt' owner holding 10%+ of the capital (b), or exporting or importing (c), after a year seen without (a st
+> arter stays one"
+
+. local txt "`txt' if it stops later). Rows 2 to 5 are the previous paper's four methods, named after their authors; the
+> y differ only in"
+
+. local txt "`txt' how they combine firms that start in different years (row 1 can mix start years)."
+
+. local txt "`txt' Black dots also leave out energy records of importers with unknown"
+
+. local txt "`txt' export status in `dtxt' (they jump or drop far from other years); the gray triangle keeps every start
+>  and record."
+
+. local txt "`txt' Five methods: (a) `rng_imp'; (b) `rng_fdi'; (c) `rng_any' (a bar crossing 0 = no clear difference)."
+
+. local txt "`txt' Before the start = the method's check that starters were not already changing differently (p below 0.
+> 05 = they were;"
+
+. local txt "`txt' 'all years' = every year before the start, not only the last `: word `=-`wlo'' of one two three four 
+> five six seven eight nine')."
+
+. * Callaway-Sant'Anna's all-years check failing anywhere gets one plain sentence.
+. local nall 0
+
+. foreach e in imp fdi any {
+  2.     if `bpall_`e'' < 0.05 local ++nall
+  3. }
+
+. if `nall' > 0 local txt "`txt' Where 'all years' differs, part of the change after the start may continue an earlier d
+> ifference."
+
+. if "`g1'" != "" local txt "`txt' No `gapyr' file: Callaway–Sant'Anna, Sun–Abraham and de Chaisemartin–D'Haultfœuille l
+> eave out firms that started in `=`g1'+1'."
+
+. local txt "`txt' Value added = output value minus materials, energy and services bought (current prices); GJ = gigajou
+> les."
+
+. local txt "`txt' Timing, not proof of cause; firm links are fictional."
+
+. local maxw 53.5                                         // widest note line that fits the 9-inch PDF
+
+. local nl 0
+
+. local line ""
+
+. local lw 0
+
+. foreach w of local txt {
+  2.     local n  = ustrlen(`"`w'"')
+  3.     local na = `n' - ustrlen(ustrregexra(`"`w'"', "[ijltfr.,;:'()\-]", ""))
+  4.     local wi = `n' - ustrlen(ustrregexra(`"`w'"', "[A-Zmw]", ""))
+  5.     local pc = `n' - ustrlen(ustrregexra(`"`w'"', "%", ""))
+  6.     local dg = `n' - ustrlen(ustrregexra(`"`w'"', "[0-9+=]", ""))
+  7.     local ww = 0.29*`na' + 0.7*`wi' + 0.83*`pc' + 0.52*`dg' + 0.47*(`n' - `na' - `wi' - `pc' - `dg')
+  8.     local try = `lw' + 0.25*(`"`line'"' != "") + `ww'
+  9.     if `try' > `maxw' & `"`line'"' != "" {
+ 10.         local ++nl
+ 11.         local L`nl' `"`line'"'
+ 12.         local W`nl' = `lw'
+ 13.         local line `"`w'"'
+ 14.         local lw = `ww'
+ 15.     }
+ 16.     else {
+ 17.         local line = strtrim(`"`line' `w'"')
+ 18.         local lw = `try'
+ 19.     }
+ 20. }
+
+. local ++nl
+
+. local L`nl' `"`line'"'
+
+. local W`nl' = `lw'
+
+. local notes ""
+
+. forvalues j = 1/`nl' {
+  2.     display "   note line `j': " udstrlen(`"`L`j''"') " characters, width " %4.1f `W`j'' " of `maxw' em"
+  3.     local notes `"`notes' "`L`j''""'
+  4. }
+   note line 1: 129 characters, width 51.8 of 53.5 em
+   note line 2: 133 characters, width 53.3 of 53.5 em
+   note line 3: 139 characters, width 52.5 of 53.5 em
+   note line 4: 134 characters, width 51.8 of 53.5 em
+   note line 5: 129 characters, width 52.7 of 53.5 em
+   note line 6: 134 characters, width 53.5 of 53.5 em
+   note line 7: 133 characters, width 52.1 of 53.5 em
+   note line 8: 138 characters, width 52.8 of 53.5 em
+   note line 9: 132 characters, width 53.3 of 53.5 em
+   note line 10: 127 characters, width 51.7 of 53.5 em
+   note line 11: 104 characters, width 40.5 of 53.5 em
+
+. twoway (pci `grid', lcolor(gs14) lwidth(vthin)) ///
+>     (pci `zero', lcolor(gs8) lwidth(thin)) ///
+>     (rspike pct_hi pct_lo ypos if row <= 5 & ok, horizontal lcolor(black) lwidth(thin)) ///
+>     (rspike pct_hi pct_lo ypos if row == 6 & ok, horizontal lcolor(gs8) lwidth(thin)) ///
+>     (scatter ypos pct if row <= 5 & ok, msymbol(O) msize(small) mcolor(black)) ///
+>     (scatter ypos pct if row == 6 & ok, msymbol(Th) msize(small) mcolor(gs8)) ///
+>     (scatter ypos pct_hi if row <= 5 & ok, msymbol(none) mlabel(lbl) mlabposition(3) mlabgap(0.8) mlabsize(vsmall) mla
+> bcolor(black)) ///
+>     (scatter ypos pct_hi if row == 6 & ok, msymbol(none) mlabel(lbl) mlabposition(3) mlabgap(0.8) mlabsize(vsmall) mla
+> bcolor(gs6)) ///
+>     (scatter ypos xnm if row <= 5, msymbol(none) mlabel(nm) mlabposition(3) mlabgap(0) mlabsize(vsmall) mlabcolor(blac
+> k)) ///
+>     (scatter ypos xnm if row == 6, msymbol(none) mlabel(nm) mlabposition(3) mlabgap(0) mlabsize(vsmall) mlabcolor(gs6)
+> ) ///
+>     (scatter ypos xc1 if row <= 5 & ok, msymbol(none) mlabel(c1) mlabposition(9) mlabgap(0) mlabsize(vsmall) mlabcolor
+> (black)) ///
+>     (scatter ypos xc1 if row == 6 & ok, msymbol(none) mlabel(c1) mlabposition(9) mlabgap(0) mlabsize(vsmall) mlabcolor
+> (gs6)) ///
+>     (scatter ypos xc2 if row <= 5 & ok, msymbol(none) mlabel(c2) mlabposition(3) mlabgap(0) mlabsize(vsmall) mlabcolor
+> (black)) ///
+>     (scatter ypos xc2 if row == 6 & ok, msymbol(none) mlabel(c2) mlabposition(3) mlabgap(0) mlabsize(vsmall) mlabcolor
+> (gs6)) ///
+>     (scatter ysub xc2 if c2b != "", msymbol(none) mlabel(c2b) mlabposition(3) mlabgap(0) mlabsize(vsmall) mlabcolor(gs
+> 6)) ///
+>     (scatter ypos xnr if !ok, msymbol(none) mlabel(nolbl) mlabposition(3) mlabsize(vsmall) mlabcolor(gs6)) ///
+>     (scatter yph xnm if ph != "", msymbol(none) mlabel(ph) mlabposition(3) mlabgap(0) mlabsize(small) mlabcolor(black)
+> ) ///
+>     (scatter yps xnm if ps != "", msymbol(none) mlabel(ps) mlabposition(3) mlabgap(0) mlabsize(vsmall) mlabcolor(gs6))
+>  ///
+>     (scatter yhdr xnm if hdr != "", msymbol(none) mlabel(hdr) mlabposition(3) mlabgap(0) mlabsize(vsmall) mlabcolor(bl
+> ack)), ///
+>     text(26.7 `xc1' "Starters", size(vsmall) placement(w)) ///
+>     text(26.7 `xc2' "Before the start, p", size(vsmall) placement(e)) ///
+>     yscale(range(0.8 27.0) off) ylabel(none) ytitle("") ///
+>     xscale(range(`xn' `xr') noline) ///
+>     xlabel(`xlab', labsize(vsmall) noticks tlength(0) nogrid) ///
+>     xtitle("") ///
+>     legend(order(5 "Average of years 0 to +`whi' (each year counts equally)" ///
+>                  6 "As filed: every start and record kept (one regression)" 3 "95% interval" 2 "0 = no difference") //
+> /
+>         cols(2) position(6) region(lstyle(none)) size(vsmall) symxsize(5) keygap(1) colgap(4) rowgap(0.3)) ///
+>     title("Figure `exhibit'. Importing, foreign owners and energy efficiency, by method", size(medsmall) position(11) 
+> justification(left) span) ///
+>     subtitle("Value added per GJ: % change after the start, starters minus firms that never start", size(small) positi
+> on(11) justification(left) span) ///
+>     note(`notes' "`srcnote'" "`devnote'", size(vsmall) span linegap(0.6)) ///
+>     graphregion(color(white) lcolor(white) margin(r+3)) plotregion(style(none)) ///
+>     xsize(9) ysize(12.5) scale(`=7.5/9')
+
+. 
+. graph export "figures/`fname'.png", width(2700) replace
+file
+    /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r2-internationalisation-energy-efficie
+    > ncy/figures/10_methods_import_foreign_start.png saved as PNG format
+
+. graph export "figures/`fname'.pdf", replace
+file
+    /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r2-internationalisation-energy-efficie
+    > ncy/figures/10_methods_import_foreign_start.pdf saved as PDF format
+
+. 
+. timer off 1
+
+. quietly timer list 1
+
+. local elapsed = strtrim(string(r(t1), "%9.1f"))
+
+. display "FINISHED: figure -> figures/`fname'.png (elapsed `elapsed' s)"
+FINISHED: figure -> figures/10_methods_import_foreign_start.png (elapsed 91.3 s)
+
+. quietly log close          // keeps FINISHED as the last output line of the log
