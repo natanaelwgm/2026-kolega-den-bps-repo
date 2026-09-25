@@ -58,8 +58,7 @@ and 42 starters have no −1 row. "Never seen exporting" can include firms that 
 status. The table also has energy per unit of value added (exactly the same result, other way up), and three
 variants: the previous paper's age² control (age = years since the firm first appears in the file, as no founding
 year exists), without the 2017 starters, and exact-dated starters only. Starters from different years are averaged
-together; if the change differs by start year a dot can mix in other years. A method that keeps start years apart
-(Sun–Abraham) moves each dot by at most 0.05 log points here; R2-07 checks this. The year window is computed in the
+together; if the change differs by start year a dot can mix in other years. A method that keeps start years apart (Sun–Abraham) has to leave out the 37 starters of 2017, whose year before the start has no file; on the same starters (this file's version without them) it moves each dot by at most 0.07 log points (at most 0.04 after the start). R2-07 checks this. The year window is computed in the
 file with R2-02's rule and cross-checked against R2-02's table when present.
 
 **04 — CO2 efficiency before and after the export start.** The R2-03 template with only the outcome changed;
@@ -100,16 +99,14 @@ nothing. Both averages cross 0.
 
 **07 — the previous paper's four methods.** Same starters (simple rule) and never-exporters as R2-03, log value added per GJ, no
 control variables. Main number = average of years 0 to +5, each year counting equally. Averages: R2-03's model +9% (95% interval
-−8% to +28%); Callaway–Sant'Anna +8% (−10% to +30%); Sun–Abraham +5% (−11% to +24%); Borusyak–Jaravel–Spiess +4% (−11% to +22%);
-de Chaisemartin–D'Haultfœuille +8% (−10% to +30%). None is clearly different from zero. Before-start checks: p = 0.245 / 0.159 /
-0.238 / 0.190 / 0.326; but Callaway–Sant'Anna's check over all years before the start (not only the five shown) gives p = 0.009,
+−8% to +28%); Callaway–Sant'Anna +8% (−10% to +30%); Sun–Abraham +10% (−7% to +31%); Borusyak–Jaravel–Spiess +4% (−11% to +22%);
+de Chaisemartin–D'Haultfœuille +8% (−10% to +30%). None is clearly different from zero. Before-start checks: p = 0.245 / 0.159 / 0.119 / 0.190 / 0.326; but Callaway–Sant'Anna's check over all years before the start (not only the five shown) gives p = 0.009,
 a warning sign. The previous paper's single summary numbers: its two-way model with one on/off marker +1.0% (−11.8% to +15.7%),
 Callaway–Sant'Anna +6.4%, Borusyak–Jaravel–Spiess +4.4%, de Chaisemartin–D'Haultfœuille +4.0%. The one-marker model is the one
-number far from the others, which is what mixing start years does. Keeping start years apart (Sun–Abraham) moves each of R2-03's
-dots by at most 0.047 log points.
+number far from the others, which is what mixing start years does. Sun–Abraham leaves out the 37 starters of 2017 (no file the year before their start). On the same starters R2-03's model also averages +10%, and keeping start years apart moves each dot by at most 0.072 log points (0.044 after the start). Against R2-03's full sample the largest move is 0.119 (at −5), which comes from leaving those starters out.
 
 Missing 2016 file: Callaway–Sant'Anna and de Chaisemartin–D'Haultfœuille count calendar years, so starters of 2017 (their year
-before the start has no file) get no after-start estimate. Sun–Abraham and Borusyak–Jaravel–Spiess keep them. For de
+before the start has no file) get no after-start estimate. Sun–Abraham leaves them out too (37 starters): with no year before the start, the package would silently measure them against their last year (+5, 2022) instead. Borusyak–Jaravel–Spiess keeps them. For de
 Chaisemartin–D'Haultfœuille every missing year inside a firm's span gets an empty row with the export-start status filled in.
 Without that, the package treats 2015→2017 as one year, and firms whose status is missing in their switch year become comparison
 firms. With it, only never-exporters are comparisons. Its yearly results then equal Callaway–Sant'Anna's, as they should with
@@ -160,7 +157,7 @@ Results (average of years 0 to +4, 95% interval, before-start check):
 | As filed (gray triangles) | +27% (+13 to +44), p = 0.202 | +12% (−2 to +28), p < 0.001, a warning sign |
 | Doubtful records kept | +25% (+10 to +42) | +19% (+1 to +40), p = 0.078 |
 | Starts and years before the missing file only (no known recording problem) | +33% (+10 to +59), 773 starters | −1% (−21 to +25), 368 starters |
-| Start years kept apart (Sun–Abraham) | +35% (+19 to +54) | +4% (−13 to +24) |
+| Start years kept apart (Sun–Abraham; starters with no file the year before the start left out: none in (a), 81 in (b), 77 of them in the estimate) | +35% (+19 to +54) | 0% (−15 to +19) |
 
 - The import answer holds in every version.
 - The foreign-owner answer is clear only when doubtful records are kept. Kept but given their own yearly average (review check), it

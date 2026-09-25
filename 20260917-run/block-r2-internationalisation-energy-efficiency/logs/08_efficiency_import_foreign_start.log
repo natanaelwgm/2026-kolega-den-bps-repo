@@ -3,7 +3,7 @@
        log:  /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r2-internationalisation-energy-
 > efficiency/logs/08_efficiency_import_foreign_start.log
   log type:  text
- opened on:  25 Sep 2026, 07:10:59
+ opened on:  25 Sep 2026, 09:18:32
 
 . timer clear 1
 
@@ -78,7 +78,7 @@ Panel variable: firm_id (unbalanced)
 . tempfile shares
 
 . save `shares'
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_92588.000002 saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_13760.000002 saved as .dta format
 
 . * Guard 1: the import share in `imp_bad' should be far above the file before it.
 . quietly summarize year if year < `imp_bad'
@@ -270,7 +270,7 @@ Step 3/7: the year window (R2-02's rule) for each main sample; both panels use t
 . tempfile fy est sums
 
 . save `fy'
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_92588.000003 saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_13760.000003 saved as .dta format
 
 . * A year since the start passes when `minfirms'+ starters have a usable row in it,
 . * from starts both before and after the missing file; take the widest window
@@ -372,124 +372,137 @@ Step 4/7: estimate each panel and version (firm and year fixed effects, clustere
  15.         gen byte never = missing(gA)
  16.         assert `kv' == 9001 if never                        // comparison = never seen participating only
  17.         gen int kA = year - gA
- 18.         gen double y1 = ln(value_added_nominal / total_gj_s1)
- 19.         gen double y2 = ln(value_added_nominal / co2_total_s1)
- 20.         gen double y3 = ln(total_gj_s1)
- 21.         gen double y4 = ln(value_added_nominal)
- 22.         * markers; a marker with no starter row in this sample is left out
+ 18.         * Sun-Abraham (version 5): a start year whose year before has no file (the
+.         * year after the missing file) has no reference year: the package would
+.         * silently measure those starters against their grouped last years instead
+.         * (it drops one of their markers). Leave such start years out (as R2-10 does).
+.         if `v' == 5 {
+ 19.             bysort gA: egen byte has_ref = max(kA == -1)
+ 20.             egen byte ft0 = tag(firm_id) if !never & !has_ref
+ 21.             quietly count if ft0 == 1
+ 22.             local sa_out_`m' = r(N)
+ 23.             drop if !never & !has_ref
+ 24.             drop ft0 has_ref
+ 25.             sort firm_id year
+ 26.         }
+ 27.         gen double y1 = ln(value_added_nominal / total_gj_s1)
+ 28.         gen double y2 = ln(value_added_nominal / co2_total_s1)
+ 29.         gen double y3 = ln(total_gj_s1)
+ 30.         gen double y4 = ln(value_added_nominal)
+ 31.         * markers; a marker with no starter row in this sample is left out
 .         gen byte ev_lo = !missing(kA) & kA < `wlo'
- 23.         local cand "ev_lo"
- 24.         forvalues k = `wlo'/`whi' {
- 25.             if `k' == -1 continue
- 26.             local nm = cond(`k' < 0, "ev_m" + string(-`k'), "ev_p" + string(`k'))
- 27.             gen byte `nm' = (kA == `k')
- 28.             local cand `cand' `nm'
- 29.         }
- 30.         gen byte ev_hi = !missing(kA) & kA > `whi'
- 31.         local cand `cand' ev_hi
- 32.         gen byte ev_ref = (kA == -1)
- 33.         local terms ""
- 34.         local pre ""
- 35.         local post ""
- 36.         foreach t of local cand {
- 37.             quietly count if `t'
- 38.             if r(N) == 0 continue
- 39.             local terms `terms' `t'
- 40.             if "`t'" == "ev_lo" | substr("`t'", 4, 1) == "m" local pre `pre' `t'
- 41.             if "`t'" != "ev_hi" & "`t'" != "ev_lo" & substr("`t'", 4, 1) == "p" local post `post' `t'
- 42.         }
- 43.         local lc = subinstr("`post'", " ", " + ", .)        // years 0..+`whi', for the average
- 44.         local np : word count `post'
- 45.         local nout_o = cond(`v' == 1, 4, 1)
- 46.         forvalues o = 1/`nout_o' {
- 47.             if `v' == 5 & !`ok_sa' {
- 48.                 post `s' ("`m'") (`v') (`o') (.) (.) (.) (.) (.) (.) (.) (.) (.) (.) ("unavailable: eventstudyinter
+ 32.         local cand "ev_lo"
+ 33.         forvalues k = `wlo'/`whi' {
+ 34.             if `k' == -1 continue
+ 35.             local nm = cond(`k' < 0, "ev_m" + string(-`k'), "ev_p" + string(`k'))
+ 36.             gen byte `nm' = (kA == `k')
+ 37.             local cand `cand' `nm'
+ 38.         }
+ 39.         gen byte ev_hi = !missing(kA) & kA > `whi'
+ 40.         local cand `cand' ev_hi
+ 41.         gen byte ev_ref = (kA == -1)
+ 42.         local terms ""
+ 43.         local pre ""
+ 44.         local post ""
+ 45.         foreach t of local cand {
+ 46.             quietly count if `t'
+ 47.             if r(N) == 0 continue
+ 48.             local terms `terms' `t'
+ 49.             if "`t'" == "ev_lo" | substr("`t'", 4, 1) == "m" local pre `pre' `t'
+ 50.             if "`t'" != "ev_hi" & "`t'" != "ev_lo" & substr("`t'", 4, 1) == "p" local post `post' `t'
+ 51.         }
+ 52.         local lc = subinstr("`post'", " ", " + ", .)        // years 0..+`whi', for the average
+ 53.         local np : word count `post'
+ 54.         local nout_o = cond(`v' == 1, 4, 1)
+ 55.         forvalues o = 1/`nout_o' {
+ 56.             if `v' == 5 & !`ok_sa' {
+ 57.                 post `s' ("`m'") (`v') (`o') (.) (.) (.) (.) (.) (.) (.) (.) (.) (.) ("unavailable: eventstudyinter
 > act/avar not installed")
- 49.                 continue
- 50.             }
- 51.             if `v' == 5 {
- 52.                 capture quietly eventstudyinteract y`o' `terms', cohort(gA) control_cohort(never) ///
+ 58.                 continue
+ 59.             }
+ 60.             if `v' == 5 {
+ 61.                 capture quietly eventstudyinteract y`o' `terms', cohort(gA) control_cohort(never) ///
 >                     absorb(i.firm_id i.year) vce(cluster firm_id)
- 53.                 if _rc {
- 54.                     post `s' ("`m'") (`v') (`o') (.) (.) (.) (.) (.) (.) (.) (.) (.) (.) ("failed: eventstudyintera
+ 62.                 if _rc {
+ 63.                     post `s' ("`m'") (`v') (`o') (.) (.) (.) (.) (.) (.) (.) (.) (.) (.) ("failed: eventstudyintera
 > ct error r(`=_rc')")
- 55.                     continue
- 56.                 }
- 57.                 local df = e(df_r)
- 58.                 local N  = e(N)
- 59.                 capture drop es
- 60.                 gen byte es = e(sample)
- 61.                 matrix bsa = e(b_iw)
- 62.                 matrix vsa = e(V_iw)
- 63.                 ereturn post bsa vsa, dof(`df')
- 64.                 local sg = .
- 65.             }
- 66.             else {
- 67.                 quietly reghdfe y`o' `terms', absorb(firm_id year) vce(cluster firm_id)
- 68.                 local df = e(df_r)
- 69.                 local N  = e(N)
- 70.                 local sg = e(num_singletons)
- 71.                 capture drop es
- 72.                 gen byte es = e(sample)
- 73.                 if `v' == 1 matrix b`m'`o' = e(b)
- 74.                 if `v' == 1 local terms1 `terms'
- 75.             }
- 76.             quietly test `pre'
- 77.             local bp = r(p)
- 78.             quietly lincom (`lc') / `np'
- 79.             local ab = r(estimate)
- 80.             local ase = r(se)
- 81.             local alo = r(estimate) - invttail(`df', 0.025) * r(se)
- 82.             local ahi = r(estimate) + invttail(`df', 0.025) * r(se)
- 83.             egen byte ftag = tag(firm_id) if es
- 84.             quietly count if ftag & !never
- 85.             local st = r(N)
- 86.             quietly count if ftag & never
- 87.             local cf = r(N)
- 88.             quietly count if ftag
- 89.             local G = r(N)
- 90.             drop ftag
- 91.             post `s' ("`m'") (`v') (`o') (`N') (`G') (`st') (`cf') (`sg') (`bp') (`ab') (`ase') (`alo') (`ahi') ("o
+ 64.                     continue
+ 65.                 }
+ 66.                 local df = e(df_r)
+ 67.                 local N  = e(N)
+ 68.                 capture drop es
+ 69.                 gen byte es = e(sample)
+ 70.                 matrix bsa = e(b_iw)
+ 71.                 matrix vsa = e(V_iw)
+ 72.                 ereturn post bsa vsa, dof(`df')
+ 73.                 local sg = .
+ 74.             }
+ 75.             else {
+ 76.                 quietly reghdfe y`o' `terms', absorb(firm_id year) vce(cluster firm_id)
+ 77.                 local df = e(df_r)
+ 78.                 local N  = e(N)
+ 79.                 local sg = e(num_singletons)
+ 80.                 capture drop es
+ 81.                 gen byte es = e(sample)
+ 82.                 if `v' == 1 matrix b`m'`o' = e(b)
+ 83.                 if `v' == 1 local terms1 `terms'
+ 84.             }
+ 85.             quietly test `pre'
+ 86.             local bp = r(p)
+ 87.             quietly lincom (`lc') / `np'
+ 88.             local ab = r(estimate)
+ 89.             local ase = r(se)
+ 90.             local alo = r(estimate) - invttail(`df', 0.025) * r(se)
+ 91.             local ahi = r(estimate) + invttail(`df', 0.025) * r(se)
+ 92.             egen byte ftag = tag(firm_id) if es
+ 93.             quietly count if ftag & !never
+ 94.             local st = r(N)
+ 95.             quietly count if ftag & never
+ 96.             local cf = r(N)
+ 97.             quietly count if ftag
+ 98.             local G = r(N)
+ 99.             drop ftag
+100.             post `s' ("`m'") (`v') (`o') (`N') (`G') (`st') (`cf') (`sg') (`bp') (`ab') (`ase') (`alo') (`ahi') ("o
 > k")
- 92.             foreach t in `cand' ev_ref {
- 93.                 if "`t'" == "ev_lo"       local k = `wlo' - 1
- 94.                 else if "`t'" == "ev_hi"  local k = `whi' + 1
- 95.                 else if "`t'" == "ev_ref" local k = -1
- 96.                 else local k = cond(substr("`t'", 4, 1) == "m", -1, 1) * real(substr("`t'", 5, .))
- 97.                 egen byte ft = tag(firm_id) if es & `t'
- 98.                 quietly count if ft == 1
- 99.                 local nf = r(N)
-100.                 quietly count if es & `t'
-101.                 local nr = r(N)
-102.                 quietly count if ft == 1 & gA < `gap1'
-103.                 local ne = r(N)
-104.                 quietly count if ft == 1 & gA > `gap1'
-105.                 local nl = r(N)
-106.                 drop ft
-107.                 local grp = inlist("`t'", "ev_lo", "ev_hi")
-108.                 if "`t'" == "ev_ref" {
-109.                     post `h' ("`m'") (`v') (`o') ("`t'") (`k') (0) (1) (0) (.) (0) (0) (.) (`nf') (`nr') (`ne') (`n
+101.             foreach t in `cand' ev_ref {
+102.                 if "`t'" == "ev_lo"       local k = `wlo' - 1
+103.                 else if "`t'" == "ev_hi"  local k = `whi' + 1
+104.                 else if "`t'" == "ev_ref" local k = -1
+105.                 else local k = cond(substr("`t'", 4, 1) == "m", -1, 1) * real(substr("`t'", 5, .))
+106.                 egen byte ft = tag(firm_id) if es & `t'
+107.                 quietly count if ft == 1
+108.                 local nf = r(N)
+109.                 quietly count if es & `t'
+110.                 local nr = r(N)
+111.                 quietly count if ft == 1 & gA < `gap1'
+112.                 local ne = r(N)
+113.                 quietly count if ft == 1 & gA > `gap1'
+114.                 local nl = r(N)
+115.                 drop ft
+116.                 local grp = inlist("`t'", "ev_lo", "ev_hi")
+117.                 if "`t'" == "ev_ref" {
+118.                     post `h' ("`m'") (`v') (`o') ("`t'") (`k') (0) (1) (0) (.) (0) (0) (.) (`nf') (`nr') (`ne') (`n
 > l')
-110.                 }
-111.                 else if !`: list t in terms' | `nr' == 0 {
-112.                     post `h' ("`m'") (`v') (`o') ("`t'") (`k') (`grp') (0) (.) (.) (.) (.) (.) (0) (0) (0) (0)
-113.                 }
-114.                 else {
-115.                     local b  = _b[`t']
-116.                     local se = _se[`t']
-117.                     post `h' ("`m'") (`v') (`o') ("`t'") (`k') (`grp') (0) (`b') (`se') ///
+119.                 }
+120.                 else if !`: list t in terms' | `nr' == 0 {
+121.                     post `h' ("`m'") (`v') (`o') ("`t'") (`k') (`grp') (0) (.) (.) (.) (.) (.) (0) (0) (0) (0)
+122.                 }
+123.                 else {
+124.                     local b  = _b[`t']
+125.                     local se = _se[`t']
+126.                     post `h' ("`m'") (`v') (`o') ("`t'") (`k') (`grp') (0) (`b') (`se') ///
 >                         (`b' - invttail(`df', 0.025) * `se') (`b' + invttail(`df', 0.025) * `se') ///
 >                         (2 * ttail(`df', abs(`b' / `se'))) (`nf') (`nr') (`ne') (`nl')
-118.                 }
-119.             }
-120.         }
-121.         display "   `m' version `v': done"
-122.     }
-123.     * Identity check: value added per GJ = value added minus energy use (in logs), marker by marker.
+127.                 }
+128.             }
+129.         }
+130.         display "   `m' version `v': done"
+131.     }
+132.     * Identity check: value added per GJ = value added minus energy use (in logs), marker by marker.
 .     foreach t of local terms1 {
-124.         assert reldif(b`m'1[1, "`t'"], b`m'4[1, "`t'"] - b`m'3[1, "`t'"]) < 1e-6 | abs(b`m'1[1, "`t'"]) < 1e-12
-125.     }
-126. }
+133.         assert reldif(b`m'1[1, "`t'"], b`m'4[1, "`t'"] - b`m'3[1, "`t'"]) < 1e-6 | abs(b`m'1[1, "`t'"]) < 1e-12
+134.     }
+135. }
 (G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
 (15,114 observations deleted)
 (10,449 missing values generated)
@@ -515,6 +528,7 @@ Step 4/7: estimate each panel and version (firm and year fixed effects, clustere
 (15,114 observations deleted)
 (10,449 missing values generated)
 (10,449 missing values generated)
+(0 observations deleted)
    imp version 5: done
 (G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
 (9,472 observations deleted)
@@ -541,6 +555,7 @@ Step 4/7: estimate each panel and version (firm and year fixed effects, clustere
 (9,472 observations deleted)
 (19,397 missing values generated)
 (19,397 missing values generated)
+(426 observations deleted)
    fdi version 5: done
 
 . postclose `h'
@@ -670,6 +685,16 @@ Step 5/7: percentages, labels and the CSV (numbers written before drawing)
 . replace note = "No starter row in this version" if !reference & missing(b) & !missing(term) & status == "ok"
 (2 real changes made)
 
+. * Sun-Abraham rows: how many starters were left out (no file the year before their start).
+. foreach m in imp fdi {
+  2.     replace note = note + cond(note == "", "", "; ") + "Sun-Abraham: `sa_out_`m'' starters with no file the year be
+> fore the start left out" if version == 5 & panel == "`m'" & status == "ok"
+  3. }
+variable note was str90 now str129
+(11 real changes made)
+variable note was str129 now str130
+(11 real changes made)
+
 . gen byte porder = 1 + (panel == "fdi")
 
 . sort porder version outcome event_time
@@ -694,7 +719,7 @@ Step 5/7: percentages, labels and the CSV (numbers written before drawing)
 . tempfile res
 
 . save `res'
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_92588.000006 saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_13760.000006 saved as .dta format
 
 . * The yearly shares behind the repairs go at the end of the same CSV.
 . use `shares', clear
@@ -707,6 +732,7 @@ file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_92588.000006 saved as .
 . format sh_imp sh_fdi %9.3f
 
 . append using `res'
+(variable note was str90, now str130 to accommodate using data's values)
 
 . gen byte porder = cond(panel == "imp", 1, cond(panel == "fdi", 2, 3))
 
@@ -808,7 +834,7 @@ file tables/08_efficiency_import_foreign_start.csv saved
 > ok  
       fdi         4         1    10043          368           2073      0.497      -1.0        -21.4         24.6       
 > ok  
-      fdi         5         1    19756          760           3397      0.477       3.8        -13.4         24.3       
+      fdi         5         1    19334          683           3397      0.171       0.3        -15.4         18.9       
 > ok  
 
 . 
@@ -1176,6 +1202,6 @@ file
 . local elapsed = strtrim(string(r(t1), "%9.1f"))
 
 . display "FINISHED: figure -> figures/`fname'.png (elapsed `elapsed' s)"
-FINISHED: figure -> figures/08_efficiency_import_foreign_start.png (elapsed 10.4 s)
+FINISHED: figure -> figures/08_efficiency_import_foreign_start.png (elapsed 9.4 s)
 
 . quietly log close          // keeps FINISHED as the last output line of the log

@@ -3,7 +3,7 @@
        log:  /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r2-internationalisation-energy-
 > efficiency/logs/07_efficiency_by_method.log
   log type:  text
- opened on:  25 Sep 2026, 06:26:33
+ opened on:  25 Sep 2026, 09:17:53
 
 . timer clear 1
 
@@ -180,7 +180,7 @@ Step 3/8: set the year window (R2-02's rule) and check it against R2-02's table 
 . tempfile fy est
 
 . save `fy'
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_13064.000001 saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_12580.000001 saved as .dta format
 
 . * Which years since the start get their own point: R2-02's rule, computed here so
 . * this file also runs on its own. A year passes when `minfirms'+ starters have a
@@ -299,7 +299,7 @@ Step 4/8: the firms compared (as R2-03) and one on/off marker per year since the
 . tempfile smp est
 
 . save `smp'
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_13064.000003 saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_12580.000003 saved as .dta format
 
 . * Counts behind each estimate: starters with a row from the start year on,
 . * comparison firms and rows, all inside the estimation sample (variable es).
@@ -503,6 +503,24 @@ Step 5/8: the same starters and never-exporters under each method
 . else {
 .     use `smp', clear
 (G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+.     * A start year whose year before has no file (the year after the missing
+.     * file) has no reference year: the package would silently measure those
+.     * starters against one of their last years instead (here +5; it drops one of their
+.     * markers). Leave such start years out, as Callaway-Sant'Anna and
+.     * de Chaisemartin-D'Haultfoeuille do by construction.
+.     bysort gA: egen byte has_ref = max(kA == -1)
+.     egen byte ft0 = tag(firm_id) if !never & !has_ref
+.     quietly count if ft0 == 1
+.     local sa_out = r(N)
+.     drop if !never & !has_ref
+(283 observations deleted)
+.     drop ft0 has_ref
+.     local sa_terms ""
+.     foreach t of local terms {
+  2.         quietly count if `t'
+  3.         if r(N) > 0 local sa_terms `sa_terms' `t'
+  4.     }
+.     assert "`sa_terms'" == "`terms'"                 // every marker still has starter rows
 .     capture quietly eventstudyinteract y `terms', cohort(gA) control_cohort(never) absorb(i.firm_id i.year) vce(cluste
 > r firm_id)
 .     if _rc {
@@ -526,7 +544,7 @@ Step 5/8: the same starters and never-exporters under each method
   3.             if `d' > `mxd' local mxd = `d'
   4.         }
 .         display "   largest move of a dot vs R2-03: " %6.4f `mxd' " log points"
-   largest move of a dot vs R2-03: 0.0472 log points
+   largest move of a dot vs R2-03: 0.1190 log points
 .         ereturn post bsa vsa, dof(`df')
 .         foreach t of local terms {
   2.             if "`t'" == "ev_lo"      local k = `wlo' - 1
@@ -537,13 +555,13 @@ Step 5/8: the same starters and never-exporters under each method
   7.         }
 .         quietly lincom (`lc') / `np'
 .         post `h' (3) ("sa") ("avg") (.) (r(estimate)) (r(se)) (`df') (`st') (`cf') (`rw') ("ok") ("years 0 to +`whi', 
-> each counts equally") (.)
+> each counts equally; `sa_out' starters with no file the year before the start left out") (.)
 .         quietly test `pre'
 .         local p_sa = r(p)
 .         post `h' (3) ("sa") ("before_check") (.) (.) (.) (.) (.) (.) (.) ("ok") ("F test, years before the start (grou
 > ped end included) = 0; p in column p") (`p_sa')
 .         post `h' (3) ("sa") ("max_move") (.) (`mxd') (.) (.) (.) (.) (.) ("ok") ("largest difference from R2-03's dots
-> , log points (all markers)") (.)
+> , log points (all markers; `sa_out' starters left out here, kept in R2-03)") (.)
 .     }
 . }
 
@@ -737,48 +755,48 @@ Panel variable: firm_id (unbalanced)
 (G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
 (13,910 observations deleted)
 (0 observations deleted)
-(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_13064.000006 not found)
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_13064.000006 saved as .dta format
+(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_12580.000006 not found)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_12580.000006 saved as .dta format
 (G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
 (12,360 observations deleted)
 (0 observations deleted)
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_13064.000006 saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_12580.000006 saved as .dta format
 (G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
 (10,805 observations deleted)
 (0 observations deleted)
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_13064.000006 saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_12580.000006 saved as .dta format
 (G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
 (8,910 observations deleted)
 (2 observations deleted)
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_13064.000006 saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_12580.000006 saved as .dta format
 (G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
 (7,373 observations deleted)
 (0 observations deleted)
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_13064.000006 saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_12580.000006 saved as .dta format
 (G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
 (7,701 observations deleted)
 (0 observations deleted)
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_13064.000006 saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_12580.000006 saved as .dta format
 (G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
 (8,808 observations deleted)
 (4 observations deleted)
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_13064.000006 saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_12580.000006 saved as .dta format
 (G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
 (10,267 observations deleted)
 (0 observations deleted)
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_13064.000006 saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_12580.000006 saved as .dta format
 (G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
 (11,492 observations deleted)
 (0 observations deleted)
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_13064.000006 saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_12580.000006 saved as .dta format
 (G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
 (12,988 observations deleted)
 (4 observations deleted)
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_13064.000006 saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_12580.000006 saved as .dta format
 (G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
 (12,931 observations deleted)
 (0 observations deleted)
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_13064.000006 saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_12580.000006 saved as .dta format
 
 . use `stack', clear
 (G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
@@ -833,7 +851,7 @@ file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_13064.000006 saved as .
 . quietly timer list 2
 
 . display "   methods done (" %5.1f r(t2) " s)"
-   methods done ( 37.2 s)
+   methods done ( 34.0 s)
 
 . 
 . *---------------------------------------------------------------------------
@@ -1058,9 +1076,9 @@ file tables/07_efficiency_by_method.csv saved
         cs    own_overall    0.0620     6.4    -10.0     25.8   0.467          .            .       .       ok  
         cs   before_check         .       .        .        .   0.159          .            .       .       ok  
         cs     before_all         .       .        .        .   0.009          .            .       .       ok  
-        sa            avg    0.0503     5.2    -10.9     24.2   0.553        740         2832   20070       ok  
-        sa   before_check         .       .        .        .   0.238          .            .       .       ok  
-        sa       max_move    0.0472       .        .        .       .          .            .       .       ok  
+        sa            avg    0.0966    10.1     -7.3     30.8   0.270        703         2832   19787       ok  
+        sa   before_check         .       .        .        .   0.119          .            .       .       ok  
+        sa       max_move    0.1190       .        .        .       .          .            .       .       ok  
        bjs            avg    0.0415     4.2    -10.8     21.8   0.602        739         4849   21483       ok  
        bjs    own_overall    0.0435     4.4     -9.6     20.7   0.556          .            .   22083       ok  
        bjs   before_check         .       .        .        .   0.190          .            .       .       ok  
@@ -1262,10 +1280,10 @@ Step 8/8: dot-and-whisker chart, one row per method
 . * Notes as one text, wrapped by printed width (R2-05's rule; widths in em).
 . local gapnote ""
 
-. if "`gapyr'" != "" & (`ok_cs' | `ok_dcdh') {
+. if "`gapyr'" != "" & (`ok_cs' | `ok_sa' | `ok_dcdh') {
 .     local g1 : word 1 of `gapyr'
-.     local gapnote "No `gapyr' file: Callaway–Sant'Anna and de Chaisemartin–D'Haultfœuille leave out firms that started
->  in `=`g1'+1'."
+.     local gapnote "No `gapyr' file: Callaway–Sant'Anna, Sun–Abraham and de Chaisemartin–D'Haultfœuille leave out firms
+>  that started in `=`g1'+1'."
 . }
 
 . local txt "Notes: Every row compares firms that start exporting (first year seen exporting after a year seen not expor
@@ -1339,11 +1357,11 @@ Step 8/8: dot-and-whisker chart, one row per method
    note line 2: 130 characters, width 52.1 of 53.5 em
    note line 3: 127 characters, width 51.4 of 53.5 em
    note line 4: 128 characters, width 52.8 of 53.5 em
-   note line 5: 132 characters, width 52.6 of 53.5 em
+   note line 5: 133 characters, width 53.1 of 53.5 em
    note line 6: 131 characters, width 50.8 of 53.5 em
-   note line 7: 124 characters, width 51.6 of 53.5 em
-   note line 8: 131 characters, width 52.5 of 53.5 em
-   note line 9: 65 characters, width 24.9 of 53.5 em
+   note line 7: 109 characters, width 46.0 of 53.5 em
+   note line 8: 129 characters, width 52.5 of 53.5 em
+   note line 9: 95 characters, width 36.8 of 53.5 em
 
 . twoway (pci 0.5 0 8.5 0, lcolor(gs8) lwidth(thin)) ///
 >     (rspike pct_hi pct_lo ypos if row_type == "avg" & ok, horizontal lcolor(black) lwidth(thin)) ///
@@ -1404,6 +1422,6 @@ file
 . local elapsed = strtrim(string(r(t1), "%9.1f"))
 
 . display "FINISHED: figure -> figures/`fname'.png (elapsed `elapsed' s)"
-FINISHED: figure -> figures/07_efficiency_by_method.png (elapsed 40.4 s)
+FINISHED: figure -> figures/07_efficiency_by_method.png (elapsed 36.9 s)
 
 . quietly log close          // keeps FINISHED as the last output line of the log

@@ -278,6 +278,19 @@ foreach m in imp fdi {
         gen byte never = missing(gA)
         assert `kv' == 9001 if never                        // comparison = never seen participating only
         gen int kA = year - gA
+        * Sun-Abraham (version 5): a start year whose year before has no file (the
+        * year after the missing file) has no reference year: the package would
+        * silently measure those starters against their grouped last years instead
+        * (it drops one of their markers). Leave such start years out (as R2-10 does).
+        if `v' == 5 {
+            bysort gA: egen byte has_ref = max(kA == -1)
+            egen byte ft0 = tag(firm_id) if !never & !has_ref
+            quietly count if ft0 == 1
+            local sa_out_`m' = r(N)
+            drop if !never & !has_ref
+            drop ft0 has_ref
+            sort firm_id year
+        }
         gen double y1 = ln(value_added_nominal / total_gj_s1)
         gen double y2 = ln(value_added_nominal / co2_total_s1)
         gen double y3 = ln(total_gj_s1)
@@ -441,6 +454,10 @@ replace note = "Reference year: 0 by definition" if reference == 1
 replace note = "Grouped end: all years before `wlo'; each firm counted once" if term == "ev_lo"
 replace note = "Grouped end: all years after +`whi'; each firm counted once" if term == "ev_hi"
 replace note = "No starter row in this version" if !reference & missing(b) & !missing(term) & status == "ok"
+* Sun-Abraham rows: how many starters were left out (no file the year before their start).
+foreach m in imp fdi {
+    replace note = note + cond(note == "", "", "; ") + "Sun-Abraham: `sa_out_`m'' starters with no file the year before the start left out" if version == 5 & panel == "`m'" & status == "ok"
+}
 gen byte porder = 1 + (panel == "fdi")
 sort porder version outcome event_time
 order panel panel_label version version_label outcome outcome_label status column event_time grouped reference ///

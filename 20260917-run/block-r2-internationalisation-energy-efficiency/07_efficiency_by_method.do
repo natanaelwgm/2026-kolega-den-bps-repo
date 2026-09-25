@@ -363,6 +363,23 @@ if !`ok_sa' {
 }
 else {
     use `smp', clear
+    * A start year whose year before has no file (the year after the missing
+    * file) has no reference year: the package would silently measure those
+    * starters against one of their last years instead (here +5; it drops one of their
+    * markers). Leave such start years out, as Callaway-Sant'Anna and
+    * de Chaisemartin-D'Haultfoeuille do by construction.
+    bysort gA: egen byte has_ref = max(kA == -1)
+    egen byte ft0 = tag(firm_id) if !never & !has_ref
+    quietly count if ft0 == 1
+    local sa_out = r(N)
+    drop if !never & !has_ref
+    drop ft0 has_ref
+    local sa_terms ""
+    foreach t of local terms {
+        quietly count if `t'
+        if r(N) > 0 local sa_terms `sa_terms' `t'
+    }
+    assert "`sa_terms'" == "`terms'"                 // every marker still has starter rows
     capture quietly eventstudyinteract y `terms', cohort(gA) control_cohort(never) absorb(i.firm_id i.year) vce(cluster firm_id)
     if _rc {
         post `h' (3) ("sa") ("avg") (.) (.) (.) (.) (.) (.) (.) ("failed: eventstudyinteract stopped with error r(`=_rc')") ("") (.)
@@ -393,11 +410,11 @@ else {
             post `h' (3) ("sa") ("event") (`k') (_b[`t']) (_se[`t']) (`df') (.) (.) (.) ("ok") ("`nt'") (.)
         }
         quietly lincom (`lc') / `np'
-        post `h' (3) ("sa") ("avg") (.) (r(estimate)) (r(se)) (`df') (`st') (`cf') (`rw') ("ok") ("years 0 to +`whi', each counts equally") (.)
+        post `h' (3) ("sa") ("avg") (.) (r(estimate)) (r(se)) (`df') (`st') (`cf') (`rw') ("ok") ("years 0 to +`whi', each counts equally; `sa_out' starters with no file the year before the start left out") (.)
         quietly test `pre'
         local p_sa = r(p)
         post `h' (3) ("sa") ("before_check") (.) (.) (.) (.) (.) (.) (.) ("ok") ("F test, years before the start (grouped end included) = 0; p in column p") (`p_sa')
-        post `h' (3) ("sa") ("max_move") (.) (`mxd') (.) (.) (.) (.) (.) ("ok") ("largest difference from R2-03's dots, log points (all markers)") (.)
+        post `h' (3) ("sa") ("max_move") (.) (`mxd') (.) (.) (.) (.) (.) ("ok") ("largest difference from R2-03's dots, log points (all markers; `sa_out' starters left out here, kept in R2-03)") (.)
     }
 }
 
@@ -772,9 +789,9 @@ gen double yhdr = 9.1                                   // column headers
 gen str6 hdr = "Method" if _n == 1
 * Notes as one text, wrapped by printed width (R2-05's rule; widths in em).
 local gapnote ""
-if "`gapyr'" != "" & (`ok_cs' | `ok_dcdh') {
+if "`gapyr'" != "" & (`ok_cs' | `ok_sa' | `ok_dcdh') {
     local g1 : word 1 of `gapyr'
-    local gapnote "No `gapyr' file: Callaway–Sant'Anna and de Chaisemartin–D'Haultfœuille leave out firms that started in `=`g1'+1'."
+    local gapnote "No `gapyr' file: Callaway–Sant'Anna, Sun–Abraham and de Chaisemartin–D'Haultfœuille leave out firms that started in `=`g1'+1'."
 }
 local txt "Notes: Every row compares firms that start exporting (first year seen exporting after a year seen not exporting) with firms never seen"
 local txt "`txt' exporting: the change in value added per GJ since before the start."
