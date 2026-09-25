@@ -13,6 +13,7 @@ Item-by-item coverage of Deasy's row and the review record: [TRACKER.md](TRACKER
 | `04_foreign_owned_energy_co2_per_va.do` → `figures/04_foreign_owned_energy_co2_per_va.png`, `tables/04_foreign_owned_energy_co2_per_va.csv` | Same chart for firms with 10%+ foreign ownership vs other firms; 2020 kept in the table only; 2017, 2019, 2021, 2022 drawn light gray in both groups because many firms' energy records are in doubt | "fdi vs non fdi"; "Gj/va", "Co2/va"; "VA/energy use … total", "VA/emisi … total" (table); "Did internationally engaged firms change … after the Paris Agreement?" | done, reviewed |
 | `05_before_after_paris.do` → `figures/05_before_after_paris.png`, `tables/05_before_after_paris.csv` | Before (2013–14) vs after (2018) the Paris Agreement for every outcome in Deasy's list (energy and CO2 per unit of value added, energy used, CO2 emitted, GJ per tonne — scope 1, 2 and total; electricity; own electricity), for all firms and for each group against other firms, with the % change or gap printed on the chart | "Do global climate commitments reach the factory floor?"; "Did internationally engaged firms change their environmental behaviour more strongly after the Paris Agreement?"; the full outcome list | done, reviewed |
 | `06_frozen_pre_paris_groups.do` → `figures/06_frozen_pre_paris_groups.png`, `tables/06_frozen_pre_paris_groups.csv` | Each firm put once into a group from its 2013–14 records (exporter or not, importer or not, 10%+ foreign-owned or not), then followed 2010–2022: the typical (median) firm's energy and CO2 per unit of value added as % of its group's own 2013–14 level, and the 2018 difference between each group and the other firms, with a 95% range; 2015 marked as the transition year, 2017 in the table only, 2019–2022 light gray | "Freeze internationalisation status sebelum Paris, misalnya average 2013–14: pre exporters x year; 2015 transition year; 2016+ post"; "Did internationally engaged firms change their environmental behaviour more strongly after the Paris Agreement?"; "Gj/va", "Co2/va"; "Energi use … total" (table) | done (descriptive; the regression is R1-09) |
+| `07_electricity_own_generation.do` → `figures/07_electricity_own_generation.png`, `tables/07_electricity_own_generation.csv` | Each year, the middle (median) firm's bought electricity per million of value added, the share of firms making some of their own electricity, and own electricity as % of the electricity used by firms that make some, for exporters, importers and 10%+ foreign-owned firms each against other firms; own-electricity rows leave out 2014–15 (too few firms recorded); doubtful years hollow gray, as in R1-03 and R1-04 | "Electricity"; "Self generation"; "Energi use … scope 2" (per unit of value added; amount per firm in the table); "export vs non export, import vs non import, fdi vs non fdi"; "Did internationally engaged firms change their environmental behaviour more strongly after the Paris Agreement?" | done |
 
 ## Details kept out of the figures
 
@@ -125,3 +126,76 @@ this file (02 and 03 re-run, tables byte-identical): optional light-gray marks f
 
   On the real files these numbers show real persistence, so re-read them there. This is a pipeline exercise: it shows change, not its cause.
 - **Units.** Energy and CO2 "per million of value added" means per million Rp000 on the real files. Value added is at current prices.
+
+**07 — bought and own electricity, yearly, by group.**
+- **What is drawn.**
+  - (a)–(c): the middle firm's electricity bought from PLN and other suppliers, in thousand kWh per million of value
+    added. Only firms with bought electricity and value added above zero count; absent is not zero.
+    - Multiplied by 3.6, it is R1-05's scope-2 row in GJ: exporters 2013 12.91 thousand kWh = 46.48 GJ; all firms
+      2018 8.91 = 32.08 GJ.
+  - (d)–(f): the share of firms making some of their own electricity, among firms whose own electricity is recorded.
+    The counts equal R1-01's `n_selfgen_known` and `n_selfgen_pos` (importers 2013: 269 of 555).
+  - (g)–(i): own electricity as % of own + bought, for the middle firm among those making some.
+  - In the table only: bought electricity as % of energy used, bought electricity per firm, own electricity per firm
+    making some.
+- **Not the same as R1-05.**
+  - R1-05's "Own, % of electricity used" is the average over all firms, with non-makers counted as 0 (8.2% in 2013).
+    Here it is the middle maker (22%).
+  - R1-05's shares also require energy above zero. So "recorded in 2014–15" reads 57–60% there and 56–60% here, and
+    all firms making their own in 2018 read 47.98% there and 47.26% here.
+- **Rules.**
+  - At least 30 firms per group and year.
+  - Own-electricity rows use a year only if at least 75% of both groups' firms have it recorded. This removes 2014–15 in
+    all three columns. Recorded shares, 2014/2015: exporters 62/60%, non-exporters 24/14%, importers 82/82%,
+    non-importers 49/52%, foreign-owned 66/71%, other firms 55/59%.
+  - Why the rule is needed: in 2014–15, 39–41% of recorded firms make their own, against 22% in 2013. Firms not
+    recorded in 2014 had made their own in 2013 only 13% of the time (29% for recorded firms; fictional links).
+  - The 95% ranges come from 999 redraws of each year's firms within each group (seed 20260925).
+- **Years in doubt.** Set by hand in the file's config block, the same years as R1-03 and R1-04.
+  - Exporters: none (2022 drops out: no known non-exporters).
+  - Importers: 2017 and 2019–22 hollow gray.
+  - Foreign-owned: 2020 not drawn; 2017, 2019, 2021 and 2022 light gray in both groups.
+  - The check on the electricity itself is in the CSV (`pct_far_below_*`: % of firms buying under a fifth of the
+    2013–14 all-firm middle value, 8.69).
+    - Importers: 12–15% in 2010–15, 8% in 2018, 56% in 2019, 28–36% in 2020–22.
+    - Exporters and non-exporters: 10–22% every year.
+  - Importers 2017 passes this check: 22% far below, and only 6% above five times the middle value, against 13–23% before.
+    Their bought electricity per worker is normal. Their hollow mark is a caution about their fuel records, which jump
+    tenfold that year (R1-03).
+  - Exporters 2017 (181% of non-exporters, clear) also passes, and R1-02 draws that year too. The high point comes from
+    value added: exporters' value added per worker is 31% below 2015 and 43% below 2018, while their bought electricity
+    per worker lies between those years.
+  - On the real files, re-read `pct_far_below_*` before keeping these years.
+- **Firms with no export answer.**
+  - In 2017 they are 90% of importers, and 77% of them make some of their own electricity, against 14% of firms with an
+    answer (2013: 35% against 16%).
+  - Among firms with an answer, making their own barely moves: 16% in 2013, 14% in 2017, 21% in 2018.
+  - They are left out of the exporter column but lift the importer and foreign-owned lines. Without them, foreign-owned
+    against other firms in 2018 reads 35% against 19%, not the drawn 43% against 48%.
+- **Results** (group as % of other firms for bought electricity; difference in points for the shares):
+  - **Exporters.** Bought electricity:
+    - 118–175% of non-exporters' in 2010–15 (average 144%; clear in 2011, 2012 and 2014);
+    - 181% in 2017;
+    - 112% [80, 151] in 2018;
+    - 93–104% in 2019–21, not clear. The pre-Paris gap closes.
+
+    Making their own:
+    - +7 to +14 points in 2010–13, all clear;
+    - +9 in 2017;
+    - +23 [+17, +28] in 2018;
+    - +20 in 2019;
+    - +10 and +9 in 2020–21.
+  - **Importers.**
+    - Bought electricity 107–145% before Paris, then 59% [52, 67] in 2018 (clear).
+    - Making their own +23 to +34 points before, then +62 [+60, +65] in 2018 (78% against 16%). This is mostly who the
+      files count as importers.
+  - **Foreign-owned.**
+    - Bought electricity 121–164% before Paris (clear 2013–15), then 120% [96, 148] in 2018, not clear.
+    - Making their own −3 to +9 points before, then −4 [−11, +2] in 2018.
+  - **Own share among makers.**
+    - Before Paris, 95% ranges are about ±20 points wide.
+    - After 2016 it is mostly 1–8% in every group (non-importers 12% in 2018 and 23% in 2022).
+    - Row (g)–(i)'s scale reaches 80 because of one cell: foreign-owned 2012, 65% on 34 makers. After-2016 gaps are
+      read from the table.
+- **Units.** "Per million of value added" means per million Rp000 on the real files; value added is at current prices.
+  Runtime is about 90 s.
