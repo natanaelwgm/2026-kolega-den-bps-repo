@@ -10,6 +10,7 @@ Tables that go with the charts: every chart has a table PDF with each plotted po
 
 - 01: `tables/01_aggregate_intensity_path_table.pdf`
 - 02: `tables/02_fhk_decomposition_table.pdf`
+- 03: `tables/03_melitz_polanec_decomposition_table.pdf`
 - 06: `tables/06_reconciliation_toy_tests_table.pdf`
 <!-- tables-end -->
 
@@ -18,6 +19,7 @@ Tables that go with the charts: every chart has a table PDF with each plotted po
 |---|---|---|---|
 | `01_aggregate_intensity_path.do` → `figures/01_aggregate_intensity_path.png/.pdf`, `tables/01_aggregate_intensity_path.csv`, `tables/01_aggregate_intensity_path_intervals.csv`, `tables/01_aggregate_intensity_path_table.pdf` | CO2 and energy per unit of value added for all manufacturing firms taken together, each year. Main line (extreme energy records set aside) and as-filed line, on a log scale. The three periods split up in R9-02 to R9-07. Table R9-01b: what the rule sets aside each year, and the line at other cut-offs. | "Who decarbonised Indonesian manufacturing …?" (the change to be explained); planning-note check "weights sum to one; aggregate = weighted firm ratio" | done, reviewed |
 | `02_fhk_decomposition.do` → `figures/02_fhk_decomposition.png/.pdf`, `tables/02_fhk_decomposition.csv`, `tables/02_fhk_decomposition_table.pdf` | Each period's change in CO2 and energy per unit of value added (all firms together), split with the FHK method into staying firms' own change (within), value added shifting among them (between, cross, and reallocation = between + cross), firms appearing (entry) and firms disappearing (exit), as % of the start level. Periods 2010→15, 2015→18, 2018→22. Tables add CO2 per output, scope 1 and scope 2, the as-filed version, the whole span and the year-to-year chain. | "Who decarbonised Indonesian manufacturing: firms becoming cleaner or production reallocating toward cleaner firms?"; "Accounting decomposition, bukan causal regression. FHK decomposition … Within + reallocation + entry + exit." | done, reviewed |
+| `03_melitz_polanec_decomposition.do` → `figures/03_melitz_polanec_decomposition.png/.pdf`, `tables/03_melitz_polanec_decomposition.csv`, `tables/03_melitz_polanec_decomposition_table.pdf` | The changes of R9-02 split the Melitz–Polanec way, for three periods (before, across and after Paris), CO2 and energy per unit of value added: staying firms' plain average (within), reallocation among them (covariance), the two together, firms appearing (entry), firms disappearing (exit), total. Table R9-03: every plotted point; Table R9-03b: each firm group's number, share of value added, plain average, weighted level and covariance term | "Who decarbonised Indonesian manufacturing: firms becoming cleaner or production reallocating toward cleaner firms?"; "Melitz–Polanec dynamic decomposition. Within + reallocation + entry + exit." | done, reviewed |
 | `06_reconciliation_toy_tests.do` → `figures/06_reconciliation_toy_tests.png`, `tables/06_reconciliation_toy_tests_cases.csv`, `tables/06_reconciliation_toy_tests_data.csv`, `tables/06_reconciliation_toy_tests_table.pdf` | Table: do the two bookkeeping methods (FHK and Melitz–Polanec) split a change correctly? (a) six made-up examples with hand-worked answers; (b) on the data, the parts add up to the actual change in every period, measure, sample and group | "Accounting decomposition … FHK decomposition + Melitz–Polanec dynamic decomposition. Within + reallocation + entry + exit." | done, reviewed |
 
 ## Details kept out of the figures
@@ -75,3 +77,34 @@ Tables that go with the charts: every chart has a table PDF with each plotted po
   - Bookkeeping, not cause.
 - **As filed** (extreme records kept), the split is dominated by a few records: 2010→2015 CO2 +669%, of which entry
   +644% (Table R9-02b).
+
+**03 — Melitz–Polanec split.**
+- **What it splits.** Each period's change in CO2 (or energy) per unit of value added, all firms together, split into
+  four parts that add up exactly:
+  - within = change in the staying firms' plain average (each firm counts once);
+  - reallocation = change in how far their value-added-weighted level sits from that plain average (the Olley–Pakes
+    covariance × number of firms);
+  - entry = appearing firms' share × their gap to staying firms in the end year;
+  - exit = disappearing firms' share × staying firms' gap to them in the start year.
+- **Checks.** The period levels are R9-01's period-sample levels. The four parts add up to 1e-14 of the level in all
+  150 runs (3 periods, whole span, 11 year pairs × 5 measures × main and as filed).
+- **Main, CO2 / energy, % of the start level:**
+  - Before Paris (2010–15): within −80 / −128; reallocation +155 / +173; staying firms together +75 / +46; entry
+    −35 / −16; exit 0 / −2; total +39 / +28.
+  - Across Paris (2015–18): −22 / −35; −4 / +6; −26 / −30; −9 / −2; −10 / −21; total −45 / −53.
+  - After Paris (2018–22): +17 / +7; −16 / −1; +2 / +5; +12 / +8; −33 / −38; total −19 / −25.
+- **Not R9-02's within.** R9-02 weights each staying firm by its value added: CO2 +26 / +21 / +50. This file's plain
+  average is −80 / −22 / +17. So in 2010–15 and 2015–18 big staying firms got dirtier while the typical staying firm got
+  cleaner. Both are correct; they answer different questions.
+- **Reallocation is not only value added moving.** It also moves when big firms change differently from small ones.
+  In 2010–15 almost all of the +155 is that (+165); value added moving between staying firms is −9.5 (split with
+  start-year shares).
+- **Huge cancelling parts before Paris.** The −80 comes mostly from a few small firms with very high ratios: the 1% of
+  staying firms with the highest 2010 ratios carry −53 points, and the median staying firm moved −14%. Read the two
+  staying-firm parts together (the "staying firms together" row).
+- **Limits.**
+  - Firm links are fictional, so entry and exit (57–83% of value added) are sample rotation and mean nothing. The total
+    is the real change of Figure R9-01.
+  - Melitz–Polanec parts do not add up firm by firm, so there are no group versions: R9-04 and R9-05 use FHK.
+  - CSV only: as filed, CO2 per output, scope 1 and scope 2, whole span, year pairs with running sums.
+  - Nominal value added; bookkeeping, not cause.
