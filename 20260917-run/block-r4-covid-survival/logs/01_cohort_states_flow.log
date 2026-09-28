@@ -1,0 +1,974 @@
+------------------------------------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r4-covid-survival/logs/01_cohor
+> t_states_flow.log
+  log type:  text
+ opened on:  28 Sep 2026, 16:44:32
+
+. timer clear 1
+
+. timer on 1
+
+. display _newline "=== [R4-01] STARTING: the 2019 firms - stayed, left the files, came back ==="
+
+=== [R4-01] STARTING: the 2019 firms - stayed, left the files, came back ===
+
+. 
+. * ---- chart style (identical block in every file) ----
+. set scheme s1mono
+
+. capture graph set window fontface "Times New Roman"   // GUI Stata; console Stata keeps its default font
+
+. * Note: this changes your Stata graph font permanently; undo with: graph set window fontface default
+. local devnote "Development data — obscured values, fictional firm panel. Not BPS findings."
+
+. local srcnote "Source: SI/IBS annual files 2010–2022 (masked), analysis_ready_data.dta."
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 1/7: load firm, year, workers and output"
+Step 1/7: load firm, year, workers and output
+
+. *---------------------------------------------------------------------------
+. * workers              = persons engaged (price-free: the main size measure)
+. * gross_output_nominal = output value in current prices
+. * gross_output_real    = output in constant prices; empty in the development
+. *                        file, used automatically when filled (see Step 2)
+. quietly describe using "$DATA", varlist
+
+. local allvars `r(varlist)'
+
+. local want firm_id year workers gross_output_nominal gross_output_real
+
+. local have : list want & allvars
+
+. use `have' using "$DATA", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. isid firm_id year
+
+. assert !missing(firm_id, year)
+
+. 
+. * The cohort file: the last annual file before COVID reached Indonesia (March 2020).
+. local cohort_year 2019
+
+. * Neutral band for stayers: "about the same" = within this many percent of the 2019 level.
+. local band_pct 10
+
+. 
+. display "Step 2/7: the cohort file, its firms' states, and the firms that came in"
+Step 2/7: the cohort file, its firms' states, and the firms that came in
+
+. *===========================================================================
+. * COVID COHORT AND STATES (copy exactly into later R4 and R10 files)
+. *   Version 2 - written and reviewed in R4-01 (28 Sep 2026). Do not edit a copy;
+. *   change R4-01 and re-copy. Set -local cohort_year- before the block; R4-02
+. *   runs it once per starting file (2012 ... 2019).
+. *   In : firm-year rows in memory (one row per firm and year): firm_id year
+. *        workers gross_output_nominal (gross_output_real is used instead when
+. *        present and filled for 95%+ of the cohort-file and last-file rows).
+. *        The block collapses to one row per firm: every other variable in memory
+. *        is dropped. Build traits in a tempfile first and merge them back by
+. *        firm_id after the block.
+. *   Out: one row per firm in the cohort file or in one of the next three files.
+. *        in_cohort = 1 for the firms of the cohort file (the cohort); the others
+. *        are newcomers (new_in_file = the later file they first appear in).
+. *        Locals: f1 f2 f3 = the next three files, p1 p2 = the two files before,
+. *        outbasis = output variable used, band_pct = neutral band in percent
+. *        (10 = within 10% either way), band_lo band_hi = its limits as ratios.
+. *   The years come from the data, so the block runs unchanged on the real files.
+. *===========================================================================
+. isid firm_id year
+
+. * -- the annual files in the data, and the files around the cohort file --
+. quietly levelsof year, local(c_files)
+
+. local c_pos : list posof "`cohort_year'" in c_files
+
+. local c_nf : word count `c_files'
+
+. if `c_pos' == 0 | `c_pos' + 3 > `c_nf' {
+.     display as error "cohort file `cohort_year' must be a file year with three later files"
+.     exit 198
+. }
+
+. local f1 : word `=`c_pos' + 1' of `c_files'
+
+. local f2 : word `=`c_pos' + 2' of `c_files'
+
+. local f3 : word `=`c_pos' + 3' of `c_files'
+
+. local p1 ""
+
+. local p2 ""
+
+. if `c_pos' > 1 local p1 : word `=`c_pos' - 1' of `c_files'
+
+. if `c_pos' > 2 local p2 : word `=`c_pos' - 2' of `c_files'
+
+. * -- output: constant prices when the file has them, else current prices --
+. local outbasis "gross_output_nominal"
+
+. capture confirm numeric variable gross_output_real
+
+. if !_rc {
+.     quietly count if inlist(year, `cohort_year', `f3')
+.     local c_nrows = r(N)
+.     quietly count if inlist(year, `cohort_year', `f3') & !missing(gross_output_real)
+.     if r(N) >= 0.95 * `c_nrows' & `c_nrows' > 0 local outbasis "gross_output_real"
+. }
+
+. * -- neutral band: a stayer is "about the same" if its last-file level is
+. *    within band_pct percent of its cohort-file level, up or down (10: 0.90 to 1.10 times);
+. *    the limits match the words on the chart ("down more than 10%") exactly --
+. if "`band_pct'" == "" local band_pct 10
+
+. local band_lo = 1 - `band_pct'/100
+
+. local band_hi = 1 + `band_pct'/100
+
+. * -- which files each firm is in (1 = in the file, 0 = not) --
+. gen byte c_base    = (year == `cohort_year')
+
+. gen byte c_f1      = (year == `f1')
+
+. gen byte c_f2      = (year == `f2')
+
+. gen byte c_f3      = (year == `f3')
+
+. gen byte c_earlier = (year <  `cohort_year')                    // any file before the cohort file
+
+. gen byte c_p1      = cond("`p1'" == "", ., (year == real("`p1'")))
+
+. gen byte c_p2      = cond("`p2'" == "", ., (year == real("`p2'")))
+
+. gen double c_wk0   = workers     if year == `cohort_year'
+(30,042 missing values generated)
+
+. gen double c_wk3   = workers     if year == `f3'
+(29,872 missing values generated)
+
+. gen double c_out0  = `outbasis'  if year == `cohort_year'
+(30,042 missing values generated)
+
+. gen double c_out3  = `outbasis'  if year == `f3'
+(29,872 missing values generated)
+
+. keep if year <= `f3'
+(0 observations deleted)
+
+. collapse (max) seen_base = c_base seen_f1 = c_f1 seen_f2 = c_f2 seen_f3 = c_f3 ///
+>     seen_earlier = c_earlier seen_p1 = c_p1 seen_p2 = c_p2 ///
+>     workers_base = c_wk0 workers_f3 = c_wk3 output_base = c_out0 output_f3 = c_out3, by(firm_id)
+
+. keep if seen_base | seen_f1 | seen_f2 | seen_f3                  // firms of the cohort file or a later one
+(5,118 observations deleted)
+
+. gen int  cohort_year = `cohort_year'
+
+. gen byte in_cohort   = (seen_base == 1)
+
+. * -- new_to_file = 1: in the cohort file but in neither of the two files before
+. *    (it may still be in an older file); 0 = "incumbent" (R10 uses 0 as incumbent) --
+. gen byte new_to_file = .
+(5,345 missing values generated)
+
+. if "`p1'" != "" replace new_to_file = (seen_p1 == 0 & (seen_p2 == 0 | missing(seen_p2))) if in_cohort
+(3,007 real changes made)
+
+. * -- presence in the next three files, e.g. "110" = in f1 and f2, not in f3 --
+. gen str3 pattern = string(seen_f1) + string(seen_f2) + string(seen_f3) if in_cohort
+(2,338 missing values generated)
+
+. * -- state by the last file (f3) --
+. *    1 stayed           = in all three later files
+. *    2 absent then back = missed f1 and/or f2, in f3 again ("temporary disappearance")
+. *    3 left the files   = not in f3 (the file has no closure record: not proof of closure)
+. gen byte state_file = cond(pattern == "111", 1, cond(seen_f3 == 1, 2, 3)) if in_cohort
+(2,338 missing values generated)
+
+. *    left_when: 1 = gone from f1 on ("000"), 2 = in f1 or f2, gone by f3
+. gen byte left_when = cond(pattern == "000", 1, 2) if state_file == 3
+(4,016 missing values generated)
+
+. * -- stayers: change from the cohort file to f3; 0 in f3 counts as shrank;
+. *    no positive cohort-file level (or no f3 level) = not classified (missing) --
+. gen double ratio_wk  = workers_f3 / workers_base if state_file == 1 & workers_base > 0 & !missing(workers_base, worker
+> s_f3)
+(3,667 missing values generated)
+
+. gen double ratio_out = output_f3  / output_base  if state_file == 1 & output_base  > 0 & !missing(output_base,  output
+> _f3)
+(3,667 missing values generated)
+
+. foreach m in wk out {
+  2.     gen byte size_`m' = cond(ratio_`m' < `band_lo', 1, cond(ratio_`m' > `band_hi', 3, 2)) if !missing(ratio_`m')
+  3.     *   outcome5: 1 left the files, 2 absent then back, 3 shrank, 4 about the same, 5 grew
+.     gen byte outcome5_`m' = cond(state_file == 3, 1, cond(state_file == 2, 2, 2 + size_`m')) if in_cohort
+  4.     replace  outcome5_`m' = . if state_file == 1 & missing(size_`m')
+  5. }
+(3,667 missing values generated)
+(2,338 missing values generated)
+(0 real changes made)
+(3,667 missing values generated)
+(2,338 missing values generated)
+(0 real changes made)
+
+. * -- newcomers: the later file a firm not in the cohort file first appears in --
+. gen int new_in_file = cond(seen_f1, `f1', cond(seen_f2, `f2', `f3')) if !in_cohort
+(3,007 missing values generated)
+
+. gen str80 outcome_basis = "`outbasis'"
+
+. label define c_state 1 "stayed" 2 "absent then back" 3 "left the files", replace
+
+. label define c_left  1 "gone from the first later file" 2 "gone later", replace
+
+. label define c_size  1 "shrank" 2 "about the same" 3 "grew", replace
+
+. label define c_out5  1 "left the files" 2 "absent then back" 3 "stayed, shrank" 4 "stayed, about the same" 5 "stayed, 
+> grew", replace
+
+. label values state_file c_state
+
+. label values left_when c_left
+
+. label values size_wk size_out c_size
+
+. label values outcome5_wk outcome5_out c_out5
+
+. * -- structural checks (hold on any data) --
+. isid firm_id
+
+. assert !missing(state_file, pattern) if in_cohort
+
+. assert missing(state_file) & !missing(new_in_file) if !in_cohort
+
+. assert (state_file == 1) == (pattern == "111") if in_cohort
+
+. assert !missing(outcome5_wk) if in_cohort & state_file != 1
+
+. order firm_id cohort_year in_cohort new_to_file seen_* pattern state_file left_when ///
+>     workers_base workers_f3 ratio_wk size_wk outcome5_wk output_base output_f3 ratio_out size_out ///
+>     outcome5_out new_in_file outcome_basis
+
+. display "   cohort file `cohort_year'; later files `f1' `f2' `f3'; earlier files `p2' `p1'; output: `outbasis'; band +
+> /-`band_pct'%"
+   cohort file 2019; later files 2020 2021 2022; earlier files 2017 2018; output: gross_output_nominal; band +/-10%
+
+. *===========================================================================
+. * END OF COVID COHORT AND STATES
+. *===========================================================================
+. 
+. *---------------------------------------------------------------------------
+. display "Step 3/7: the flow table - every row is a count of firms"
+Step 3/7: the flow table - every row is a count of firms
+
+. *---------------------------------------------------------------------------
+. * Each row: a label and the rule that picks its firms. drawn = 1 rows go into the figure.
+. * Cohort rows are split into firms also in the p2/p1 files ("incumbents") and
+. * firms new in the cohort file; newcomer rows into first-time firms and firms
+. * seen in a file before the cohort file.
+. tempname pf
+
+. tempfile flow
+
+. postfile `pf' int row_order str14 section str60 row_label byte drawn ///
+>     double firms incumbents new_in_cohort_file first_time_in_files seen_before_cohort_file ///
+>     using `flow', replace
+(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_64310.000001 not found)
+
+. * the eight presence patterns (CSV only): 1 = in that later file, 0 = not
+. local prows ""
+
+. foreach p in 111 110 101 100 011 010 001 000 {
+  2.     local c1 = substr("`p'", 1, 1)
+  3.     local c2 = substr("`p'", 2, 1)
+  4.     local c3 = substr("`p'", 3, 1)
+  5.     local prows `"`prows' "P|0|Pattern `p' (1 = in the file: `f1' `f2' `f3')|in_cohort & seen_f1 == `c1' & seen_f2 
+> == `c2' & seen_f3 == `c3'""'
+  6. }
+
+. local r 0
+
+. foreach row in ///
+>     "A|1|In the `cohort_year' file|in_cohort" ///
+>     "A|1|In the `f1' file|in_cohort & seen_f1 == 1" ///
+>     "A|1|In the `f2' file|in_cohort & seen_f2 == 1" ///
+>     "A|1|In the `f3' file|in_cohort & seen_f3 == 1" ///
+>     "B|1|Stayed: in all three later files|state_file == 1" ///
+>     "B|1|Stayed, workers up more than `band_pct'%|state_file == 1 & size_wk == 3" ///
+>     "B|1|Stayed, workers about the same (±`band_pct'%)|state_file == 1 & size_wk == 2" ///
+>     "B|1|Stayed, workers down more than `band_pct'%|state_file == 1 & size_wk == 1" ///
+>     "B|1|Stayed, workers not comparable|state_file == 1 & missing(size_wk)" ///
+>     "B|1|Absent, then back in the `f3' file|state_file == 2" ///
+>     "B|1|Left: in none of the three later files|state_file == 3 & left_when == 1" ///
+>     "B|1|Left later: gone by the `f3' file|state_file == 3 & left_when == 2" ///
+>     "C|1|First in the `f1' file|!in_cohort & new_in_file == `f1'" ///
+>     "C|1|First in the `f2' file|!in_cohort & new_in_file == `f2'" ///
+>     "C|1|First in the `f3' file|!in_cohort & new_in_file == `f3'" ///
+>     `prows' ///
+>     "O|0|Stayed, output up more than `band_pct'%|state_file == 1 & size_out == 3" ///
+>     "O|0|Stayed, output about the same (±`band_pct'%)|state_file == 1 & size_out == 2" ///
+>     "O|0|Stayed, output down more than `band_pct'%|state_file == 1 & size_out == 1" ///
+>     "O|0|Stayed, output not comparable|state_file == 1 & missing(size_out)" {
+  2.     local ++r
+  3.     tokenize `"`row'"', parse("|")
+  4.     local sec "`1'"
+  5.     local drw = `3'
+  6.     local lab "`5'"
+  7.     local cond `"`7'"'
+  8.     quietly count if `cond'
+  9.     local n = r(N)
+ 10.     if "`sec'" != "C" {
+ 11.         quietly count if (`cond') & new_to_file == 0
+ 12.         local a = r(N)
+ 13.         quietly count if (`cond') & new_to_file == 1
+ 14.         local b = r(N)
+ 15.         post `pf' (`r') ("`sec'") ("`lab'") (`drw') (`n') (`a') (`b') (.) (.)
+ 16.     }
+ 17.     else {
+ 18.         quietly count if (`cond') & seen_earlier == 0
+ 19.         local a = r(N)
+ 20.         quietly count if (`cond') & seen_earlier == 1
+ 21.         local b = r(N)
+ 22.         post `pf' (`r') ("`sec'") ("`lab'") (`drw') (`n') (.) (.) (`a') (`b')
+ 23.     }
+ 24. }
+
+. postclose `pf'
+
+. 
+. * Numbers the notes and checks need (read from the data, never typed).
+. quietly count if in_cohort
+
+. local n_coh = r(N)
+
+. quietly count if in_cohort & missing(new_to_file)
+
+. local n_nonew = r(N)
+
+. quietly count if state_file == 2
+
+. local n_back = r(N)
+
+. 
+. use `flow', clear
+
+. gen str12 section_name = cond(section == "A", "file_by_file", cond(section == "B", "final_state", ///
+>     cond(section == "C", "newcomers", cond(section == "P", "pattern", "output"))))
+
+. gen int  cohort_year      = `cohort_year'
+
+. gen str23 later_files     = "`f1' `f2' `f3'"
+
+. gen str9  earlier_files   = strtrim("`p2' `p1'")
+
+. gen str80 outcome_basis   = "`outbasis'"
+
+. gen double band_pct       = `band_pct'
+
+. gen double pct_of_cohort  = 100 * firms / `n_coh' if inlist(section, "A", "B", "P", "O")
+(3 missing values generated)
+
+. quietly summarize firms if row_label == "Stayed: in all three later files"
+
+. local n_stay = r(sum)
+
+. gen double pct_of_stayed  = 100 * firms / `n_stay' if inlist(section, "O") | (section == "B" & strpos(row_label, "Stay
+> ed,") == 1)
+(19 missing values generated)
+
+. foreach v in incumbents new_in_cohort_file {
+  2.     quietly summarize `v' if row_order == 1
+  3.     gen double pct_of_`v' = 100 * `v' / r(sum) if inlist(section, "A", "B", "P", "O")
+  4. }
+(3 missing values generated)
+(3 missing values generated)
+
+. 
+. * Reconciliation: every split adds up to the cohort (structural, holds on any data).
+. foreach v in firms incumbents new_in_cohort_file {
+  2.     quietly summarize `v' if row_order == 1
+  3.     local tot = r(sum)
+  4.     quietly summarize `v' if inlist(row_order, 5, 10, 11, 12)          // stayed + back + left + left later
+  5.     assert r(sum) == `tot'
+  6.     quietly summarize `v' if section == "P"                           // the eight presence patterns
+  7.     assert r(sum) == `tot'
+  8.     quietly summarize `v' if inrange(row_order, 6, 9)                 // stayers split by workers
+  9.     local s1 = r(sum)
+ 10.     quietly summarize `v' if section == "O"                           // stayers split by output
+ 11.     local s2 = r(sum)
+ 12.     quietly summarize `v' if row_order == 5
+ 13.     assert `s1' == r(sum) & `s2' == r(sum)
+ 14. }
+
+. assert incumbents + new_in_cohort_file == firms if section != "C" & `n_nonew' == 0
+
+. assert first_time_in_files + seen_before_cohort_file == firms if section == "C"
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 4/7: write the table (numbers before drawing)"
+Step 4/7: write the table (numbers before drawing)
+
+. *---------------------------------------------------------------------------
+. format firms incumbents new_in_cohort_file first_time_in_files seen_before_cohort_file %9.0f
+
+. format pct_* %6.1f
+
+. order cohort_year later_files earlier_files row_order section_name row_label drawn firms incumbents ///
+>     new_in_cohort_file first_time_in_files seen_before_cohort_file pct_of_cohort pct_of_stayed ///
+>     pct_of_incumbents pct_of_new_in_cohort_file outcome_basis band_pct
+
+. export delimited cohort_year-band_pct using "tables/01_cohort_states_flow.csv", datafmt replace
+file tables/01_cohort_states_flow.csv saved
+
+. list row_order row_label firms incumbents new_in_cohort_file first_time_in_files ///
+>     seen_before_cohort_file, noobs sep(0) abbreviate(24)
+
+  +-----------------------------------------------------------------------------------------------------+
+  | row_order |                                     row_label | firms | incumbents | new_in_cohort_file |
+  |         1 |                              In the 2019 file |  3007 |       2266 |                741 |
+  |-----------------------------------------------------------------------------------------------------|
+  |              first_time_in_files               |              seen_before_cohort_file               |
+  |                                .               |                                    .               |
+  +-----------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------+
+  | row_order |                                     row_label | firms | incumbents | new_in_cohort_file |
+  |         2 |                              In the 2020 file |  2199 |       1871 |                328 |
+  |-----------------------------------------------------------------------------------------------------|
+  |              first_time_in_files               |              seen_before_cohort_file               |
+  |                                .               |                                    .               |
+  +-----------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------+
+  | row_order |                                     row_label | firms | incumbents | new_in_cohort_file |
+  |         3 |                              In the 2021 file |  1912 |       1669 |                243 |
+  |-----------------------------------------------------------------------------------------------------|
+  |              first_time_in_files               |              seen_before_cohort_file               |
+  |                                .               |                                    .               |
+  +-----------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------+
+  | row_order |                                     row_label | firms | incumbents | new_in_cohort_file |
+  |         4 |                              In the 2022 file |  1678 |       1484 |                194 |
+  |-----------------------------------------------------------------------------------------------------|
+  |              first_time_in_files               |              seen_before_cohort_file               |
+  |                                .               |                                    .               |
+  +-----------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------+
+  | row_order |                                     row_label | firms | incumbents | new_in_cohort_file |
+  |         5 |              Stayed: in all three later files |  1678 |       1484 |                194 |
+  |-----------------------------------------------------------------------------------------------------|
+  |              first_time_in_files               |              seen_before_cohort_file               |
+  |                                .               |                                    .               |
+  +-----------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------+
+  | row_order |                                     row_label | firms | incumbents | new_in_cohort_file |
+  |         6 |              Stayed, workers up more than 10% |   541 |        476 |                 65 |
+  |-----------------------------------------------------------------------------------------------------|
+  |              first_time_in_files               |              seen_before_cohort_file               |
+  |                                .               |                                    .               |
+  +-----------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------+
+  | row_order |                                     row_label | firms | incumbents | new_in_cohort_file |
+  |         7 |         Stayed, workers about the same (±10%) |   202 |        183 |                 19 |
+  |-----------------------------------------------------------------------------------------------------|
+  |              first_time_in_files               |              seen_before_cohort_file               |
+  |                                .               |                                    .               |
+  +-----------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------+
+  | row_order |                                     row_label | firms | incumbents | new_in_cohort_file |
+  |         8 |            Stayed, workers down more than 10% |   935 |        825 |                110 |
+  |-----------------------------------------------------------------------------------------------------|
+  |              first_time_in_files               |              seen_before_cohort_file               |
+  |                                .               |                                    .               |
+  +-----------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------+
+  | row_order |                                     row_label | firms | incumbents | new_in_cohort_file |
+  |         9 |                Stayed, workers not comparable |     0 |          0 |                  0 |
+  |-----------------------------------------------------------------------------------------------------|
+  |              first_time_in_files               |              seen_before_cohort_file               |
+  |                                .               |                                    .               |
+  +-----------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------+
+  | row_order |                                     row_label | firms | incumbents | new_in_cohort_file |
+  |        10 |            Absent, then back in the 2022 file |     0 |          0 |                  0 |
+  |-----------------------------------------------------------------------------------------------------|
+  |              first_time_in_files               |              seen_before_cohort_file               |
+  |                                .               |                                    .               |
+  +-----------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------+
+  | row_order |                                     row_label | firms | incumbents | new_in_cohort_file |
+  |        11 |        Left: in none of the three later files |   808 |        395 |                413 |
+  |-----------------------------------------------------------------------------------------------------|
+  |              first_time_in_files               |              seen_before_cohort_file               |
+  |                                .               |                                    .               |
+  +-----------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------+
+  | row_order |                                     row_label | firms | incumbents | new_in_cohort_file |
+  |        12 |             Left later: gone by the 2022 file |   521 |        387 |                134 |
+  |-----------------------------------------------------------------------------------------------------|
+  |              first_time_in_files               |              seen_before_cohort_file               |
+  |                                .               |                                    .               |
+  +-----------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------+
+  | row_order |                                     row_label | firms | incumbents | new_in_cohort_file |
+  |        13 |                        First in the 2020 file |   737 |          . |                  . |
+  |-----------------------------------------------------------------------------------------------------|
+  |              first_time_in_files               |              seen_before_cohort_file               |
+  |                              737               |                                    0               |
+  +-----------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------+
+  | row_order |                                     row_label | firms | incumbents | new_in_cohort_file |
+  |        14 |                        First in the 2021 file |   789 |          . |                  . |
+  |-----------------------------------------------------------------------------------------------------|
+  |              first_time_in_files               |              seen_before_cohort_file               |
+  |                              789               |                                    0               |
+  +-----------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------+
+  | row_order |                                     row_label | firms | incumbents | new_in_cohort_file |
+  |        15 |                        First in the 2022 file |   812 |          . |                  . |
+  |-----------------------------------------------------------------------------------------------------|
+  |              first_time_in_files               |              seen_before_cohort_file               |
+  |                              812               |                                    0               |
+  +-----------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------+
+  | row_order |                                     row_label | firms | incumbents | new_in_cohort_file |
+  |        16 | Pattern 111 (1 = in the file: 2020 2021 2022) |  1678 |       1484 |                194 |
+  |-----------------------------------------------------------------------------------------------------|
+  |              first_time_in_files               |              seen_before_cohort_file               |
+  |                                .               |                                    .               |
+  +-----------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------+
+  | row_order |                                     row_label | firms | incumbents | new_in_cohort_file |
+  |        17 | Pattern 110 (1 = in the file: 2020 2021 2022) |   234 |        185 |                 49 |
+  |-----------------------------------------------------------------------------------------------------|
+  |              first_time_in_files               |              seen_before_cohort_file               |
+  |                                .               |                                    .               |
+  +-----------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------+
+  | row_order |                                     row_label | firms | incumbents | new_in_cohort_file |
+  |        18 | Pattern 101 (1 = in the file: 2020 2021 2022) |     0 |          0 |                  0 |
+  |-----------------------------------------------------------------------------------------------------|
+  |              first_time_in_files               |              seen_before_cohort_file               |
+  |                                .               |                                    .               |
+  +-----------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------+
+  | row_order |                                     row_label | firms | incumbents | new_in_cohort_file |
+  |        19 | Pattern 100 (1 = in the file: 2020 2021 2022) |   287 |        202 |                 85 |
+  |-----------------------------------------------------------------------------------------------------|
+  |              first_time_in_files               |              seen_before_cohort_file               |
+  |                                .               |                                    .               |
+  +-----------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------+
+  | row_order |                                     row_label | firms | incumbents | new_in_cohort_file |
+  |        20 | Pattern 011 (1 = in the file: 2020 2021 2022) |     0 |          0 |                  0 |
+  |-----------------------------------------------------------------------------------------------------|
+  |              first_time_in_files               |              seen_before_cohort_file               |
+  |                                .               |                                    .               |
+  +-----------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------+
+  | row_order |                                     row_label | firms | incumbents | new_in_cohort_file |
+  |        21 | Pattern 010 (1 = in the file: 2020 2021 2022) |     0 |          0 |                  0 |
+  |-----------------------------------------------------------------------------------------------------|
+  |              first_time_in_files               |              seen_before_cohort_file               |
+  |                                .               |                                    .               |
+  +-----------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------+
+  | row_order |                                     row_label | firms | incumbents | new_in_cohort_file |
+  |        22 | Pattern 001 (1 = in the file: 2020 2021 2022) |     0 |          0 |                  0 |
+  |-----------------------------------------------------------------------------------------------------|
+  |              first_time_in_files               |              seen_before_cohort_file               |
+  |                                .               |                                    .               |
+  +-----------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------+
+  | row_order |                                     row_label | firms | incumbents | new_in_cohort_file |
+  |        23 | Pattern 000 (1 = in the file: 2020 2021 2022) |   808 |        395 |                413 |
+  |-----------------------------------------------------------------------------------------------------|
+  |              first_time_in_files               |              seen_before_cohort_file               |
+  |                                .               |                                    .               |
+  +-----------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------+
+  | row_order |                                     row_label | firms | incumbents | new_in_cohort_file |
+  |        24 |               Stayed, output up more than 10% |   578 |        506 |                 72 |
+  |-----------------------------------------------------------------------------------------------------|
+  |              first_time_in_files               |              seen_before_cohort_file               |
+  |                                .               |                                    .               |
+  +-----------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------+
+  | row_order |                                     row_label | firms | incumbents | new_in_cohort_file |
+  |        25 |          Stayed, output about the same (±10%) |   133 |        120 |                 13 |
+  |-----------------------------------------------------------------------------------------------------|
+  |              first_time_in_files               |              seen_before_cohort_file               |
+  |                                .               |                                    .               |
+  +-----------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------+
+  | row_order |                                     row_label | firms | incumbents | new_in_cohort_file |
+  |        26 |             Stayed, output down more than 10% |   967 |        858 |                109 |
+  |-----------------------------------------------------------------------------------------------------|
+  |              first_time_in_files               |              seen_before_cohort_file               |
+  |                                .               |                                    .               |
+  +-----------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------+
+  | row_order |                                     row_label | firms | incumbents | new_in_cohort_file |
+  |        27 |                 Stayed, output not comparable |     0 |          0 |                  0 |
+  |-----------------------------------------------------------------------------------------------------|
+  |              first_time_in_files               |              seen_before_cohort_file               |
+  |                                .               |                                    .               |
+  +-----------------------------------------------------------------------------------------------------+
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 5/7: numbers for the notes (read from the table, never typed)"
+Step 5/7: numbers for the notes (read from the table, never typed)
+
+. *---------------------------------------------------------------------------
+. local outword = cond("`outbasis'" == "gross_output_real", "constant prices", "current prices")
+
+. local incword "in the `p2' or `p1' file"
+
+. if "`p2'" == "" local incword "in the `p1' file"
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 6/7: horizontal bars, one row per count"
+Step 6/7: horizontal bars, one row per count
+
+. *---------------------------------------------------------------------------
+. keep if drawn
+(12 observations deleted)
+
+. drop if row_label == "Stayed, workers not comparable" & firms == 0   // drawn only when it occurs
+(1 observation deleted)
+
+. sort row_order
+
+. * section headings (also used in the companion table)
+. local headA "The `cohort_year' firms, file by file"
+
+. local headB "Where the `cohort_year' firms were by the `f3' file"
+
+. local headC "Firms in later files that were not in the `cohort_year' file"
+
+. local charttitle "Figure R4-01. The firms of the `cohort_year' file: how many stayed in the `f1'–`f3' files, left, or 
+> came back"
+
+. * y positions: a bold heading per section, one blank row between sections
+. gen double y = .
+(14 missing values generated)
+
+. local pos 0
+
+. local ylab ""
+
+. local prevsec ""
+
+. forvalues i = 1/`=_N' {
+  2.     local sec = section[`i']
+  3.     if "`sec'" != "`prevsec'" {
+  4.         if "`prevsec'" != "" local pos = `pos' + 0.6
+  5.         local ++pos
+  6.         local head "`head`sec''"
+  7.         local ylab `"`ylab' `pos' "{bf:`head'}""'
+  8.         local prevsec "`sec'"
+  9.     }
+ 10.     local ++pos
+ 11.     replace y = `pos' in `i'
+ 12.     local lab = row_label[`i']
+ 13.     local ylab `"`ylab' `pos' "`lab'""'
+ 14. }
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+
+. local ymax = `pos' + 0.6
+
+. * bar pieces: dark = incumbents / light gray = first time in any file (left piece);
+. * white = new in the cohort file / pale = seen in a file before the cohort file (right piece)
+. gen double zero = 0
+
+. gen double cut  = cond(section == "C", first_time_in_files, incumbents)
+
+. * count labels: total at the bar end; piece counts inside when the piece is wide enough
+. quietly summarize firms
+
+. local xmax = r(max)
+
+. local step = 10^floor(log10(`xmax'))                       // axis step that grows with the counts
+
+. if `xmax'/`step' < 2       local step = `step'/5
+
+. else if `xmax'/`step' < 5  local step = `step'/2
+
+. local xtop = `step' * ceil(1.12*`xmax'/`step')           // room for the count labels
+
+. gen str24 end_lbl = strtrim(string(firms, "%12.0fc"))
+
+. replace end_lbl = end_lbl + " (" + strtrim(string(pct_of_cohort, "%5.1f")) + "%)" if section != "C" & row_order != 1
+(10 real changes made)
+
+. gen double in1_x = cut / 2
+
+. gen double in2_x = cut + (firms - cut) / 2
+
+. gen double ylab_y = y - 0.06                                  // text sits a hair low in Stata: centre it in the bar
+
+. gen str12 in1_lbl = strtrim(string(cut, "%12.0fc"))           if cut >= 0.07 * `xtop'
+(2 missing values generated)
+
+. replace in1_lbl = "" if section == "C" & firms == cut          // one piece only: the end label says it
+(3 real changes made)
+
+. gen str12 in2_lbl = strtrim(string(firms - cut, "%12.0fc"))   if firms - cut >= 0.07 * `xtop'
+(11 missing values generated)
+
+. 
+. * Notes: one text, wrapped into lines of at most 138 characters (PDF text runs wider than the PNG)
+. local ntext "Notes: Firm links are fictional in the development data, so who stays, leaves or comes back means nothing
+>  here; read this chart on the real BPS files. Every firm in the `cohort_year' file, looked up in the next three files 
+> (`f1', `f2', `f3'); percent = share of the `cohort_year' firms. Stayed = in all three; workers in `f3' against `cohort
+> _year', about the same = within `band_pct'% either way (output, `outword', in the companion table). Absent, then back 
+> = missed `f1' or `f2' but in `f3' again (`n_back' firms here); the `f3' row = Stayed plus these firms. Left is not pro
+> of of closure: the files record no closures, so a firm may have closed, fallen out of the survey, stopped answering, o
+> r may return after `f3'. Counts only, not the effect of COVID (Figure R4-02 shows normal years)."
+
+. local notelines ""
+
+. local line ""
+
+. foreach w of local ntext {
+  2.     if ustrlen("`line' `w'") > 138 & "`line'" != "" {
+  3.         local notelines `"`notelines' "`line'""'
+  4.         local line "`w'"
+  5.     }
+  6.     else local line = strtrim("`line' `w'")
+  7. }
+
+. local notelines `"`notelines' "`line'""'
+
+. display `"   note lines: `notelines'"'
+   note lines:  "Notes: Firm links are fictional in the development data, so who stays, leaves or comes back means nothi
+> ng here; read this chart on the" "real BPS files. Every firm in the 2019 file, looked up in the next three files (2020
+> , 2021, 2022); percent = share of the 2019 firms." "Stayed = in all three; workers in 2022 against 2019, about the sam
+> e = within 10% either way (output, current prices, in the companion" "table). Absent, then back = missed 2020 or 2021 
+> but in 2022 again (0 firms here); the 2022 row = Stayed plus these firms. Left is not" "proof of closure: the files re
+> cord no closures, so a firm may have closed, fallen out of the survey, stopped answering, or may return" "after 2022. 
+> Counts only, not the effect of COVID (Figure R4-02 shows normal years)."
+
+. 
+. twoway (rbar zero cut y if section != "C", horizontal barwidth(0.78) fcolor(gs4) lcolor(gs4) lwidth(vthin)) ///
+>     (rbar cut firms y if section != "C", horizontal barwidth(0.78) fcolor(white) lcolor(gs4) lwidth(thin)) ///
+>     (rbar zero cut y if section == "C", horizontal barwidth(0.78) fcolor(gs11) lcolor(gs11) lwidth(vthin)) ///
+>     (rbar cut firms y if section == "C" & firms > cut, horizontal barwidth(0.78) fcolor(white) lcolor(gs6) lwidth(thin
+> ) lpattern(shortdash)) ///
+>     (scatter y firms, msymbol(none) mlabel(end_lbl) mlabposition(3) mlabgap(0.8) mlabcolor(black) mlabsize(vsmall)) //
+> /
+>     (scatter ylab_y in1_x if section != "C" & in1_lbl != "", msymbol(none) mlabel(in1_lbl) mlabposition(0) mlabcolor(w
+> hite) mlabsize(vsmall)) ///
+>     (scatter ylab_y in1_x if section == "C" & in1_lbl != "", msymbol(none) mlabel(in1_lbl) mlabposition(0) mlabcolor(b
+> lack) mlabsize(vsmall)) ///
+>     (scatter ylab_y in2_x if in2_lbl != "", msymbol(none) mlabel(in2_lbl) mlabposition(0) mlabcolor(black) mlabsize(vs
+> mall)), ///
+>     yscale(reverse noline range(0.4 `ymax')) ylabel(`ylab', angle(0) noticks nogrid labsize(vsmall) labgap(1)) ytitle(
+> "") ///
+>     xscale(range(0 `xtop') lcolor(gs10)) xlabel(0(`step')`xtop', format(%9.0fc) labsize(vsmall) tlcolor(gs10) nogrid) 
+> ///
+>     xtitle("Number of firms", size(vsmall)) ///
+>     legend(order(1 "Also `incword'" 2 "Not `incword'" ///
+>                  3 "Not in `cohort_year': new to the files" 4 "Not in `cohort_year': seen before `cohort_year'") ///
+>            rows(2) position(6) region(lstyle(none)) size(vsmall) symysize(2.2) symxsize(4) keygap(1) rowgap(0.3) colga
+> p(8)) ///
+>     title("`charttitle'", ///
+>           size(small) position(11) justification(left) span) ///
+>     note(`notelines' "`srcnote'" "`devnote'", size(vsmall) span linegap(0.6)) ///
+>     graphregion(color(white) lcolor(white) margin(r+2)) plotregion(style(none) margin(t=1 b=1)) ///
+>     xsize(8) ysize(6.5)
+
+. 
+. graph export "figures/01_cohort_states_flow.png", width(2400) replace
+file
+    /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r4-covid-survival/figures/01_cohort_st
+    > ates_flow.png saved as PNG format
+
+. graph export "figures/01_cohort_states_flow.pdf", replace
+file
+    /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r4-covid-survival/figures/01_cohort_st
+    > ates_flow.pdf saved as PDF format
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 7/7: companion table - every plotted bar, one row each (putpdf, no add-on)"
+Step 7/7: companion table - every plotted bar, one row each (putpdf, no add-on)
+
+. *---------------------------------------------------------------------------
+. * Read back the CSV just written, so the table shows exactly the charted numbers.
+. import delimited using "tables/01_cohort_states_flow.csv", clear varnames(1) encoding("utf-8") stringcols(6)
+(18 vars, 27 obs)
+
+. keep if drawn == 1 | section_name == "output"          // drawn rows + the output split the notes point to
+(8 observations deleted)
+
+. sort row_order
+
+. gen str40 status = "drawn"
+
+. replace status = "not drawn: table only" if section_name == "output"
+(4 real changes made)
+
+. replace status = "not drawn: no firms" if row_label == "Stayed, workers not comparable" & firms == 0
+(1 real change made)
+
+. gen str12 c_firms = strtrim(string(firms, "%12.0fc"))
+
+. gen str8  c_pct   = cond(missing(pct_of_cohort), "", strtrim(string(pct_of_cohort, "%5.1f")))
+(3 missing values generated)
+
+. gen double left_piece  = cond(section_name == "newcomers", first_time_in_files, incumbents)
+
+. gen double right_piece = cond(section_name == "newcomers", seen_before_cohort_file, new_in_cohort_file)
+
+. gen str12 c_left  = strtrim(string(left_piece, "%12.0fc"))
+
+. gen str12 c_right = strtrim(string(right_piece, "%12.0fc"))
+
+. local nrow = _N
+
+. quietly tab section_name
+
+. local ntab = `nrow' + 1 + r(r)                            // header + one heading per section
+
+. local headD "Stayed, split by output (`outword'): not drawn"
+
+. putpdf clear
+
+. putpdf begin, font("Times New Roman", 10) margin(all, 0.6in)
+
+. putpdf paragraph, spacing(after, 6pt)
+
+. putpdf text ("Table R4-01. `=substr("`charttitle'", strpos("`charttitle'", ".") + 2, .)' — every plotted point and the
+>  output split"), bold
+
+. matrix colw = (34, 9, 12, 11, 12, 22)                  // column widths, % of the page width
+
+. putpdf table T = (`ntab', 6), border(all, nil) width(colw)
+
+. local h1 "Row on the chart"
+
+. local h2 "Firms"
+
+. local h3 "% of the `cohort_year' firms"
+
+. local h4 "Dark or gray piece"
+
+. local h5 "White or dashed piece"
+
+. local h6 "Status"
+
+. forvalues c = 1/6 {
+  2.     local al = cond(inlist(`c', 1, 6), "left", "right")
+  3.     putpdf table T(1, `c') = ("`h`c''"), bold halign(`al') border(top, single) border(bottom, single) margin(left, 
+> 6pt)
+  4. }
+
+. local r 1
+
+. local prev ""
+
+. forvalues i = 1/`nrow' {
+  2.     local sec = section_name[`i']
+  3.     local key = cond("`sec'" == "file_by_file", "A", cond("`sec'" == "final_state", "B", cond("`sec'" == "newcomers
+> ", "C", "D")))
+  4.     if "`key'" != "`prev'" {
+  5.         local ++r
+  6.         putpdf table T(`r', 1) = ("`head`key''"), bold colspan(6)
+  7.         local prev "`key'"
+  8.     }
+  9.     local ++r
+ 10.     putpdf table T(`r', 1) = ("`=row_label[`i']'")
+ 11.     putpdf table T(`r', 2) = ("`=c_firms[`i']'"), halign(right)
+ 12.     putpdf table T(`r', 3) = ("`=c_pct[`i']'"), halign(right)
+ 13.     putpdf table T(`r', 4) = ("`=c_left[`i']'"), halign(right)
+ 14.     putpdf table T(`r', 5) = ("`=c_right[`i']'"), halign(right)
+ 15.     putpdf table T(`r', 6) = ("`=status[`i']'"), margin(left, 6pt)
+ 16. }
+
+. assert `r' == `ntab'
+
+. forvalues c = 1/6 {
+  2.     putpdf table T(`ntab', `c'), border(bottom, single)
+  3. }
+
+. putpdf paragraph, spacing(before, 6pt)
+
+. putpdf text ("Pieces: dark = also `incword'; white = not `incword'; gray = not in the `cohort_year' file, new to the f
+> iles; dashed = not in the `cohort_year' file, seen in a file before `cohort_year'. The chart prints a piece count only
+>  where it fits; this table gives all."), font("Times New Roman", 9)
+
+. putpdf paragraph
+
+. putpdf text ("`ntext'"), font("Times New Roman", 9)
+
+. putpdf paragraph
+
+. putpdf text ("`srcnote'"), font("Times New Roman", 9)
+
+. putpdf paragraph
+
+. putpdf text ("`devnote'"), font("Times New Roman", 9)
+
+. putpdf save "tables/01_cohort_states_flow_table.pdf", replace
+successfully created "/Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r4-covid-survival/tabl
+> es/01_cohort_states_flow_table.pdf"
+
+. display "table -> tables/01_cohort_states_flow_table.pdf (`nrow' plotted rows)"
+table -> tables/01_cohort_states_flow_table.pdf (19 plotted rows)
+
+. 
+. timer off 1
+
+. quietly timer list 1
+
+. local elapsed = strtrim(string(r(t1), "%9.1f"))
+
+. display "FINISHED: figure -> figures/01_cohort_states_flow.png (elapsed `elapsed' s)"
+FINISHED: figure -> figures/01_cohort_states_flow.png (elapsed 1.9 s)
+
+. quietly log close          // keeps FINISHED as the last output line of the log
