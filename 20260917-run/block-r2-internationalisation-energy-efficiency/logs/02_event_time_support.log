@@ -1,0 +1,1197 @@
+------------------------------------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r2-internationalisation-energy-
+> efficiency/logs/02_event_time_support.log
+  log type:  text
+ opened on:  28 Sep 2026, 17:11:39
+
+. timer clear 1
+
+. timer on 1
+
+. display _newline "=== [R2-02] STARTING: firms seen each year before and after their export start ==="
+
+=== [R2-02] STARTING: firms seen each year before and after their export start ===
+
+. 
+. * ---- chart style (identical block in every file) ----
+. set scheme s1mono
+
+. capture graph set window fontface "Times New Roman"   // GUI Stata; console Stata keeps its default font
+
+. * Note: this changes your Stata graph font permanently; undo with: graph set window fontface default
+. local devnote "Development data — obscured values, fictional firm panel. Not BPS findings."
+
+. local srcnote "Source: SI/IBS annual files 2010–2022 (masked), analysis_ready_data.dta."
+
+. 
+. * ---- the one choice made in this file ----
+. local minfirms 30      // a year since the start gets its own point in later charts only with 30+ firms
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 1/7: load export status, energy, CO2 and value added"
+Step 1/7: load export status, energy, CO2 and value added
+
+. *---------------------------------------------------------------------------
+. * export_flag         = any export activity (1 yes, 0 no, missing = unknown)
+. * total_gj_s1         = energy use in GJ (nine fuels + purchased electricity)
+. * co2_total_s1        = CO2 tonnes from the same fuels and electricity
+. * value_added_nominal = value added, current prices (masked money unit)
+. use firm_id year export_flag total_gj_s1 co2_total_s1 value_added_nominal using "$DATA", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. isid firm_id year
+
+. assert year != 2016
+
+. sort firm_id year
+
+. tsset firm_id year                 // L. and F. below mean exact calendar years
+
+Panel variable: firm_id (unbalanced)
+ Time variable: year, 2010 to 2022, but with gaps
+         Delta: 1 unit
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 2/7: date each firm's export start under two rules (same code in every R2 file)"
+Step 2/7: date each firm's export start under two rules (same code in every R2 file)
+
+. *---------------------------------------------------------------------------
+. * Missing status is unknown, never read as "not participating".
+. * Rule A, simple first entry (main): the first year the firm is seen
+. *   participating, if it was seen NOT participating in some earlier year.
+. *   Firms participating when first seen cannot be dated and are left out.
+. * Rule B, previous paper's sustained entry (variant): the first year t with
+. *   participation in t, none in t-1 AND t-2, and participation again in t+1
+. *   (exact calendar years; the missing 2016 file breaks the pattern).
+. * Comparison group for BOTH rules: firms never seen participating.
+. * Row keys: 9001 never seen participating · 9002 already participating when first
+. * seen (rule A, excluded) · 9003 status never observed · 9004 seen participating
+. * without the sustained pattern (rule B, excluded) · 8000 all entrants · 9999 all firms.
+. local x export_flag
+
+.     * --- Rule A ---
+.     by firm_id: egen int first_yes = min(cond(`x' == 1, year, .))
+(21,821 missing values generated)
+
+.     by firm_id: egen int first_no  = min(cond(`x' == 0, year, .))
+(7,833 missing values generated)
+
+.     by firm_id: egen int n_known   = total(!missing(`x'))
+
+.     gen int keyA = .
+(33,049 missing values generated)
+
+.     replace keyA = 9003 if n_known == 0                                     // status never observed
+(4,817 real changes made)
+
+.     replace keyA = 9001 if n_known > 0 & missing(first_yes)                 // never seen participating
+(17,004 real changes made)
+
+.     replace keyA = 9002 if n_known > 0 & !missing(first_yes) & (missing(first_no) | first_no > first_yes)
+(5,800 real changes made)
+
+.     replace keyA = first_yes if n_known > 0 & !missing(first_yes) & !missing(first_no) & first_no < first_yes
+(5,428 real changes made)
+
+.     assert !missing(keyA)
+
+.     gen int gA = keyA if keyA < 9000                                        // entry year, rule A
+(27,621 missing values generated)
+
+.     by firm_id: egen int last_no_before = max(cond(`x' == 0 & year < gA, year, .))
+(7,833 missing values generated)
+
+.     gen byte exactA = !missing(gA) & last_no_before == gA - 1               // seen "no" the year just before
+
+.     by firm_id: egen int first_stop = min(cond(!missing(gA) & `x' == 0 & year > gA, year, .))
+(29,872 missing values generated)
+
+.     gen byte stopA = !missing(first_stop)                                   // later seen not participating
+
+.     by firm_id: egen byte reenterA = max(!missing(first_stop) & `x' == 1 & year > first_stop)
+
+. 
+.     * --- Rule B ---
+.     gen byte cleanB = (`x' == 1 & L1.`x' == 0 & L2.`x' == 0 & F1.`x' == 1)
+
+.     by firm_id: egen int gB = min(cond(cleanB == 1, year, .))               // entry year, rule B
+(32,781 missing values generated)
+
+.     by firm_id: egen byte earlier_yesB = max(`x' == 1 & year < gB & !missing(gB))
+
+.     gen int keyB = cond(!missing(gB), gB, cond(n_known == 0, 9003, cond(missing(first_yes), 9001, 9004)))
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 3/7: years since the start; choose the years shown one by one"
+Step 3/7: years since the start; choose the years shown one by one
+
+. *---------------------------------------------------------------------------
+. * Years since the start = calendar year minus start year (0 = start year,
+. * -1 = the year before). Counted in calendar years, so a firm's 2016 is simply
+. * missing: no row, no count.
+. gen int kA = year - gA                                  // rule A (missing for non-starters)
+(27,621 missing values generated)
+
+. gen int kB = year - gB                                  // rule B
+(32,781 missing values generated)
+
+. * Usable row = energy, CO2 and value added all above zero, so the logs used in
+. * R2-03 to R2-05 exist. A zero is left out, not read as "none".
+. gen byte usable = total_gj_s1 > 0 & co2_total_s1 > 0 & value_added_nominal > 0 ///
+>     & !missing(total_gj_s1, co2_total_s1, value_added_nominal)
+
+. by firm_id: egen int n_usable = total(usable)           // a firm needs 2+ to be compared with itself
+
+. gen byte one = 1
+
+. tempfile fy tot totB est cells comp summ
+
+. save `fy'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_17551.000001 saved as .dta format
+
+. 
+. * Totals by single year since the start (rule A).
+. keep if !missing(gA)
+(27,621 observations deleted)
+
+. gen byte early = gA < 2016 & usable                     // started before the missing 2016 file
+
+. gen byte late  = gA > 2016 & usable                     // started after it
+
+. egen byte coh_tag = tag(gA kA) if usable
+
+. collapse (sum) firms = one usable_firms = usable exact_firms = exactA cohorts_seen = coh_tag ///
+>          (max) early_seen = early late_seen = late, by(kA)
+
+. * A year since the start gets its own point in the later charts when (1) at
+. * least `minfirms' firms have a usable row in it and (2) firms that started
+. * before AND after the missing 2016 file are both seen in it. Take the widest
+. * window -K..+K in which every year passes; years further out are grouped at
+. * the two ends (only early or only late starters reach them).
+. gen byte passes = usable_firms >= `minfirms' & early_seen & late_seen
+
+. assert passes if inlist(kA, -1, 0)
+
+. local K 0
+
+. local go 1
+
+. while `go' {
+  2.     local kk = `K' + 1
+  3.     quietly count if passes & inlist(kA, -`kk', `kk')
+  4.     if r(N) == 2 local K = `kk'
+  5.     else local go 0
+  6. }
+
+. local wlo = -`K'
+
+. local whi = `K'
+
+. local blo = `wlo' - 1                                   // column code of the lower grouped end
+
+. local bhi = `whi' + 1                                   // column code of the upper grouped end
+
+. display "   window: each year from `wlo' to +`whi' on its own; `blo' or earlier and +`bhi' or later grouped"
+   window: each year from -5 to +5 on its own; -6 or earlier and +6 or later grouped
+
+. gen byte own_estimate = inrange(kA, `wlo', `whi')
+
+. gen str1 rule = "A"
+
+. rename kA event_time
+
+. save `tot'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_17551.000002 saved as .dta format
+
+. 
+. * Totals by single year since the start (rule B).
+. use `fy', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if !missing(gB)
+(32,781 observations deleted)
+
+. collapse (sum) firms = one usable_firms = usable, by(kB)
+
+. gen str1 rule = "B"
+
+. rename kB event_time
+
+. save `totB'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_17551.000003 saved as .dta format
+
+. 
+. * The columns of panel A: each year in the window + the two grouped ends,
+. * by start year (cells) and for all starters (estimate rows), both rules.
+. * In a grouped end a firm is counted once, however many years it has there.
+. foreach r in A B {
+  2.     use `fy', clear
+  3.     keep if !missing(g`r')
+  4.     gen int col = cond(k`r' < `wlo', `blo', cond(k`r' > `whi', `bhi', k`r'))
+  5.     egen byte f_tag = tag(firm_id col)
+  6.     egen byte u_tag = tag(firm_id col) if usable
+  7.     preserve
+  8.     collapse (sum) firms = f_tag firm_years = one usable_firms = u_tag usable_firm_years = usable, by(col)
+  9.     gen str1 rule = "`r'"
+ 10.     tempfile e`r'
+ 11.     save `e`r''
+ 12.     restore
+ 13.     collapse (sum) firms = f_tag firm_years = one usable_firms = u_tag, by(g`r' col)
+ 14.     fillin g`r' col
+ 15.     rename g`r' cohort_year
+ 16.     * A cell can hold firms only if its calendar year(s) lie inside 2010-2022.
+.     gen int calendar_year = cohort_year + col if inrange(col, `wlo', `whi')
+ 17.     gen byte possible = inrange(calendar_year, 2010, 2022) & calendar_year != 2016 if inrange(col, `wlo', `whi')
+ 18.     replace possible = (cohort_year + `blo' >= 2010) if col == `blo'
+ 19.     replace possible = (cohort_year + `bhi' <= 2022) if col == `bhi'
+ 20.     foreach v in firms firm_years usable_firms {
+ 21.         replace `v' = 0 if missing(`v') & possible      // could be seen, none seen = genuine 0
+ 22.         replace `v' = . if !possible                    // 2016 (no file) or outside 2010-2022: empty
+ 23.     }
+ 24.     drop if possible == 0 & calendar_year != 2016       // outside 2010-2022: no row
+ 25.     gen str1 rule = "`r'"
+ 26.     drop _fillin possible
+ 27.     tempfile c`r'
+ 28.     save `c`r''
+ 29. }
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(27,621 observations deleted)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_17551.000009 saved as .dta format
+(22 missing values generated)
+(22 missing values generated)
+(11 real changes made)
+(11 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(36 observations deleted)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_17551.00000a saved as .dta format
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(32,781 observations deleted)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_17551.00000c saved as .dta format
+(12 missing values generated)
+(12 missing values generated)
+(6 real changes made)
+(6 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(21 observations deleted)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_17551.00000d saved as .dta format
+
+. use `eA', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. append using `eB'
+
+. save `est'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_17551.000004 saved as .dta format
+
+. use `cA', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. append using `cB'
+
+. save `cells'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_17551.000005 saved as .dta format
+
+. * Each firm has one start year, so the cells add up to the all-starters row.
+. collapse (sum) sumc = firms, by(rule col)
+
+. merge 1:1 rule col using `est', nogenerate assert(match)
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                                26  
+    -----------------------------------------
+
+. assert sumc == firms
+
+. quietly summarize usable_firms if rule == "B"
+
+. local maxB = r(max)                                     // previous paper's rule: largest column
+
+. 
+. * Comparison firms (never seen exporting), by calendar year.
+. use `fy', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if keyA == 9001
+(16,045 observations deleted)
+
+. gen byte seen_no = export_flag == 0
+
+. gen byte usable2 = usable & n_usable >= 2
+
+. collapse (sum) firms = one seen_not_exporting = seen_no usable_firms = usable usable_firms_2plus = usable2, by(year)
+
+. set obs `=_N + 1'
+Number of observations (_N) was 12, now 13.
+
+. replace year = 2016 in L                                // empty row for the missing file
+(1 real change made)
+
+. sort year
+
+. rename year calendar_year
+
+. save `comp'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_17551.000006 saved as .dta format
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 4/7: key counts, then the CSV (numbers written before drawing)"
+Step 4/7: key counts, then the CSV (numbers written before drawing)
+
+. *---------------------------------------------------------------------------
+. use `fy', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. egen byte ftag = tag(firm_id)
+
+. by firm_id: egen byte pre_u   = max(kA <  0 & usable & !missing(kA))
+
+. by firm_id: egen byte from_u  = max(kA >= 0 & usable & !missing(kA))
+
+. by firm_id: egen byte after1  = max(kA >= 1 & !missing(kA))
+
+. by firm_id: egen byte has_m1  = max(kA == -1 & usable)
+
+. by firm_id: egen byte pre_uB  = max(kB <  0 & usable & !missing(kB))
+
+. by firm_id: egen byte from_uB = max(kB >= 0 & usable & !missing(kB))
+
+. by firm_id: egen int  n_no    = total(export_flag == 0)
+
+. local labs `" "Starters, simple rule (all)" "Starters with a usable year before AND a usable year from the start year"
+>  "Starters seen at least one year after their start year" "Starters with a usable row the year just before the start" 
+> "Firms never seen exporting (comparison group)" "Comparison firms with 2+ usable years" "Comparison firms with 1 usabl
+> e year (cannot be compared with themselves)" "Comparison firms with no usable year" "Comparison firms seen not exporti
+> ng in 2+ years" "Starters, previous paper's rule (all)" "Starters, previous paper's rule, usable year before and from 
+> the start" "'
+
+. local i 0
+
+. foreach c in "!missing(gA)" "!missing(gA) & pre_u & from_u" "!missing(gA) & after1" ///
+>              "!missing(gA) & has_m1" "keyA == 9001" "keyA == 9001 & n_usable >= 2" ///
+>              "keyA == 9001 & n_usable == 1" "keyA == 9001 & n_usable == 0" ///
+>              "keyA == 9001 & n_no >= 2" "!missing(gB)" "!missing(gB) & pre_uB & from_uB" {
+  2.     local ++i
+  3.     quietly count if ftag & `c'
+  4.     local s`i' = r(N)
+  5. }
+
+. assert `s2' <= `s1' & `s3' <= `s1' & `s4' <= `s1' & `s11' <= `s10'
+
+. assert `s6' + `s7' + `s8' == `s5'
+
+. clear
+
+. set obs 12
+Number of observations (_N) was 0, now 12.
+
+. gen int row_order = _n
+
+. gen str90 row_label = ""
+(12 missing values generated)
+
+. gen double firms = .
+(12 missing values generated)
+
+. forvalues j = 1/11 {
+  2.     local l : word `j' of `labs'
+  3.     replace row_label = "`l'" in `j'
+  4.     replace firms = `s`j'' in `j'
+  5. }
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+
+. replace row_label = "Previous paper's rule: most usable firms in any one column" in 12
+(1 real change made)
+
+. replace firms = `maxB' in 12
+(1 real change made)
+
+. gen str12 section = "summary"
+
+. save `summ'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_17551.000007 saved as .dta format
+
+. 
+. * Stack the sections into one long table (one row per number set).
+. use `summ', clear
+
+. append using `est'
+
+. replace section = "estimate" if missing(section)
+(26 real changes made)
+
+. append using `tot'
+
+. append using `totB'
+
+. replace section = "event_time" if missing(section)
+(45 real changes made)
+
+. append using `cells'
+
+. replace section = "cell" if missing(section)
+(164 real changes made)
+
+. append using `comp'
+
+. replace section = "comparison" if missing(section)
+(13 real changes made)
+
+. * Readable labels and the column code used in panel A.
+. replace event_time = col if inlist(section, "estimate", "cell")
+(190 real changes made)
+
+. gen str40 column = ""
+(260 missing values generated)
+
+. replace column = cond(event_time > 0, "+", "") + string(event_time) if !missing(event_time)
+(235 real changes made)
+
+. replace column = "`blo' or earlier (grouped)" if inlist(section, "estimate", "cell") & event_time == `blo'
+(11 real changes made)
+
+. replace column = "+`bhi' or later (grouped)"  if inlist(section, "estimate", "cell") & event_time == `bhi'
+(10 real changes made)
+
+. replace row_label = "All starters" if inlist(section, "estimate", "event_time") & rule == "A"
+(37 real changes made)
+
+. replace row_label = "All starters, previous paper's rule" if inlist(section, "estimate", "event_time") & rule == "B"
+(34 real changes made)
+
+. replace row_label = "Started " + string(cohort_year) if section == "cell"
+(164 real changes made)
+
+. replace row_label = "Never seen exporting" if section == "comparison"
+(13 real changes made)
+
+. gen str70 note = ""
+(260 missing values generated)
+
+. replace note = "No annual file" if calendar_year == 2016 & inlist(section, "cell", "comparison")
+(17 real changes made)
+
+. replace note = "Reference year: left out of the later estimates" if section == "estimate" & event_time == -1 & rule ==
+>  "A"
+(1 real change made)
+
+. replace note = "2022 file records direct exporters only: no firm is seen not exporting" if section == "comparison" & c
+> alendar_year == 2022
+(1 real change made)
+
+. gen int window_first = `wlo'
+
+. gen int window_last  = `whi'
+
+. gen int min_firms    = `minfirms'
+
+. gen byte sorder = 1*(section=="summary") + 2*(section=="estimate") + 3*(section=="event_time") + 4*(section=="cell") +
+>  5*(section=="comparison")
+
+. sort sorder rule cohort_year event_time calendar_year row_order
+
+. order section rule row_label cohort_year column event_time calendar_year firms firm_years usable_firms usable_firm_yea
+> rs ///
+>       exact_firms cohorts_seen early_seen late_seen own_estimate seen_not_exporting usable_firms_2plus ///
+>       window_first window_last min_firms note
+
+. keep section-note
+
+. format firms-min_firms %9.0f
+
+. export delimited using "tables/02_event_time_support.csv", datafmt replace
+file tables/02_event_time_support.csv saved
+
+. list rule row_label column firms firm_years usable_firms if inlist(section, "summary", "estimate"), noobs sep(0) abbre
+> viate(24) clean
+
+    rule                                                                  row_label                    column   firms   
+> firm_years   usable_firms  
+                                                        Starters, simple rule (all)                               743   
+>          .              .  
+           Starters with a usable year before AND a usable year from the start year                               739   
+>          .              .  
+                             Starters seen at least one year after their start year                               560   
+>          .              .  
+                          Starters with a usable row the year just before the start                               700   
+>          .              .  
+                                      Firms never seen exporting (comparison group)                              4945   
+>          .              .  
+                                              Comparison firms with 2+ usable years                              2832   
+>          .              .  
+           Comparison firms with 1 usable year (cannot be compared with themselves)                              2017   
+>          .              .  
+                                               Comparison firms with no usable year                                96   
+>          .              .  
+                                    Comparison firms seen not exporting in 2+ years                              2008   
+>          .              .  
+                                              Starters, previous paper's rule (all)                                29   
+>          .              .  
+             Starters, previous paper's rule, usable year before and from the start                                29   
+>          .              .  
+                         Previous paper's rule: most usable firms in any one column                                29   
+>          .              .  
+       A                                                               All starters   -6 or earlier (grouped)     122   
+>        417            122  
+       A                                                               All starters                        -5     188   
+>        188            185  
+       A                                                               All starters                        -4     274   
+>        274            271  
+       A                                                               All starters                        -3     359   
+>        359            357  
+       A                                                               All starters                        -2     472   
+>        472            467  
+       A                                                               All starters                        -1     706   
+>        706            700  
+       A                                                               All starters                         0     743   
+>        743            736  
+       A                                                               All starters                        +1     468   
+>        468            465  
+       A                                                               All starters                        +2     386   
+>        386            384  
+       A                                                               All starters                        +3     340   
+>        340            336  
+       A                                                               All starters                        +4     279   
+>        279            278  
+       A                                                               All starters                        +5     189   
+>        189            188  
+       A                                                               All starters     +6 or later (grouped)     196   
+>        607            196  
+       B                                        All starters, previous paper's rule   -6 or earlier (grouped)       7   
+>         28              7  
+       B                                        All starters, previous paper's rule                        -5       6   
+>          6              6  
+       B                                        All starters, previous paper's rule                        -4      12   
+>         12             12  
+       B                                        All starters, previous paper's rule                        -3      20   
+>         20             20  
+       B                                        All starters, previous paper's rule                        -2      29   
+>         29             29  
+       B                                        All starters, previous paper's rule                        -1      29   
+>         29             29  
+       B                                        All starters, previous paper's rule                         0      29   
+>         29             29  
+       B                                        All starters, previous paper's rule                        +1      29   
+>         29             29  
+       B                                        All starters, previous paper's rule                        +2      14   
+>         14             14  
+       B                                        All starters, previous paper's rule                        +3      13   
+>         13             13  
+       B                                        All starters, previous paper's rule                        +4      13   
+>         13             13  
+       B                                        All starters, previous paper's rule                        +5      13   
+>         13             13  
+       B                                        All starters, previous paper's rule     +6 or later (grouped)      10   
+>         33             10  
+
+. tempfile all
+
+. save `all'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_17551.00000e saved as .dta format
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 5/7: numbers quoted in the notes (read from the table, never typed)"
+Step 5/7: numbers quoted in the notes (read from the table, never typed)
+
+. *---------------------------------------------------------------------------
+. foreach j in 1 3 5 6 {
+  2.     local t : display %9.0fc `s`j''
+  3.     local n`j' = strtrim("`t'")
+  4. }
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 6/7: panel A = firms by start year x years since start; panel B = comparison firms"
+Step 6/7: panel A = firms by start year x years since start; panel B = comparison firms
+
+. *---------------------------------------------------------------------------
+. * ---- panel A: the counts drawn as a table ----
+. use `all', clear
+
+. keep if inlist(section, "cell", "estimate")
+(70 observations deleted)
+
+. quietly levelsof cohort_year if section == "cell", local(cohorts)
+
+. local ncoh : word count `cohorts'
+
+. gen double row = .
+(190 missing values generated)
+
+. local r 0
+
+. local ylab ""
+
+. foreach g of local cohorts {
+  2.     local ++r
+  3.     replace row = `r' if section == "cell" & cohort_year == `g'
+  4.     local ylab `"`ylab' `r' "`g'""'
+  5. }
+(8 real changes made)
+(18 real changes made)
+(20 real changes made)
+(22 real changes made)
+(12 real changes made)
+(12 real changes made)
+(11 real changes made)
+(20 real changes made)
+(18 real changes made)
+(16 real changes made)
+(7 real changes made)
+
+. local rA = `ncoh' + 1.3
+
+. local rB = `ncoh' + 2.3
+
+. replace row = `rA' if section == "estimate" & rule == "A"
+(13 real changes made)
+
+. replace row = `rB' if section == "estimate" & rule == "B"
+(13 real changes made)
+
+. drop if section == "cell" & rule == "B"                 // previous rule: all-starters row only
+(57 observations deleted)
+
+. local ylab `"`ylab' `rA' "All starters" `rB' "Previous rule""'
+
+. gen str8 lbl = string(firms, "%9.0fc") if !missing(firms)
+(10 missing values generated)
+
+. gen double lo = row - 0.42 if section == "cell" & calendar_year == 2016
+(123 missing values generated)
+
+. gen double hi = row + 0.42 if section == "cell" & calendar_year == 2016
+(123 missing values generated)
+
+. local xlab `"`blo' "≤ `blo'""'
+
+. forvalues k = `wlo'/`whi' {
+  2.     local s = cond(`k' > 0, "+`k'", "`k'")
+  3.     local xlab `"`xlab' `k' "`s'""'
+  4. }
+
+. local xlab `"`xlab' `bhi' "≥ +`bhi'""'
+
+. local xl = `wlo' - 0.5                                 // dashed edges of the year-by-year columns
+
+. local xr = `whi' + 0.5
+
+. local ytop = 0.55                                      // dashed lines start below the headers
+
+. local ybot = `rB' + 0.5
+
+. local ysep = `ncoh' + 0.65
+
+. twoway (rbar lo hi event_time, barwidth(0.92) fcolor(gs14) lcolor(gs14) lwidth(none)) ///
+>     (pci `ytop' `xl' `ybot' `xl' `ytop' `xr' `ybot' `xr', lpattern(dash) lcolor(gs7) lwidth(thin)) ///
+>     (pci `ysep' `=`blo'-0.5' `ysep' `=`bhi'+0.5', lcolor(gs11) lwidth(vthin)) ///
+>     (scatter row event_time if section == "cell", msymbol(none) mlabel(lbl) mlabposition(0) mlabsize(vsmall) mlabcolor
+> (black)) ///
+>     (scatter row event_time if section == "estimate" & rule == "A", msymbol(none) mlabel(lbl) mlabposition(0) mlabsize
+> (vsmall) mlabcolor(black)) ///
+>     (scatter row event_time if section == "estimate" & rule == "B", msymbol(none) mlabel(lbl) mlabposition(0) mlabsize
+> (vsmall) mlabcolor(gs6)), ///
+>     yscale(reverse range(-0.4 `ybot') noline) ///
+>     ylabel(`ylab', angle(0) labsize(vsmall) noticks nogrid tlength(0) labgap(1)) ///
+>     ytitle("Year the firm started exporting", size(vsmall)) ///
+>     xscale(range(`=`blo'-0.5' `=`bhi'+0.5') noline) xlabel(`xlab', labsize(vsmall) noticks tlength(0) labgap(0.5)) ///
+>     xtitle("Years since the start (0 = start year; -1 = the year before)", size(vsmall)) ///
+>     text(-0.05 `blo' "Grouped", size(vsmall) color(gs5)) ///
+>     text(-0.05 0 "Each year shown separately in later charts", size(vsmall) color(gs5)) ///
+>     text(-0.05 `bhi' "Grouped", size(vsmall) color(gs5)) ///
+>     legend(order(1 "No annual file" 2 "Edge of the year-by-year columns") rows(1) position(6) ///
+>         region(lstyle(none)) size(vsmall) symysize(2) symxsize(4) keygap(1) colgap(4)) ///
+>     subtitle("A. Number of starters seen, by start year (rows) and years since the start (columns)", ///
+>         size(small) position(11) justification(left) nobox span) ///
+>     graphregion(color(white) lcolor(white)) plotregion(style(none) margin(zero)) ///
+>     fysize(64) name(pA, replace) nodraw
+
+. 
+. * ---- panel B: comparison firms by calendar year ----
+. use `all', clear
+
+. keep if section == "comparison"
+(247 observations deleted)
+
+. gen double total = firms
+(1 missing value generated)
+
+. gen double known = seen_not_exporting
+(1 missing value generated)
+
+. gen double zero = 0
+
+. gen double known_mid = known / 2
+(1 missing value generated)
+
+. quietly summarize total
+
+. local btop = 1.2 * r(max)                               // headroom for the count labels
+
+. gen double band_lo = 0 if calendar_year == 2016
+(12 missing values generated)
+
+. gen double band_hi = `btop' if calendar_year == 2016
+(12 missing values generated)
+
+. gen str8 total_lbl = string(total, "%9.0fc") if !missing(total)
+(1 missing value generated)
+
+. gen str8 known_lbl = string(known, "%9.0fc") if known > 0 & !missing(known)
+(2 missing values generated)
+
+. twoway (rbar band_lo band_hi calendar_year, barwidth(0.9) fcolor(gs14) lcolor(gs14) lwidth(none)) ///
+>     (rbar zero known calendar_year if !missing(total), barwidth(0.8) fcolor(gs4) lcolor(gs4) lwidth(vthin)) ///
+>     (rbar known total calendar_year if !missing(total), barwidth(0.8) fcolor(white) lcolor(gs4) lwidth(thin)) ///
+>     (scatter total calendar_year if total_lbl != "", msymbol(none) mlabel(total_lbl) mlabposition(12) mlabgap(0.4) ///
+>         mlabcolor(black) mlabsize(vsmall)) ///
+>     (scatter known_mid calendar_year if known_lbl != "", msymbol(none) mlabel(known_lbl) mlabposition(0) ///
+>         mlabcolor(white) mlabsize(vsmall)), ///
+>     xlabel(2010(1)2022, labsize(vsmall) noticks) xscale(range(2009.5 2022.5) lcolor(gs10)) ///
+>     yscale(off range(0 `btop')) ylabel(, nogrid) xtitle("") ///
+>     legend(order(2 "Seen not exporting that year" 3 "Export status not recorded that year" 1 "No annual file") rows(1)
+>  position(6) ///
+>         region(lstyle(none)) size(vsmall) symysize(2) symxsize(4) keygap(1) colgap(4)) ///
+>     subtitle("B. Number of comparison firms (never seen exporting in any year), by calendar year", ///
+>         size(small) position(11) justification(left) nobox) ///
+>     graphregion(color(white) lcolor(white)) plotregion(style(none) margin(t+1 b=0)) ///
+>     fysize(33) name(pB, replace) nodraw
+
+. 
+. graph combine pA pB, cols(1) iscale(1) imargin(0 0 1 1) ///
+>     title("Figure R2-02. Firms seen before and after they start exporting", size(medsmall) ///
+>         position(11) justification(left) span) ///
+>     note("Notes: Start year = first year a firm is seen exporting after a year seen not exporting. Later charts" ///
+>          "compare each starter's energy use and CO2 with its year before the start (-1), minus the change in panel B's
+> " ///
+>          "firms. Between the dashed lines each column has `minfirms'+ firms with data, from starters before and after 
+> 2016;" ///
+>          "further out only early or only late starters are seen, so those years are pooled. Previous rule (last row," 
+> ///
+>          "previous paper): no exports in the two years before, exports again the year after; it never reaches `minfirm
+> s'. The" ///
+>          "2022 file records direct exporters only, hence no dark bar. `n6' of `n5' comparison firms have 2+ years" ///
+>          "with data (needed to see a change). Firm links are fictional: this tests the method, not a finding." ///
+>          "`srcnote'" "`devnote'", size(vsmall) span) ///
+>     graphregion(color(white) lcolor(white) margin(r+2)) xsize(9) ysize(10)
+
+. 
+. graph export "figures/02_event_time_support.png", width(2700) replace
+file
+    /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r2-internationalisation-energy-efficie
+    > ncy/figures/02_event_time_support.png saved as PNG format
+
+. graph export "figures/02_event_time_support.pdf", replace
+file
+    /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r2-internationalisation-energy-efficie
+    > ncy/figures/02_event_time_support.pdf saved as PDF format
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 7/7: companion table: every plotted point"
+Step 7/7: companion table: every plotted point
+
+. *---------------------------------------------------------------------------
+. * ==== COMPANION TABLE (pattern for all exhibits) =============================
+. * Owner rule, 28 Sep 2026: every chart gets a table of every plotted point, and
+. * every chart of regression coefficients also gets a regression table, written
+. * by the same do-file (spec: TABLE_BRIEF.md). This step runs AFTER the graph
+. * export, so the chart and the CSV stay byte-identical.
+. *
+. * How to use it in another exhibit file:
+. *   PART 1 (the writer, program ctable_pdf) is copied UNCHANGED.
+. *   PART 2 is the only exhibit-specific part: put the numbers in memory (the
+. *   tempfile saved right after the CSV export, or the CSV itself), build one
+. *   STRING variable per table column, one row per plotted point in chart order
+. *   (years not drawn included, with the reason in a status column), then call
+. *   ctable_pdf. Format numbers with string(x, "%9.1f") etc. so the table shows
+. *   exactly the rounding of the chart labels.
+. *
+. * ctable_pdf strvars using "tables/NN_name_table.pdf",
+. *     title("Table R1-02. ...: every plotted point")    first line, bold
+. *     header("Col 1" "Col 2" ...)       one text per column; "|" = line break
+. *     [right(numlist)]                  columns right-aligned (numbers)
+. *     [norepeat(numlist)]               columns whose repeated text is shown
+. *                                       only on the first row of a run
+. *     [rules(numlist)]                  thin gray line under these data rows
+. *     [notes("line 1" "line 2" ...)]    footer paragraphs (Notes, Source, dev line)
+. *     [subtitle(text)] [fontsize(#)] [perpage(#)] [landscape|portrait]
+. * Landscape is chosen automatically when there are more than 6 columns. Long
+. * tables continue on a new page with the header repeated ("(continued)"); a page
+. * never breaks inside a block whose first column is empty (e.g. an SE row).
+. * --- PART 1: the writer (identical in every file; do not edit) ---------------
+. capture program drop ctable_pdf
+
+. program define ctable_pdf
+  1.     version 17
+  2.     syntax varlist(string) using/, TItle(string) HEADer(string asis) ///
+>         [RIGHT(numlist integer >0) NOREPeat(numlist integer >0) RULES(numlist integer >0) ///
+>          NOTEs(string asis) SUBtitle(string) FONTsize(real 9.5) PERpage(integer 0) ///
+>          LANDscape PORTrait]
+  3.     local nc : word count `varlist'
+  4.     local nh : word count `header'
+  5.     if `nh' != `nc' {
+  6.         display as error "ctable_pdf: `nc' columns but `nh' header texts"
+  7.         exit 198
+  8.     }
+  9.     local orient = cond(`nc' > 6, "landscape", "")
+ 10.     if "`landscape'" != "" local orient "landscape"
+ 11.     if "`portrait'"  != "" local orient ""
+ 12.     * rows per page: a conservative guess for 9-10 pt text (wrapped cells take more)
+.     if `perpage' == 0 local perpage = cond("`orient'" == "landscape", 24, 40)
+ 13.     preserve
+ 14.     quietly {
+ 15.         keep `varlist'
+ 16.         rename (`varlist') (__c#), addnumber      // __c1 __c2 ... in the order given
+ 17.         forvalues j = 1/`nc' {
+ 18.             replace __c`j' = strtrim(__c`j')
+ 19.         }
+ 20.         local N = _N
+ 21.         gen long row = _n
+ 22.         * page chunks: fill up to perpage rows; prefer to end a page at a rule,
+.         * never start a page on a row whose first column is empty
+.         gen int chunk = .
+ 23.         local start 1
+ 24.         local k 0
+ 25.         while `start' <= `N' {
+ 26.             local ++k
+ 27.             local end = min(`start' + `perpage' - 1, `N')
+ 28.             if `end' < `N' {
+ 29.                 local best 0
+ 30.                 foreach r of local rules {
+ 31.                     if `r' >= `start' + floor(`perpage' / 2) & `r' <= `end' & `r' > `best' local best `r'
+ 32.                 }
+ 33.                 if `best' > 0 local end `best'
+ 34.                 else {
+ 35.                     while `end' > `start' & __c1[`end' + 1] == "" {
+ 36.                         local --end
+ 37.                     }
+ 38.                 }
+ 39.             }
+ 40.             replace chunk = `k' in `start'/`end'
+ 41.             local start = `end' + 1
+ 42.         }
+ 43.         local nk `k'
+ 44.         * blank repeated labels inside each page; a column is blanked only while the
+.         * norepeat columns to its left are unchanged too (a new panel shows its series)
+.         gen byte same = _n > 1 & chunk == chunk[_n - 1]
+ 45.         foreach j of local norepeat {
+ 46.             gen strL o`j' = __c`j'
+ 47.             replace same = same & o`j' == o`j'[_n - 1]
+ 48.             replace __c`j' = "" if same
+ 49.             drop o`j'
+ 50.         }
+ 51.         drop same
+ 52.         * column widths (% of the page), from the longest text in each column;
+.         * long text columns are capped so they wrap instead of squeezing numbers
+.         matrix W = J(1, `nc', 0)
+ 53.         local tot 0
+ 54.         forvalues j = 1/`nc' {
+ 55.             gen long L`j' = udstrlen(__c`j')
+ 56.             summarize L`j', meanonly
+ 57.             local w = max(r(max), 3)
+ 58.             local h : word `j' of `header'
+ 59.             local h = subinstr(`"`h'"', "|", " ", .)
+ 60.             foreach hw of local h {
+ 61.                 local w = max(`w', udstrlen(`"`hw'"'))
+ 62.             }
+ 63.             local w = min(`w', 34) + 2          // + 2 = room for the cell margins
+ 64.             matrix W[1, `j'] = `w'
+ 65.             local tot = `tot' + `w'
+ 66.             drop L`j'
+ 67.         }
+ 68.         local used 0
+ 69.         forvalues j = 1/`nc' {
+ 70.             if `j' < `nc' {
+ 71.                 matrix W[1, `j'] = max(floor(100 * W[1, `j'] / `tot'), 3)
+ 72.                 local used = `used' + W[1, `j']
+ 73.             }
+ 74.             else matrix W[1, `j'] = 100 - `used'
+ 75.         }
+ 76.     }
+ 77.     putpdf clear
+ 78.     putpdf begin, pagesize(A4) `orient' font("Times New Roman", `fontsize') ///
+>         margin(left, 0.8in) margin(right, 0.8in) margin(top, 0.5in) margin(bottom, 0.5in)
+ 79.     forvalues k = 1/`nk' {
+ 80.         if `k' > 1 putpdf pagebreak
+ 81.         putpdf paragraph, spacing(after, 4pt)
+ 82.         local tt = cond(`k' == 1, `"`title'"', `"`title' (continued)"')
+ 83.         putpdf text (`"`tt'"'), bold font("Times New Roman", `=`fontsize' + 1.5')
+ 84.         if `k' == 1 & `"`subtitle'"' != "" {
+ 85.             putpdf paragraph, spacing(after, 4pt)
+ 86.             putpdf text (`"`subtitle'"')
+ 87.         }
+ 88.         quietly count if chunk == `k'
+ 89.         local nr = r(N) + 1
+ 90.         quietly putpdf table T`k' = data(__c1-__c`nc') if chunk == `k', varnames border(all, nil) width(W)
+ 91.         forvalues j = 1/`nc' {
+ 92.             * header text; "|" starts a new line inside the cell
+.             local rest : word `j' of `header'
+ 93.             local opt ""
+ 94.             while `"`rest'"' != "" {
+ 95.                 gettoken part rest : rest, parse("|")
+ 96.                 if `"`part'"' == "|" {
+ 97.                     putpdf table T`k'(1, `j') = (""), linebreak append
+ 98.                     continue
+ 99.                 }
+100.                 putpdf table T`k'(1, `j') = (`"`part'"'), valign(bottom) `opt'
+101.                 local opt "append"
+102.             }
+103.             local al = cond(`: list j in right', "right", "left")
+104.             putpdf table T`k'(., `j'), halign(`al') margin(top, 0pt) margin(bottom, 0pt)
+105.         }
+106.         putpdf table T`k'(1, .), border(top, single, black) border(bottom, single, black)
+107.         putpdf table T`k'(`nr', .), border(bottom, single, black)
+108.         foreach r of local rules {
+109.             quietly summarize row if chunk == `k', meanonly
+110.             if `r' >= r(min) & `r' < r(max) {
+111.                 putpdf table T`k'(`=`r' - r(min) + 2', .), border(bottom, single, "A6A6A6")
+112.             }
+113.         }
+114.     }
+115.     local first 1
+116.     foreach n of local notes {
+117.         putpdf paragraph, spacing(before, `=cond(`first', 6, 1)'pt)
+118.         putpdf text (`"`n'"'), font("Times New Roman", `=`fontsize' - 0.5')
+119.         local first 0
+120.     }
+121.     putpdf save `"`using'"', replace
+122.     restore
+123. end
+
+. * --- end of PART 1 ------------------------------------------------------------
+. 
+. * --- PART 2: the rows of this exhibit (the only part that changes per file) ---
+. * Source: `all' = the table just written to the CSV (same numbers as drawn).
+. * One row per drawn number, in chart order: panel A row by row (start years top
+. * to bottom, then All starters and Previous rule), left to right; then panel B,
+. * series by series, left to right. Cells with no annual file are included.
+. * -- panel A: the grid of counts --
+. use `all', clear
+
+. keep if (section == "cell" & rule == "A") | section == "estimate"
+(127 observations deleted)
+
+. gen byte ord = cond(section == "cell", 1, cond(rule == "A", 2, 3))
+
+. sort ord cohort_year event_time
+
+. gen str40 t_panel = "A. Starters"
+
+. gen str60 t_row = "Started " + string(cohort_year) if ord == 1
+(26 missing values generated)
+
+. replace t_row = "All starters" if ord == 2
+(13 real changes made)
+
+. replace t_row = "Previous rule" if ord == 3
+(13 real changes made)
+
+. gen str16 t_pos = cond(event_time > 0, "+", "") + string(event_time)
+
+. replace t_pos = "≤ `blo'"  if event_time == `blo'
+(8 real changes made)
+
+. replace t_pos = "≥ +`bhi'" if event_time == `bhi'
+(7 real changes made)
+
+. gen str8  t_cal = string(calendar_year) if !missing(calendar_year)
+(37 missing values generated)
+
+. gen str12 t_v   = string(firms, "%9.0fc") if !missing(firms)        // as the chart label
+(10 missing values generated)
+
+. gen str12 t_fy  = string(firm_years, "%12.0fc") if !missing(firms)
+(10 missing values generated)
+
+. gen str90 t_status = "drawn"
+
+. replace t_status = "drawn: grouped end" if inlist(event_time, `blo', `bhi')
+(15 real changes made)
+
+. replace t_status = subinstr(t_status, "drawn", "drawn gray", 1) if ord == 3
+(13 real changes made)
+
+. replace t_status = "not drawn: no annual file" if missing(firms) & calendar_year == 2016
+(10 real changes made)
+
+. assert !missing(firms) if !(calendar_year == 2016 & section == "cell")
+
+. local nA = _N
+
+. * thin rules under each start year's last cell and under the two summary rows
+. local rl ""
+
+. forvalues i = 1/`=_N - 1' {
+  2.     if t_row[`i'] != t_row[`i' + 1] local rl `rl' `i'
+  3. }
+
+. keep t_*
+
+. tempfile ctA
+
+. save `ctA'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_17551.00000f saved as .dta format
+
+. * -- panel B: comparison firms by calendar year (three parts of each bar) --
+. use `all', clear
+
+. keep if section == "comparison"
+(247 observations deleted)
+
+. sort calendar_year
+
+. local nyB = _N
+
+. expand 3
+(26 observations created)
+
+. bysort calendar_year: gen byte series = _n       // 1 = dark part, 2 = white part, 3 = total (on top)
+
+. sort series calendar_year
+
+. gen str40 t_panel = "B. Comparison"
+
+. gen str60 t_row = cond(series == 1, "Dark: not exporting", ///
+>                   cond(series == 2, "White: not recorded", "All comparison firms"))
+
+. gen str16 t_pos = ""
+(39 missing values generated)
+
+. gen str8  t_cal = string(calendar_year)
+
+. gen double v = cond(series == 1, seen_not_exporting, cond(series == 2, firms - seen_not_exporting, firms))
+(3 missing values generated)
+
+. gen str12 t_v  = string(v, "%9.0fc") if !missing(v)
+(3 missing values generated)
+
+. gen str12 t_fy = ""
+(39 missing values generated)
+
+. gen str90 t_status = cond(series == 1, "drawn: inside the bar", cond(series == 2, "drawn: no number", ///
+>                      "drawn: on top of the bar"))
+
+. replace t_status = "not drawn: 0 (see notes)" if series == 1 & v == 0
+(1 real change made)
+
+. replace t_status = "not drawn: no annual file" if calendar_year == 2016
+(3 real changes made)
+
+. assert missing(v) == (calendar_year == 2016)
+
+. keep t_*
+
+. local nB = _N
+
+. append using `ctA'
+
+. gen byte pp = cond(t_panel == "A. Starters", 1, 2)
+
+. gen long n0 = _n
+
+. sort pp n0                                          // panel A first, then panel B, each in its order
+
+. drop pp n0
+
+. assert _N == `nA' + 3 * `nyB'
+
+. * chart's notes word for word; then how to read the table
+. local ntext "Notes: Start year = first year a firm is seen exporting after a year seen not exporting. Later charts"
+
+. local ntext "`ntext' compare each starter's energy use and CO2 with its year before the start (-1), minus the change i
+> n panel B's"
+
+. local ntext "`ntext' firms. Between the dashed lines each column has `minfirms'+ firms with data, from starters before
+>  and after 2016;"
+
+. local ntext "`ntext' further out only early or only late starters are seen, so those years are pooled. Previous rule (
+> last row,"
+
+. local ntext "`ntext' previous paper): no exports in the two years before, exports again the year after; it never reach
+> es `minfirms'. The"
+
+. local ntext "`ntext' 2022 file records direct exporters only, hence no dark bar. `n6' of `n5' comparison firms have 2+
+>  years"
+
+. local ntext "`ntext' with data (needed to see a change). Firm links are fictional: this tests the method, not a findin
+> g."
+
+. local tnote "Table: every number of Figure R2-02 in chart order, with the cells and years not drawn and why. Panel A: 
+> firms seen"
+
+. local tnote "`tnote' (the number in each cell) and all their rows (firm-years; in a grouped end a firm counts once but
+>  all its years"
+
+. local tnote "`tnote' are rows); gray = the previous rule's row; no annual file = gray cell or band. Panel B: the dark 
+> and white parts of each bar and the total on top; 2022 has no dark part because that file records direct exporters onl
+> y. Full precision, the firms with usable data and the"
+
+. local tnote "`tnote' previous rule by start year: tables/02_event_time_support.csv."
+
+. local rB1 = `nA' + `nyB'
+
+. local rB2 = `nA' + 2 * `nyB'
+
+. ctable_pdf t_panel t_row t_pos t_cal t_v t_fy t_status using "tables/02_event_time_support_table.pdf", ///
+>     title("Table R2-02. Firms seen before and after they start exporting: every plotted point") ///
+>     header("Panel" "Row / series" "Years since|the start" "Calendar|year" "Firms|(drawn)" "Firm-years" "Status") ///
+>     right(3 4 5 6) norepeat(1 2) rules(`rl' `nA' `rB1' `rB2') portrait fontsize(9) perpage(46) ///
+>     notes("`ntext'" "`tnote'" "`srcnote'" "`devnote'")
+successfully created "/Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r2-internationalisatio
+> n-energy-efficiency/tables/02_event_time_support_table.pdf"
+
+. display "table -> tables/02_event_time_support_table.pdf"
+table -> tables/02_event_time_support_table.pdf
+
+. * --- end of PART 2 ------------------------------------------------------------
+. 
+. 
+. timer off 1
+
+. quietly timer list 1
+
+. local elapsed = strtrim(string(r(t1), "%9.1f"))
+
+. display "FINISHED: figure -> figures/02_event_time_support.png (elapsed `elapsed' s)"
+FINISHED: figure -> figures/02_event_time_support.png (elapsed 4.8 s)
+
+. quietly log close

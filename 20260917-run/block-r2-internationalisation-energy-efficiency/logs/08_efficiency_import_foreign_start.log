@@ -1,0 +1,1706 @@
+------------------------------------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r2-internationalisation-energy-
+> efficiency/logs/08_efficiency_import_foreign_start.log
+  log type:  text
+ opened on:  28 Sep 2026, 17:22:24
+
+. timer clear 1
+
+. timer on 1
+
+. display _newline "=== [`exhibit'] STARTING: value added per GJ before and after firms start importing or get a foreign
+>  owner ==="
+
+=== [R2-08] STARTING: value added per GJ before and after firms start importing or get a foreign owner ===
+
+. 
+. * ---- chart style (identical block in every file) ----
+. set scheme s1mono
+
+. capture graph set window fontface "Times New Roman"   // GUI Stata; console Stata keeps its default font
+
+. * Note: this changes your Stata graph font permanently; undo with: graph set window fontface default
+. local devnote "Development data — obscured values, fictional firm panel. Not BPS findings."
+
+. local srcnote "Source: SI/IBS annual files 2010–2022 (masked), analysis_ready_data.dta."
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 1/8: load import, foreign-ownership and export status, energy, CO2 and value added; re-check the known p
+> roblems"
+Step 1/8: load import, foreign-ownership and export status, energy, CO2 and value added; re-check the known problems
+
+. *---------------------------------------------------------------------------
+. * import_flag         = imports reported above zero (1 yes, 0 no; never missing)
+. * fdi_10_flag         = foreign ownership of 10% or more (the previous paper's rule)
+. * export_flag         = any export activity (used only to find doubtful energy records)
+. * total_gj_s1         = energy use in GJ (nine fuels + purchased electricity)
+. * co2_total_s1        = CO2 tonnes from the same fuels and electricity
+. * value_added_nominal = value added, current prices (masked money unit)
+. use firm_id year import_flag fdi_10_flag export_flag total_gj_s1 co2_total_s1 value_added_nominal using "$DATA", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. isid firm_id year
+
+. assert year != 2016
+
+. sort firm_id year
+
+. tsset firm_id year                 // L. and F. below mean exact calendar years
+
+Panel variable: firm_id (unbalanced)
+ Time variable: year, 2010 to 2022, but with gaps
+         Delta: 1 unit
+
+. * The calendar year with no annual file (found in the data, never typed).
+. quietly summarize year
+
+. local gapyr ""
+
+. forvalues t = `r(min)'/`r(max)' {
+  2.     quietly count if year == `t'
+  3.     if r(N) == 0 local gapyr `gapyr' `t'
+  4. }
+
+. local gap1 : word 1 of `gapyr'
+
+. if "`gap1'" == "" local gap1 = 9999
+
+. display "   calendar years with no file: `gapyr'"
+   calendar years with no file: 2016
+
+. * Shares of firms importing / foreign-owned each year (for the guards, the notes and the CSV).
+. preserve
+
+. collapse (mean) sh_imp = import_flag sh_fdi = fdi_10_flag (count) file_rows = firm_id, by(year)
+
+. tempfile shares
+
+. save `shares'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_35384.000002 saved as .dta format
+
+. * Guard 1: the import share in `imp_bad' should be far above the file before it.
+. quietly summarize year if year < `imp_bad'
+
+. local imp_prev = r(max)
+
+. quietly summarize sh_imp if year == `imp_prev'
+
+. local shi0 = r(mean)
+
+. quietly summarize sh_imp if year == `imp_bad'
+
+. local shi1 = r(mean)
+
+. if `shi1' < 1.5 * `shi0' display "   WARNING: import share `imp_prev' -> `imp_bad' does not jump (" %4.2f `shi0' " -> 
+> " %4.2f `shi1' ") - re-check imp_bad at the top"
+
+. else display "   import share `imp_prev' -> `imp_bad': " %4.2f `shi0' " -> " %4.2f `shi1' " (starts dated `imp_bad' le
+> ft out)"
+   import share 2015 -> 2017: 0.26 -> 0.56 (starts dated 2017 left out)
+
+. * Guard 2: the foreign-owned share in `fdi_bad' should be far above the other years' middle.
+. quietly summarize sh_fdi if year != `fdi_bad', detail
+
+. local shf0 = r(p50)
+
+. quietly summarize sh_fdi if year == `fdi_bad'
+
+. local shf1 = r(mean)
+
+. if `shf1' < 2 * `shf0' display "   WARNING: foreign-owned share in `fdi_bad' looks normal (" %4.2f `shf1' " vs " %4.2f
+>  `shf0' ") - re-check fdi_bad at the top"
+
+. else display "   foreign-owned share: `fdi_bad' " %4.2f `shf1' " vs middle of other years " %4.2f `shf0' " (`fdi_bad' 
+> answers treated as unknown)"
+   foreign-owned share: 2020 0.47 vs middle of other years 0.09 (2020 answers treated as unknown)
+
+. restore
+
+. * Usable row = energy, CO2 and value added all above zero, so every log exists
+. * (as in R2-03 to R2-07). A zero is left out, not read as "none".
+. gen byte usable = total_gj_s1 > 0 & co2_total_s1 > 0 & value_added_nominal > 0 ///
+>     & !missing(total_gj_s1, co2_total_s1, value_added_nominal)
+
+. * Doubtful energy records (R2-06's definition): importers whose export status is
+. * unknown, in the years listed at the top. Left out of the main version.
+. local dlist = subinstr(strtrim(itrim("`doubt_yrs'")), " ", ",", .)
+
+. gen byte doubt = missing(export_flag) & import_flag == 1 & inlist(year, `dlist')
+
+. * Guard 3 (R2-06's re-check): in each listed year the doubtful rows' middle
+. * energy per unit of value added should be far from the other rows' (above
+. * double or below half). If not, the year list needs a new look.
+. gen double gjva = total_gj_s1 / value_added_nominal if usable
+(514 missing values generated)
+
+. foreach yy of local doubt_yrs {
+  2.     quietly summarize gjva if doubt & year == `yy', detail
+  3.     local md = r(p50)
+  4.     local nd = r(N)
+  5.     quietly summarize gjva if !doubt & year == `yy', detail
+  6.     local ratio = `md' / r(p50)
+  7.     if `nd' == 0 display "   WARNING: no doubtful rows in `yy' - re-check doubt_yrs at the top"
+  8.     else if inrange(`ratio', 0.5, 2) display "   WARNING: in `yy' doubtful rows look normal (median ratio " %4.2f `
+> ratio' ") - re-check doubt_yrs"
+  9.     else display "   `yy': " %5.0fc `nd' " doubtful rows; their median energy per unit of value added = " %5.2f `ra
+> tio' " x the other rows'"
+ 10. }
+   2017: 1,688 doubtful rows; their median energy per unit of value added = 13.15 x the other rows'
+   2019: 1,320 doubtful rows; their median energy per unit of value added =  0.13 x the other rows'
+   2020: 1,121 doubtful rows; their median energy per unit of value added =  0.16 x the other rows'
+   2021: 1,298 doubtful rows; their median energy per unit of value added =  0.16 x the other rows'
+   2022:   972 doubtful rows; their median energy per unit of value added =  0.22 x the other rows'
+
+. drop gjva
+
+. * Foreign ownership with the `fdi_bad' answers treated as unknown (main version).
+. gen byte fdi_fixed = fdi_10_flag
+(311 missing values generated)
+
+. replace fdi_fixed = . if year == `fdi_bad'
+(2,936 real changes made, 2,936 to missing)
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 2/8: date each firm's start (rule A, same code as every R2 file) for importing and foreign ownership"
+Step 2/8: date each firm's start (rule A, same code as every R2 file) for importing and foreign ownership
+
+. *---------------------------------------------------------------------------
+. * Missing status is unknown, never read as "not participating".
+. * Rule A, simple first entry: the first year the firm is seen participating,
+. *   if it was seen NOT participating in some earlier year. Firms participating
+. *   when first seen cannot be dated and are left out.
+. * Comparison group: firms never seen participating.
+. * Row keys: 9001 never seen participating · 9002 already participating when first
+. * seen (excluded) · 9003 status never observed (excluded).
+. * Three start events: imp = importing; fdi = foreign owner 10%+ with the
+. * `fdi_bad' answers unknown (main); fdiraw = the same, answers as filed.
+. * (The previous paper's stricter rule B is counted in R2-01's table only.)
+. foreach m in imp fdi fdiraw {
+  2.     if "`m'" == "imp"    local x import_flag
+  3.     if "`m'" == "fdi"    local x fdi_fixed
+  4.     if "`m'" == "fdiraw" local x fdi_10_flag
+  5.     * --- Rule A ---
+.     by firm_id: egen int first_yes = min(cond(`x' == 1, year, .))
+  6.     by firm_id: egen int first_no  = min(cond(`x' == 0, year, .))
+  7.     by firm_id: egen int n_known   = total(!missing(`x'))
+  8.     gen int keyA = .
+  9.     replace keyA = 9003 if n_known == 0                                     // status never observed
+ 10.     replace keyA = 9001 if n_known > 0 & missing(first_yes)                 // never seen participating
+ 11.     replace keyA = 9002 if n_known > 0 & !missing(first_yes) & (missing(first_no) | first_no > first_yes)
+ 12.     replace keyA = first_yes if n_known > 0 & !missing(first_yes) & !missing(first_no) & first_no < first_yes
+ 13.     assert !missing(keyA)
+ 14.     gen int gA = keyA if keyA < 9000                                        // start year, rule A
+ 15.     by firm_id: egen int last_no_before = max(cond(`x' == 0 & year < gA, year, .))
+ 16.     gen byte exactA = !missing(gA) & last_no_before == gA - 1               // seen "no" the year just before
+ 17.     rename (keyA gA exactA) (key_`m' g_`m' exact_`m')
+ 18.     drop first_yes first_no n_known last_no_before
+ 19. }
+(10,740 missing values generated)
+(4,337 missing values generated)
+(33,049 missing values generated)
+(0 real changes made)
+(10,740 real changes made)
+(9,476 real changes made)
+(12,833 real changes made)
+(20,216 missing values generated)
+(4,337 missing values generated)
+(24,333 missing values generated)
+(1,356 missing values generated)
+(33,049 missing values generated)
+(398 real changes made)
+(23,935 real changes made)
+(3,099 real changes made)
+(5,617 real changes made)
+(27,432 missing values generated)
+(1,356 missing values generated)
+(17,404 missing values generated)
+(1,095 missing values generated)
+(33,049 missing values generated)
+(32 real changes made)
+(17,372 real changes made)
+(3,668 real changes made)
+(11,977 real changes made)
+(21,072 missing values generated)
+(1,095 missing values generated)
+
+. * Firms moved by the repairs (CSV and log): import starts dated `imp_bad';
+. * foreign-owner starts dated `fdi_bad' as filed and where they go once that
+. * year's answers are unknown.
+. egen byte ftag = tag(firm_id)
+
+. quietly count if ftag & g_imp == `imp_bad'
+
+. local n_impbad = r(N)
+
+. quietly count if ftag & g_fdiraw == `fdi_bad'
+
+. local n_fdibad = r(N)
+
+. quietly count if ftag & g_fdiraw == `fdi_bad' & key_fdi == 9001
+
+. local n_fdibad_never = r(N)
+
+. quietly count if ftag & g_fdiraw == `fdi_bad' & !missing(g_fdi)
+
+. local n_fdibad_redated = r(N)
+
+. display "   import starts dated `imp_bad' (left out): `n_impbad'; foreign-owner starts dated `fdi_bad' as filed: `n_fd
+> ibad', of which `n_fdibad_never' become never foreign-owned and `n_fdibad_redated' get a later start year"
+   import starts dated 2017 (left out): 459; foreign-owner starts dated 2020 as filed: 854, of which 798 become never fo
+> reign-owned and 56 get a later start year
+
+. drop ftag
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 3/8: the year window (R2-02's rule) for each main sample; both panels use the narrower one"
+Step 3/8: the year window (R2-02's rule) for each main sample; both panels use the narrower one
+
+. *---------------------------------------------------------------------------
+. * Main samples: importing = starters except those dated `imp_bad', plus firms never
+. * seen importing; foreign owner = starters (`fdi_bad' answers unknown) plus firms
+. * never seen foreign-owned. Both: usable rows, doubtful energy records left out.
+. gen byte main_imp = usable & !doubt & ((!missing(g_imp) & g_imp != `imp_bad') | key_imp == 9001)
+
+. gen byte main_fdi = usable & !doubt & (!missing(g_fdi) | key_fdi == 9001)
+
+. tempfile fy est sums
+
+. save `fy'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_35384.000003 saved as .dta format
+
+. * A year since the start passes when `minfirms'+ starters have a usable row in it,
+. * from starts both before and after the missing file; take the widest window
+. * -K..+K in which every year passes (further out = grouped ends).
+. local K 99
+
+. foreach m in imp fdi {
+  2.     use `fy', clear
+  3.     keep if main_`m' & !missing(g_`m')
+  4.     gen int k = year - g_`m'
+  5.     gen byte early = g_`m' < `gap1'
+  6.     gen byte late  = g_`m' > `gap1'
+  7.     collapse (count) n = firm_id (max) early late, by(k)
+  8.     gen byte passes = n >= `minfirms' & early & late
+  9.     assert passes if inlist(k, -1, 0)
+ 10.     local K_`m' 0
+ 11.     local go 1
+ 12.     while `go' {
+ 13.         local kk = `K_`m'' + 1
+ 14.         quietly count if passes & inlist(k, -`kk', `kk')
+ 15.         if r(N) == 2 local K_`m' = `kk'
+ 16.         else local go 0
+ 17.     }
+ 18.     local K = min(`K', `K_`m'')
+ 19.     display "   `m': R2-02's rule allows -`K_`m'' to +`K_`m''"
+ 20. }
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(25,563 observations deleted)
+   imp: R2-02's rule allows -4 to +4
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(28,869 observations deleted)
+   fdi: R2-02's rule allows -5 to +5
+
+. local wlo = -`K'
+
+. local whi = `K'
+
+. local nout = `whi' + 1                                  // first grouped year on each side
+
+. display "   window used in both panels: each year from `wlo' to +`whi' on its own; `nout'+ years before or after group
+> ed"
+   window used in both panels: each year from -4 to +4 on its own; 5+ years before or after grouped
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 4/8: estimate each panel and version (firm and year fixed effects, clustered by firm)"
+Step 4/8: estimate each panel and version (firm and year fixed effects, clustered by firm)
+
+. *---------------------------------------------------------------------------
+. * Log outcome on one marker per year since the start (-1 = the year before the
+. * start = reference, 0 by definition; grouped ends), removing each firm's own
+. * average (firm fixed effects) and each year's average (year fixed effects).
+. * A firm with one usable year cannot be compared with itself; reghdfe drops it.
+. * Coefficient b = log difference from the starters' year before the start, net
+. * of the comparison firms' change; drawn as 100 x (exp(b) - 1) = % difference.
+. * Versions (the figure draws 1 in black and 2 in hollow gray; the rest are in the table):
+. *   1 main        = repaired starts (above), doubtful energy records left out
+. *   2 as_filed    = every start and every record as filed
+. *   3 keep_doubt  = repaired starts, doubtful energy records kept
+. *   4 before_gap  = repaired starts dated before the missing file, years before it only
+. *                   (no known recording problem in these years)
+. *   5 sun_abraham = version 1 with start years kept apart (Sun-Abraham,
+. *                   eventstudyinteract), never-starters as the only comparison
+. * Outcomes: 1 ln(value added / GJ) (drawn); 2 ln(value added / CO2); 3 ln GJ;
+. * 4 ln value added (outcome 1 = 4 minus 3, checked). Outcomes 2-4 for version 1 only.
+. local ok_sa 1
+
+. foreach c in eventstudyinteract avar {
+  2.     capture which `c'
+  3.     if _rc local ok_sa 0
+  4. }
+
+. if !`ok_sa' display "   NOTE: eventstudyinteract/avar not installed - the Sun-Abraham version gets an 'unavailable' ro
+> w"
+
+. tempname h s
+
+. postfile `h' str6 panel byte(version outcome) str8 term int event_time byte(grouped reference) ///
+>     double(b se lo hi p) long(firms rows firms_early firms_late) using `est'
+
+. postfile `s' str6 panel byte(version outcome) long(n_rows n_firms n_starters n_comparison n_one_year_dropped) ///
+>     double(before_p avg_b avg_se avg_lo avg_hi) str80 status using `sums'
+
+. foreach m in imp fdi {
+  2.     forvalues v = 1/5 {
+  3.         use `fy', clear
+  4.         * which start dating and which rows
+.         local gv "g_`m'"
+  5.         local kv "key_`m'"
+  6.         if `v' == 2 & "`m'" == "fdi" {
+  7.             local gv "g_fdiraw"
+  8.             local kv "key_fdiraw"
+  9.         }
+ 10.         if `v' == 2      keep if usable & (!missing(`gv') | `kv' == 9001)
+ 11.         else if `v' == 3 keep if usable & (!missing(`gv') | `kv' == 9001) & !(`gv' == `imp_bad' & "`m'" == "imp")
+ 12.         else             keep if main_`m'
+ 13.         if `v' == 4      keep if year < `gap1' & (missing(`gv') | `gv' < `gap1')
+ 14.         gen int gA = `gv'
+ 15.         gen byte never = missing(gA)
+ 16.         assert `kv' == 9001 if never                        // comparison = never seen participating only
+ 17.         gen int kA = year - gA
+ 18.         * Sun-Abraham (version 5): a start year whose year before has no file (the
+.         * year after the missing file) has no reference year: the package would
+.         * silently measure those starters against their grouped last years instead
+.         * (it drops one of their markers). Leave such start years out (as R2-10 does).
+.         if `v' == 5 {
+ 19.             bysort gA: egen byte has_ref = max(kA == -1)
+ 20.             egen byte ft0 = tag(firm_id) if !never & !has_ref
+ 21.             quietly count if ft0 == 1
+ 22.             local sa_out_`m' = r(N)
+ 23.             drop if !never & !has_ref
+ 24.             drop ft0 has_ref
+ 25.             sort firm_id year
+ 26.         }
+ 27.         gen double y1 = ln(value_added_nominal / total_gj_s1)
+ 28.         gen double y2 = ln(value_added_nominal / co2_total_s1)
+ 29.         gen double y3 = ln(total_gj_s1)
+ 30.         gen double y4 = ln(value_added_nominal)
+ 31.         * markers; a marker with no starter row in this sample is left out
+.         gen byte ev_lo = !missing(kA) & kA < `wlo'
+ 32.         local cand "ev_lo"
+ 33.         forvalues k = `wlo'/`whi' {
+ 34.             if `k' == -1 continue
+ 35.             local nm = cond(`k' < 0, "ev_m" + string(-`k'), "ev_p" + string(`k'))
+ 36.             gen byte `nm' = (kA == `k')
+ 37.             local cand `cand' `nm'
+ 38.         }
+ 39.         gen byte ev_hi = !missing(kA) & kA > `whi'
+ 40.         local cand `cand' ev_hi
+ 41.         gen byte ev_ref = (kA == -1)
+ 42.         local terms ""
+ 43.         local pre ""
+ 44.         local post ""
+ 45.         foreach t of local cand {
+ 46.             quietly count if `t'
+ 47.             if r(N) == 0 continue
+ 48.             local terms `terms' `t'
+ 49.             if "`t'" == "ev_lo" | substr("`t'", 4, 1) == "m" local pre `pre' `t'
+ 50.             if "`t'" != "ev_hi" & "`t'" != "ev_lo" & substr("`t'", 4, 1) == "p" local post `post' `t'
+ 51.         }
+ 52.         local lc = subinstr("`post'", " ", " + ", .)        // years 0..+`whi', for the average
+ 53.         local np : word count `post'
+ 54.         local nout_o = cond(`v' == 1, 4, 1)
+ 55.         forvalues o = 1/`nout_o' {
+ 56.             if `v' == 5 & !`ok_sa' {
+ 57.                 post `s' ("`m'") (`v') (`o') (.) (.) (.) (.) (.) (.) (.) (.) (.) (.) ("unavailable: eventstudyinter
+> act/avar not installed")
+ 58.                 continue
+ 59.             }
+ 60.             if `v' == 5 {
+ 61.                 capture quietly eventstudyinteract y`o' `terms', cohort(gA) control_cohort(never) ///
+>                     absorb(i.firm_id i.year) vce(cluster firm_id)
+ 62.                 if _rc {
+ 63.                     post `s' ("`m'") (`v') (`o') (.) (.) (.) (.) (.) (.) (.) (.) (.) (.) ("failed: eventstudyintera
+> ct error r(`=_rc')")
+ 64.                     continue
+ 65.                 }
+ 66.                 local df = e(df_r)
+ 67.                 local N  = e(N)
+ 68.                 capture drop es
+ 69.                 gen byte es = e(sample)
+ 70.                 matrix bsa = e(b_iw)
+ 71.                 matrix vsa = e(V_iw)
+ 72.                 ereturn post bsa vsa, dof(`df')
+ 73.                 local sg = .
+ 74.             }
+ 75.             else {
+ 76.                 quietly reghdfe y`o' `terms', absorb(firm_id year) vce(cluster firm_id)
+ 77.                 local df = e(df_r)
+ 78.                 local N  = e(N)
+ 79.                 local sg = e(num_singletons)
+ 80.                 local ab_08 "`e(absvars)'"               // for the regression table (Step 8)
+ 81.                 local cl_08 "`e(clustvar)'"
+ 82.                 capture drop es
+ 83.                 gen byte es = e(sample)
+ 84.                 if `v' == 1 matrix b`m'`o' = e(b)
+ 85.                 if `v' == 1 local terms1 `terms'
+ 86.             }
+ 87.             quietly test `pre'
+ 88.             local bp = r(p)
+ 89.             quietly lincom (`lc') / `np'
+ 90.             local ab = r(estimate)
+ 91.             local ase = r(se)
+ 92.             local alo = r(estimate) - invttail(`df', 0.025) * r(se)
+ 93.             local ahi = r(estimate) + invttail(`df', 0.025) * r(se)
+ 94.             egen byte ftag = tag(firm_id) if es
+ 95.             quietly count if ftag & !never
+ 96.             local st = r(N)
+ 97.             quietly count if ftag & never
+ 98.             local cf = r(N)
+ 99.             quietly count if ftag
+100.             local G = r(N)
+101.             drop ftag
+102.             post `s' ("`m'") (`v') (`o') (`N') (`G') (`st') (`cf') (`sg') (`bp') (`ab') (`ase') (`alo') (`ahi') ("o
+> k")
+103.             foreach t in `cand' ev_ref {
+104.                 if "`t'" == "ev_lo"       local k = `wlo' - 1
+105.                 else if "`t'" == "ev_hi"  local k = `whi' + 1
+106.                 else if "`t'" == "ev_ref" local k = -1
+107.                 else local k = cond(substr("`t'", 4, 1) == "m", -1, 1) * real(substr("`t'", 5, .))
+108.                 egen byte ft = tag(firm_id) if es & `t'
+109.                 quietly count if ft == 1
+110.                 local nf = r(N)
+111.                 quietly count if es & `t'
+112.                 local nr = r(N)
+113.                 quietly count if ft == 1 & gA < `gap1'
+114.                 local ne = r(N)
+115.                 quietly count if ft == 1 & gA > `gap1'
+116.                 local nl = r(N)
+117.                 drop ft
+118.                 local grp = inlist("`t'", "ev_lo", "ev_hi")
+119.                 if "`t'" == "ev_ref" {
+120.                     post `h' ("`m'") (`v') (`o') ("`t'") (`k') (0) (1) (0) (.) (0) (0) (.) (`nf') (`nr') (`ne') (`n
+> l')
+121.                 }
+122.                 else if !`: list t in terms' | `nr' == 0 {
+123.                     post `h' ("`m'") (`v') (`o') ("`t'") (`k') (`grp') (0) (.) (.) (.) (.) (.) (0) (0) (0) (0)
+124.                 }
+125.                 else {
+126.                     local b  = _b[`t']
+127.                     local se = _se[`t']
+128.                     post `h' ("`m'") (`v') (`o') ("`t'") (`k') (`grp') (0) (`b') (`se') ///
+>                         (`b' - invttail(`df', 0.025) * `se') (`b' + invttail(`df', 0.025) * `se') ///
+>                         (2 * ttail(`df', abs(`b' / `se'))) (`nf') (`nr') (`ne') (`nl')
+129.                 }
+130.             }
+131.         }
+132.         display "   `m' version `v': done"
+133.     }
+134.     * Identity check: value added per GJ = value added minus energy use (in logs), marker by marker.
+.     foreach t of local terms1 {
+135.         assert reldif(b`m'1[1, "`t'"], b`m'4[1, "`t'"] - b`m'3[1, "`t'"]) < 1e-6 | abs(b`m'1[1, "`t'"]) < 1e-12
+136.     }
+137. }
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(15,114 observations deleted)
+(10,449 missing values generated)
+(10,449 missing values generated)
+   imp version 1: done
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(9,899 observations deleted)
+(10,449 missing values generated)
+(10,449 missing values generated)
+   imp version 2: done
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(13,402 observations deleted)
+(10,449 missing values generated)
+(10,449 missing values generated)
+   imp version 3: done
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(15,114 observations deleted)
+(8,851 observations deleted)
+(5,431 missing values generated)
+(5,431 missing values generated)
+   imp version 4: done
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(15,114 observations deleted)
+(10,449 missing values generated)
+(10,449 missing values generated)
+(0 observations deleted)
+   imp version 5: done
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(9,472 observations deleted)
+(19,397 missing values generated)
+(19,397 missing values generated)
+   fdi version 1: done
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(4,116 observations deleted)
+(17,077 missing values generated)
+(17,077 missing values generated)
+   fdi version 2: done
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(3,915 observations deleted)
+(23,572 missing values generated)
+(23,572 missing values generated)
+   fdi version 3: done
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(9,472 observations deleted)
+(11,499 observations deleted)
+(10,440 missing values generated)
+(10,440 missing values generated)
+   fdi version 4: done
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(9,472 observations deleted)
+(19,397 missing values generated)
+(19,397 missing values generated)
+(426 observations deleted)
+   fdi version 5: done
+
+. postclose `h'
+
+. postclose `s'
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 5/8: percentages, labels and the CSV (numbers written before drawing)"
+Step 5/8: percentages, labels and the CSV (numbers written before drawing)
+
+. *---------------------------------------------------------------------------
+. use `est', clear
+
+. merge m:1 panel version outcome using `sums', nogenerate
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                               176  
+    -----------------------------------------
+
+. gen str80 panel_label = cond(panel == "imp", "Starting to import", "Getting a foreign owner (10%+ of capital)")
+
+. gen str90 version_label = ""
+(176 missing values generated)
+
+. replace version_label = "Main: repaired starts, doubtful energy records left out (drawn black)" if version == 1
+(88 real changes made)
+
+. replace version_label = "Every start and record as filed (drawn hollow gray)"                   if version == 2
+(22 real changes made)
+
+. replace version_label = "Repaired starts, doubtful energy records kept"                          if version == 3
+(22 real changes made)
+
+. replace version_label = "Repaired starts dated before the missing file, years before it only"   if version == 4
+(22 real changes made)
+
+. replace version_label = "Main sample, start years kept apart (Sun-Abraham, eventstudyinteract)" if version == 5
+(22 real changes made)
+
+. gen str40 outcome_label = ""
+(176 missing values generated)
+
+. replace outcome_label = "ln(value added / GJ)"    if outcome == 1
+(110 real changes made)
+
+. replace outcome_label = "ln(value added / CO2)"   if outcome == 2
+(22 real changes made)
+
+. replace outcome_label = "ln(energy use, GJ)"      if outcome == 3
+(22 real changes made)
+
+. replace outcome_label = "ln(value added)"         if outcome == 4
+(22 real changes made)
+
+. gen str24 column = cond(event_time > 0, "+", "") + string(event_time)
+
+. replace column = "`=`wlo'-1' or earlier (grouped)" if term == "ev_lo"
+(16 real changes made)
+
+. replace column = "+`nout' or later (grouped)"      if term == "ev_hi"
+(16 real changes made)
+
+. replace column = "" if missing(term)
+(0 real changes made)
+
+. * % difference = 100 x (exp(b) - 1); interval ends converted the same way.
+. gen double pct    = 100 * (exp(b)  - 1)
+(2 missing values generated)
+
+. gen double pct_lo = 100 * (exp(lo) - 1)
+(2 missing values generated)
+
+. gen double pct_hi = 100 * (exp(hi) - 1)
+(2 missing values generated)
+
+. * Mirror (outcomes 1-2 only): energy or CO2 per unit of value added = -b.
+. gen double mirror_pct    = 100 * (exp(-b)  - 1) if inlist(outcome, 1, 2)
+(46 missing values generated)
+
+. gen double mirror_pct_lo = 100 * (exp(-hi) - 1) if inlist(outcome, 1, 2)
+(46 missing values generated)
+
+. gen double mirror_pct_hi = 100 * (exp(-lo) - 1) if inlist(outcome, 1, 2)
+(46 missing values generated)
+
+. gen double avg_pct    = 100 * (exp(avg_b)  - 1)
+
+. gen double avg_pct_lo = 100 * (exp(avg_lo) - 1)
+
+. gen double avg_pct_hi = 100 * (exp(avg_hi) - 1)
+
+. gen int window_first = `wlo'
+
+. gen int window_last  = `whi'
+
+. * The repairs, repeated on every row of their panel: starts dated in the problem
+. * year as filed, and where they went (left out / later start year / never).
+. gen long problem_year_starts = cond(panel == "imp", `n_impbad', `n_fdibad')      if inlist(version, 1, 3, 4, 5)
+(22 missing values generated)
+
+. gen long starts_left_out     = cond(panel == "imp", `n_impbad', 0)               if inlist(version, 1, 3, 4, 5)
+(22 missing values generated)
+
+. gen long starts_redated      = cond(panel == "imp", 0, `n_fdibad_redated')       if inlist(version, 1, 3, 4, 5)
+(22 missing values generated)
+
+. gen long moved_to_never      = cond(panel == "imp", 0, `n_fdibad_never')         if inlist(version, 1, 3, 4, 5)
+(22 missing values generated)
+
+. assert problem_year_starts == starts_left_out + starts_redated + moved_to_never if inlist(version, 1, 3, 4, 5)
+
+. gen str90 note = ""
+(176 missing values generated)
+
+. replace note = "Reference year: 0 by definition" if reference == 1
+(16 real changes made)
+
+. replace note = "Grouped end: all years before `wlo'; each firm counted once" if term == "ev_lo"
+(16 real changes made)
+
+. replace note = "Grouped end: all years after +`whi'; each firm counted once" if term == "ev_hi"
+(16 real changes made)
+
+. replace note = "No starter row in this version" if !reference & missing(b) & !missing(term) & status == "ok"
+(2 real changes made)
+
+. * Sun-Abraham rows: how many starters were left out (no file the year before their start).
+. foreach m in imp fdi {
+  2.     replace note = note + cond(note == "", "", "; ") + "Sun-Abraham: `sa_out_`m'' starters with no file the year be
+> fore the start left out" if version == 5 & panel == "`m'" & status == "ok"
+  3. }
+variable note was str90 now str129
+(11 real changes made)
+variable note was str129 now str130
+(11 real changes made)
+
+. gen byte porder = 1 + (panel == "fdi")
+
+. sort porder version outcome event_time
+
+. order panel panel_label version version_label outcome outcome_label status column event_time grouped reference ///
+>       b se lo hi p pct pct_lo pct_hi mirror_pct mirror_pct_lo mirror_pct_hi firms rows firms_early firms_late ///
+>       n_rows n_firms n_starters n_comparison n_one_year_dropped before_p avg_b avg_se avg_pct avg_pct_lo avg_pct_hi //
+> /
+>       window_first window_last problem_year_starts starts_left_out starts_redated moved_to_never note
+
+. drop term porder avg_lo avg_hi
+
+. format b se lo hi avg_b avg_se %9.4f
+
+. format pct pct_lo pct_hi mirror_pct mirror_pct_lo mirror_pct_hi avg_pct avg_pct_lo avg_pct_hi %9.1f
+
+. format p before_p %9.3f
+
+. format firms rows firms_early firms_late n_rows n_firms n_starters n_comparison n_one_year_dropped problem_year_starts
+>  starts_left_out starts_redated moved_to_never %9.0f
+
+. tempfile res
+
+. save `res'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_35384.000006 saved as .dta format
+
+. * The yearly shares behind the repairs go at the end of the same CSV.
+. use `shares', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. gen str6 panel = "share"
+
+. gen str90 note = "Yearly share of firms importing (sh_imp) and with 10%+ foreign ownership (sh_fdi)"
+
+. format sh_imp sh_fdi %9.3f
+
+. append using `res'
+(variable note was str90, now str130 to accommodate using data's values)
+
+. gen byte porder = cond(panel == "imp", 1, cond(panel == "fdi", 2, 3))
+
+. sort porder version outcome event_time year
+
+. drop porder
+
+. order panel panel_label version version_label outcome outcome_label status column event_time grouped reference ///
+>       b se lo hi p pct pct_lo pct_hi mirror_pct mirror_pct_lo mirror_pct_hi firms rows firms_early firms_late ///
+>       n_rows n_firms n_starters n_comparison n_one_year_dropped before_p avg_b avg_se avg_pct avg_pct_lo avg_pct_hi //
+> /
+>       window_first window_last problem_year_starts starts_left_out starts_redated moved_to_never year sh_imp sh_fdi fi
+> le_rows note
+
+. export delimited using "tables/`fname'.csv", datafmt replace
+file tables/08_efficiency_import_foreign_start.csv saved
+
+. tempfile ctsrc                     // same numbers, full precision, for the companion tables (Step 8)
+
+. quietly save `ctsrc'
+
+. list panel version column pct pct_lo pct_hi firms if outcome == 1 & inlist(version, 1, 2), noobs sepby(panel version) 
+> abbreviate(24) clean
+
+    panel   version                    column     pct   pct_lo   pct_hi   firms  
+      imp         1   -5 or earlier (grouped)    -5.9    -26.4     20.4     210  
+      imp         1                        -4    -4.6    -24.5     20.4     284  
+      imp         1                        -3   -15.7    -30.4      2.2     407  
+      imp         1                        -2   -10.9    -22.7      2.7     640  
+      imp         1                        -1     0.0      0.0      0.0    1239  
+      imp         1                         0    28.8     15.2     44.1    1022  
+      imp         1                        +1    15.7      0.9     32.6     750  
+      imp         1                        +2    19.1      0.9     40.7     557  
+      imp         1                        +3    36.7     13.2     65.1     478  
+      imp         1                        +4    45.3     17.3     80.0     338  
+      imp         1     +5 or later (grouped)    55.0     23.3     94.9     380  
+      imp         2   -5 or earlier (grouped)    -7.7    -24.3     12.6     430  
+      imp         2                        -4     3.0    -15.3     25.3     534  
+      imp         2                        -3    -7.5    -21.8      9.4     725  
+      imp         2                        -2     7.6     -6.1     23.4    1094  
+      imp         2                        -1     0.0      0.0      0.0    1324  
+      imp         2                         0     1.7     -9.3     14.0    1796  
+      imp         2                        +1    29.6     14.7     46.5    1315  
+      imp         2                        +2    34.9     15.5     57.6    1099  
+      imp         2                        +3    34.2     12.9     59.6     884  
+      imp         2                        +4    39.7     13.5     72.0     732  
+      imp         2     +5 or later (grouped)    91.9     55.3    137.3     656  
+      fdi         1   -5 or earlier (grouped)   -11.7    -29.5     10.6     202  
+      fdi         1                        -4   -20.3    -37.5      1.6     261  
+      fdi         1                        -3   -16.6    -33.7      4.7     295  
+      fdi         1                        -2   -10.3    -25.6      8.3     364  
+      fdi         1                        -1     0.0      0.0      0.0     571  
+      fdi         1                         0     9.9     -6.4     29.0     634  
+      fdi         1                        +1     5.2    -13.5     28.0     396  
+      fdi         1                        +2     5.8    -17.3     35.3     236  
+      fdi         1                        +3     9.7    -16.0     43.4     228  
+      fdi         1                        +4   -11.2    -33.8     19.1     155  
+      fdi         1     +5 or later (grouped)    10.3    -15.8     44.5     168  
+      fdi         2   -5 or earlier (grouped)   133.4     96.5    177.3     675  
+      fdi         2                        -4    17.2     -8.0     49.2     263  
+      fdi         2                        -3   129.3     87.2    180.9     911  
+      fdi         2                        -2    37.9     21.7     56.2    1154  
+      fdi         2                        -1     0.0      0.0      0.0    1565  
+      fdi         2                         0     1.3     -9.4     13.2    1634  
+      fdi         2                        +1     3.0     -9.4     17.2    1233  
+      fdi         2                        +2    25.8      7.8     46.8    1009  
+      fdi         2                        +3    41.1     10.4     80.4     344  
+      fdi         2                        +4    -5.6    -29.4     26.2     253  
+      fdi         2     +5 or later (grouped)    13.5    -12.2     46.8     208  
+
+. list panel version outcome n_rows n_starters n_comparison before_p avg_pct avg_pct_lo avg_pct_hi status ///
+>     if event_time == 0, noobs sep(0) abbreviate(24) clean
+
+    panel   version   outcome   n_rows   n_starters   n_comparison   before_p   avg_pct   avg_pct_lo   avg_pct_hi   stat
+> us  
+      imp         1         1    14511         1253           1808      0.395      28.7         13.8         45.5       
+> ok  
+      imp         1         2    14511         1253           1808      0.405      24.2         10.0         40.2       
+> ok  
+      imp         1         3    14511         1253           1808      0.424     -12.6        -22.6         -1.4       
+> ok  
+      imp         1         4    14511         1253           1808      0.000      12.4          3.7         21.9       
+> ok  
+      imp         2         1    19810         1805           1808      0.202      27.2         12.6         43.7       
+> ok  
+      imp         3         1    16308         1347           1808      0.253      24.7          9.8         41.5       
+> ok  
+      imp         4         1     7378          773           1054      0.863      32.7         10.4         59.4       
+> ok  
+      imp         5         1    14511         1253           1808      0.157      35.3         19.1         53.8       
+> ok  
+      fdi         1         1    19756          760           3397      0.409       3.6        -12.0         22.0       
+> ok  
+      fdi         1         2    19756          760           3397      0.567       2.9        -12.4         21.0       
+> ok  
+      fdi         1         3    19756          760           3397      0.211      -4.9        -18.6         11.2       
+> ok  
+      fdi         1         4    19756          760           3397      0.001      -1.5        -12.8         11.3       
+> ok  
+      fdi         2         1    24915         1653           3074      0.000      11.8         -2.4         28.1       
+> ok  
+      fdi         3         1    25294          836           4030      0.078      19.1          1.1         40.3       
+> ok  
+      fdi         4         1    10043          368           2073      0.497      -1.0        -21.4         24.6       
+> ok  
+      fdi         5         1    19334          683           3397      0.171       0.3        -15.4         18.9       
+> ok  
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 6/8: numbers for the panels and notes (read from the table, never typed)"
+Step 6/8: numbers for the panels and notes (read from the table, never typed)
+
+. *---------------------------------------------------------------------------
+. drop if panel == "share"
+(12 observations deleted)
+
+. keep if outcome == 1 & inlist(version, 1, 2)
+(132 observations deleted)
+
+. foreach m in imp fdi {
+  2.     quietly summarize avg_pct if panel == "`m'" & version == 1
+  3.     local a = r(mean)
+  4.     quietly summarize avg_pct_lo if panel == "`m'" & version == 1
+  5.     local al = r(mean)
+  6.     quietly summarize avg_pct_hi if panel == "`m'" & version == 1
+  7.     local ah = r(mean)
+  8.     quietly summarize before_p if panel == "`m'" & version == 1
+  9.     local bp = r(mean)
+ 10.     local bps = cond(`bp' < 0.001, "p < 0.001", "p = " + string(`bp', "%5.3f"))
+ 11.     local bpw = cond(`bp' < 0.05, "a clear difference, a warning sign", "no clear difference")
+ 12.     local clr = cond(`al' > 0 | `ah' < 0, "clear", "not clear")
+ 13.     local avg_`m' = "Average of years 0 to +`whi': " + cond(`a' > 0, "+", "") + string(`a', "%9.0f") + "% (95% inte
+> rval " ///
+>         + cond(`al' > 0, "+", "") + string(`al', "%9.0f") + "% to " + cond(`ah' > 0, "+", "") + string(`ah', "%9.0f") 
+> + "%, `clr')." ///
+>         + " Before the start: `bpw' (`bps')."
+ 14.     * The same two numbers for the gray triangles (every start and record as filed).
+.     quietly summarize avg_pct if panel == "`m'" & version == 2
+ 15.     local g = r(mean)
+ 16.     quietly summarize avg_pct_lo if panel == "`m'" & version == 2
+ 17.     local gl = r(mean)
+ 18.     quietly summarize avg_pct_hi if panel == "`m'" & version == 2
+ 19.     local gh = r(mean)
+ 20.     quietly summarize before_p if panel == "`m'" & version == 2
+ 21.     local gp = r(mean)
+ 22.     local gps = cond(`gp' < 0.001, "p < 0.001", "p = " + string(`gp', "%5.3f"))
+ 23.     local gpw = cond(`gp' < 0.05, "a clear difference, a warning sign", "no clear difference")
+ 24.     local gclr = cond(`gl' > 0 | `gh' < 0, "clear", "not clear")
+ 25.     local gry_`m' = "Gray triangles, as filed: average " + cond(`g' > 0, "+", "") + string(`g', "%9.0f") + "% (`gcl
+> r')." ///
+>         + " Before the start: `gpw' (`gps')."
+ 26.     quietly summarize n_starters if panel == "`m'" & version == 1
+ 27.     local ns = string(r(mean), "%9.0fc")
+ 28.     quietly summarize n_comparison if panel == "`m'" & version == 1
+ 29.     local nc = string(r(mean), "%9.0fc")
+ 30.     if "`m'" == "imp" local ptl_`m' "(a) Starting to import: `ns' starters vs `nc' firms never seen importing"
+ 31.     else              local ptl_`m' "(b) Getting a foreign owner (10%+): `ns' starters vs `nc' firms never seen for
+> eign-owned"
+ 32. }
+
+. * Shares quoted in the notes (whole %), from Step 1.
+. local s_i0 = string(100 * `shi0', "%9.0f")
+
+. local s_i1 = string(100 * `shi1', "%9.0f")
+
+. local s_f1 = string(100 * `shf1', "%9.0f")
+
+. local s_f0 = string(100 * `shf0', "%9.0f")
+
+. * The doubtful years as text: runs of consecutive files joined by a dash
+. * (the missing file counts as a break), e.g. "2017 and 2019–2022".
+. local runs ""
+
+. local r0 ""
+
+. local rp ""
+
+. foreach yy of local doubt_yrs {
+  2.     local nxt = `rp' + 1
+  3.     if "`r0'" != "" & `yy' == `nxt' local rp `yy'
+  4.     else {
+  5.         if "`r0'" != "" local runs `"`runs' "`=cond(`rp' > `r0', "`r0'–`rp'", "`r0'")'""'
+  6.         local r0 `yy'
+  7.         local rp `yy'
+  8.     }
+  9. }
+> invalid name
+
+. local runs `"`runs' "`=cond(`rp' > `r0', "`r0'–`rp'", "`r0'")'""'
+
+. local nr : word count `runs'
+
+. local dtxt ""
+
+. forvalues j = 1/`nr' {
+  2.     local rj : word `j' of `runs'
+  3.     local sep = cond(`j' == 1, "", cond(`j' == `nr', " and ", ", "))
+  4.     local dtxt "`dtxt'`sep'`rj'"
+  5. }
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 7/8: two panels on one scale: main (black) and as filed (hollow gray)"
+Step 7/8: two panels on one scale: main (black) and as filed (hollow gray)
+
+. *---------------------------------------------------------------------------
+. gen double x = event_time
+
+. gen double xg = event_time - 0.26                        // as-filed marks sit just left of the black dot
+
+. gen double pr = round(pct)
+
+. gen str6 lbl = cond(pr > 0, "+", "") + string(pr, "%9.0f") if !reference & version == 1 & !missing(pct)
+(24 missing values generated)
+
+. gen str9 reflbl = "reference" if reference & version == 1 & panel == "imp"
+(43 missing values generated)
+
+. gen double refx = x - 0.2 if reference
+(40 missing values generated)
+
+. * y-axis: one scale for both panels (black intervals and gray marks); 0 always inside.
+. quietly summarize pct_lo if version == 1
+
+. local ymin = min(r(min), 0)
+
+. quietly summarize pct_hi if version == 1
+
+. local ymax = max(r(max), 0)
+
+. quietly summarize pct if version == 2
+
+. local ymin = min(`ymin', r(min))
+
+. local ymax = max(`ymax', r(max))
+
+. local rng = `ymax' - `ymin'
+
+. local step = 10^floor(log10(`rng'))
+
+. if `rng'/`step' < 2       local step = `step'/5
+
+. else if `rng'/`step' < 5  local step = `step'/2
+
+. local ybot = `step' * floor(`ymin'/`step')
+
+. local ytop = `step' * ceil(`ymax'/`step')
+
+. if (`ytop' - `ybot')/`step' > 8 {                  // at most 8 steps: fewer, clearer labels
+.     local step = 2 * `step'
+.     local ybot = `step' * floor(`ymin'/`step')
+.     local ytop = `step' * ceil(`ymax'/`step')
+. }
+
+. local yfmt = cond(`step' >= 1, "%9.0f", "%9.1f")
+
+. local span = `ytop' - `ybot'
+
+. local ycnt = `ybot' - 0.13 * `span'                      // row of starter counts, under the lowest gridline
+
+. local yavg = `ytop' + 0.27 * `span'                      // the panel's average, above the highest gridline
+
+. local ygry = `ytop' + 0.13 * `span'                      // the same for the gray triangles, one line lower
+
+. local xl = `wlo' - 2.6                                   // room for the "Starters" row name
+
+. local xr = `whi' + 1.6
+
+. * Starter counts behind each black dot, one row per panel inside the panel.
+. gen str8 nlbl = string(firms, "%9.0fc") if version == 1
+(22 missing values generated)
+
+. gen double ycnt = `ycnt'
+
+. gen double yavg = `yavg'
+
+. gen double ygry = `ygry'
+
+. gen double xlft = `xl'
+
+. gen str12 cname = "Starters" if version == 1 & reference
+(42 missing values generated)
+
+. gen str200 atxt = ""
+(44 missing values generated)
+
+. replace atxt = "`avg_imp'" if version == 1 & reference & panel == "imp"
+(1 real change made)
+
+. replace atxt = "`avg_fdi'" if version == 1 & reference & panel == "fdi"
+(1 real change made)
+
+. gen str200 gtxt = ""
+(44 missing values generated)
+
+. replace gtxt = "`gry_imp'" if version == 1 & reference & panel == "imp"
+(1 real change made)
+
+. replace gtxt = "`gry_fdi'" if version == 1 & reference & panel == "fdi"
+(1 real change made)
+
+. * x labels: years since the start (grouped ends as <= / >=).
+. local xlab ""
+
+. forvalues k = `=`wlo'-1'/`nout' {
+  2.     local s = cond(`k' > 0, "+", "") + string(`k')
+  3.     if `k' < `wlo' local s "≤ `k'"
+  4.     if `k' > `whi' local s "≥ +`k'"
+  5.     local xlab `"`xlab' `k' "`s'""'
+  6. }
+
+. * Reference lines as data, one row per panel: 0 line and start line.
+. gen double zl_y = 0       if reference & version == 1
+(42 missing values generated)
+
+. gen double zl_x0 = `wlo' - 1.6 if reference & version == 1
+(42 missing values generated)
+
+. gen double zl_x1 = `xr'   if reference & version == 1
+(42 missing values generated)
+
+. gen double sl_x = -0.5    if reference & version == 1
+(42 missing values generated)
+
+. gen double sl_y0 = `ybot' if reference & version == 1
+(42 missing values generated)
+
+. gen double sl_y1 = `ytop' if reference & version == 1
+(42 missing values generated)
+
+. gen byte pnum = 1 + (panel == "fdi")
+
+. label define pnl 1 "`ptl_imp'" 2 "`ptl_fdi'"
+
+. label values pnum pnl
+
+. * Notes as one text, wrapped by printed width (R2-05's rule; widths in em).
+. local txt "Notes: Start = first year a firm is seen importing (a), or with a foreign owner holding 10%+ of its capital
+>  (b), after a year"
+
+. local txt "`txt' seen without (it stays a starter if it stops later). Each black dot = starters' change since their ye
+> ar before the start, minus the same years' change among"
+
+. local txt "`txt' firms never seen importing (a) or never foreign-owned (b). Bars = 95% intervals; crossing 0 = no clea
+> r difference."
+
+. local txt "`txt' 'Before the start': p below 0.05 = starters were already changing differently (a warning sign). Black
+>  dots leave out records"
+
+. local txt "`txt' in doubt; gray triangles keep them: import starts dated `imp_bad' (importers rise from `s_i0'% of fir
+> ms in `imp_prev' to `s_i1'% in"
+
+. local txt "`txt' `imp_bad', likely a recording change); all `fdi_bad' foreign-ownership answers (`s_f1'% of firms, abo
+> ut `s_f0'% in other years);"
+
+. local txt "`txt' importers with unknown export status in `dtxt' (energy records jump or drop far from other years). Va
+> lue added ="
+
+. local txt "`txt' output value minus materials, energy and services bought (current prices); GJ = gigajoules. Timing, n
+> ot proof of cause;"
+
+. local txt "`txt' firm links are fictional: a test of the method only."
+
+. local maxw 53.5                                         // widest note line that fits the 9-inch PDF
+
+. local nl 0
+
+. local line ""
+
+. local lw 0
+
+. foreach w of local txt {
+  2.     local n  = ustrlen(`"`w'"')
+  3.     local na = `n' - ustrlen(ustrregexra(`"`w'"', "[ijltfr.,;:'()\-]", ""))
+  4.     local wi = `n' - ustrlen(ustrregexra(`"`w'"', "[A-Zmw]", ""))
+  5.     local pc = `n' - ustrlen(ustrregexra(`"`w'"', "%", ""))
+  6.     local dg = `n' - ustrlen(ustrregexra(`"`w'"', "[0-9+=]", ""))
+  7.     local ww = 0.29*`na' + 0.7*`wi' + 0.83*`pc' + 0.52*`dg' + 0.47*(`n' - `na' - `wi' - `pc' - `dg')
+  8.     local try = `lw' + 0.25*(`"`line'"' != "") + `ww'
+  9.     if `try' > `maxw' & `"`line'"' != "" {
+ 10.         local ++nl
+ 11.         local L`nl' `"`line'"'
+ 12.         local W`nl' = `lw'
+ 13.         local line `"`w'"'
+ 14.         local lw = `ww'
+ 15.     }
+ 16.     else {
+ 17.         local line = strtrim(`"`line' `w'"')
+ 18.         local lw = `try'
+ 19.     }
+ 20. }
+
+. local ++nl
+
+. local L`nl' `"`line'"'
+
+. local W`nl' = `lw'
+
+. local notes ""
+
+. forvalues j = 1/`nl' {
+  2.     display "   note line `j': " udstrlen(`"`L`j''"') " characters, width " %4.1f `W`j'' " of `maxw' em"
+  3.     local notes `"`notes' "`L`j''""'
+  4. }
+   note line 1: 138 characters, width 53.0 of 53.5 em
+   note line 2: 137 characters, width 52.5 of 53.5 em
+   note line 3: 132 characters, width 52.6 of 53.5 em
+   note line 4: 127 characters, width 49.8 of 53.5 em
+   note line 5: 131 characters, width 52.6 of 53.5 em
+   note line 6: 124 characters, width 50.8 of 53.5 em
+   note line 7: 125 characters, width 51.0 of 53.5 em
+   note line 8: 122 characters, width 47.2 of 53.5 em
+
+. twoway (pcspike zl_y zl_x0 zl_y zl_x1, lcolor(gs8) lwidth(thin)) ///
+>     (pcspike sl_y0 sl_x sl_y1 sl_x, lcolor(gs6) lpattern(dash) lwidth(thin)) ///
+>     (rspike pct_hi pct_lo x if version == 1 & !reference, lcolor(black) lwidth(thin)) ///
+>     (scatter pct x if version == 1 & !reference & !grouped, msymbol(O) msize(small) mcolor(black) ///
+>         mlabel(lbl) mlabposition(3) mlabgap(0.5) mlabsize(vsmall) mlabcolor(black)) ///
+>     (scatter pct x if version == 1 & grouped, msymbol(Oh) msize(small) mcolor(black) ///
+>         mlabel(lbl) mlabposition(3) mlabgap(0.5) mlabsize(vsmall) mlabcolor(black)) ///
+>     (scatter pct xg if version == 2 & !reference, msymbol(Th) msize(small) mcolor(gs8)) ///
+>     (scatter pct x if version == 1 & reference, msymbol(D) msize(small) mcolor(gs8)) ///
+>     (scatter pct refx if reflbl != "", msymbol(none) mlabel(reflbl) mlabposition(6) mlabgap(1.5) ///
+>         mlabsize(vsmall) mlabcolor(gs6)) ///
+>     (scatter ycnt x if version == 1, msymbol(none) mlabel(nlbl) mlabposition(0) mlabsize(vsmall) mlabcolor(gs4)) ///
+>     (scatter ycnt xlft if cname != "", msymbol(none) mlabel(cname) mlabposition(3) mlabgap(0) mlabsize(vsmall) mlabcol
+> or(gs4)) ///
+>     (scatter yavg xlft if atxt != "", msymbol(none) mlabel(atxt) mlabposition(3) mlabgap(0) mlabsize(vsmall) mlabcolor
+> (black)) ///
+>     (scatter ygry xlft if gtxt != "", msymbol(none) mlabel(gtxt) mlabposition(3) mlabgap(0) mlabsize(vsmall) mlabcolor
+> (gs6)), ///
+>     by(pnum, cols(1) iscale(1) imargin(small) ixaxes scale(`=7.5/9') ///
+>         title("Figure `exhibit'. Importing, foreign owners and energy efficiency", size(medium) position(11) justifica
+> tion(left) span) ///
+>         subtitle("Value added per GJ: % change since the year before the start, starters minus firms that never start"
+> , ///
+>             size(small) position(11) justification(left) span) ///
+>         note(`notes' "`srcnote'" "`devnote'", size(vsmall) span linegap(0.6)) ///
+>         legend(position(6)) graphregion(color(white) lcolor(white) margin(r+3)) plotregion(style(none))) ///
+>     subtitle(, size(small) position(11) justification(left) nobox fcolor(white) lcolor(white) margin(b+1)) ///
+>     xscale(range(`xl' `xr') noline) xlabel(`xlab', labsize(vsmall) noticks tlength(0) labgap(1)) ///
+>     xtitle("Years since the start (0 = start year)", size(vsmall) margin(t+1)) ///
+>     yscale(range(`ycnt' `yavg') noline) ///
+>     ylabel(`ybot'(`step')`ytop', angle(0) labsize(vsmall) noticks tlength(0) grid glcolor(gs14) glwidth(vthin) format(
+> `yfmt')) ///
+>     ytitle("") ///
+>     legend(order(4 "Each single year (records in doubt left out)" 5 "Years `nout'+ before or after, combined" ///
+>                  7 "Year before the start (reference = 0)" 3 "95% interval" ///
+>                  6 "Every start and record as filed (nothing left out)" 1 "0 = no difference" 2 "Start (importing / fo
+> reign owner)") ///
+>         cols(2) region(lstyle(none)) size(vsmall) symxsize(5) keygap(1) colgap(4) rowgap(0.3)) ///
+>     plotregion(style(none)) xsize(9) ysize(12)
+
+. 
+. graph export "figures/`fname'.png", width(2700) replace
+file
+    /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r2-internationalisation-energy-efficie
+    > ncy/figures/08_efficiency_import_foreign_start.png saved as PNG format
+
+. graph export "figures/`fname'.pdf", replace
+file
+    /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r2-internationalisation-energy-efficie
+    > ncy/figures/08_efficiency_import_foreign_start.pdf saved as PDF format
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 8/8: companion tables: every plotted point, and the regression table"
+Step 8/8: companion tables: every plotted point, and the regression table
+
+. *---------------------------------------------------------------------------
+. * ==== COMPANION TABLE (pattern for all exhibits) =============================
+. * Owner rule, 28 Sep 2026: every chart gets a table of every plotted point, and
+. * every chart of regression coefficients also gets a regression table, written
+. * by the same do-file (spec: TABLE_BRIEF.md). This step runs AFTER the graph
+. * export, so the chart and the CSV stay byte-identical.
+. *
+. * How to use it in another exhibit file:
+. *   PART 1 (the writer, program ctable_pdf) is copied UNCHANGED.
+. *   PART 2 is the only exhibit-specific part: put the numbers in memory (the
+. *   tempfile saved right after the CSV export, or the CSV itself), build one
+. *   STRING variable per table column, one row per plotted point in chart order
+. *   (years not drawn included, with the reason in a status column), then call
+. *   ctable_pdf. Format numbers with string(x, "%9.1f") etc. so the table shows
+. *   exactly the rounding of the chart labels.
+. *
+. * ctable_pdf strvars using "tables/NN_name_table.pdf",
+. *     title("Table R1-02. ...: every plotted point")    first line, bold
+. *     header("Col 1" "Col 2" ...)       one text per column; "|" = line break
+. *     [right(numlist)]                  columns right-aligned (numbers)
+. *     [norepeat(numlist)]               columns whose repeated text is shown
+. *                                       only on the first row of a run
+. *     [rules(numlist)]                  thin gray line under these data rows
+. *     [notes("line 1" "line 2" ...)]    footer paragraphs (Notes, Source, dev line)
+. *     [subtitle(text)] [fontsize(#)] [perpage(#)] [landscape|portrait]
+. * Landscape is chosen automatically when there are more than 6 columns. Long
+. * tables continue on a new page with the header repeated ("(continued)"); a page
+. * never breaks inside a block whose first column is empty (e.g. an SE row).
+. * --- PART 1: the writer (identical in every file; do not edit) ---------------
+. capture program drop ctable_pdf
+
+. program define ctable_pdf
+  1.     version 17
+  2.     syntax varlist(string) using/, TItle(string) HEADer(string asis) ///
+>         [RIGHT(numlist integer >0) NOREPeat(numlist integer >0) RULES(numlist integer >0) ///
+>          NOTEs(string asis) SUBtitle(string) FONTsize(real 9.5) PERpage(integer 0) ///
+>          LANDscape PORTrait]
+  3.     local nc : word count `varlist'
+  4.     local nh : word count `header'
+  5.     if `nh' != `nc' {
+  6.         display as error "ctable_pdf: `nc' columns but `nh' header texts"
+  7.         exit 198
+  8.     }
+  9.     local orient = cond(`nc' > 6, "landscape", "")
+ 10.     if "`landscape'" != "" local orient "landscape"
+ 11.     if "`portrait'"  != "" local orient ""
+ 12.     * rows per page: a conservative guess for 9-10 pt text (wrapped cells take more)
+.     if `perpage' == 0 local perpage = cond("`orient'" == "landscape", 24, 40)
+ 13.     preserve
+ 14.     quietly {
+ 15.         keep `varlist'
+ 16.         rename (`varlist') (__c#), addnumber      // __c1 __c2 ... in the order given
+ 17.         forvalues j = 1/`nc' {
+ 18.             replace __c`j' = strtrim(__c`j')
+ 19.         }
+ 20.         local N = _N
+ 21.         gen long row = _n
+ 22.         * page chunks: fill up to perpage rows; prefer to end a page at a rule,
+.         * never start a page on a row whose first column is empty
+.         gen int chunk = .
+ 23.         local start 1
+ 24.         local k 0
+ 25.         while `start' <= `N' {
+ 26.             local ++k
+ 27.             local end = min(`start' + `perpage' - 1, `N')
+ 28.             if `end' < `N' {
+ 29.                 local best 0
+ 30.                 foreach r of local rules {
+ 31.                     if `r' >= `start' + floor(`perpage' / 2) & `r' <= `end' & `r' > `best' local best `r'
+ 32.                 }
+ 33.                 if `best' > 0 local end `best'
+ 34.                 else {
+ 35.                     while `end' > `start' & __c1[`end' + 1] == "" {
+ 36.                         local --end
+ 37.                     }
+ 38.                 }
+ 39.             }
+ 40.             replace chunk = `k' in `start'/`end'
+ 41.             local start = `end' + 1
+ 42.         }
+ 43.         local nk `k'
+ 44.         * blank repeated labels inside each page; a column is blanked only while the
+.         * norepeat columns to its left are unchanged too (a new panel shows its series)
+.         gen byte same = _n > 1 & chunk == chunk[_n - 1]
+ 45.         foreach j of local norepeat {
+ 46.             gen strL o`j' = __c`j'
+ 47.             replace same = same & o`j' == o`j'[_n - 1]
+ 48.             replace __c`j' = "" if same
+ 49.             drop o`j'
+ 50.         }
+ 51.         drop same
+ 52.         * column widths (% of the page), from the longest text in each column;
+.         * long text columns are capped so they wrap instead of squeezing numbers
+.         matrix W = J(1, `nc', 0)
+ 53.         local tot 0
+ 54.         forvalues j = 1/`nc' {
+ 55.             gen long L`j' = udstrlen(__c`j')
+ 56.             summarize L`j', meanonly
+ 57.             local w = max(r(max), 3)
+ 58.             local h : word `j' of `header'
+ 59.             local h = subinstr(`"`h'"', "|", " ", .)
+ 60.             foreach hw of local h {
+ 61.                 local w = max(`w', udstrlen(`"`hw'"'))
+ 62.             }
+ 63.             local w = min(`w', 34) + 2          // + 2 = room for the cell margins
+ 64.             matrix W[1, `j'] = `w'
+ 65.             local tot = `tot' + `w'
+ 66.             drop L`j'
+ 67.         }
+ 68.         local used 0
+ 69.         forvalues j = 1/`nc' {
+ 70.             if `j' < `nc' {
+ 71.                 matrix W[1, `j'] = max(floor(100 * W[1, `j'] / `tot'), 3)
+ 72.                 local used = `used' + W[1, `j']
+ 73.             }
+ 74.             else matrix W[1, `j'] = 100 - `used'
+ 75.         }
+ 76.     }
+ 77.     putpdf clear
+ 78.     putpdf begin, pagesize(A4) `orient' font("Times New Roman", `fontsize') ///
+>         margin(left, 0.8in) margin(right, 0.8in) margin(top, 0.5in) margin(bottom, 0.5in)
+ 79.     forvalues k = 1/`nk' {
+ 80.         if `k' > 1 putpdf pagebreak
+ 81.         putpdf paragraph, spacing(after, 4pt)
+ 82.         local tt = cond(`k' == 1, `"`title'"', `"`title' (continued)"')
+ 83.         putpdf text (`"`tt'"'), bold font("Times New Roman", `=`fontsize' + 1.5')
+ 84.         if `k' == 1 & `"`subtitle'"' != "" {
+ 85.             putpdf paragraph, spacing(after, 4pt)
+ 86.             putpdf text (`"`subtitle'"')
+ 87.         }
+ 88.         quietly count if chunk == `k'
+ 89.         local nr = r(N) + 1
+ 90.         quietly putpdf table T`k' = data(__c1-__c`nc') if chunk == `k', varnames border(all, nil) width(W)
+ 91.         forvalues j = 1/`nc' {
+ 92.             * header text; "|" starts a new line inside the cell
+.             local rest : word `j' of `header'
+ 93.             local opt ""
+ 94.             while `"`rest'"' != "" {
+ 95.                 gettoken part rest : rest, parse("|")
+ 96.                 if `"`part'"' == "|" {
+ 97.                     putpdf table T`k'(1, `j') = (""), linebreak append
+ 98.                     continue
+ 99.                 }
+100.                 putpdf table T`k'(1, `j') = (`"`part'"'), valign(bottom) `opt'
+101.                 local opt "append"
+102.             }
+103.             local al = cond(`: list j in right', "right", "left")
+104.             putpdf table T`k'(., `j'), halign(`al') margin(top, 0pt) margin(bottom, 0pt)
+105.         }
+106.         putpdf table T`k'(1, .), border(top, single, black) border(bottom, single, black)
+107.         putpdf table T`k'(`nr', .), border(bottom, single, black)
+108.         foreach r of local rules {
+109.             quietly summarize row if chunk == `k', meanonly
+110.             if `r' >= r(min) & `r' < r(max) {
+111.                 putpdf table T`k'(`=`r' - r(min) + 2', .), border(bottom, single, "A6A6A6")
+112.             }
+113.         }
+114.     }
+115.     local first 1
+116.     foreach n of local notes {
+117.         putpdf paragraph, spacing(before, `=cond(`first', 6, 1)'pt)
+118.         putpdf text (`"`n'"'), font("Times New Roman", `=`fontsize' - 0.5')
+119.         local first 0
+120.     }
+121.     putpdf save `"`using'"', replace
+122.     restore
+123. end
+
+. * --- end of PART 1 ------------------------------------------------------------
+. * --- PART 2: the rows of this exhibit (the only part that changes per file) ---
+. * Source: the table saved right after the CSV export (full precision, same
+. * estimation run as the chart).
+. * (1) Points table: one row per point, series by series: panel (a) black dots,
+. * (a) gray triangles, then panel (b) the same; each series left to right.
+. use `ctsrc', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if inlist(panel, "imp", "fdi") & outcome == 1 & inlist(version, 1, 2)
+(144 observations deleted)
+
+. gen byte pn = 1 + (panel == "fdi")
+
+. sort pn version event_time
+
+. local npts = _N
+
+. local nser = `npts' / 4
+
+. gen str60 t_panel = cond(pn == 1, "(a) Starting to import", "(b) Getting a foreign owner (10%+)")
+
+. gen str60 t_ser = cond(version == 1, "Records in doubt left out (black)", "Every start and record as filed (gray)")
+
+. gen str16 t_pos = cond(event_time > 0, "+", "") + string(event_time)
+
+. replace t_pos = "≤ " + t_pos if grouped & event_time < 0
+(4 real changes made)
+
+. replace t_pos = "≥ " + t_pos if grouped & event_time > 0
+(4 real changes made)
+
+. * black dots: whole % as the chart labels; gray triangles (no label): one decimal
+. gen byte drawn = status == "ok" & !missing(pct) & !(version == 2 & reference)
+
+. gen str12 t_v  = ""
+(44 missing values generated)
+
+. gen str12 t_lo = ""
+(44 missing values generated)
+
+. gen str12 t_hi = ""
+(44 missing values generated)
+
+. foreach c in v lo hi {
+  2.     local s = cond("`c'" == "v", "pct", "pct_`c'")
+  3.     replace t_`c' = cond(round(`s') > 0, "+", "") + string(round(`s'), "%9.0f") if drawn & version == 1
+  4.     replace t_`c' = cond(round(`s', 0.1) > 0, "+", "") + string(round(`s', 0.1), "%9.1f") if drawn & version == 2
+  5.     replace t_`c' = "" if reference & "`c'" != "v"
+  6. }
+(22 real changes made)
+(20 real changes made)
+(0 real changes made)
+(22 real changes made)
+(20 real changes made)
+(2 real changes made)
+(22 real changes made)
+(20 real changes made)
+(2 real changes made)
+
+. gen str12 t_n = string(firms, "%12.0fc") if !missing(firms)
+
+. gen str12 t_r = string(rows, "%12.0fc") if !missing(rows)
+
+. gen str90 t_status = ""
+(44 missing values generated)
+
+. replace t_status = "drawn: solid dot and bar" if drawn & version == 1 & !grouped & !reference
+(16 real changes made)
+
+. replace t_status = "drawn: hollow dot and bar (each firm once)" if drawn & version == 1 & grouped
+(4 real changes made)
+
+. replace t_status = "drawn: gray diamond (reference, 0 by definition)" if drawn & version == 1 & reference
+(2 real changes made)
+
+. replace t_status = "drawn: hollow gray triangle (no bar)" if drawn & version == 2
+(20 real changes made)
+
+. replace t_status = "not drawn: reference year (0 by definition)" if version == 2 & reference
+(2 real changes made)
+
+. replace t_status = "not drawn: no starter row in this version" if !drawn & !reference & status == "ok"
+(0 real changes made)
+
+. replace t_status = "not drawn: " + status if status != "ok"
+(0 real changes made)
+
+. quietly count if drawn
+
+. local ndrawn = r(N)
+
+. quietly count if strpos(t_status, "drawn:") == 1
+
+. assert r(N) == `ndrawn'
+
+. assert t_v != "" if drawn
+
+. assert _N == `npts'
+
+. local txt_t = itrim(`"`txt'"')
+
+. local tnote "Table: every point of Figure `exhibit', series by series, each left to right. % difference = 100 × (exp(b
+> ) − 1), b = the"
+
+. local tnote "`tnote' regression table's columns; black dots rounded as the chart labels, gray triangles (no label on t
+> he chart) to one"
+
+. local tnote "`tnote' decimal. Starter firms (the chart's Starters row for black dots) and their firm-years behind each
+>  point."
+
+. local tnote "`tnote' Full precision: tables/`fname'.csv."
+
+. ctable_pdf t_panel t_ser t_pos t_v t_lo t_hi t_n t_r t_status using "tables/`fname'_table.pdf", ///
+>     title("Table `exhibit'. Importing, foreign owners and energy efficiency: every plotted point") ///
+>     subtitle("Value added per GJ: % change since the year before the start, starters minus firms that never start") //
+> /
+>     header("Panel" "Series" "Years since|the start" "%|difference" "95%|interval|low" "95%|interval|high" "Starter|fir
+> ms" "Starter|firm-years" "Status") ///
+>     right(3 4 5 6 7 8) norepeat(1 2) fontsize(9) rules(`nser' `=2*`nser'' `=3*`nser'') perpage(`=2*`nser'') ///
+>     notes("`txt_t'" "`tnote'" "`srcnote'" "`devnote'")
+successfully created "/Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r2-internationalisatio
+> n-energy-efficiency/tables/08_efficiency_import_foreign_start_table.pdf"
+
+. display "table -> tables/`fname'_table.pdf"
+table -> tables/08_efficiency_import_foreign_start_table.pdf
+
+. 
+. * (2) Regression table (AER style): one column per panel and drawn version,
+. * coefficient on the first line, (standard error) on the second.
+. * show_pct = 1 adds a third line, [% difference], for every year: the table
+. * then runs to two pages, so it is off here (the drawn %s are in the points
+. * table; every version and outcome in the CSV).
+. local show_pct 0
+
+. use `ctsrc', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if inlist(panel, "imp", "fdi")
+(12 observations deleted)
+
+. * check: the coefficients are those in the CSV just written (4 decimals there)
+. preserve
+
+. import delimited using "tables/`fname'.csv", clear varnames(1)
+(encoding automatically selected: ISO-8859-1)
+(48 vars, 188 obs)
+
+. keep if inlist(panel, "imp", "fdi")
+(12 observations deleted)
+
+. keep panel version outcome event_time b
+
+. rename b b_csv
+
+. tempfile csvb
+
+. save `csvb'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_35384.000009 saved as .dta format
+
+. restore
+
+. merge 1:1 panel version outcome event_time using `csvb', assert(match) nogenerate
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                               176  
+    -----------------------------------------
+
+. assert abs(b - b_csv) <= 0.00005 + 1e-9 if !missing(b)
+
+. assert missing(b_csv) if missing(b)
+
+. drop b_csv
+
+. keep if outcome == 1 & inlist(version, 1, 2)
+(132 observations deleted)
+
+. gen byte m = cond(panel == "imp", 0, 2) + version          // 1-2 = (a), 3-4 = (b)
+
+. sort m event_time
+
+. tempname P
+
+. tempfile R
+
+. postfile `P' str60 t_lab str24(t1 t2 t3 t4) using `R'
+
+. levelsof event_time, local(ks)
+-5 -4 -3 -2 -1 0 1 2 3 4 5
+
+. local nterm 0
+
+. foreach k of local ks {
+  2.     quietly summarize grouped if event_time == `k' & m == 1, meanonly
+  3.     local gr = r(max)
+  4.     quietly summarize reference if event_time == `k' & m == 1, meanonly
+  5.     local rf = r(max)
+  6.     local lab = cond(`k' > 0, "+", "") + string(`k')
+  7.     if `gr' & `k' < 0 local lab "≤ `lab' (grouped)"
+  8.     if `gr' & `k' > 0 local lab "≥ `lab' (grouped)"
+  9.     if `rf' {
+ 10.         post `P' ("`lab' (reference, set to 0)") ("—") ("—") ("—") ("—")
+ 11.         local ++nterm
+ 12.         continue
+ 13.     }
+ 14.     forvalues s = 1/4 {
+ 15.         quietly count if event_time == `k' & m == `s' & !missing(b)
+ 16.         if r(N) == 0 {
+ 17.             local b`s' "—"
+ 18.             local s`s' ""
+ 19.             local p`s' ""
+ 20.             continue
+ 21.         }
+ 22.         quietly summarize b if event_time == `k' & m == `s', meanonly
+ 23.         local b`s' = string(r(mean), "%9.3f")
+ 24.         quietly summarize se if event_time == `k' & m == `s', meanonly
+ 25.         local s`s' = "(" + string(r(mean), "%9.3f") + ")"
+ 26.         quietly summarize pct if event_time == `k' & m == `s', meanonly
+ 27.         local p`s' = "[" + cond(r(mean) > 0, "+", "") + string(r(mean), "%9.1f") + "%]"
+ 28.     }
+ 29.     post `P' ("`lab'") ("`b1'") ("`b2'") ("`b3'") ("`b4'")
+ 30.     post `P' ("")      ("`s1'") ("`s2'") ("`s3'") ("`s4'")
+ 31.     if `show_pct' post `P' ("") ("`p1'") ("`p2'") ("`p3'") ("`p4'")
+ 32.     local nterm = `nterm' + 2 + `show_pct'
+ 33. }
+
+. * whole-model rows (the same number on every row of a version: take the first)
+. forvalues s = 1/4 {
+  2.     quietly summarize avg_b if m == `s', meanonly
+  3.     local ab`s' = string(r(mean), "%9.3f")
+  4.     quietly summarize avg_se if m == `s', meanonly
+  5.     local as`s' = "(" + string(r(mean), "%9.3f") + ")"
+  6.     quietly summarize avg_pct if m == `s', meanonly
+  7.     local ap`s' = "[" + cond(r(mean) > 0, "+", "") + string(r(mean), "%9.1f") + "%]"
+  8.     foreach v in n_rows n_firms n_starters n_comparison n_one_year_dropped {
+  9.         quietly summarize `v' if m == `s', meanonly
+ 10.         local `v'`s' = string(r(mean), "%12.0fc")
+ 11.     }
+ 12.     quietly summarize before_p if m == `s', meanonly
+ 13.     local bp`s' = cond(r(mean) < 0.001, "< 0.001", string(r(mean), "%5.3f"))
+ 14. }
+
+. local fe_f = cond(strpos(" `ab_08' ", " firm_id "), "Yes", "No")
+
+. local fe_y = cond(strpos(" `ab_08' ", " year "), "Yes", "No")
+
+. local clu  = cond("`cl_08'" == "firm_id", "Firm", "`cl_08'")
+
+. post `P' ("Average of years 0 to +`whi'")    ("`ab1'") ("`ab2'") ("`ab3'") ("`ab4'")
+
+. post `P' ("")                                ("`as1'") ("`as2'") ("`as3'") ("`as4'")
+
+. post `P' ("")                                ("`ap1'") ("`ap2'") ("`ap3'") ("`ap4'")
+
+. post `P' ("Observations (firm-years)")       ("`n_rows1'") ("`n_rows2'") ("`n_rows3'") ("`n_rows4'")
+
+. post `P' ("Firms (clusters)")                ("`n_firms1'") ("`n_firms2'") ("`n_firms3'") ("`n_firms4'")
+
+. post `P' ("Firms: starters")                 ("`n_starters1'") ("`n_starters2'") ("`n_starters3'") ("`n_starters4'")
+
+. post `P' ("Firms: never starting")           ("`n_comparison1'") ("`n_comparison2'") ("`n_comparison3'") ("`n_comparis
+> on4'")
+
+. post `P' ("Firms with one usable year (dropped)")       ("`n_one_year_dropped1'") ("`n_one_year_dropped2'") ("`n_one_y
+> ear_dropped3'") ("`n_one_year_dropped4'")
+
+. post `P' ("Firm fixed effects")              ("`fe_f'") ("`fe_f'") ("`fe_f'") ("`fe_f'")
+
+. post `P' ("Year fixed effects")              ("`fe_y'") ("`fe_y'") ("`fe_y'") ("`fe_y'")
+
+. post `P' ("Weights")                         ("None") ("None") ("None") ("None")
+
+. post `P' ("Standard errors clustered by")    ("`clu'") ("`clu'") ("`clu'") ("`clu'")
+
+. post `P' ("Before-start test, joint p")      ("`bp1'") ("`bp2'") ("`bp3'") ("`bp4'")
+
+. postclose `P'
+
+. use `R', clear
+
+. local rsub = "Outcome: log of value added per GJ. Log points; standard errors in parentheses; [% = 100 × (exp(b) − 1)]
+> " + cond(`show_pct', ".", " for the average.")
+
+. local rnote "Notes: Each column is one regression of the log outcome on one marker per year since the start, `wlo' to 
+> +`whi', except -1"
+
+. local rnote "`rnote' (the year before the start: the reference, set to 0), and one marker for each grouped end (`nout'
+> + years before or after),"
+
+. local rnote "`rnote' with firm and year fixed effects; firms that never start are 0 on every marker. Start = first yea
+> r seen importing (a) or"
+
+. local rnote "`rnote' with a foreign owner holding 10%+ of capital (b) after a year seen without. Columns (1) and (3) l
+> eave out records in doubt"
+
+. local rnote "`rnote' (black dots in Figure `exhibit'); (2) and (4) keep every start and record as filed (gray triangle
+> s). Before-start test: all"
+
+. local rnote "`rnote' years before the start are 0 together. Average = mean of years 0 to +`whi'. Other versions and ou
+> tcomes: the CSV. No stars."
+
+. ctable_pdf t_lab t1 t2 t3 t4 using "tables/`fname'_regression.pdf", ///
+>     title("Table `exhibit', regression. Importing, foreign owners and energy efficiency: estimates behind the chart") 
+> ///
+>     subtitle("`rsub'") ///
+>     header("Years since the start" "(1)|(a) Importing:|in doubt left out" "(2)|(a) Importing:|as filed" "(3)|(b) Forei
+> gn-owner:|in doubt left out" "(4)|(b) Foreign-owner:|as filed") ///
+>     right(2 3 4 5) rules(`nterm' `=`nterm' + 3') fontsize(9) perpage(60) ///
+>     notes("`rnote'" "`srcnote'" "`devnote'")
+successfully created "/Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r2-internationalisatio
+> n-energy-efficiency/tables/08_efficiency_import_foreign_start_regression.pdf"
+
+. display "table -> tables/`fname'_regression.pdf"
+table -> tables/08_efficiency_import_foreign_start_regression.pdf
+
+. * --- end of PART 2 ------------------------------------------------------------
+. 
+. 
+. 
+. timer off 1
+
+. quietly timer list 1
+
+. local elapsed = strtrim(string(r(t1), "%9.1f"))
+
+. display "FINISHED: figure -> figures/`fname'.png (elapsed `elapsed' s)"
+FINISHED: figure -> figures/08_efficiency_import_foreign_start.png (elapsed 10.4 s)
+
+. quietly log close          // keeps FINISHED as the last output line of the log
