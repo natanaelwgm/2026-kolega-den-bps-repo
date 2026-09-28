@@ -284,6 +284,13 @@ gen byte d6 = imp                               // importer
 gen byte d7 = fdi                               // 10% or more foreign-owned
 gen byte d8 = new_to_file                       // in neither of the two files before
 local nterm 8
+* Size band and export answer have three groups each, so their two markers are one trait:
+* an effect compares a group with the reference group (20-99 workers; known non-exporters),
+* the other marker of the pair switched off in both (a factor contrast; R4-05 does the same)
+local pair1 2
+local pair2 1
+local pair4 5
+local pair5 4
 local t1 "Fewer than 20 workers"
 local t2 "100 or more workers"
 local t3 "Value added per worker above its sector's median"
@@ -395,10 +402,22 @@ if `model_ok' {
         foreach t of local terms_`c' {
             assert reldif(_b[1.x`t'_`c'], lb_`t'_`c') < 1e-6
         }
-        quietly margins, dydx(`xs')
-        matrix ms = r(b)
+        * the same "with minus without" pairs as the dots below
+        local atl ""
         foreach t of local terms_`c' {
-            scalar amesep_`t'_`c' = ms[1, colnumb(ms, "1.x`t'_`c'")]
+            local pt ""
+            if "`pair`t''" != "" {
+                local inp : list pair`t' in terms_`c'
+                if `inp' local pt " x`pair`t''_`c'=0"
+            }
+            local atl `atl' at(x`t'_`c'=0`pt') at(x`t'_`c'=1`pt')
+        }
+        quietly margins, `atl' post
+        local k 0
+        foreach t of local terms_`c' {
+            local k = `k' + 2
+            quietly lincom _b[`k'._at] - _b[`=`k' - 1'._at]
+            scalar amesep_`t'_`c' = r(estimate)
         }
     }
     * table-only check (not drawn, not in the CSV): value added per worker as a continuous
@@ -427,28 +446,45 @@ if `model_ok' {
     capture drop zc
     estimates restore pooled
     predict double phat if in_est, pr                 // predicted chance of leaving at that file
-    * average marginal effects over each starting file's own rows (the dots)
-    margins, dydx(`xvars') over(coh) post
-    matrix mb = e(b)
-    matrix mV = e(V)
+    * average marginal effects over each starting file's own rows (the dots): for each
+    * trait, the average predicted chance with the trait (at 1) minus without it (at 0);
+    * for size band and export answer the partner marker is 0 in both, so each group is
+    * set against the reference group. One margins call over both files keeps the
+    * covariance for the 2019-minus-2012 difference; the at() of one file's markers is
+    * read only in that file's rows (the other file's markers are 0 there anyway).
+    local atl ""
+    local na 0
+    foreach c of local cohorts {
+        foreach t of local terms_`c' {
+            local pt ""
+            if "`pair`t''" != "" {
+                local inp : list pair`t' in terms_`c'
+                if `inp' local pt " x`pair`t''_`c'=0"
+            }
+            local atl `atl' at(x`t'_`c'=0`pt') at(x`t'_`c'=1`pt')
+            local na = `na' + 2
+            local at1_`t'_`c' = `na'                   // "with" position; "without" = one before
+        }
+    }
+    margins, `atl' over(coh) post
     local cn : colfullnames e(b)
-    local j 0
     foreach nm of local cn {
-        local ++j
-        local cl = subinstr("`nm'", "bn.coh", ".coh", 1)
+        local cl = subinstr("`nm'", "bn", "", .)       // Stata may add "bn" to base levels
         foreach c of local cohorts {
-            foreach t of local terms_`c' {
-                if "`cl'" == "1.x`t'_`c':`c'.coh" {
-                    local nm_`t'_`c' "`nm'"
-                    scalar ame_`t'_`c' = mb[1, `j']
-                    scalar ase_`t'_`c' = sqrt(mV[`j', `j'])
-                }
+            forvalues a = 1/`na' {
+                if "`cl'" == "`a'._at#`c'.coh" local nm_`a'_`c' "`nm'"
             }
         }
     }
     foreach c of local cohorts {
         foreach t of local terms_`c' {
-            assert "`nm_`t'_`c''" != ""
+            local a1 = `at1_`t'_`c''
+            local a0 = `a1' - 1
+            assert "`nm_`a1'_`c''" != "" & "`nm_`a0'_`c''" != ""
+            local ex_`t'_`c' "_b[`nm_`a1'_`c''] - _b[`nm_`a0'_`c'']"
+            quietly lincom `ex_`t'_`c''
+            scalar ame_`t'_`c' = r(estimate)
+            scalar ase_`t'_`c' = r(se)
             assert abs(ame_`t'_`c' - amesep_`t'_`c') < 1e-6   // same as the separate logit
         }
     }
@@ -456,11 +492,11 @@ if `model_ok' {
     local both : list terms_`cohort_covid' & terms_`cohort_normal'
     local jt ""
     foreach t of local both {
-        quietly lincom _b[`nm_`t'_`cohort_covid''] - _b[`nm_`t'_`cohort_normal'']
+        quietly lincom (`ex_`t'_`cohort_covid'') - (`ex_`t'_`cohort_normal'')
         scalar dif_`t' = r(estimate)
         scalar dse_`t' = r(se)
         scalar dp_`t'  = r(p)
-        local jt `jt' (_b[`nm_`t'_`cohort_covid''] = _b[`nm_`t'_`cohort_normal''])
+        local jt `jt' ((`ex_`t'_`cohort_covid'') - (`ex_`t'_`cohort_normal'') = 0)
     }
     scalar joint_p = .
     if "`jt'" != "" {
