@@ -1,0 +1,2063 @@
+------------------------------------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r10-covid-resilience-internatio
+> nalised/logs/03_survivors_output_jobs_productivity.log
+  log type:  text
+ opened on:  28 Sep 2026, 17:29:38
+
+. timer clear 1
+
+. timer on 1
+
+. display _newline "=== [R10-03] STARTING: output, workers and value added per worker around COVID, firms still in the f
+> iles ==="
+
+=== [R10-03] STARTING: output, workers and value added per worker around COVID, firms still in the files ===
+
+. 
+. * reghdfe (with ftools) runs regressions that take out many sets of averages at once
+. foreach p in reghdfe ftools {
+  2.     capture which `p'
+  3.     if _rc {
+  4.         display as error "R10-03 needs the Stata add-on `p'. Install it once: ssc install `p'  - then run this file
+>  again."
+  5.         log close
+  6.         exit 199
+  7.     }
+  8. }
+
+. 
+. * ---- chart style (identical block in every file) ----
+. set scheme s1mono
+
+. capture graph set window fontface "Times New Roman"   // GUI Stata; console Stata keeps its default font
+
+. * Note: this changes your Stata graph font permanently; undo with: graph set window fontface default
+. local devnote "Development data — obscured values, fictional firm panel. Not BPS findings."
+
+. local srcnote "Source: SI/IBS annual files 2010–2022 (masked), analysis_ready_data.dta."
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 1/8: load identity, industry, province, status flags and the outcomes"
+Step 1/8: load identity, industry, province, status flags and the outcomes
+
+. *---------------------------------------------------------------------------
+. * export_flag  = any export activity (1 yes, 0 no, missing = unknown)
+. * import_flag  = imports reported above zero (never missing)
+. * fdi_10_flag  = 10% or more of capital held abroad (missing = unknown)
+. * gross_output_nominal = output value, current prices (masked money unit); the file has
+. *                no price index filled in (gross_output_real is empty), see the notes
+. * value_added_nominal  = output value minus materials, energy and services bought
+. * workers      = persons employed
+. * dev_nominal_tfp_lp   = productivity residual (development only; table-only check)
+. * industry2_reported, province_code = never change within a firm
+. quietly describe using "$DATA", varlist
+
+. local allvars `r(varlist)'
+
+. local want firm_id year export_flag import_flag fdi_10_flag workers gross_output_nominal ///
+>     gross_output_real value_added_nominal dev_nominal_tfp_lp industry2_reported province_code
+
+. local have : list want & allvars          // gross_output_real: used by the cohort block when filled
+
+. use `have' using "$DATA", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. isid firm_id year
+
+. foreach v in export_flag import_flag fdi_10_flag {
+  2.     assert inlist(`v', 0, 1, .)
+  3. }
+
+. assert !missing(industry2_reported, province_code)
+
+. tempfile firmyear0
+
+. save `firmyear0'                          // the firm-year rows; the cohort block keeps one row per firm
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_49765.000001 saved as .dta format
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 2/8: the COVID cohort and the frozen groups (blocks copied unchanged from R10-01)"
+Step 2/8: the COVID cohort and the frozen groups (blocks copied unchanged from R10-01)
+
+. *---------------------------------------------------------------------------
+. * The cohort file: the last annual file before COVID (read from the data).
+. quietly levelsof year, local(allfiles)
+
+. local cohort_year ""
+
+. foreach c of local allfiles {
+  2.     if `c' < `covid_first' local cohort_year `c'
+  3. }
+
+. assert "`cohort_year'" != ""
+
+. display "   cohort file: `cohort_year'"
+   cohort file: 2019
+
+. 
+. *===========================================================================
+. * COVID COHORT AND STATES (copy exactly into later R4 and R10 files)
+. *   Version 2 - written and reviewed in R4-01 (28 Sep 2026). Do not edit a copy;
+. *   change R4-01 and re-copy. Set -local cohort_year- before the block; R4-02
+. *   runs it once per starting file (2012 ... 2019).
+. *   In : firm-year rows in memory (one row per firm and year): firm_id year
+. *        workers gross_output_nominal (gross_output_real is used instead when
+. *        present and filled for 95%+ of the cohort-file and last-file rows).
+. *        The block collapses to one row per firm: every other variable in memory
+. *        is dropped. Build traits in a tempfile first and merge them back by
+. *        firm_id after the block.
+. *   Out: one row per firm in the cohort file or in one of the next three files.
+. *        in_cohort = 1 for the firms of the cohort file (the cohort); the others
+. *        are newcomers (new_in_file = the later file they first appear in).
+. *        Locals: f1 f2 f3 = the next three files, p1 p2 = the two files before,
+. *        outbasis = output variable used, band_pct = neutral band in percent
+. *        (10 = within 10% either way), band_lo band_hi = its limits as ratios.
+. *   The years come from the data, so the block runs unchanged on the real files.
+. *===========================================================================
+. isid firm_id year
+
+. * -- the annual files in the data, and the files around the cohort file --
+. quietly levelsof year, local(c_files)
+
+. local c_pos : list posof "`cohort_year'" in c_files
+
+. local c_nf : word count `c_files'
+
+. if `c_pos' == 0 | `c_pos' + 3 > `c_nf' {
+.     display as error "cohort file `cohort_year' must be a file year with three later files"
+.     exit 198
+. }
+
+. local f1 : word `=`c_pos' + 1' of `c_files'
+
+. local f2 : word `=`c_pos' + 2' of `c_files'
+
+. local f3 : word `=`c_pos' + 3' of `c_files'
+
+. local p1 ""
+
+. local p2 ""
+
+. if `c_pos' > 1 local p1 : word `=`c_pos' - 1' of `c_files'
+
+. if `c_pos' > 2 local p2 : word `=`c_pos' - 2' of `c_files'
+
+. * -- output: constant prices when the file has them, else current prices --
+. local outbasis "gross_output_nominal"
+
+. capture confirm numeric variable gross_output_real
+
+. if !_rc {
+.     quietly count if inlist(year, `cohort_year', `f3')
+.     local c_nrows = r(N)
+.     quietly count if inlist(year, `cohort_year', `f3') & !missing(gross_output_real)
+.     if r(N) >= 0.95 * `c_nrows' & `c_nrows' > 0 local outbasis "gross_output_real"
+. }
+
+. * -- neutral band: a stayer is "about the same" if its last-file level is
+. *    within band_pct percent of its cohort-file level, up or down (10: 0.90 to 1.10 times);
+. *    the limits match the words on the chart ("down more than 10%") exactly --
+. if "`band_pct'" == "" local band_pct 10
+
+. local band_lo = 1 - `band_pct'/100
+
+. local band_hi = 1 + `band_pct'/100
+
+. * -- which files each firm is in (1 = in the file, 0 = not) --
+. gen byte c_base    = (year == `cohort_year')
+
+. gen byte c_f1      = (year == `f1')
+
+. gen byte c_f2      = (year == `f2')
+
+. gen byte c_f3      = (year == `f3')
+
+. gen byte c_earlier = (year <  `cohort_year')                    // any file before the cohort file
+
+. gen byte c_p1      = cond("`p1'" == "", ., (year == real("`p1'")))
+
+. gen byte c_p2      = cond("`p2'" == "", ., (year == real("`p2'")))
+
+. gen double c_wk0   = workers     if year == `cohort_year'
+(30,042 missing values generated)
+
+. gen double c_wk3   = workers     if year == `f3'
+(29,872 missing values generated)
+
+. gen double c_out0  = `outbasis'  if year == `cohort_year'
+(30,042 missing values generated)
+
+. gen double c_out3  = `outbasis'  if year == `f3'
+(29,872 missing values generated)
+
+. keep if year <= `f3'
+(0 observations deleted)
+
+. collapse (max) seen_base = c_base seen_f1 = c_f1 seen_f2 = c_f2 seen_f3 = c_f3 ///
+>     seen_earlier = c_earlier seen_p1 = c_p1 seen_p2 = c_p2 ///
+>     workers_base = c_wk0 workers_f3 = c_wk3 output_base = c_out0 output_f3 = c_out3, by(firm_id)
+
+. keep if seen_base | seen_f1 | seen_f2 | seen_f3                  // firms of the cohort file or a later one
+(5,118 observations deleted)
+
+. gen int  cohort_year = `cohort_year'
+
+. gen byte in_cohort   = (seen_base == 1)
+
+. * -- new_to_file = 1: in the cohort file but in neither of the two files before
+. *    (it may still be in an older file); 0 = "incumbent" (R10 uses 0 as incumbent) --
+. gen byte new_to_file = .
+(5,345 missing values generated)
+
+. if "`p1'" != "" replace new_to_file = (seen_p1 == 0 & (seen_p2 == 0 | missing(seen_p2))) if in_cohort
+(3,007 real changes made)
+
+. * -- presence in the next three files, e.g. "110" = in f1 and f2, not in f3 --
+. gen str3 pattern = string(seen_f1) + string(seen_f2) + string(seen_f3) if in_cohort
+(2,338 missing values generated)
+
+. * -- state by the last file (f3) --
+. *    1 stayed           = in all three later files
+. *    2 absent then back = missed f1 and/or f2, in f3 again ("temporary disappearance")
+. *    3 left the files   = not in f3 (the file has no closure record: not proof of closure)
+. gen byte state_file = cond(pattern == "111", 1, cond(seen_f3 == 1, 2, 3)) if in_cohort
+(2,338 missing values generated)
+
+. *    left_when: 1 = gone from f1 on ("000"), 2 = in f1 or f2, gone by f3
+. gen byte left_when = cond(pattern == "000", 1, 2) if state_file == 3
+(4,016 missing values generated)
+
+. * -- stayers: change from the cohort file to f3; 0 in f3 counts as shrank;
+. *    no positive cohort-file level (or no f3 level) = not classified (missing) --
+. gen double ratio_wk  = workers_f3 / workers_base if state_file == 1 & workers_base > 0 & !missing(workers_base, worker
+> s_f3)
+(3,667 missing values generated)
+
+. gen double ratio_out = output_f3  / output_base  if state_file == 1 & output_base  > 0 & !missing(output_base,  output
+> _f3)
+(3,667 missing values generated)
+
+. foreach m in wk out {
+  2.     gen byte size_`m' = cond(ratio_`m' < `band_lo', 1, cond(ratio_`m' > `band_hi', 3, 2)) if !missing(ratio_`m')
+  3.     *   outcome5: 1 left the files, 2 absent then back, 3 shrank, 4 about the same, 5 grew
+.     gen byte outcome5_`m' = cond(state_file == 3, 1, cond(state_file == 2, 2, 2 + size_`m')) if in_cohort
+  4.     replace  outcome5_`m' = . if state_file == 1 & missing(size_`m')
+  5. }
+(3,667 missing values generated)
+(2,338 missing values generated)
+(0 real changes made)
+(3,667 missing values generated)
+(2,338 missing values generated)
+(0 real changes made)
+
+. * -- newcomers: the later file a firm not in the cohort file first appears in --
+. gen int new_in_file = cond(seen_f1, `f1', cond(seen_f2, `f2', `f3')) if !in_cohort
+(3,007 missing values generated)
+
+. gen str80 outcome_basis = "`outbasis'"
+
+. label define c_state 1 "stayed" 2 "absent then back" 3 "left the files", replace
+
+. label define c_left  1 "gone from the first later file" 2 "gone later", replace
+
+. label define c_size  1 "shrank" 2 "about the same" 3 "grew", replace
+
+. label define c_out5  1 "left the files" 2 "absent then back" 3 "stayed, shrank" 4 "stayed, about the same" 5 "stayed, 
+> grew", replace
+
+. label values state_file c_state
+
+. label values left_when c_left
+
+. label values size_wk size_out c_size
+
+. label values outcome5_wk outcome5_out c_out5
+
+. * -- structural checks (hold on any data) --
+. isid firm_id
+
+. assert !missing(state_file, pattern) if in_cohort
+
+. assert missing(state_file) & !missing(new_in_file) if !in_cohort
+
+. assert (state_file == 1) == (pattern == "111") if in_cohort
+
+. assert !missing(outcome5_wk) if in_cohort & state_file != 1
+
+. order firm_id cohort_year in_cohort new_to_file seen_* pattern state_file left_when ///
+>     workers_base workers_f3 ratio_wk size_wk outcome5_wk output_base output_f3 ratio_out size_out ///
+>     outcome5_out new_in_file outcome_basis
+
+. display "   cohort file `cohort_year'; later files `f1' `f2' `f3'; earlier files `p2' `p1'; output: `outbasis'; band +
+> /-`band_pct'%"
+   cohort file 2019; later files 2020 2021 2022; earlier files 2017 2018; output: gross_output_nominal; band +/-10%
+
+. *===========================================================================
+. * END OF COVID COHORT AND STATES
+. *===========================================================================
+. 
+. * back to firm-year rows: attach the cohort markers to every record of each firm
+. keep firm_id in_cohort new_to_file pattern state_file left_when
+
+. tempfile cohort
+
+. save `cohort'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_49765.000002 saved as .dta format
+
+. use `firmyear0', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. merge m:1 firm_id using `cohort', keep(master match) nogenerate
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                        10,306
+        from master                    10,306  
+        from using                          0  
+
+    Matched                            22,743  
+    -----------------------------------------
+
+. replace in_cohort = 0 if missing(in_cohort)       // firms seen only before the cohort file
+(10,306 real changes made)
+
+. 
+. *===========================================================================
+. * R10 FROZEN PRE-COVID GROUPS (copy exactly into later R10 files)
+. *===========================================================================
+. * Needs: firm-year data with firm_id year export_flag import_flag fdi_10_flag,
+. * in_cohort and new_to_file, and the locals cohort_year p1 p2 from the cohort block
+. * (p1 = the file just before the cohort file, p2 = the one before that).
+. * Each firm is put in each group ONCE, from its own records in the files
+. * `p2', `p1' and `cohort_year' (the last file before COVID and the two before it).
+. * Answers from later files NEVER change a group.
+. *   main rule   : in the group (1) if it answered "yes" in at least half of its
+. *                 known answers in those files; other firms (0) = "yes" in fewer
+. *                 than half (most never said "yes"; e.g. yes in 1 of 3 = other);
+. *                 no known answer = left out (missing), never counted as "no".
+. *   stricter    : 1 only if "yes" in EVERY known answer; 0 only if never "yes";
+. *                 firms with both answers ("mixed") are left out (missing).
+. *   early files : main rule on the files `p2' and `p1' only (Bu Deasy's literal "pre-2019").
+. *   base file   : the answer in the `cohort_year' file only.
+. * Variable names: grp_<rule>_<x>, x = exp (export_flag), imp (import_flag),
+. * fdi (fdi_10_flag); rule = main, strict, early, base. Also k_<x> (known
+. * answers) and s_<x> (of which "yes") in the three files.
+. * Main sample of R10 = cohort firms that are not new to the file (new_to_file == 0):
+. * a firm first seen in `cohort_year' has only one year of answers and no earlier years.
+. if "`p1'" == "" | "`p2'" == "" {
+.     display as error "the groups need two files before the cohort file `cohort_year'"
+.     exit 198
+. }
+
+. local grp_rule_min 0.5
+
+. gen byte in_pre   = inlist(year, `p2', `p1', `cohort_year')
+
+. gen byte in_early = inlist(year, `p2', `p1')
+
+. foreach x in exp imp fdi {
+  2.     if "`x'" == "exp" local v export_flag
+  3.     if "`x'" == "imp" local v import_flag
+  4.     if "`x'" == "fdi" local v fdi_10_flag
+  5.     bysort firm_id: egen byte k_`x' = total(in_pre & !missing(`v'))
+  6.     bysort firm_id: egen byte s_`x' = total(in_pre & `v' == 1)
+  7.     gen byte grp_main_`x'   = s_`x' / k_`x' >= `grp_rule_min' if k_`x' > 0
+  8.     gen byte grp_strict_`x' = cond(k_`x' == 0, ., cond(s_`x' == k_`x', 1, cond(s_`x' == 0, 0, .)))
+  9.     bysort firm_id: egen byte ke = total(in_early & !missing(`v'))
+ 10.     bysort firm_id: egen byte se = total(in_early & `v' == 1)
+ 11.     gen byte grp_early_`x'  = se / ke >= `grp_rule_min' if ke > 0
+ 12.     bysort firm_id: egen byte grp_base_`x' = max(cond(year == `cohort_year', `v', .))
+ 13.     drop ke se
+ 14.     * groups exist only for firms in the cohort; they are constant within a firm
+.     foreach r in main strict early base {
+ 15.         replace grp_`r'_`x' = . if !in_cohort
+ 16.         bysort firm_id: assert grp_`r'_`x' == grp_`r'_`x'[1]
+ 17.     }
+ 18.     replace k_`x' = . if !in_cohort
+ 19.     replace s_`x' = . if !in_cohort
+ 20. }
+(16,954 missing values generated)
+(18,684 missing values generated)
+(19,682 missing values generated)
+(23,283 missing values generated)
+(2,389 real changes made, 2,389 to missing)
+(2,293 real changes made, 2,293 to missing)
+(2,389 real changes made, 2,389 to missing)
+(0 real changes made)
+(13,708 real changes made, 13,708 to missing)
+(13,708 real changes made, 13,708 to missing)
+(9,520 missing values generated)
+(17,241 missing values generated)
+(11,026 missing values generated)
+(13,708 missing values generated)
+(4,188 real changes made, 4,188 to missing)
+(3,700 real changes made, 3,700 to missing)
+(4,188 real changes made, 4,188 to missing)
+(0 real changes made)
+(13,708 real changes made, 13,708 to missing)
+(13,708 real changes made, 13,708 to missing)
+(9,520 missing values generated)
+(12,702 missing values generated)
+(11,026 missing values generated)
+(13,708 missing values generated)
+(4,188 real changes made, 4,188 to missing)
+(3,976 real changes made, 3,976 to missing)
+(4,188 real changes made, 4,188 to missing)
+(0 real changes made)
+(13,708 real changes made, 13,708 to missing)
+(13,708 real changes made, 13,708 to missing)
+
+. drop in_pre in_early
+
+. label define grp 1 "in the group" 0 "other firms"
+
+. label values grp_* grp
+
+. *===========================================================================
+. * END R10 FROZEN PRE-COVID GROUPS
+. *===========================================================================
+. sort firm_id year
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 3/8: the sample, the outcomes and who stayed"
+Step 3/8: the sample, the outcomes and who stayed
+
+. *---------------------------------------------------------------------------
+. * Sample: firms of the cohort file that were also in one of the two files before it
+. * (new_to_file == 0, R10's main sample), their records in the files `p2' to `f3'.
+. keep if in_cohort & new_to_file == 0 & inrange(year, `p2', `f3')
+(21,515 observations deleted)
+
+. * stayer = in every later file (`f1', `f2' and `f3'): the sample of the solid markers
+. gen byte stayer = (state_file == 1)
+
+. egen int ind  = group(industry2_reported)
+
+. egen int prov = group(province_code)
+
+. * outcomes in logs, so a difference reads as a % difference (zero or missing = not used)
+. gen double y1 = ln(`outbasis') if `outbasis' > 0 & !missing(`outbasis')            // output
+
+. gen double y2 = ln(workers) if workers > 0 & !missing(workers)                      // workers
+(2 missing values generated)
+
+. gen double y3 = ln(value_added_nominal / workers) ///
+>     if value_added_nominal > 0 & workers > 0 & !missing(value_added_nominal, workers) // value added per worker
+(2 missing values generated)
+
+. gen double y4 = dev_nominal_tfp_lp                                                   // table only: productivity resid
+> ual
+(7,292 missing values generated)
+
+. gen double y5 = ln(`outbasis' / workers) if `outbasis' > 0 & workers > 0 & !missing(`outbasis', workers) // table only
+(2 missing values generated)
+
+. local out_prices = cond("`outbasis'" == "gross_output_real", "constant prices", "current prices")
+
+. * the files of the window, the reference file, the files before and after it
+. quietly levelsof year, local(evyrs)
+
+. local pre_list ""
+
+. local post_list ""
+
+. foreach y of local evyrs {
+  2.     if `y' < `cohort_year' local pre_list "`pre_list' `y'"
+  3.     if `y' > `cohort_year' local post_list "`post_list' `y'"
+  4. }
+
+. local npost : word count `post_list'
+
+. local npre1 = `: word count `pre_list'' + 1          // files before COVID incl. the reference
+
+. * calendar years with no annual file, from the year before `p2' to `f3' (drawn as a gray band)
+. local nofile ""
+
+. forvalues y = `=`p2' - 1'/`f3' {
+  2.     local isin : list y in allfiles
+  3.     if !`isin' local nofile "`nofile' `y'"
+  4. }
+
+. local xfirst `p2'
+
+. local ybefore = `p2' - 1
+
+. local isin : list ybefore in nofile
+
+. if `isin' local xfirst `ybefore'           // the axis starts at the missing year before the window
+
+. display "   files `evyrs'; reference `cohort_year'; before:`pre_list'; after:`post_list'; no file:`nofile'"
+   files 2017 2018 2019 2020 2021 2022; reference 2019; before: 2017 2018; after: 2020 2021 2022; no file: 2016
+
+. gen byte post = year > `cohort_year'
+
+. egen byte f1tag = tag(firm_id)
+
+. quietly count if f1tag
+
+. local n_inc = r(N)
+
+. quietly count if f1tag & stayer
+
+. local n_stay = r(N)
+
+. display "   firms `n_inc', of which in every later file (stayers) `n_stay'"
+   firms 2266, of which in every later file (stayers) 1484
+
+. compress
+  variable workers was long now int
+  variable ind was int now byte
+  variable prov was int now byte
+  (46,136 bytes saved)
+
+. tempfile evdata
+
+. save `evdata'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_49765.000003 saved as .dta format
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 4/8: regressions: group x each file (reference `cohort_year'), and the pooled term"
+Step 4/8: regressions: group x each file (reference 2019), and the pooled term
+
+. *---------------------------------------------------------------------------
+. * Model: outcome = firm's own average + one average per industry and file + one per
+. * province and file + the group's extra change in each file, against `cohort_year':
+. *   b_year = (group's change from `cohort_year' to that year) - (other firms' change), log points.
+. * Versions:  stay   = stayers only (firms in every later file): drawn, solid dot
+. *            all    = every firm of the sample in whatever files it is in: drawn, hollow circle
+. *            fystay = stayers, firm + year averages only (table only)
+. * Outcomes 4 (productivity residual) and 5 (output per worker): stayers, main averages, table only.
+. * Pooled (Bu Deasy's "x Post2020"): the same model with one term, group x every file after
+. * `cohort_year', against the files `p2' to `cohort_year' together (a separate regression).
+. local ab_stay   "firm_id ind#year prov#year"
+
+. local ab_all    "firm_id ind#year prov#year"
+
+. local ab_fystay "firm_id year"
+
+. tempname P
+
+. tempfile res
+
+. postfile `P' str8 grouping str8 version byte outcome_id str8 term int year double(b se df_r) ///
+>     long(rows firms singletons n_g1 n_g0 ref_g1 ref_g0 firms_g1 firms_g0) double before_p using `res', replace
+(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_49765.000004 not found)
+
+. foreach x in exp imp fdi {
+  2.     display "   group `x'"
+  3.     foreach v in stay all fystay {
+  4.         use `evdata', clear
+  5.         keep if !missing(grp_main_`x')
+  6.         if "`v'" != "all" keep if stayer
+  7.         gen double X = grp_main_`x'
+  8.         local terms ""
+  9.         foreach y of local evyrs {
+ 10.             if `y' != `cohort_year' {
+ 11.                 gen double t`y' = X * (year == `y')
+ 12.                 local terms "`terms' t`y'"
+ 13.             }
+ 14.         }
+ 15.         local pre_terms ""
+ 16.         foreach y of local pre_list {
+ 17.             local pre_terms "`pre_terms' t`y'"
+ 18.         }
+ 19.         gen double tpost = X * post
+ 20.         local ks "1 2 3"
+ 21.         if "`v'" == "stay" local ks "1 2 3 4 5"
+ 22.         foreach k of local ks {
+ 23.             * --- year by year ---
+.             quietly reghdfe y`k' `terms', absorb(`ab_`v'') vce(cluster firm_id)
+ 24.             capture drop es
+ 25.             gen byte es = e(sample)
+ 26.             local N  = e(N)
+ 27.             local G  = e(N_clust)
+ 28.             local df = e(df_r)
+ 29.             local S  = e(num_singletons)
+ 30.             if "`S'" == "" local S 0
+ 31.             * before-COVID check: all markers before `cohort_year' are 0 together
+.             capture test `pre_terms'
+ 32.             local bp = cond(_rc, ., r(p))
+ 33.             * average of the markers after `cohort_year'
+.             local lc ""
+ 34.             foreach y of local post_list {
+ 35.                 local lc "`lc' + t`y'"
+ 36.             }
+ 37.             quietly lincom (`=substr("`lc'", 4, .)') / `npost'
+ 38.             local ab = r(estimate)
+ 39.             local as = r(se)
+ 40.             * firms behind each marker: group (X = 1) and other firms (X = 0) in that year
+.             quietly count if es & year == `cohort_year' & X == 1
+ 41.             local r1 = r(N)
+ 42.             quietly count if es & year == `cohort_year' & X == 0
+ 43.             local r0 = r(N)
+ 44.             capture drop ft
+ 45.             egen byte ft = tag(firm_id) if es
+ 46.             quietly count if ft == 1 & X == 1
+ 47.             local fg1 = r(N)
+ 48.             quietly count if ft == 1 & X == 0
+ 49.             local fg0 = r(N)
+ 50.             foreach y of local evyrs {
+ 51.                 if `y' == `cohort_year' continue
+ 52.                 quietly count if es & year == `y' & X == 1
+ 53.                 local n1 = r(N)
+ 54.                 quietly count if es & year == `y' & X == 0
+ 55.                 local n0 = r(N)
+ 56.                 * a file with no rows for this outcome (e.g. no residual) is dropped by reghdfe: left empty
+.                 capture local sechk = _se[t`y']
+ 57.                 if _rc local sechk = .
+ 58.                 if `sechk' == 0 | missing(`sechk') {
+ 59.                     post `P' ("`x'") ("`v'") (`k') ("`y'") (`y') (.) (.) (`df') (`N') (`G') (`S') ///
+>                         (`n1') (`n0') (`r1') (`r0') (`fg1') (`fg0') (`bp')
+ 60.                 }
+ 61.                 else {
+ 62.                     post `P' ("`x'") ("`v'") (`k') ("`y'") (`y') (_b[t`y']) (_se[t`y']) (`df') (`N') (`G') (`S') //
+> /
+>                         (`n1') (`n0') (`r1') (`r0') (`fg1') (`fg0') (`bp')
+ 63.                 }
+ 64.             }
+ 65.             post `P' ("`x'") ("`v'") (`k') ("avgpost") (.) (`ab') (`as') (`df') (`N') (`G') (`S') ///
+>                 (.) (.) (`r1') (`r0') (`fg1') (`fg0') (`bp')
+ 66.             * --- pooled term (Bu Deasy's "x Post2020"), same rows ---
+.             quietly reghdfe y`k' tpost if es, absorb(`ab_`v'') vce(cluster firm_id)
+ 67.             assert e(N) == `N'
+ 68.             local S2 = e(num_singletons)
+ 69.             if "`S2'" == "" local S2 0
+ 70.             post `P' ("`x'") ("`v'") (`k') ("pooled") (.) (_b[tpost]) (_se[tpost]) (e(df_r)) (e(N)) (e(N_clust)) //
+> /
+>                 (`S2') (.) (.) (`r1') (`r0') (`fg1') (`fg0') (`bp')
+ 71.         }
+ 72.     }
+ 73. }
+   group exp
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(3,394 observations deleted)
+(1,943 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(3,394 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(3,394 observations deleted)
+(1,943 observations deleted)
+   group imp
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(0 observations deleted)
+(2,764 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(0 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(0 observations deleted)
+(2,764 observations deleted)
+   group fdi
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(0 observations deleted)
+(2,764 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(0 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(0 observations deleted)
+(2,764 observations deleted)
+
+. postclose `P'
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 5/8: table -> CSV (numbers written before drawing)"
+Step 5/8: table -> CSV (numbers written before drawing)
+
+. *---------------------------------------------------------------------------
+. use `res', clear
+
+. * reference rows (0 by definition) and rows for years with no annual file
+. preserve
+
+. keep if term == "avgpost"
+(198 observations deleted)
+
+. replace term = "`cohort_year'"
+(33 real changes made)
+
+. replace year = `cohort_year'
+(33 real changes made)
+
+. replace b = 0
+(33 real changes made)
+
+. replace se = .
+(33 real changes made, 33 to missing)
+
+. replace n_g1 = ref_g1
+(33 real changes made)
+
+. replace n_g0 = ref_g0
+(33 real changes made)
+
+. tempfile refrows
+
+. save `refrows'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_49765.000006 saved as .dta format
+
+. restore
+
+. append using `refrows'
+
+. foreach y of local nofile {
+  2.     preserve
+  3.     keep if term == "avgpost"
+  4.     replace term = "`y'"
+  5.     replace year = `y'
+  6.     foreach v in b se n_g1 n_g0 {
+  7.         replace `v' = .
+  8.     }
+  9.     tempfile nf`y'
+ 10.     save `nf`y''
+ 11.     restore
+ 12.     append using `nf`y''
+ 13. }
+(231 observations deleted)
+(33 real changes made)
+(33 real changes made)
+(33 real changes made, 33 to missing)
+(33 real changes made, 33 to missing)
+(0 real changes made)
+(0 real changes made)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_49765.000008 saved as .dta format
+
+. gen byte reference = term == "`cohort_year'"
+
+. gen byte no_file = 0
+
+. foreach y of local nofile {
+  2.     replace no_file = 1 if term == "`y'"
+  3. }
+(33 real changes made)
+
+. gen byte yearly = !missing(year)
+
+. * support: a marker is shown only if the group and the other firms each have min_n firms in
+. * that year and in the reference year
+. gen byte shown = !missing(b) & ((n_g1 >= `min_n' & n_g0 >= `min_n' & ref_g1 >= `min_n' & ref_g0 >= `min_n') ///
+>     | !yearly)
+
+. replace shown = 0 if no_file
+(0 real changes made)
+
+. gen double tcrit = invttail(df_r, 0.025)
+
+. gen double lo = b - tcrit * se if shown & !reference
+(73 missing values generated)
+
+. gen double hi = b + tcrit * se if shown & !reference
+(73 missing values generated)
+
+. gen double p  = 2 * ttail(df_r, abs(b / se)) if shown & se > 0 & !missing(se)
+(73 missing values generated)
+
+. gen double pct    = 100 * (exp(b) - 1)  if shown
+(41 missing values generated)
+
+. gen double pct_lo = 100 * (exp(lo) - 1) if shown
+(73 missing values generated)
+
+. gen double pct_hi = 100 * (exp(hi) - 1) if shown
+(73 missing values generated)
+
+. gen byte clear = pct_lo > 0 | pct_hi < 0 if !missing(pct_lo)
+(73 missing values generated)
+
+. * labels
+. gen byte gi = cond(grouping == "exp", 1, cond(grouping == "imp", 2, 3))
+
+. gen str30 grouping_label = cond(gi == 1, "Exporters", cond(gi == 2, "Importers", "Foreign-owned (10%+)"))
+
+. gen str50 outcome_label = ""
+(297 missing values generated)
+
+. replace outcome_label = "Output (log, `out_prices')"            if outcome_id == 1
+(81 real changes made)
+
+. replace outcome_label = "Workers (log)"                           if outcome_id == 2
+(81 real changes made)
+
+. replace outcome_label = "Value added per worker (log)"            if outcome_id == 3
+(81 real changes made)
+
+. replace outcome_label = "Productivity residual (development)"     if outcome_id == 4
+(27 real changes made)
+
+. replace outcome_label = "Output per worker (log, `out_prices')"   if outcome_id == 5
+(27 real changes made)
+
+. gen str70 version_label = ""
+(297 missing values generated)
+
+. replace version_label = "Stayers (in every file `f1'-`f3'); firm + industry x year + province x year" if version == "s
+> tay"
+variable version_label was str70 now str75
+(135 real changes made)
+
+. replace version_label = "All sample firms in that year's file; firm + industry x year + province x year" if version ==
+>  "all"
+variable version_label was str75 now str78
+(81 real changes made)
+
+. replace version_label = "Stayers; firm + year averages only" if version == "fystay"
+(81 real changes made)
+
+. gen str70 period = ""
+(297 missing values generated)
+
+. replace period = "year " + term if yearly
+(231 real changes made)
+
+. replace period = "reference: " + term + " (0 by definition)" if reference
+(33 real changes made)
+
+. replace period = "average of the markers" + "`post_list'" if term == "avgpost"
+(33 real changes made)
+
+. replace period = "pooled: group x" + "`post_list'" + " vs `p2'-`cohort_year'" if term == "pooled"
+(33 real changes made)
+
+. gen str40 on_chart = "table only"
+
+. replace on_chart = "solid dot" if version == "stay" & outcome_id <= 3 & yearly & shown & !reference
+(45 real changes made)
+
+. replace on_chart = "hollow circle" if version == "all" & outcome_id <= 3 & yearly & shown & !reference
+(45 real changes made)
+
+. replace on_chart = "gray diamond (reference)" if version == "stay" & outcome_id <= 3 & reference
+(9 real changes made)
+
+. replace on_chart = "same diamond (reference)" if version == "all" & outcome_id <= 3 & reference
+(9 real changes made)
+
+. replace on_chart = "printed in the panel" if version == "stay" & outcome_id <= 3 & inlist(term, "pooled", "avgpost")
+(18 real changes made)
+
+. gen byte in_figure = inlist(on_chart, "solid dot", "hollow circle", "gray diamond (reference)", "printed in the panel"
+> )
+
+. gen str120 note = ""
+(297 missing values generated)
+
+. replace note = "No annual file" if no_file
+(33 real changes made)
+
+. replace note = "No rows in this file for this outcome (not estimable)" if missing(b) & yearly & !no_file
+(3 real changes made)
+
+. replace note = "Fewer than `min_n' firms of a group in this year or in `cohort_year': left empty" ///
+>     if !shown & !missing(b) & yearly
+(5 real changes made)
+
+. replace note = "Average of the markers after `cohort_year', against `cohort_year' only; table only" if term == "avgpos
+> t"
+(33 real changes made)
+
+. replace note = "Average of the markers after `cohort_year', against `cohort_year' only; printed in the panel" ///
+>     if term == "avgpost" & in_figure
+(9 real changes made)
+
+. * structural checks
+. assert pct_lo <= pct + 1e-9 & pct <= pct_hi + 1e-9 if !missing(pct_lo)
+
+. assert b == 0 if reference
+
+. assert n_g1 <= firms_g1 & n_g0 <= firms_g0 if !missing(n_g1)
+
+. gen byte vorder = cond(version == "stay", 1, cond(version == "all", 2, 3))
+
+. gen int torder = cond(yearly, year, cond(term == "avgpost", 9001, 9002))
+
+. sort gi vorder outcome_id torder
+
+. order grouping grouping_label version version_label outcome_id outcome_label term period year reference ///
+>     in_figure on_chart shown b se df_r p lo hi pct pct_lo pct_hi clear n_g1 n_g0 ref_g1 ref_g0 ///
+>     firms_g1 firms_g0 rows firms singletons before_p note
+
+. format b se lo hi %9.4f
+
+. format p before_p %6.4f
+
+. format pct pct_lo pct_hi %8.2f
+
+. format df_r rows firms singletons n_g* ref_g* firms_g* %9.0f
+
+. export delimited grouping-note using "tables/`fname'.csv", datafmt replace
+file tables/03_survivors_output_jobs_productivity.csv saved
+
+. list grouping version outcome_id term pct pct_lo pct_hi clear n_g1 n_g0 if version != "fystay" & outcome_id <= 3 ///
+>     & (yearly | term == "pooled"), noobs sepby(grouping version outcome_id) abbreviate(24)
+
+  +-------------------------------------------------------------------------------------------+
+  | grouping   version   outcome_id     term      pct   pct_lo   pct_hi   clear   n_g1   n_g0 |
+  |-------------------------------------------------------------------------------------------|
+  |      exp      stay            1     2016        .        .        .       .      .      . |
+  |      exp      stay            1     2017   -20.85   -32.92    -6.60       1    220    725 |
+  |      exp      stay            1     2018   -12.16   -23.29     0.58       0    243    801 |
+  |      exp      stay            1     2019     0.00        .        .       .    243    801 |
+  |      exp      stay            1     2020     3.80    -8.79    18.13       0    243    801 |
+  |      exp      stay            1     2021     4.55   -10.33    21.89       0    243    801 |
+  |      exp      stay            1     2022     4.90   -12.47    25.73       0    243    801 |
+  |      exp      stay            1   pooled    17.29     3.14    33.39       1      .      . |
+  |-------------------------------------------------------------------------------------------|
+  |      exp      stay            2     2016        .        .        .       .      .      . |
+  |      exp      stay            2     2017     9.26    -2.96    23.03       0    220    725 |
+  |      exp      stay            2     2018    10.18    -0.44    21.93       0    243    801 |
+  |      exp      stay            2     2019     0.00        .        .       .    243    801 |
+  |      exp      stay            2     2020     5.75    -3.94    16.42       0    243    801 |
+  |      exp      stay            2     2021    13.71     1.12    27.87       1    243    801 |
+  |      exp      stay            2     2022     6.07    -6.21    19.95       0    243    799 |
+  |      exp      stay            2   pooled     2.06    -6.77    11.74       0      .      . |
+  |-------------------------------------------------------------------------------------------|
+  |      exp      stay            3     2016        .        .        .       .      .      . |
+  |      exp      stay            3     2017   -26.37   -39.22   -10.80       1    220    725 |
+  |      exp      stay            3     2018   -18.08   -30.36    -3.63       1    243    801 |
+  |      exp      stay            3     2019     0.00        .        .       .    243    801 |
+  |      exp      stay            3     2020    -5.10   -19.56    11.95       0    243    801 |
+  |      exp      stay            3     2021    -6.81   -22.42    11.94       0    243    801 |
+  |      exp      stay            3     2022    -2.53   -20.86    20.06       0    243    799 |
+  |      exp      stay            3   pooled    11.98    -2.30    28.35       0      .      . |
+  |-------------------------------------------------------------------------------------------|
+  |      exp       all            1     2016        .        .        .       .      .      . |
+  |      exp       all            1     2017   -20.60   -30.55    -9.22       1    346   1046 |
+  |      exp       all            1     2018   -11.58   -21.08    -0.94       1    401   1198 |
+  |      exp       all            1     2019     0.00        .        .       .    401   1198 |
+  |      exp       all            1     2020     2.91    -9.32    16.79       0    321    989 |
+  |      exp       all            1     2021     5.79    -8.66    22.53       0    275    895 |
+  |      exp       all            1     2022     5.20   -11.73    25.38       0    243    801 |
+  |      exp       all            1   pooled    17.00     3.77    31.90       1      .      . |
+  |-------------------------------------------------------------------------------------------|
+  |      exp       all            2     2016        .        .        .       .      .      . |
+  |      exp       all            2     2017     7.16    -3.10    18.50       0    346   1046 |
+  |      exp       all            2     2018     8.79     0.10    18.24       1    401   1198 |
+  |      exp       all            2     2019     0.00        .        .       .    401   1198 |
+  |      exp       all            2     2020     2.82    -5.87    12.32       0    321    989 |
+  |      exp       all            2     2021    16.23     4.00    29.88       1    275    895 |
+  |      exp       all            2     2022     5.24    -6.81    18.85       0    243    799 |
+  |      exp       all            2   pooled     2.47    -5.58    11.21       0      .      . |
+  |-------------------------------------------------------------------------------------------|
+  |      exp       all            3     2016        .        .        .       .      .      . |
+  |      exp       all            3     2017   -26.04   -36.55   -13.80       1    346   1046 |
+  |      exp       all            3     2018   -14.90   -25.84    -2.35       1    401   1198 |
+  |      exp       all            3     2019     0.00        .        .       .    401   1198 |
+  |      exp       all            3     2020    -0.31   -14.67    16.48       0    321    989 |
+  |      exp       all            3     2021    -7.69   -22.08     9.35       0    275    895 |
+  |      exp       all            3     2022    -0.76   -18.84    21.35       0    243    799 |
+  |      exp       all            3   pooled    12.55    -0.95    27.89       0      .      . |
+  |-------------------------------------------------------------------------------------------|
+  |      imp      stay            1     2016        .        .        .       .      .      . |
+  |      imp      stay            1     2017    -7.48   -18.52     5.06       0    756    587 |
+  |      imp      stay            1     2018    -1.63   -10.99     8.72       0    847    634 |
+  |      imp      stay            1     2019     0.00        .        .       .    847    634 |
+  |      imp      stay            1     2020    -1.08   -11.18    10.17       0    847    634 |
+  |      imp      stay            1     2021   -13.59   -24.42    -1.21       1    847    634 |
+  |      imp      stay            1     2022   -21.12   -31.89    -8.64       1    847    634 |
+  |      imp      stay            1   pooled    -9.69   -19.06     0.76       0      .      . |
+  |-------------------------------------------------------------------------------------------|
+  |      imp      stay            2     2016        .        .        .       .      .      . |
+  |      imp      stay            2     2017    -1.24    -9.30     7.53       0    756    587 |
+  |      imp      stay            2     2018    -2.60    -9.40     4.72       0    847    634 |
+  |      imp      stay            2     2019     0.00        .        .       .    847    634 |
+  |      imp      stay            2     2020     4.88    -1.60    11.79       0    847    634 |
+  |      imp      stay            2     2021    15.23     5.86    25.42       1    847    634 |
+  |      imp      stay            2     2022     7.95    -2.01    18.91       0    847    632 |
+  |      imp      stay            2   pooled    10.69     3.46    18.43       1      .      . |
+  |-------------------------------------------------------------------------------------------|
+  |      imp      stay            3     2016        .        .        .       .      .      . |
+  |      imp      stay            3     2017     2.33   -12.44    19.58       0    756    587 |
+  |      imp      stay            3     2018     8.26    -5.55    24.09       0    847    634 |
+  |      imp      stay            3     2019     0.00        .        .       .    847    634 |
+  |      imp      stay            3     2020   -14.31   -25.47    -1.48       1    847    634 |
+  |      imp      stay            3     2021   -33.54   -43.09   -22.39       1    847    634 |
+  |      imp      stay            3     2022   -36.88   -46.82   -25.08       1    847    632 |
+  |      imp      stay            3   pooled   -31.30   -39.00   -22.63       1      .      . |
+  |-------------------------------------------------------------------------------------------|
+  |      imp       all            1     2016        .        .        .       .      .      . |
+  |      imp       all            1     2017   -16.18   -24.43    -7.02       1   1142    832 |
+  |      imp       all            1     2018    -4.79   -12.38     3.45       0   1328    933 |
+  |      imp       all            1     2019     0.00        .        .       .   1328    933 |
+  |      imp       all            1     2020    -3.44   -12.78     6.89       0   1093    776 |
+  |      imp       all            1     2021   -19.11   -29.06    -7.76       1    973    693 |
+  |      imp       all            1     2022   -24.39   -34.36   -12.90       1    847    634 |
+  |      imp       all            1   pooled    -8.63   -17.40     1.08       0      .      . |
+  |-------------------------------------------------------------------------------------------|
+  |      imp       all            2     2016        .        .        .       .      .      . |
+  |      imp       all            2     2017    -1.31    -7.66     5.48       0   1142    832 |
+  |      imp       all            2     2018    -3.89    -9.17     1.69       0   1328    933 |
+  |      imp       all            2     2019     0.00        .        .       .   1328    933 |
+  |      imp       all            2     2020     4.81    -1.18    11.16       0   1093    776 |
+  |      imp       all            2     2021    15.85     6.88    25.58       1    973    693 |
+  |      imp       all            2     2022     7.81    -1.94    18.54       0    847    632 |
+  |      imp       all            2   pooled    11.12     4.59    18.07       1      .      . |
+  |-------------------------------------------------------------------------------------------|
+  |      imp       all            3     2016        .        .        .       .      .      . |
+  |      imp       all            3     2017    -9.65   -20.44     2.61       0   1142    832 |
+  |      imp       all            3     2018     5.97    -4.86    18.02       0   1328    933 |
+  |      imp       all            3     2019     0.00        .        .       .   1328    933 |
+  |      imp       all            3     2020   -15.55   -25.41    -4.38       1   1093    776 |
+  |      imp       all            3     2021   -38.53   -46.69   -29.13       1    973    693 |
+  |      imp       all            3     2022   -39.72   -48.75   -29.10       1    847    632 |
+  |      imp       all            3   pooled   -29.95   -37.10   -21.97       1      .      . |
+  |-------------------------------------------------------------------------------------------|
+  |      fdi      stay            1     2016        .        .        .       .      .      . |
+  |      fdi      stay            1     2017   -22.32   -41.56     3.24       0     41   1302 |
+  |      fdi      stay            1     2018     2.99   -17.28    28.23       0     63   1418 |
+  |      fdi      stay            1     2019     0.00        .        .       .     63   1418 |
+  |      fdi      stay            1     2020     1.11   -19.43    26.87       0     63   1418 |
+  |      fdi      stay            1     2021     9.76   -15.16    41.99       0     63   1418 |
+  |      fdi      stay            1     2022    11.40   -12.67    42.09       0     63   1418 |
+  |      fdi      stay            1   pooled    12.69    -9.06    39.66       0      .      . |
+  |-------------------------------------------------------------------------------------------|
+  |      fdi      stay            2     2016        .        .        .       .      .      . |
+  |      fdi      stay            2     2017    -8.94   -27.96    15.10       0     41   1302 |
+  |      fdi      stay            2     2018   -13.26   -28.63     5.42       0     63   1418 |
+  |      fdi      stay            2     2019     0.00        .        .       .     63   1418 |
+  |      fdi      stay            2     2020    -4.34   -18.70    12.56       0     63   1418 |
+  |      fdi      stay            2     2021    -4.99   -18.85    11.24       0     63   1418 |
+  |      fdi      stay            2     2022     2.15   -17.29    26.16       0     63   1416 |
+  |      fdi      stay            2   pooled     5.31   -10.34    23.68       0      .      . |
+  |-------------------------------------------------------------------------------------------|
+  |      fdi      stay            3     2016        .        .        .       .      .      . |
+  |      fdi      stay            3     2017   -21.72   -48.61    19.24       0     41   1302 |
+  |      fdi      stay            3     2018    13.03   -16.14    52.34       0     63   1418 |
+  |      fdi      stay            3     2019     0.00        .        .       .     63   1418 |
+  |      fdi      stay            3     2020    -1.12   -25.33    30.94       0     63   1418 |
+  |      fdi      stay            3     2021     8.31   -19.67    46.02       0     63   1418 |
+  |      fdi      stay            3     2022     4.37   -21.91    39.49       0     63   1416 |
+  |      fdi      stay            3   pooled     4.98   -15.17    29.93       0      .      . |
+  |-------------------------------------------------------------------------------------------|
+  |      fdi       all            1     2016        .        .        .       .      .      . |
+  |      fdi       all            1     2017   -18.14   -34.28     1.96       0     74   1900 |
+  |      fdi       all            1     2018    -5.14   -21.20    14.19       0    126   2135 |
+  |      fdi       all            1     2019     0.00        .        .       .    126   2135 |
+  |      fdi       all            1     2020    -6.80   -24.12    14.47       0     90   1779 |
+  |      fdi       all            1     2021     5.51   -18.95    37.35       0     76   1590 |
+  |      fdi       all            1     2022     7.57   -16.44    38.48       0     63   1418 |
+  |      fdi       all            1   pooled     7.73   -10.65    29.89       0      .      . |
+  |-------------------------------------------------------------------------------------------|
+  |      fdi       all            2     2016        .        .        .       .      .      . |
+  |      fdi       all            2     2017    -0.58   -16.54    18.44       0     74   1900 |
+  |      fdi       all            2     2018    -7.34   -19.43     6.57       0    126   2135 |
+  |      fdi       all            2     2019     0.00        .        .       .    126   2135 |
+  |      fdi       all            2     2020    -0.40   -13.90    15.22       0     90   1779 |
+  |      fdi       all            2     2021     1.39   -13.37    18.66       0     76   1590 |
+  |      fdi       all            2     2022     7.08   -12.83    31.54       0     63   1416 |
+  |      fdi       all            2   pooled     5.26    -8.31    20.85       0      .      . |
+  |-------------------------------------------------------------------------------------------|
+  |      fdi       all            3     2016        .        .        .       .      .      . |
+  |      fdi       all            3     2017   -28.64   -46.53    -4.77       1     74   1900 |
+  |      fdi       all            3     2018     3.15   -19.24    31.76       0    126   2135 |
+  |      fdi       all            3     2019     0.00        .        .       .    126   2135 |
+  |      fdi       all            3     2020   -10.45   -29.62    13.94       0     90   1779 |
+  |      fdi       all            3     2021    -3.20   -26.35    27.22       0     76   1590 |
+  |      fdi       all            3     2022    -3.05   -27.55    29.74       0     63   1416 |
+  |      fdi       all            3   pooled     0.27   -17.05    21.21       0      .      . |
+  +-------------------------------------------------------------------------------------------+
+
+. list grouping version outcome_id before_p firms_g1 firms_g0 rows singletons if term == "pooled", ///
+>     noobs sepby(grouping) abbreviate(24)
+
+  +---------------------------------------------------------------------------------------+
+  | grouping   version   outcome_id   before_p   firms_g1   firms_g0    rows   singletons |
+  |---------------------------------------------------------------------------------------|
+  |      exp      stay            1     0.0217        243        801    6165            0 |
+  |      exp      stay            2     0.1539        243        801    6163            0 |
+  |      exp      stay            3     0.0048        243        801    6163            0 |
+  |      exp      stay            4     0.1333        182        633    2758            0 |
+  |      exp      stay            5     0.0009        243        801    6163            0 |
+  |      exp       all            1     0.0034        401       1198    8114            0 |
+  |      exp       all            2     0.1348        401       1198    8112            0 |
+  |      exp       all            3     0.0006        401       1198    8112            0 |
+  |      exp    fystay            1     0.0328        243        806    6197            0 |
+  |      exp    fystay            2     0.0656        243        806    6195            0 |
+  |      exp    fystay            3     0.0106        243        806    6195            0 |
+  |---------------------------------------------------------------------------------------|
+  |      imp      stay            1     0.4189        847        634    8748            0 |
+  |      imp      stay            2     0.7622        847        634    8746            0 |
+  |      imp      stay            3     0.4770        847        634    8746            0 |
+  |      imp      stay            4     0.2795        421        550    3175            0 |
+  |      imp      stay            5     0.4662        847        634    8746            0 |
+  |      imp       all            1     0.0023       1328        933   11512            0 |
+  |      imp       all            2     0.3387       1328        933   11510            0 |
+  |      imp       all            3     0.0224       1328        933   11510            0 |
+  |      imp    fystay            1     0.0023        848        636    8770            0 |
+  |      imp    fystay            2     0.0018        848        636    8768            0 |
+  |      imp    fystay            3     0.2245        848        636    8768            0 |
+  |---------------------------------------------------------------------------------------|
+  |      fdi      stay            1     0.0657         63       1418    8748            0 |
+  |      fdi      stay            2     0.3508         63       1418    8746            0 |
+  |      fdi      stay            3     0.0977         63       1418    8746            0 |
+  |      fdi      stay            4     0.9698         36        935    3175            0 |
+  |      fdi      stay            5     0.0767         63       1418    8746            0 |
+  |      fdi       all            1     0.1572        126       2135   11512            0 |
+  |      fdi       all            2     0.5150        126       2135   11510            0 |
+  |      fdi       all            3     0.0101        126       2135   11510            0 |
+  |      fdi    fystay            1     0.0460         63       1421    8770            0 |
+  |      fdi    fystay            2     0.2631         63       1421    8768            0 |
+  |      fdi    fystay            3     0.1342         63       1421    8768            0 |
+  +---------------------------------------------------------------------------------------+
+
+. tempfile ctsrc
+
+. save `ctsrc'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_49765.000009 saved as .dta format
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 6/8: numbers for the notes and panel texts, read from the table (never typed)"
+Step 6/8: numbers for the notes and panel texts, read from the table (never typed)
+
+. *---------------------------------------------------------------------------
+. * markers before COVID that are clearly away from 0 (stayers, drawn outcomes): named in the notes
+. * and flagged in the panel (there the pooled term carries a change that started before COVID)
+. local olab1 "output"
+
+. local olab2 "workers"
+
+. local olab3 "value added per worker"
+
+. local glab1 "exporters'"
+
+. local glab2 "importers'"
+
+. local glab3 "foreign-owned firms'"
+
+. local apart ""
+
+. local n_apart 0
+
+. forvalues g = 1/3 {
+  2.     forvalues k = 1/3 {
+  3.         quietly count if gi == `g' & outcome_id == `k' & version == "stay" & yearly & year < `cohort_year' & clear 
+> == 1
+  4.         local flag_`g'_`k' = r(N) > 0
+  5.         if r(N) > 0 {
+  6.             local ++n_apart
+  7.             local apart "`apart'; `glab`g'' `olab`k''"
+  8.         }
+  9.     }
+ 10. }
+
+. local apart = substr("`apart'", 3, .)
+
+. display "   drawn panels already apart before COVID (stayers): `n_apart' (`apart')"
+   drawn panels already apart before COVID (stayers): 2 (exporters' output; exporters' value added per worker)
+
+. local pre_txt = subinstr(strtrim("`pre_list'"), " ", " or ", .)
+
+. local post_first : word 1 of `post_list'
+
+. local post_last  : word `npost' of `post_list'
+
+. local post_rng = "`post_first'–" + substr("`post_last'", 3, 2)
+
+. local pool_rng = "`p2'–" + substr("`cohort_year'", 3, 2)
+
+. local n_inc_s  = strtrim(string(`n_inc', "%9.0fc"))
+
+. local n_stay_s = strtrim(string(`n_stay', "%9.0fc"))
+
+. * two numbers per panel (stayers), whole %, with their 95% intervals:
+. *   line 1 = average of the markers after COVID, against `cohort_year' alone
+. *   line 2 = the pooled term (Bu Deasy's x Post2020), against `p2'-`cohort_year' together
+. *   line 3 = "Already apart before COVID" where a stayers' marker before `cohort_year' is clear
+. forvalues g = 1/3 {
+  2.     forvalues k = 1/3 {
+  3.         foreach tm in avgpost pooled {
+  4.             quietly summarize pct if gi == `g' & outcome_id == `k' & version == "stay" & term == "`tm'"
+  5.             local pv = r(mean)
+  6.             quietly summarize pct_lo if gi == `g' & outcome_id == `k' & version == "stay" & term == "`tm'"
+  7.             local pl = r(mean)
+  8.             quietly summarize pct_hi if gi == `g' & outcome_id == `k' & version == "stay" & term == "`tm'"
+  9.             local ph = r(mean)
+ 10.             local s1 = cond(round(`pv') > 0, "+", "") + string(round(`pv'), "%9.0f")
+ 11.             local s2 = cond(round(`pl') > 0, "+", "") + string(round(`pl'), "%9.0f")
+ 12.             local s3 = cond(round(`ph') > 0, "+", "") + string(round(`ph'), "%9.0f")
+ 13.             local v_`tm' "`s1'% (`s2' to `s3')"
+ 14.         }
+ 15.         local ptxt1_`g'_`k' "`post_rng' vs `cohort_year': `v_avgpost'"
+ 16.         local ptxt2_`g'_`k' "`post_rng' vs `pool_rng': `v_pooled'"
+ 17.         local ptxt3_`g'_`k' = cond(`flag_`g'_`k'', "Already apart before COVID", "")
+ 18.     }
+ 19. }
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 7/8: dot-and-whisker panels: 3 groups x 3 outcomes, one shared scale"
+Step 7/8: dot-and-whisker panels: 3 groups x 3 outcomes, one shared scale
+
+. *---------------------------------------------------------------------------
+. keep if version != "fystay" & outcome_id <= 3 & yearly & !no_file
+(189 observations deleted)
+
+. gen byte panel = 3 * (gi - 1) + outcome_id
+
+. label define panel 1 "(a) Exporters: output" 2 "(b) Exporters: workers" 3 "(c) Exporters: VA per worker" ///
+>     4 "(d) Importers: output" 5 "(e) Importers: workers" 6 "(f) Importers: VA per worker" ///
+>     7 "(g) Foreign-owned: output" 8 "(h) Foreign-owned: workers" 9 "(i) Foreign-owned: VA per worker"
+
+. label values panel panel
+
+. * marker sets: stayers just left of the year, all firms just right; the reference once
+. gen double xs = year - 0.15 if version == "stay" & shown & !reference
+(63 missing values generated)
+
+. gen double ys = pct         if version == "stay" & shown & !reference
+(63 missing values generated)
+
+. gen double ls = pct_lo      if version == "stay" & shown & !reference
+(63 missing values generated)
+
+. gen double hs = pct_hi      if version == "stay" & shown & !reference
+(63 missing values generated)
+
+. gen double xa = year + 0.15 if version == "all" & shown & !reference
+(63 missing values generated)
+
+. gen double ya = pct         if version == "all" & shown & !reference
+(63 missing values generated)
+
+. gen double la = pct_lo      if version == "all" & shown & !reference
+(63 missing values generated)
+
+. gen double ha = pct_hi      if version == "all" & shown & !reference
+(63 missing values generated)
+
+. gen double xr = year        if version == "stay" & reference
+(99 missing values generated)
+
+. gen double yr = 0           if version == "stay" & reference
+(99 missing values generated)
+
+. * one shared y scale: a round step that grows with the numbers; 0 always inside
+. egen double ymn = rowmin(ls la)
+(18 missing values generated)
+
+. egen double ymx = rowmax(hs ha)
+(18 missing values generated)
+
+. quietly summarize ymn
+
+. local ymin = min(r(min), 0)
+
+. quietly summarize ymx
+
+. local ymax = max(r(max), 0)
+
+. local rng = `ymax' - `ymin'
+
+. local step = 10^floor(log10(`rng'))
+
+. if `rng'/`step' < 2       local step = `step'/5
+
+. else if `rng'/`step' < 5  local step = `step'/2
+
+. local ybot = `step' * floor(`ymin'/`step')
+
+. local ytop = `step' * ceil(`ymax'/`step')
+
+. local ytx1 = `ytop' + 0.52 * (`ytop' - `ybot')          // three text lines above the markers
+
+. local ytx2 = `ytop' + 0.33 * (`ytop' - `ybot')
+
+. local ytx3 = `ytop' + 0.14 * (`ytop' - `ybot')
+
+. local yroof = `ytop' + 0.60 * (`ytop' - `ybot')
+
+. display "   y from `ybot' to `ytop' by `step'"
+   y from -60 to 60 by 20
+
+. * labelled every second step, always through 0 (short panels); faint grid at every step
+. local ylab "0"
+
+. forvalues m = 1/20 {
+  2.     if -2 * `m' * `step' >= `ybot' local ylab "`=-2 * `m' * `step'' `ylab'"
+  3.     if  2 * `m' * `step' <= `ytop' local ylab "`ylab' `=2 * `m' * `step''"
+  4. }
+
+. * per panel: the gray no-file band, the 0 line, the COVID line and the three text lines
+. local xl = `xfirst' - 0.5
+
+. local xr2 = `f3' + 0.5
+
+. local n0 = _N
+
+. set obs `=_N + 9'
+Number of observations (_N) was 108, now 117.
+
+. gen double bx = .
+(117 missing values generated)
+
+. gen double by0 = .
+(117 missing values generated)
+
+. gen double by1 = .
+(117 missing values generated)
+
+. gen double zy = .
+(117 missing values generated)
+
+. gen double zx0 = .
+(117 missing values generated)
+
+. gen double zx1 = .
+(117 missing values generated)
+
+. gen double cx = .
+(117 missing values generated)
+
+. gen double cy0 = .
+(117 missing values generated)
+
+. gen double cy1 = .
+(117 missing values generated)
+
+. gen double tx = .
+(117 missing values generated)
+
+. gen double ty1 = .
+(117 missing values generated)
+
+. gen double ty2 = .
+(117 missing values generated)
+
+. gen double ty3 = .
+(117 missing values generated)
+
+. gen str60 ttx1 = ""
+(117 missing values generated)
+
+. gen str60 ttx2 = ""
+(117 missing values generated)
+
+. gen str60 ttx3 = ""
+(117 missing values generated)
+
+. local nf1 : word 1 of `nofile'
+
+. forvalues pp = 1/9 {
+  2.     local r = `n0' + `pp'
+  3.     local g = ceil(`pp' / 3)
+  4.     local k = `pp' - 3 * (`g' - 1)
+  5.     quietly replace panel = `pp' in `r'
+  6.     if "`nf1'" != "" {
+  7.         quietly replace bx  = `nf1' in `r'
+  8.         quietly replace by0 = `ybot' in `r'
+  9.         quietly replace by1 = `ytop' in `r'
+ 10.     }
+ 11.     quietly replace zy  = 0 in `r'
+ 12.     quietly replace zx0 = `xl' in `r'
+ 13.     quietly replace zx1 = `xr2' in `r'
+ 14.     quietly replace cx  = `cohort_year' + 0.5 in `r'
+ 15.     quietly replace cy0 = `ybot' in `r'
+ 16.     quietly replace cy1 = `ytop' in `r'
+ 17.     quietly replace tx  = `xl' + 0.05 in `r'
+ 18.     quietly replace ty1 = `ytx1' in `r'
+ 19.     quietly replace ty2 = `ytx2' in `r'
+ 20.     quietly replace ty3 = `ytx3' in `r'
+ 21.     quietly replace ttx1 = "`ptxt1_`g'_`k''" in `r'
+ 22.     quietly replace ttx2 = "`ptxt2_`g'_`k''" in `r'
+ 23.     quietly replace ttx3 = "`ptxt3_`g'_`k''" in `r'
+ 24. }
+
+. sort panel
+
+. * x labels: every calendar year of the axis, two digits (three panels side by side leave no room for four)
+. local xlab ""
+
+. forvalues y = `xfirst'/`f3' {
+  2.     local xlab `"`xlab' `y' "`=substr("`y'", 3, 2)'""'
+  3. }
+
+. * Notes: one text, wrapped here into lines of at most 102 characters (PDF text runs wider than the PNG)
+. if `n_apart' > 0 local aparttxt "Already apart before COVID (a `pre_txt' ● clearly away from 0): `apart'. There the gr
+> oup was already moving away from similar firms before COVID, so the `pool_rng' number includes that earlier change and
+>  does not measure COVID: read the `cohort_year' number."
+
+. else local aparttxt "No ● before COVID is clearly away from 0; with only `: word count `pre_list'' earlier files this 
+> is weak evidence that the paths were the same."
+
+. local ntext "Notes: Firms = the `n_inc_s' firms of the `cohort_year' file (the last before COVID) also in the `p2' or 
+> `p1' file, grouped once from their own `pool_rng' answers (in the group if yes in at least half of its known answers; 
+> no known answer = left out). ●~=~the group's change since `cohort_year' minus that of firms of the same industry and p
+> rovince, each firm against its own average, among the `n_stay_s' firms in every file `f1'–`f3' (conditional on staying
+> : firms that left are not in it). ○~=~the same with every firm in whatever files it is in. Line = 95% interval; crossi
+> ng 0 = no clear difference. Printed in each panel, ●~firms: `post_rng' vs `cohort_year' = average of the `npost' ● aft
+> er COVID; `post_rng' vs `pool_rng' = Bu Deasy's ×~Post2020 term (against the `npre1' files before COVID together). `ap
+> arttxt' Productivity = value added (VA) per worker; VA = output minus materials, energy and services bought. Output = 
+> value of goods produced; `out_prices'. Association, not the effect of COVID. Firm links are fictional in the developme
+> nt data, so who stayed means nothing here: run on the real BPS panel."
+
+. local notelines ""
+
+. local line ""
+
+. foreach w of local ntext {
+  2.     if ustrlen("`line' `w'") > 102 & "`line'" != "" {
+  3.         local notelines `"`notelines' "`line'""'
+  4.         local line "`w'"
+  5.     }
+  6.     else local line = strtrim("`line' `w'")
+  7. }
+
+. local notelines `"`notelines' "`line'""'
+
+. * "~" keeps a symbol with its words on one line; it prints as a space
+. local notelines : subinstr local notelines "~" " ", all
+
+. display `"   note lines: `notelines'"'
+   note lines:  "Notes: Firms = the 2,266 firms of the 2019 file (the last before COVID) also in the 2017 or 2018 file,"
+>  "grouped once from their own 2017–19 answers (in the group if yes in at least half of its known" "answers; no known a
+> nswer = left out). ● = the group's change since 2019 minus that of firms of the" "same industry and province, each fir
+> m against its own average, among the 1,484 firms in every file" "2020–2022 (conditional on staying: firms that left ar
+> e not in it). ○ = the same with every firm in" "whatever files it is in. Line = 95% interval; crossing 0 = no clear di
+> fference. Printed in each panel," "● firms: 2020–22 vs 2019 = average of the 3 ● after COVID; 2020–22 vs 2017–19 = Bu 
+> Deasy's × Post2020" "term (against the 3 files before COVID together). Already apart before COVID (a 2017 or 2018 ● cl
+> early" "away from 0): exporters' output; exporters' value added per worker. There the group was already moving" "away 
+> from similar firms before COVID, so the 2017–19 number includes that earlier change and does not" "measure COVID: read
+>  the 2019 number. Productivity = value added (VA) per worker; VA = output minus" "materials, energy and services bough
+> t. Output = value of goods produced; current prices. Association," "not the effect of COVID. Firm links are fictional 
+> in the development data, so who stayed means nothing" "here: run on the real BPS panel."
+
+. local nfkey ""
+
+. local f3rng = "`f1'–" + substr("`f3'", 3, 2)
+
+. if "`nf1'" != "" local nfkey `"1 "No annual file (`nf1')""'
+
+. 
+. * Stata draws markers about twice as large in the PNG as in the PDF, so each file gets its own
+. * marker size (same data, same layout)
+. foreach out in png pdf {
+  2.     local msz = cond("`out'" == "png", "vsmall", "small")
+  3.     twoway (rbar by0 by1 bx, barwidth(0.8) fcolor(gs14) lcolor(gs14) lwidth(none)) ///
+>         (rspike zx0 zx1 zy, horizontal lcolor(gs8) lwidth(thin)) ///
+>         (rspike cy0 cy1 cx, lcolor(gs6) lpattern(dash) lwidth(thin)) ///
+>         (rspike la ha xa, lcolor(gs10) lwidth(thin)) ///
+>         (rspike ls hs xs, lcolor(black) lwidth(medthin)) ///
+>         (scatter ya xa, msymbol(O) mfcolor(white) mlcolor(gs5) mlwidth(medthin) msize(`msz')) ///
+>         (scatter ys xs, msymbol(O) mcolor(black) msize(`msz')) ///
+>         (scatter yr xr, msymbol(D) mcolor(gs8) msize(`msz')) ///
+>         (scatter ty1 tx, msymbol(none) mlabel(ttx1) mlabpos(3) mlabgap(0) mlabsize(vsmall) mlabcolor(black)) ///
+>         (scatter ty2 tx, msymbol(none) mlabel(ttx2) mlabpos(3) mlabgap(0) mlabsize(vsmall) mlabcolor(black)) ///
+>         (scatter ty3 tx, msymbol(none) mlabel(ttx3) mlabpos(3) mlabgap(0) mlabsize(vsmall) mlabcolor(black)), ///
+>         by(panel, cols(3) imargin(small) graphregion(color(white) lcolor(white) ilcolor(white) margin(r+2)) ///
+>             legend(pos(6)) ///
+>             title("Figure R10-03. Output, workers and value added per worker around COVID:" ///
+>                   "internationalised firms vs similar firms, among firms still in the files", ///
+>                   size(small) pos(11) span) ///
+>             note(`notelines' "`srcnote'" "`devnote'", size(vsmall) span linegap(0.6))) ///
+>         subtitle(, pos(11) nobox fcolor(white) lcolor(white) size(small)) ///
+>         yscale(range(`ybot' `yroof') noline) ///
+>         ylabel(`ylab', angle(0) format(%9.0f) noticks tlength(0) labsize(vsmall) grid glcolor(gs15) glwidth(vthin)) //
+> /
+>         ymtick(`ybot'(`step')`ytop', noticks tlength(0) grid glcolor(gs15) glwidth(vthin)) ///
+>         ytitle("Group minus similar firms: change since `cohort_year', %", size(vsmall)) ///
+>         xscale(range(`xl' `xr2') noline) xlabel(`xlab', noticks tlength(0) labsize(vsmall) nogrid) ///
+>         xtitle("Year of the survey file (`=substr("`xfirst'", 3, 2)' = `xfirst')", size(vsmall)) ///
+>         legend(order(7 "Stayers (in every file `f3rng')" 6 "All firms in that year's file" ///
+>                      8 "`cohort_year' = reference (0)" 5 "95% interval, stayers" 4 "95% interval, all firms" ///
+>                      3 "COVID (from March `covid_first')" 2 "0 = no difference" `nfkey') ///
+>             cols(3) region(lcolor(none)) size(vsmall) symxsize(6) keygap(1) colgap(6) rowgap(0.3)) ///
+>         plotregion(style(none)) xsize(8) ysize(12)
+  4.     if "`out'" == "png" graph export "figures/`fname'.png", width(2400) replace
+  5.     else graph export "figures/`fname'.pdf", replace
+  6. }
+file
+    /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r10-covid-resilience-internationalised
+    > /figures/03_survivors_output_jobs_productivity.png saved as PNG format
+file
+    /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r10-covid-resilience-internationalised
+    > /figures/03_survivors_output_jobs_productivity.pdf saved as PDF format
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 8/8: companion tables: every plotted point, and the regression tables"
+Step 8/8: companion tables: every plotted point, and the regression tables
+
+. *---------------------------------------------------------------------------
+. * ==== COMPANION TABLE (pattern for all exhibits) =============================
+. * Owner rule, 28 Sep 2026: every chart gets a table of every plotted point, and
+. * every chart of regression coefficients also gets a regression table, written
+. * by the same do-file (spec: TABLE_BRIEF.md). This step runs AFTER the graph
+. * export, so the chart and the CSV stay byte-identical.
+. *
+. * How to use it in another exhibit file:
+. *   PART 1 (the writer, program ctable_pdf) is copied UNCHANGED.
+. *   PART 2 is the only exhibit-specific part: put the numbers in memory (the
+. *   tempfile saved right after the CSV export, or the CSV itself), build one
+. *   STRING variable per table column, one row per plotted point in chart order
+. *   (years not drawn included, with the reason in a status column), then call
+. *   ctable_pdf. Format numbers with string(x, "%9.1f") etc. so the table shows
+. *   exactly the rounding of the chart labels.
+. *
+. * ctable_pdf strvars using "tables/NN_name_table.pdf",
+. *     title("Table R1-02. ...: every plotted point")    first line, bold
+. *     header("Col 1" "Col 2" ...)       one text per column; "|" = line break
+. *     [right(numlist)]                  columns right-aligned (numbers)
+. *     [norepeat(numlist)]               columns whose repeated text is shown
+. *                                       only on the first row of a run
+. *     [rules(numlist)]                  thin gray line under these data rows
+. *     [notes("line 1" "line 2" ...)]    footer paragraphs (Notes, Source, dev line)
+. *     [subtitle(text)] [fontsize(#)] [perpage(#)] [landscape|portrait]
+. * Landscape is chosen automatically when there are more than 6 columns. Long
+. * tables continue on a new page with the header repeated ("(continued)"); a page
+. * never breaks inside a block whose first column is empty (e.g. an SE row).
+. * --- PART 1: the writer (identical in every file; do not edit) ---------------
+. capture program drop ctable_pdf
+
+. program define ctable_pdf
+  1.     version 17
+  2.     syntax varlist(string) using/, TItle(string) HEADer(string asis) ///
+>         [RIGHT(numlist integer >0) NOREPeat(numlist integer >0) RULES(numlist integer >0) ///
+>          NOTEs(string asis) SUBtitle(string) FONTsize(real 9.5) PERpage(integer 0) ///
+>          LANDscape PORTrait]
+  3.     local nc : word count `varlist'
+  4.     local nh : word count `header'
+  5.     if `nh' != `nc' {
+  6.         display as error "ctable_pdf: `nc' columns but `nh' header texts"
+  7.         exit 198
+  8.     }
+  9.     local orient = cond(`nc' > 6, "landscape", "")
+ 10.     if "`landscape'" != "" local orient "landscape"
+ 11.     if "`portrait'"  != "" local orient ""
+ 12.     * rows per page: a conservative guess for 9-10 pt text (wrapped cells take more)
+.     if `perpage' == 0 local perpage = cond("`orient'" == "landscape", 24, 40)
+ 13.     preserve
+ 14.     quietly {
+ 15.         keep `varlist'
+ 16.         rename (`varlist') (__c#), addnumber      // __c1 __c2 ... in the order given
+ 17.         forvalues j = 1/`nc' {
+ 18.             replace __c`j' = strtrim(__c`j')
+ 19.         }
+ 20.         local N = _N
+ 21.         gen long row = _n
+ 22.         * page chunks: fill up to perpage rows; prefer to end a page at a rule,
+.         * never start a page on a row whose first column is empty
+.         gen int chunk = .
+ 23.         local start 1
+ 24.         local k 0
+ 25.         while `start' <= `N' {
+ 26.             local ++k
+ 27.             local end = min(`start' + `perpage' - 1, `N')
+ 28.             if `end' < `N' {
+ 29.                 local best 0
+ 30.                 foreach r of local rules {
+ 31.                     if `r' >= `start' + floor(`perpage' / 2) & `r' <= `end' & `r' > `best' local best `r'
+ 32.                 }
+ 33.                 if `best' > 0 local end `best'
+ 34.                 else {
+ 35.                     while `end' > `start' & __c1[`end' + 1] == "" {
+ 36.                         local --end
+ 37.                     }
+ 38.                 }
+ 39.             }
+ 40.             replace chunk = `k' in `start'/`end'
+ 41.             local start = `end' + 1
+ 42.         }
+ 43.         local nk `k'
+ 44.         * blank repeated labels inside each page; a column is blanked only while the
+.         * norepeat columns to its left are unchanged too (a new panel shows its series)
+.         gen byte same = _n > 1 & chunk == chunk[_n - 1]
+ 45.         foreach j of local norepeat {
+ 46.             gen strL o`j' = __c`j'
+ 47.             replace same = same & o`j' == o`j'[_n - 1]
+ 48.             replace __c`j' = "" if same
+ 49.             drop o`j'
+ 50.         }
+ 51.         drop same
+ 52.         * column widths (% of the page), from the longest text in each column;
+.         * long text columns are capped so they wrap instead of squeezing numbers
+.         matrix W = J(1, `nc', 0)
+ 53.         local tot 0
+ 54.         forvalues j = 1/`nc' {
+ 55.             gen long L`j' = udstrlen(__c`j')
+ 56.             summarize L`j', meanonly
+ 57.             local w = max(r(max), 3)
+ 58.             local h : word `j' of `header'
+ 59.             local h = subinstr(`"`h'"', "|", " ", .)
+ 60.             foreach hw of local h {
+ 61.                 local w = max(`w', udstrlen(`"`hw'"'))
+ 62.             }
+ 63.             local w = min(`w', 34) + 2          // + 2 = room for the cell margins
+ 64.             matrix W[1, `j'] = `w'
+ 65.             local tot = `tot' + `w'
+ 66.             drop L`j'
+ 67.         }
+ 68.         local used 0
+ 69.         forvalues j = 1/`nc' {
+ 70.             if `j' < `nc' {
+ 71.                 matrix W[1, `j'] = max(floor(100 * W[1, `j'] / `tot'), 3)
+ 72.                 local used = `used' + W[1, `j']
+ 73.             }
+ 74.             else matrix W[1, `j'] = 100 - `used'
+ 75.         }
+ 76.     }
+ 77.     putpdf clear
+ 78.     putpdf begin, pagesize(A4) `orient' font("Times New Roman", `fontsize') ///
+>         margin(left, 0.8in) margin(right, 0.8in) margin(top, 0.5in) margin(bottom, 0.5in)
+ 79.     forvalues k = 1/`nk' {
+ 80.         if `k' > 1 putpdf pagebreak
+ 81.         putpdf paragraph, spacing(after, 4pt)
+ 82.         local tt = cond(`k' == 1, `"`title'"', `"`title' (continued)"')
+ 83.         putpdf text (`"`tt'"'), bold font("Times New Roman", `=`fontsize' + 1.5')
+ 84.         if `k' == 1 & `"`subtitle'"' != "" {
+ 85.             putpdf paragraph, spacing(after, 4pt)
+ 86.             putpdf text (`"`subtitle'"')
+ 87.         }
+ 88.         quietly count if chunk == `k'
+ 89.         local nr = r(N) + 1
+ 90.         quietly putpdf table T`k' = data(__c1-__c`nc') if chunk == `k', varnames border(all, nil) width(W)
+ 91.         forvalues j = 1/`nc' {
+ 92.             * header text; "|" starts a new line inside the cell
+.             local rest : word `j' of `header'
+ 93.             local opt ""
+ 94.             while `"`rest'"' != "" {
+ 95.                 gettoken part rest : rest, parse("|")
+ 96.                 if `"`part'"' == "|" {
+ 97.                     putpdf table T`k'(1, `j') = (""), linebreak append
+ 98.                     continue
+ 99.                 }
+100.                 putpdf table T`k'(1, `j') = (`"`part'"'), valign(bottom) `opt'
+101.                 local opt "append"
+102.             }
+103.             local al = cond(`: list j in right', "right", "left")
+104.             putpdf table T`k'(., `j'), halign(`al') margin(top, 0pt) margin(bottom, 0pt)
+105.         }
+106.         putpdf table T`k'(1, .), border(top, single, black) border(bottom, single, black)
+107.         putpdf table T`k'(`nr', .), border(bottom, single, black)
+108.         foreach r of local rules {
+109.             quietly summarize row if chunk == `k', meanonly
+110.             if `r' >= r(min) & `r' < r(max) {
+111.                 putpdf table T`k'(`=`r' - r(min) + 2', .), border(bottom, single, "A6A6A6")
+112.             }
+113.         }
+114.     }
+115.     local first 1
+116.     foreach n of local notes {
+117.         putpdf paragraph, spacing(before, `=cond(`first', 6, 1)'pt)
+118.         putpdf text (`"`n'"'), font("Times New Roman", `=`fontsize' - 0.5')
+119.         local first 0
+120.     }
+121.     putpdf save `"`using'"', replace
+122.     restore
+123. end
+
+. * --- end of PART 1 ------------------------------------------------------------
+. * --- PART 2: the rows of this exhibit (the only part that changes per file) ---
+. * Source: the table saved right after the CSV export (full precision, same
+. * estimation run as the chart).
+. * (1) Points table: one row per point of the chart, panel by panel, stayers then all
+. *     firms, left to right (the no-file year included), then the number printed in the panel.
+. use `ctsrc', clear
+
+. quietly count if in_figure
+
+. local n_fig = r(N)                     // drawn markers + reference diamonds + printed pooled terms
+
+. keep if version != "fystay" & outcome_id <= 3 & (yearly | inlist(term, "pooled", "avgpost"))
+(135 observations deleted)
+
+. drop if version == "all" & !yearly                          // the panel prints the stayers' two numbers only
+(18 observations deleted)
+
+. gen byte panel = 3 * (gi - 1) + outcome_id
+
+. local pl1 "(a) Exporters: output"
+
+. local pl2 "(b) Exporters: workers"
+
+. local pl3 "(c) Exporters: VA per worker"
+
+. local pl4 "(d) Importers: output"
+
+. local pl5 "(e) Importers: workers"
+
+. local pl6 "(f) Importers: VA per worker"
+
+. local pl7 "(g) Foreign-owned: output"
+
+. local pl8 "(h) Foreign-owned: workers"
+
+. local pl9 "(i) Foreign-owned: VA per worker"
+
+. gen str60 t_panel = ""
+(144 missing values generated)
+
+. forvalues pp = 1/9 {
+  2.     replace t_panel = "`pl`pp''" if panel == `pp'
+  3. }
+(16 real changes made)
+(16 real changes made)
+(16 real changes made)
+(16 real changes made)
+(16 real changes made)
+(16 real changes made)
+(16 real changes made)
+(16 real changes made)
+(16 real changes made)
+
+. gen byte srow = cond(term == "pooled", 4, cond(term == "avgpost", 3, cond(version == "stay", 1, 2)))
+
+. gen str60 t_series = cond(srow == 1, "Stayers (in every file `f1'–`f3')", cond(srow == 2, ///
+>     "All firms in that year's file", "Printed in the panel (stayers)"))
+
+. gen str24 t_pos = cond(yearly, string(year), cond(term == "avgpost", "`post_rng' vs `cohort_year'", "`post_rng' vs `po
+> ol_rng'"))
+
+. * values: markers carry no label on the chart, so one decimal; the printed pooled term is whole %
+. gen str12 t_v  = cond(pct > 0.05, "+", "") + string(pct, "%9.1f") if yearly & !missing(pct)
+(36 missing values generated)
+
+. gen str12 t_lo = cond(pct_lo > 0.05, "+", "") + string(pct_lo, "%9.1f") if yearly & !missing(pct_lo)
+(54 missing values generated)
+
+. gen str12 t_hi = cond(pct_hi > 0.05, "+", "") + string(pct_hi, "%9.1f") if yearly & !missing(pct_hi)
+(54 missing values generated)
+
+. replace t_v  = cond(round(pct) > 0, "+", "") + string(round(pct), "%9.0f") if !yearly
+(18 real changes made)
+
+. replace t_lo = cond(round(pct_lo) > 0, "+", "") + string(round(pct_lo), "%9.0f") if !yearly
+(18 real changes made)
+
+. replace t_hi = cond(round(pct_hi) > 0, "+", "") + string(round(pct_hi), "%9.0f") if !yearly
+(18 real changes made)
+
+. replace t_v = "0" if reference
+(18 real changes made)
+
+. gen str12 t_n1 = string(n_g1, "%12.0fc") if !missing(n_g1)
+(36 missing values generated)
+
+. gen str12 t_n0 = string(n_g0, "%12.0fc") if !missing(n_g0)
+(36 missing values generated)
+
+. replace t_n1 = string(firms_g1, "%12.0fc") if !yearly
+(18 real changes made)
+
+. replace t_n0 = string(firms_g0, "%12.0fc") if !yearly
+(18 real changes made)
+
+. gen str80 t_status = ""
+(144 missing values generated)
+
+. replace t_status = "drawn: solid dot" if on_chart == "solid dot"
+(45 real changes made)
+
+. replace t_status = "drawn: hollow circle" if on_chart == "hollow circle"
+(45 real changes made)
+
+. replace t_status = "gray diamond: reference (0 by definition)" if reference & srow == 1
+(9 real changes made)
+
+. replace t_status = "same gray diamond (reference)" if reference & srow == 2
+(9 real changes made)
+
+. replace t_status = "printed, line 1 (whole %)" if term == "avgpost"
+(9 real changes made)
+
+. replace t_status = "printed, line 2: × Post2020 (whole %)" if term == "pooled"
+(9 real changes made)
+
+. replace t_status = "not drawn: no annual file" if no_file
+(18 real changes made)
+
+. replace t_status = "not drawn: fewer than `min_n' firms in a group" if t_status == "" & !missing(b) & !shown
+(0 real changes made)
+
+. replace t_status = "not drawn: no rows in this file" if t_status == ""
+(0 real changes made)
+
+. assert t_status != ""
+
+. * check: every drawn marker, reference diamond and printed number is in the table once
+. quietly count if in_figure
+
+. assert r(N) == `n_fig'
+
+. sort panel srow torder
+
+. local nrows = _N
+
+. local rl ""
+
+. forvalues i = 1/`=_N - 1' {
+  2.     if panel[`i'] != panel[`i' + 1] local rl "`rl' `i'"
+  3. }
+
+. local tnote "Table: every point of Figure R10-03, panel by panel, left to right. % difference = 100 × (exp(b) − 1), b 
+> = the"
+
+. local tnote "`tnote' coefficient in the regression table (full precision in tables/`fname'.csv). Markers carry no numb
+> er on the chart, so"
+
+. local tnote "`tnote' one decimal is shown; the two numbers printed in each panel are whole on the chart. Firms: group 
+> and other firms with a record"
+
+. local tnote "`tnote' in that year behind the marker; for the printed numbers, all firms of the regression (every year)
+> ."
+
+. local ntab : subinstr local ntext "~" " ", all
+
+. ctable_pdf t_panel t_series t_pos t_v t_lo t_hi t_n1 t_n0 t_status using "tables/`fname'_table.pdf", ///
+>     title("Table R10-03. Output, workers and value added per worker around COVID, firms still in the files: every plot
+> ted point") ///
+>     subtitle("Group minus similar firms (same industry and province), change since `cohort_year', %") ///
+>     header("Panel" "Series" "Year" "%|difference" "95%|low" "95%|high" "Group|firms" "Other|firms" "Status") ///
+>     right(4 5 6 7 8) norepeat(1 2) rules(`rl') perpage(32) fontsize(9) ///
+>     notes("`ntab'" "`tnote'" "`srcnote'" "`devnote'")
+successfully created "/Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r10-covid-resilience-i
+> nternationalised/tables/03_survivors_output_jobs_productivity_table.pdf"
+
+. display "table -> tables/`fname'_table.pdf (`nrows' rows; `n_fig' drawn or printed)"
+table -> tables/03_survivors_output_jobs_productivity_table.pdf (144 rows; 117 drawn or printed)
+
+. 
+. * (2) Regression tables (AER style): coefficient on the first line, (standard error)
+. * on the second, [% difference = 100 × (exp(b) − 1)] on the third. One panel per group.
+. *   _regression.pdf : the six models drawn (3 outcomes x stayers / all firms)
+. *   _checks.pdf     : table-only versions (stayers): firm + year averages only; the
+. *                     productivity residual; output per worker
+. use `ctsrc', clear
+
+. * check: the coefficients are those in the CSV just written (4 decimals there)
+. preserve
+
+. import delimited using "tables/`fname'.csv", clear varnames(1) stringcols(1 3 7)
+(encoding automatically selected: ISO-8859-1)
+(34 vars, 297 obs)
+
+. keep grouping version outcome_id term b
+
+. rename b b_csv
+
+. tempfile csvb
+
+. save `csvb'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_49765.00000b saved as .dta format
+
+. restore
+
+. merge 1:1 grouping version outcome_id term using `csvb', assert(match) nogenerate
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                               297  
+    -----------------------------------------
+
+. assert abs(b - b_csv) <= 0.00005 + 1e-9 if !missing(b)
+
+. assert missing(b_csv) if missing(b)
+
+. drop b_csv
+
+. tempfile regsrc
+
+. save `regsrc'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_49765.00000c saved as .dta format
+
+. local ntabs 2
+
+. local cols1 "stay:1 all:1 stay:2 all:2 stay:3 all:3"
+
+. local cols2 "fystay:1 fystay:2 fystay:3 stay:4 stay:5"
+
+. local file1 "`fname'_regression"
+
+. local file2 "`fname'_checks"
+
+. local ttl1 "Table R10-03, regression. Output, workers and value added per worker around COVID: estimates behind the ch
+> art"
+
+. local ttl2 "Table R10-03, checks. Table-only versions for the stayers: estimates not drawn"
+
+. local hdr1 `"" " "(1)|Output|stayers" "(2)|Output|all firms" "(3)|Workers|stayers" "(4)|Workers|all firms" "(5)|VA per
+>  worker|stayers" "(6)|VA per worker|all firms""'
+
+. local hdr2 `"" " "(1)|Output|firm + year" "(2)|Workers|firm + year" "(3)|VA per worker|firm + year" "(4)|Productivity|
+> residual" "(5)|Output per|worker""'
+
+. local plab1 "Panel A. Exporters"
+
+. local plab2 "Panel B. Importers"
+
+. local plab3 "Panel C. Foreign-owned"
+
+. local pre_eq = subinstr(strtrim("`pre_list'"), " ", ", ", .)
+
+. forvalues tb = 1/`ntabs' {
+  2.     local nc : word count `cols`tb''
+  3.     tempname Q
+  4.     tempfile R
+  5.     local tv ""
+  6.     forvalues c = 1/`nc' {
+  7.         local tv "`tv' t`c'"
+  8.     }
+  9.     postfile `Q' str70 t_lab str24(`tv') using `R', replace
+ 10.     local nterm 0
+ 11.     local rl ""
+ 12.     forvalues g = 1/3 {
+ 13.         * the posted row: label + one cell per column
+.         local cells ""
+ 14.         forvalues c = 1/`nc' {
+ 15.             local cells `"`cells' ("")"'
+ 16.         }
+ 17.         post `Q' ("`plab`g''") `cells'
+ 18.         local ++nterm
+ 19.         foreach tm in `evyrs' avgpost pooled {
+ 20.             local l1 ""
+ 21.             local l2 ""
+ 22.             local l3 ""
+ 23.             forvalues c = 1/`nc' {
+ 24.                 local cs : word `c' of `cols`tb''
+ 25.                 gettoken vv kk : cs, parse(":")
+ 26.                 local kk = substr("`kk'", 2, .)
+ 27.                 quietly summarize b if gi == `g' & version == "`vv'" & outcome_id == `kk' & term == "`tm'", meanonl
+> y
+ 28.                 local bb = r(mean)
+ 29.                 quietly summarize se if gi == `g' & version == "`vv'" & outcome_id == `kk' & term == "`tm'", meanon
+> ly
+ 30.                 local ss = r(mean)
+ 31.                 if "`tm'" == "`cohort_year'" {
+ 32.                     local l1 `"`l1' ("—")"'
+ 33.                 }
+ 34.                 else if missing(`bb') {
+ 35.                     local l1 `"`l1' ("n.a.")"'
+ 36.                     local l2 `"`l2' ("")"'
+ 37.                     local l3 `"`l3' ("")"'
+ 38.                 }
+ 39.                 else {
+ 40.                     local pv = 100 * (exp(`bb') - 1)
+ 41.                     local l1 `"`l1' ("`=string(`bb', "%9.3f")'")"'
+ 42.                     local l2 `"`l2' ("(`=string(`ss', "%9.3f")')")"'
+ 43.                     local l3 `"`l3' ("[`=cond(`pv' > 0, "+", "")'`=string(`pv', "%9.1f")'%]")"'
+ 44.                 }
+ 45.             }
+ 46.             if "`tm'" == "`cohort_year'" local lab "Group × `tm' (reference)"
+ 47.             else if "`tm'" == "avgpost" local lab "Average `post_rng'"
+ 48.             else if "`tm'" == "pooled" local lab "Pooled `post_rng'"
+ 49.             else local lab "Group × `tm'"
+ 50.             post `Q' ("`lab'") `l1'
+ 51.             local ++nterm
+ 52.             if "`tm'" != "`cohort_year'" {
+ 53.                 post `Q' ("") `l2'
+ 54.                 post `Q' ("") `l3'
+ 55.                 local nterm = `nterm' + 2
+ 56.             }
+ 57.         }
+ 58.         * whole-model rows (the yearly model of each column)
+.         foreach st in before_p rows firms firms_g1 {
+ 59.             local ll ""
+ 60.             forvalues c = 1/`nc' {
+ 61.                 local cs : word `c' of `cols`tb''
+ 62.                 gettoken vv kk : cs, parse(":")
+ 63.                 local kk = substr("`kk'", 2, .)
+ 64.                 quietly summarize `st' if gi == `g' & version == "`vv'" & outcome_id == `kk' & term == "avgpost", m
+> eanonly
+ 65.                 if "`st'" == "before_p" local cv = cond(missing(r(mean)), "n.a.", cond(r(mean) < 0.001, "< 0.001", 
+> string(r(mean), "%5.3f")))
+ 66.                 else local cv = string(r(mean), "%12.0fc")
+ 67.                 local ll `"`ll' ("`cv'")"'
+ 68.             }
+ 69.             if "`st'" == "before_p" local lab "Before-COVID test, p"
+ 70.             if "`st'" == "rows"     local lab "Observations"
+ 71.             if "`st'" == "firms"    local lab "Firms (clusters)"
+ 72.             if "`st'" == "firms_g1" local lab "Firms in the group"
+ 73.             post `Q' ("`lab'") `ll'
+ 74.             local ++nterm
+ 75.         }
+ 76.         local rl "`rl' `nterm'"
+ 77.     }
+ 78.     * design rows, the same for every panel
+.     foreach d in firm indyr provyr yr sample wgt clu {
+ 79.         local ll ""
+ 80.         forvalues c = 1/`nc' {
+ 81.             local cs : word `c' of `cols`tb''
+ 82.             gettoken vv kk : cs, parse(":")
+ 83.             if "`d'" == "firm"   local cv "Yes"
+ 84.             if "`d'" == "indyr"  local cv = cond("`vv'" == "fystay", "No", "Yes")
+ 85.             if "`d'" == "provyr" local cv = cond("`vv'" == "fystay", "No", "Yes")
+ 86.             if "`d'" == "yr"     local cv = cond("`vv'" == "fystay", "Yes", "In ind. × year")
+ 87.             if "`d'" == "sample" local cv = cond("`vv'" == "all", "All firms", "Stayers")
+ 88.             if "`d'" == "wgt"    local cv "None"
+ 89.             if "`d'" == "clu"    local cv "Firm"
+ 90.             local ll `"`ll' ("`cv'")"'
+ 91.         }
+ 92.         if "`d'" == "firm"   local lab "Firm FE"
+ 93.         if "`d'" == "indyr"  local lab "Industry × year FE"
+ 94.         if "`d'" == "provyr" local lab "Province × year FE"
+ 95.         if "`d'" == "yr"     local lab "Year FE"
+ 96.         if "`d'" == "sample" local lab "Sample"
+ 97.         if "`d'" == "wgt"    local lab "Weights"
+ 98.         if "`d'" == "clu"    local lab "SE clustered by"
+ 99.         post `Q' ("`lab'") `ll'
+100.     }
+101.     postclose `Q'
+102.     preserve
+103.     use `R', clear
+104.     local rnote "Notes: Each column is one regression of the log outcome (column 4 of the checks: the productivity 
+> residual, already"
+105.     local rnote "`rnote' a log) on the group times each file from `p2' to `f3' except `cohort_year' (the reference,
+>  set to 0), with the"
+106.     local rnote "`rnote' fixed effects listed; firms: the `n_inc_s' firms of the `cohort_year' file also in the `p2
+> ' or `p1' file, grouped once"
+107.     local rnote "`rnote' from their `pool_rng' answers (in the group if yes in at least half of the known answers; 
+> no known answer = left out)."
+108.     local rnote "`rnote' Stayers = the `n_stay_s' of them in every file `f1'–`f3' (conditional on staying); all fir
+> ms = every record of the"
+109.     local rnote "`rnote' `n_inc_s' in those files. Pooled = the same model with one term, group × every file after 
+> `cohort_year' (Bu Deasy's ×"
+110.     local rnote "`rnote' Post2020), compared with `pool_rng' together (its own regression, same rows). Average = me
+> an of the `post_rng'"
+111.     local rnote "`rnote' markers, against `cohort_year' alone. Where the markers `pre_eq' are away from 0 (small be
+> fore-COVID p), the"
+112.     local rnote "`rnote' group was already moving apart before COVID and the pooled term includes that earlier chan
+> ge; the average does not."
+113.     local rnote "`rnote' Before-COVID test: joint p that the markers `pre_eq' are all 0. FE = fixed effects"
+114.     local rnote "`rnote' (averages taken out); VA = value added; productivity = VA per worker (drawn). n.a. = no ro
+> ws in that file"
+115.     local rnote "`rnote' (the productivity residual starts later, so its pooled term compares with the files it has
+>  before COVID)."
+116.     if `tb' == 2 local rnote "`rnote' Output per worker = value of goods produced per worker, before inputs are sub
+> tracted (a check on VA per worker)."
+117.     local rnote "`rnote' Output = value of goods produced, `out_prices'. Singleton firms dropped by reghdfe. No sta
+> rs."
+118.     ctable_pdf t_lab `tv' using "tables/`file`tb''.pdf", ///
+>         title("`ttl`tb''") ///
+>         subtitle("Coefficient in log points; (standard error, clustered by firm); [% difference = 100 × (exp(b) − 1)].
+> ") ///
+>         header(`hdr`tb'') right(`=substr("2 3 4 5 6 7", 1, 2 * `nc' - 1)') rules(`rl') portrait fontsize(9) perpage(36
+> ) ///
+>         notes("`rnote'" "`srcnote'" "`devnote'")
+119.     restore
+120.     display "table -> tables/`file`tb''.pdf"
+121. }
+(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_49765.00000d not found)
+successfully created "/Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r10-covid-resilience-i
+> nternationalised/tables/03_survivors_output_jobs_productivity_regression.pdf"
+table -> tables/03_survivors_output_jobs_productivity_regression.pdf
+(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_49765.00000f not found)
+successfully created "/Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r10-covid-resilience-i
+> nternationalised/tables/03_survivors_output_jobs_productivity_checks.pdf"
+table -> tables/03_survivors_output_jobs_productivity_checks.pdf
+
+. * --- end of PART 2 ------------------------------------------------------------
+. 
+. timer off 1
+
+. quietly timer list 1
+
+. local elapsed = strtrim(string(r(t1), "%9.1f"))
+
+. display "FINISHED: figure -> figures/`fname'.png (elapsed `elapsed' s)"
+FINISHED: figure -> figures/03_survivors_output_jobs_productivity.png (elapsed 13.3 s)
+
+. quietly log close          // keeps FINISHED as the last output line of the log
