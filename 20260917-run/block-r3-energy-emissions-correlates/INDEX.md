@@ -5,6 +5,20 @@ Development data — obscured values, fictional firm panel. Not BPS findings.
 Run all: open `00_run.do`, check the two paths at the top, press Do. Each file below also runs on its own.
 Item-by-item coverage of Deasy's row and the review record: [TRACKER.md](TRACKER.md).
 
+<!-- tables-start -->
+Tables that go with the charts: every chart has a table PDF with each plotted point and its number (`_table.pdf`); charts built from regressions also have the full regression table (`_regression.pdf`).
+
+- 01: `tables/01_reducer_shares_by_year_table.pdf`
+- 02: `tables/02_who_reduces_by_group_table.pdf`
+- 03: `tables/03_who_reduces_by_sector_table.pdf`
+- 04: `tables/04_trait_associations_fe_regression.pdf`, `tables/04_trait_associations_fe_table.pdf`
+- 05: `tables/05_motivation_proxies_table.pdf`
+- 06: `tables/06_own_electricity_reducers_table.pdf`
+- 07: `tables/07_productivity_reducers_regression.pdf`, `tables/07_productivity_reducers_table.pdf`
+- 09: `tables/09_who_reduces_by_province_table.pdf`
+<!-- tables-end -->
+
+
 | File | What it shows | Deasy's words it answers | Status |
 |---|---|---|---|
 | `01_reducer_shares_by_year.do` → `figures/01_reducer_shares_by_year.png`, `tables/01_reducer_shares_by_year.csv`, `tables/01_reducer_firms.csv` | Share of firms whose energy use and CO2 (total, and per unit of value added) fell from the year before, each year; defines the firm-level "reducer" flag used by the later R3 files | "Siapa yang reduce energy use and emisi?" | done, reviewed |

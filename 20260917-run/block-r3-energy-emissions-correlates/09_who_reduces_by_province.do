@@ -8,6 +8,7 @@
   Output : figures/09_who_reduces_by_province.png (+ .pdf)
            tables/09_who_reduces_by_province.csv            (one-year changes, main unit)
            tables/09_who_reduces_by_province_firm_flag.csv  (firm-level reducer flag, companion)
+           tables/09_who_reduces_by_province_table.pdf (every plotted point)
   Development data — obscured values, fictional firm panel. Not BPS findings.
 ==========================================================================*/
 version 17
@@ -42,7 +43,7 @@ local srcnote "Source: SI/IBS annual files 2010–2022 (masked), analysis_ready_
 local minchg 100                 // a province is drawn on its own only with at least this many one-year changes
 
 *---------------------------------------------------------------------------
-display "Step 1/8: load; province code as a number; island group; each province's share of all energy and CO2"
+display "Step 1/9: load; province code as a number; island group; each province's share of all energy and CO2"
 *---------------------------------------------------------------------------
 * province_code = two-digit province code as recorded (text). The file has no
 * province names, so the exhibit shows codes. Island group = first digit of the
@@ -74,7 +75,7 @@ restore
 xtset firm_id year
 
 *---------------------------------------------------------------------------
-display "Step 2/8: one-year changes, as in R3-01 (same code)"
+display "Step 2/9: one-year changes, as in R3-01 (same code)"
 *---------------------------------------------------------------------------
 gen double energy    = total_gj_s1
 gen double co2       = co2_total_s1
@@ -102,7 +103,7 @@ foreach v in energy co2 energy_va co2_va {
 xtset firm_id year                // the bysort calls above changed the sort order
 
 *---------------------------------------------------------------------------
-display "Step 3/8: did each change beat the typical firm? province, sector and starting level at the start"
+display "Step 3/9: did each change beat the typical firm? province, sector and starting level at the start"
 *---------------------------------------------------------------------------
 * beat = the change was below the typical (median) change that year: it fell more or rose less.
 foreach v in energy_va co2_va energy co2 {
@@ -149,7 +150,7 @@ local q5pct = string(100 * r(mean), "%4.0f")
 display "   energy use: lowest fifth of starting energy beats the typical change in `q1pct'%, highest fifth in `q5pct'%"
 
 *---------------------------------------------------------------------------
-display "Step 4/8: drawing groups - provinces with enough changes, the rest together per island group"
+display "Step 4/9: drawing groups - provinces with enough changes, the rest together per island group"
 *---------------------------------------------------------------------------
 bysort g_prov: egen long n_prov_chg = count(beat_energy_va)
 gen int grp = cond(n_prov_chg >= `minchg', g_prov, 900 + g_isl) if cmp   // 901-904 = smaller provinces together
@@ -167,7 +168,7 @@ forvalues i = 1/4 {
 }
 
 *---------------------------------------------------------------------------
-display "Step 5/8: share per row with 95% intervals (clustered by firm); checks without 2017 and early/late"
+display "Step 5/9: share per row with 95% intervals (clustered by firm); checks without 2017 and early/late"
 *---------------------------------------------------------------------------
 * The interval allows for the same firm appearing in several years. Rows:
 * 1 = island group (all its provinces), 2 = one province, 3 = smaller provinces together.
@@ -226,7 +227,7 @@ forvalues t = 1/3 {
 postclose `P'
 
 *---------------------------------------------------------------------------
-display "Step 6/8: same shares holding sector fixed, and holding the starting level fixed (table only)"
+display "Step 6/9: same shares holding sector fixed, and holding the starting level fixed (table only)"
 *---------------------------------------------------------------------------
 * Sector fixed: share predicted from a linear model of 'beat' on the row and the
 * sector, averaged over all changes = the row's share if its changes had the
@@ -274,7 +275,7 @@ foreach k in G I {
 postclose `A'
 
 *---------------------------------------------------------------------------
-display "Step 7/8: firm-level companion (the R3 reducer flag), by the same rows"
+display "Step 7/9: firm-level companion (the R3 reducer flag), by the same rows"
 *---------------------------------------------------------------------------
 preserve
 bysort firm_id: egen int first_cmp = min(cond(cmp, year, .))
@@ -306,7 +307,7 @@ postclose `F'
 restore
 
 *---------------------------------------------------------------------------
-display "Step 8/8: names, drawing order -> CSVs (numbers written before drawing), then the dot plot"
+display "Step 8/9: names, drawing order -> CSVs (numbers written before drawing), then the dot plot"
 *---------------------------------------------------------------------------
 use `rows', clear
 merge 1:1 row_type code using `adj', nogen
@@ -377,6 +378,8 @@ rename code row_code
 format pct_* lo_* hi_* sf_* st_* %6.2f
 format start_energy_ratio %8.3f
 export delimited using "tables/09_who_reduces_by_province.csv", datafmt replace
+tempfile ctsrc                     // same numbers, full precision, for the companion table (Step 9)
+quietly save `ctsrc'
 list row_order row_kind row_code changes firms pct_energy_va lo_energy_va hi_energy_va sf_pct_energy_va ///
     st_pct_energy_va pct_energy pct_co2 st_pct_energy, noobs sep(0) abbreviate(24)
 * largest shifts from the checks, over drawn rows (log and INDEX, not the figure)
@@ -513,6 +516,241 @@ twoway (rspike lo hi y, horizontal lcolor(black) lwidth(thin)) ///
 
 graph export "figures/09_who_reduces_by_province.png", width(2850) replace
 graph export "figures/09_who_reduces_by_province.pdf", replace
+
+*---------------------------------------------------------------------------
+display "Step 9/9: companion table: every plotted point"
+*---------------------------------------------------------------------------
+* ==== COMPANION TABLE (pattern for all exhibits) =============================
+* Owner rule, 28 Sep 2026: every chart gets a table of every plotted point, and
+* every chart of regression coefficients also gets a regression table, written
+* by the same do-file (spec: TABLE_BRIEF.md). This step runs AFTER the graph
+* export, so the chart and the CSV stay byte-identical.
+*
+* How to use it in another exhibit file:
+*   PART 1 (the writer, program ctable_pdf) is copied UNCHANGED.
+*   PART 2 is the only exhibit-specific part: put the numbers in memory (the
+*   tempfile saved right after the CSV export, or the CSV itself), build one
+*   STRING variable per table column, one row per plotted point in chart order
+*   (years not drawn included, with the reason in a status column), then call
+*   ctable_pdf. Format numbers with string(x, "%9.1f") etc. so the table shows
+*   exactly the rounding of the chart labels.
+*
+* ctable_pdf strvars using "tables/NN_name_table.pdf",
+*     title("Table R1-02. ...: every plotted point")    first line, bold
+*     header("Col 1" "Col 2" ...)       one text per column; "|" = line break
+*     [right(numlist)]                  columns right-aligned (numbers)
+*     [norepeat(numlist)]               columns whose repeated text is shown
+*                                       only on the first row of a run
+*     [rules(numlist)]                  thin gray line under these data rows
+*     [notes("line 1" "line 2" ...)]    footer paragraphs (Notes, Source, dev line)
+*     [subtitle(text)] [fontsize(#)] [perpage(#)] [landscape|portrait]
+* Landscape is chosen automatically when there are more than 6 columns. Long
+* tables continue on a new page with the header repeated ("(continued)"); a page
+* never breaks inside a block whose first column is empty (e.g. an SE row).
+* --- PART 1: the writer (identical in every file; do not edit) ---------------
+capture program drop ctable_pdf
+program define ctable_pdf
+    version 17
+    syntax varlist(string) using/, TItle(string) HEADer(string asis) ///
+        [RIGHT(numlist integer >0) NOREPeat(numlist integer >0) RULES(numlist integer >0) ///
+         NOTEs(string asis) SUBtitle(string) FONTsize(real 9.5) PERpage(integer 0) ///
+         LANDscape PORTrait]
+    local nc : word count `varlist'
+    local nh : word count `header'
+    if `nh' != `nc' {
+        display as error "ctable_pdf: `nc' columns but `nh' header texts"
+        exit 198
+    }
+    local orient = cond(`nc' > 6, "landscape", "")
+    if "`landscape'" != "" local orient "landscape"
+    if "`portrait'"  != "" local orient ""
+    * rows per page: a conservative guess for 9-10 pt text (wrapped cells take more)
+    if `perpage' == 0 local perpage = cond("`orient'" == "landscape", 24, 40)
+    preserve
+    quietly {
+        keep `varlist'
+        rename (`varlist') (__c#), addnumber      // __c1 __c2 ... in the order given
+        forvalues j = 1/`nc' {
+            replace __c`j' = strtrim(__c`j')
+        }
+        local N = _N
+        gen long row = _n
+        * page chunks: fill up to perpage rows; prefer to end a page at a rule,
+        * never start a page on a row whose first column is empty
+        gen int chunk = .
+        local start 1
+        local k 0
+        while `start' <= `N' {
+            local ++k
+            local end = min(`start' + `perpage' - 1, `N')
+            if `end' < `N' {
+                local best 0
+                foreach r of local rules {
+                    if `r' >= `start' + floor(`perpage' / 2) & `r' <= `end' & `r' > `best' local best `r'
+                }
+                if `best' > 0 local end `best'
+                else {
+                    while `end' > `start' & __c1[`end' + 1] == "" {
+                        local --end
+                    }
+                }
+            }
+            replace chunk = `k' in `start'/`end'
+            local start = `end' + 1
+        }
+        local nk `k'
+        * blank repeated labels inside each page; a column is blanked only while the
+        * norepeat columns to its left are unchanged too (a new panel shows its series)
+        gen byte same = _n > 1 & chunk == chunk[_n - 1]
+        foreach j of local norepeat {
+            gen strL o`j' = __c`j'
+            replace same = same & o`j' == o`j'[_n - 1]
+            replace __c`j' = "" if same
+            drop o`j'
+        }
+        drop same
+        * column widths (% of the page), from the longest text in each column;
+        * long text columns are capped so they wrap instead of squeezing numbers
+        matrix W = J(1, `nc', 0)
+        local tot 0
+        forvalues j = 1/`nc' {
+            gen long L`j' = udstrlen(__c`j')
+            summarize L`j', meanonly
+            local w = max(r(max), 3)
+            local h : word `j' of `header'
+            local h = subinstr(`"`h'"', "|", " ", .)
+            foreach hw of local h {
+                local w = max(`w', udstrlen(`"`hw'"'))
+            }
+            local w = min(`w', 34) + 2          // + 2 = room for the cell margins
+            matrix W[1, `j'] = `w'
+            local tot = `tot' + `w'
+            drop L`j'
+        }
+        local used 0
+        forvalues j = 1/`nc' {
+            if `j' < `nc' {
+                matrix W[1, `j'] = max(floor(100 * W[1, `j'] / `tot'), 3)
+                local used = `used' + W[1, `j']
+            }
+            else matrix W[1, `j'] = 100 - `used'
+        }
+    }
+    putpdf clear
+    putpdf begin, pagesize(A4) `orient' font("Times New Roman", `fontsize') ///
+        margin(left, 0.8in) margin(right, 0.8in) margin(top, 0.5in) margin(bottom, 0.5in)
+    forvalues k = 1/`nk' {
+        if `k' > 1 putpdf pagebreak
+        putpdf paragraph, spacing(after, 4pt)
+        local tt = cond(`k' == 1, `"`title'"', `"`title' (continued)"')
+        putpdf text (`"`tt'"'), bold font("Times New Roman", `=`fontsize' + 1.5')
+        if `k' == 1 & `"`subtitle'"' != "" {
+            putpdf paragraph, spacing(after, 4pt)
+            putpdf text (`"`subtitle'"')
+        }
+        quietly count if chunk == `k'
+        local nr = r(N) + 1
+        quietly putpdf table T`k' = data(__c1-__c`nc') if chunk == `k', varnames border(all, nil) width(W)
+        forvalues j = 1/`nc' {
+            * header text; "|" starts a new line inside the cell
+            local rest : word `j' of `header'
+            local opt ""
+            while `"`rest'"' != "" {
+                gettoken part rest : rest, parse("|")
+                if `"`part'"' == "|" {
+                    putpdf table T`k'(1, `j') = (""), linebreak append
+                    continue
+                }
+                putpdf table T`k'(1, `j') = (`"`part'"'), valign(bottom) `opt'
+                local opt "append"
+            }
+            local al = cond(`: list j in right', "right", "left")
+            putpdf table T`k'(., `j'), halign(`al') margin(top, 0pt) margin(bottom, 0pt)
+        }
+        putpdf table T`k'(1, .), border(top, single, black) border(bottom, single, black)
+        putpdf table T`k'(`nr', .), border(bottom, single, black)
+        foreach r of local rules {
+            quietly summarize row if chunk == `k', meanonly
+            if `r' >= r(min) & `r' < r(max) {
+                putpdf table T`k'(`=`r' - r(min) + 2', .), border(bottom, single, "A6A6A6")
+            }
+        }
+    }
+    local first 1
+    foreach n of local notes {
+        putpdf paragraph, spacing(before, `=cond(`first', 6, 1)'pt)
+        putpdf text (`"`n'"'), font("Times New Roman", `=`fontsize' - 0.5')
+        local first 0
+    }
+    putpdf save `"`using'"', replace
+    restore
+end
+* --- end of PART 1 ------------------------------------------------------------
+
+* --- PART 2: the rows of this exhibit (the only part that changes per file) ---
+* Source: the table saved right after the CSV export (full precision, same run
+* as the chart). One row per point, in chart order: panels (a)-(d), and in each
+* panel the rows top to bottom (island group, its provinces by panel (a), its
+* "together" row). Provinces with under `minchg' changes are not drawn on their
+* own: they follow their island's "together" row, with their share and the
+* reason. Points are shares, not regression coefficients: no regression table.
+use `ctsrc', clear
+gen long csvrow = _n                       // CSV order (not-drawn rows: by island, then panel (a))
+gen byte isl = cond(island_name == "Sumatra", 1, cond(island_name == "Java", 2, cond(island_name == "Other islands", 3, 4)))
+bysort isl: egen double maxro = max(row_order)
+gen double key = cond(in_figure, row_order, maxro + 0.5)
+assert !missing(key)
+sort key csvrow
+local nrow = _N
+quietly count if in_figure
+local ndrawnrows = r(N)
+expand 4
+bysort key csvrow: gen byte panel = _n
+gen double v  = cond(panel == 1, pct_energy_va, cond(panel == 2, pct_co2_va, cond(panel == 3, pct_energy, pct_co2)))
+gen double lo = cond(panel == 1, lo_energy_va,  cond(panel == 2, lo_co2_va,  cond(panel == 3, lo_energy,  lo_co2)))
+gen double hi = cond(panel == 1, hi_energy_va,  cond(panel == 2, hi_co2_va,  cond(panel == 3, hi_energy,  hi_co2)))
+gen str40 t_panel = ""
+replace t_panel = "(a) Energy per VA" if panel == 1
+replace t_panel = "(b) CO2 per VA"    if panel == 2
+replace t_panel = "(c) Energy use"    if panel == 3
+replace t_panel = "(d) CO2 emitted"   if panel == 4
+gen str80 t_pos = row_label                   // as on the axis
+* rounding as the chart labels: one decimal
+gen str12 t_v  = string(v,  "%9.1f")
+gen str12 t_lo = string(lo, "%9.1f") if !missing(lo)
+gen str12 t_hi = string(hi, "%9.1f") if !missing(hi)
+gen str12 t_c  = string(changes, "%12.0fc")
+gen str12 t_n  = string(firms, "%12.0fc")
+gen str60 t_status = ""
+replace t_status = "drawn: diamond"        if in_figure & row_kind == "island group"
+replace t_status = "drawn: dot"            if in_figure & row_kind == "province"
+replace t_status = "drawn: hollow circle"  if in_figure & row_kind == "smaller provinces together"
+replace t_status = "not drawn (< `minchg')" if !in_figure & row_kind == "province"
+replace t_status = "not drawn: too few changes" if !in_figure & row_kind == "smaller provinces together"
+sort panel key csvrow
+* checks: every drawn point is one row with a number and its interval
+assert t_status != ""
+quietly count if !strpos(t_status, "not drawn")
+assert r(N) == 4 * `ndrawnrows'
+assert t_v != "" & t_lo != "" & t_hi != "" if !strpos(t_status, "not drawn")
+assert _N == 4 * `nrow'
+local tnote "Table: every point of Figure R3-09 in chart order (panel, then rows top to bottom), values rounded as the chart labels;"
+local tnote "`tnote' 95% interval clustered by firm; One-year changes and Firms = those behind the point. Rows marked not drawn (< `minchg'): provinces"
+local tnote "`tnote' with under `minchg' changes, shown in the chart only inside their island's 'smaller provinces together' row (listed right"
+local tnote "`tnote' after it); share without an interval. Full precision: tables/09_who_reduces_by_province.csv."
+ctable_pdf t_panel t_pos t_v t_lo t_hi t_c t_n t_status using "tables/09_who_reduces_by_province_table.pdf", ///
+    title("Table R3-09. Share of yearly changes in which energy and CO2 fell more (or rose less) than at the typical firm, by province: every plotted point") ///
+    header("Panel" "Row (number of one-year changes)" "Plotted|value (%)" "95%|low" "95%|high" "One-year|changes" "Firms|(clusters)" "Status") ///
+    subtitle("`tnote'") right(3 4 5 6 7) norepeat(1) fontsize(9) portrait /// how-to-read note on page 1
+    rules(`nrow' `=2*`nrow'' `=3*`nrow'') perpage(`nrow') ///
+    notes("Notes: Each dot = share of the province's one-year changes that fell more or rose less than the typical (median) change of all firms that year." ///
+          "50% = same as the typical firm; where the 95% interval crosses the dashed line, the row is not clearly different. Shows where, not why." ///
+          "In (a), `nmiss' of `K' province rows are clearly different, against about `nexp' by chance. Island group = first digit: Sumatra 1–2, Java 3, other islands 5–9." ///
+          "Firms that start high tend to fall back: in (c), `q5pct'% of changes from the top fifth of starting energy beat the typical change, `q1pct'% from the bottom fifth; so provinces whose firms start high look better, partly automatically (the table holds sector or starting level fixed). GJ = gigajoules." ///
+          "VA = value added = output minus materials, energy and services bought (current prices). Province = code at the start of each change." ///
+          "`srcnote'" "`devnote'")
+display "table -> tables/09_who_reduces_by_province_table.pdf"
+* --- end of PART 2 ------------------------------------------------------------
 timer off 1
 quietly timer list 1
 local elapsed = strtrim(string(r(t1), "%9.1f"))

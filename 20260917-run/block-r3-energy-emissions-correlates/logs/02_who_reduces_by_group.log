@@ -3,7 +3,7 @@
        log:  /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r3-energy-emissions-correlates/
 > logs/02_who_reduces_by_group.log
   log type:  text
- opened on:  25 Sep 2026, 05:00:44
+ opened on:  28 Sep 2026, 16:59:42
 
 . timer clear 1
 
@@ -26,8 +26,8 @@
 
 . 
 . *---------------------------------------------------------------------------
-. display "Step 1/7: load the variables; find years where foreign ownership jumps"
-Step 1/7: load the variables; find years where foreign ownership jumps
+. display "Step 1/8: load the variables; find years where foreign ownership jumps"
+Step 1/8: load the variables; find years where foreign ownership jumps
 
 . *---------------------------------------------------------------------------
 . * workers      = total workers (size)
@@ -84,8 +84,8 @@ Panel variable: firm_id (unbalanced)
 
 . 
 . *---------------------------------------------------------------------------
-. display "Step 2/7: one-year changes, as in R3-01 (same code)"
-Step 2/7: one-year changes, as in R3-01 (same code)
+. display "Step 2/8: one-year changes, as in R3-01 (same code)"
+Step 2/8: one-year changes, as in R3-01 (same code)
 
 . *---------------------------------------------------------------------------
 . gen double energy    = total_gj_s1
@@ -156,8 +156,8 @@ Panel variable: firm_id (unbalanced)
 
 . 
 . *---------------------------------------------------------------------------
-. display "Step 3/7: for each change, did it beat the typical firm, and which group was the firm in?"
-Step 3/7: for each change, did it beat the typical firm, and which group was the firm in?
+. display "Step 3/8: for each change, did it beat the typical firm, and which group was the firm in?"
+Step 3/8: for each change, did it beat the typical firm, and which group was the firm in?
 
 . *---------------------------------------------------------------------------
 . * beat = the change was below the typical (median) change that year: it fell more or rose less.
@@ -282,8 +282,8 @@ Step 3/7: for each change, did it beat the typical firm, and which group was the
 
 . 
 . *---------------------------------------------------------------------------
-. display "Step 4/7: share beating the typical firm, per group, with 95% intervals -> CSV"
-Step 4/7: share beating the typical firm, per group, with 95% intervals -> CSV
+. display "Step 4/8: share beating the typical firm, per group, with 95% intervals -> CSV"
+Step 4/8: share beating the typical firm, per group, with 95% intervals -> CSV
 
 . *---------------------------------------------------------------------------
 . * The interval allows for the same firm appearing in several years (clustered by firm).
@@ -298,7 +298,7 @@ Step 4/7: share beating the typical firm, per group, with 95% intervals -> CSV
 >            pct_energy lo_energy hi_energy gap_energy gap_lo_energy gap_hi_energy ///
 >            pct_co2 lo_co2 hi_co2 gap_co2 gap_lo_co2 gap_hi_co2 pct_energy_va_early) ///
 >     long changes_early double pct_energy_va_late long changes_late using `rows', replace
-(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_61783.000002 not found)
+(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_95386.000002 not found)
 
 . local r 0
 
@@ -372,8 +372,8 @@ Step 4/7: share beating the typical firm, per group, with 95% intervals -> CSV
 
 . 
 . *---------------------------------------------------------------------------
-. display "Step 5/7: firm-level companion (the R3 reducer flag), status at each firm's first change"
-Step 5/7: firm-level companion (the R3 reducer flag), status at each firm's first change
+. display "Step 5/8: firm-level companion (the R3 reducer flag), status at each firm's first change"
+Step 5/8: firm-level companion (the R3 reducer flag), status at each firm's first change
 
 . *---------------------------------------------------------------------------
 . preserve
@@ -401,7 +401,7 @@ Step 5/7: firm-level companion (the R3 reducer flag), status at each firm's firs
 
 . postfile `F' str40 dimension str24 group long(firms changes reducer_adj_firms) ///
 >     double(pct_reducer_adj lo hi) using `firmrows', replace
-(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_61783.000004 not found)
+(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_95386.000004 not found)
 
 . foreach d in size exp imp fdi {
   2.     if "`d'" == "size" local dn "Size (workers, thirds per year)"
@@ -530,6 +530,10 @@ file tables/02_who_reduces_firm_flag.csv saved
 
 . export delimited using "tables/02_who_reduces_by_group.csv", datafmt replace
 file tables/02_who_reduces_by_group.csv saved
+
+. tempfile ctsrc                     // same numbers, full precision, for the companion table (Step 8)
+
+. quietly save `ctsrc'
 
 . list row_order dimension group changes pct_energy_va lo_energy_va hi_energy_va gap_energy_va pct_energy gap_energy, //
 > /
@@ -667,8 +671,8 @@ file tables/02_who_reduces_by_group.csv saved
 
 . 
 . *---------------------------------------------------------------------------
-. display "Step 6/7: numbers for the notes (read from the data, never typed)"
-Step 6/7: numbers for the notes (read from the data, never typed)
+. display "Step 6/8: numbers for the notes (read from the data, never typed)"
+Step 6/8: numbers for the notes (read from the data, never typed)
 
 . *---------------------------------------------------------------------------
 . local fdinote ""
@@ -677,8 +681,8 @@ Step 6/7: numbers for the notes (read from the data, never typed)
 
 . 
 . *---------------------------------------------------------------------------
-. display "Step 7/7: dot plot, four panels on one shared scale"
-Step 7/7: dot plot, four panels on one shared scale
+. display "Step 7/8: dot plot, four panels on one shared scale"
+Step 7/8: dot plot, four panels on one shared scale
 
 . *---------------------------------------------------------------------------
 . keep if in_figure
@@ -846,6 +850,276 @@ file
     > /02_who_reduces_by_group.pdf saved as PDF format
 
 . 
+. 
+. *---------------------------------------------------------------------------
+. display "Step 8/8: companion table: every plotted point"
+Step 8/8: companion table: every plotted point
+
+. *---------------------------------------------------------------------------
+. * ==== COMPANION TABLE (pattern for all exhibits) =============================
+. * Owner rule, 28 Sep 2026: every chart gets a table of every plotted point, and
+. * every chart of regression coefficients also gets a regression table, written
+. * by the same do-file (spec: TABLE_BRIEF.md). This step runs AFTER the graph
+. * export, so the chart and the CSV stay byte-identical.
+. *
+. * How to use it in another exhibit file:
+. *   PART 1 (the writer, program ctable_pdf) is copied UNCHANGED.
+. *   PART 2 is the only exhibit-specific part: put the numbers in memory (the
+. *   tempfile saved right after the CSV export, or the CSV itself), build one
+. *   STRING variable per table column, one row per plotted point in chart order
+. *   (years not drawn included, with the reason in a status column), then call
+. *   ctable_pdf. Format numbers with string(x, "%9.1f") etc. so the table shows
+. *   exactly the rounding of the chart labels.
+. *
+. * ctable_pdf strvars using "tables/NN_name_table.pdf",
+. *     title("Table R1-02. ...: every plotted point")    first line, bold
+. *     header("Col 1" "Col 2" ...)       one text per column; "|" = line break
+. *     [right(numlist)]                  columns right-aligned (numbers)
+. *     [norepeat(numlist)]               columns whose repeated text is shown
+. *                                       only on the first row of a run
+. *     [rules(numlist)]                  thin gray line under these data rows
+. *     [notes("line 1" "line 2" ...)]    footer paragraphs (Notes, Source, dev line)
+. *     [subtitle(text)] [fontsize(#)] [perpage(#)] [landscape|portrait]
+. * Landscape is chosen automatically when there are more than 6 columns. Long
+. * tables continue on a new page with the header repeated ("(continued)"); a page
+. * never breaks inside a block whose first column is empty (e.g. an SE row).
+. * --- PART 1: the writer (identical in every file; do not edit) ---------------
+. capture program drop ctable_pdf
+
+. program define ctable_pdf
+  1.     version 17
+  2.     syntax varlist(string) using/, TItle(string) HEADer(string asis) ///
+>         [RIGHT(numlist integer >0) NOREPeat(numlist integer >0) RULES(numlist integer >0) ///
+>          NOTEs(string asis) SUBtitle(string) FONTsize(real 9.5) PERpage(integer 0) ///
+>          LANDscape PORTrait]
+  3.     local nc : word count `varlist'
+  4.     local nh : word count `header'
+  5.     if `nh' != `nc' {
+  6.         display as error "ctable_pdf: `nc' columns but `nh' header texts"
+  7.         exit 198
+  8.     }
+  9.     local orient = cond(`nc' > 6, "landscape", "")
+ 10.     if "`landscape'" != "" local orient "landscape"
+ 11.     if "`portrait'"  != "" local orient ""
+ 12.     * rows per page: a conservative guess for 9-10 pt text (wrapped cells take more)
+.     if `perpage' == 0 local perpage = cond("`orient'" == "landscape", 24, 40)
+ 13.     preserve
+ 14.     quietly {
+ 15.         keep `varlist'
+ 16.         rename (`varlist') (__c#), addnumber      // __c1 __c2 ... in the order given
+ 17.         forvalues j = 1/`nc' {
+ 18.             replace __c`j' = strtrim(__c`j')
+ 19.         }
+ 20.         local N = _N
+ 21.         gen long row = _n
+ 22.         * page chunks: fill up to perpage rows; prefer to end a page at a rule,
+.         * never start a page on a row whose first column is empty
+.         gen int chunk = .
+ 23.         local start 1
+ 24.         local k 0
+ 25.         while `start' <= `N' {
+ 26.             local ++k
+ 27.             local end = min(`start' + `perpage' - 1, `N')
+ 28.             if `end' < `N' {
+ 29.                 local best 0
+ 30.                 foreach r of local rules {
+ 31.                     if `r' >= `start' + floor(`perpage' / 2) & `r' <= `end' & `r' > `best' local best `r'
+ 32.                 }
+ 33.                 if `best' > 0 local end `best'
+ 34.                 else {
+ 35.                     while `end' > `start' & __c1[`end' + 1] == "" {
+ 36.                         local --end
+ 37.                     }
+ 38.                 }
+ 39.             }
+ 40.             replace chunk = `k' in `start'/`end'
+ 41.             local start = `end' + 1
+ 42.         }
+ 43.         local nk `k'
+ 44.         * blank repeated labels inside each page; a column is blanked only while the
+.         * norepeat columns to its left are unchanged too (a new panel shows its series)
+.         gen byte same = _n > 1 & chunk == chunk[_n - 1]
+ 45.         foreach j of local norepeat {
+ 46.             gen strL o`j' = __c`j'
+ 47.             replace same = same & o`j' == o`j'[_n - 1]
+ 48.             replace __c`j' = "" if same
+ 49.             drop o`j'
+ 50.         }
+ 51.         drop same
+ 52.         * column widths (% of the page), from the longest text in each column;
+.         * long text columns are capped so they wrap instead of squeezing numbers
+.         matrix W = J(1, `nc', 0)
+ 53.         local tot 0
+ 54.         forvalues j = 1/`nc' {
+ 55.             gen long L`j' = udstrlen(__c`j')
+ 56.             summarize L`j', meanonly
+ 57.             local w = max(r(max), 3)
+ 58.             local h : word `j' of `header'
+ 59.             local h = subinstr(`"`h'"', "|", " ", .)
+ 60.             foreach hw of local h {
+ 61.                 local w = max(`w', udstrlen(`"`hw'"'))
+ 62.             }
+ 63.             local w = min(`w', 34) + 2          // + 2 = room for the cell margins
+ 64.             matrix W[1, `j'] = `w'
+ 65.             local tot = `tot' + `w'
+ 66.             drop L`j'
+ 67.         }
+ 68.         local used 0
+ 69.         forvalues j = 1/`nc' {
+ 70.             if `j' < `nc' {
+ 71.                 matrix W[1, `j'] = max(floor(100 * W[1, `j'] / `tot'), 3)
+ 72.                 local used = `used' + W[1, `j']
+ 73.             }
+ 74.             else matrix W[1, `j'] = 100 - `used'
+ 75.         }
+ 76.     }
+ 77.     putpdf clear
+ 78.     putpdf begin, pagesize(A4) `orient' font("Times New Roman", `fontsize') ///
+>         margin(left, 0.8in) margin(right, 0.8in) margin(top, 0.5in) margin(bottom, 0.5in)
+ 79.     forvalues k = 1/`nk' {
+ 80.         if `k' > 1 putpdf pagebreak
+ 81.         putpdf paragraph, spacing(after, 4pt)
+ 82.         local tt = cond(`k' == 1, `"`title'"', `"`title' (continued)"')
+ 83.         putpdf text (`"`tt'"'), bold font("Times New Roman", `=`fontsize' + 1.5')
+ 84.         if `k' == 1 & `"`subtitle'"' != "" {
+ 85.             putpdf paragraph, spacing(after, 4pt)
+ 86.             putpdf text (`"`subtitle'"')
+ 87.         }
+ 88.         quietly count if chunk == `k'
+ 89.         local nr = r(N) + 1
+ 90.         quietly putpdf table T`k' = data(__c1-__c`nc') if chunk == `k', varnames border(all, nil) width(W)
+ 91.         forvalues j = 1/`nc' {
+ 92.             * header text; "|" starts a new line inside the cell
+.             local rest : word `j' of `header'
+ 93.             local opt ""
+ 94.             while `"`rest'"' != "" {
+ 95.                 gettoken part rest : rest, parse("|")
+ 96.                 if `"`part'"' == "|" {
+ 97.                     putpdf table T`k'(1, `j') = (""), linebreak append
+ 98.                     continue
+ 99.                 }
+100.                 putpdf table T`k'(1, `j') = (`"`part'"'), valign(bottom) `opt'
+101.                 local opt "append"
+102.             }
+103.             local al = cond(`: list j in right', "right", "left")
+104.             putpdf table T`k'(., `j'), halign(`al') margin(top, 0pt) margin(bottom, 0pt)
+105.         }
+106.         putpdf table T`k'(1, .), border(top, single, black) border(bottom, single, black)
+107.         putpdf table T`k'(`nr', .), border(bottom, single, black)
+108.         foreach r of local rules {
+109.             quietly summarize row if chunk == `k', meanonly
+110.             if `r' >= r(min) & `r' < r(max) {
+111.                 putpdf table T`k'(`=`r' - r(min) + 2', .), border(bottom, single, "A6A6A6")
+112.             }
+113.         }
+114.     }
+115.     local first 1
+116.     foreach n of local notes {
+117.         putpdf paragraph, spacing(before, `=cond(`first', 6, 1)'pt)
+118.         putpdf text (`"`n'"'), font("Times New Roman", `=`fontsize' - 0.5')
+119.         local first 0
+120.     }
+121.     putpdf save `"`using'"', replace
+122.     restore
+123. end
+
+. * --- end of PART 1 ------------------------------------------------------------
+. 
+. * --- PART 2: the rows of this exhibit (the only part that changes per file) ---
+. * Source: the group table saved right after the CSV export (full precision,
+. * same run as the chart). One row per point, in chart order: panel (a) to (d),
+. * groups top to bottom within each panel. Rows kept in the CSV only as checks
+. * (more than 100 workers; foreign ownership with the break year kept) are not
+. * chart positions and are not listed.
+. use `ctsrc', clear
+
+. keep if in_figure
+(5 observations deleted)
+
+. sort row_order
+
+. local nrow = _N
+
+. expand 4
+(33 observations created)
+
+. bysort row_order: gen byte panel = _n
+
+. sort panel row_order
+
+. gen str30 t_panel = cond(panel == 1, "(a) Energy per unit of VA", cond(panel == 2, "(b) CO2 per unit of VA", ///
+>                     cond(panel == 3, "(c) Energy use (GJ)", "(d) CO2 emitted (tonnes)")))
+
+. gen str40 t_dim = dimension
+
+. gen str30 t_grp = group
+
+. gen double v  = cond(panel == 1, pct_energy_va, cond(panel == 2, pct_co2_va, cond(panel == 3, pct_energy, pct_co2)))
+
+. gen double lo = cond(panel == 1, lo_energy_va,  cond(panel == 2, lo_co2_va,  cond(panel == 3, lo_energy,  lo_co2)))
+
+. gen double hi = cond(panel == 1, hi_energy_va,  cond(panel == 2, hi_co2_va,  cond(panel == 3, hi_energy,  hi_co2)))
+
+. * rounding as the chart labels (one decimal)
+. gen str12 t_v  = string(v,  "%9.1f")
+
+. gen str12 t_lo = string(lo, "%9.1f")
+
+. gen str12 t_hi = string(hi, "%9.1f")
+
+. gen str12 t_ch = string(changes, "%12.0fc")
+
+. gen str12 t_f  = string(firms, "%12.0fc")
+
+. gen str40 t_status = "drawn"
+
+. * checks: one row per drawn point, each with a number and an interval
+. assert !missing(v, lo, hi)
+
+. assert _N == 4 * `nrow'
+
+. * notes: the chart's notes, how to read the table, Source, development-data line
+. local ntext "Notes: Each dot = share of the group's one-year changes that fell more or rose less than the typical (med
+> ian) firm's change that year."
+
+. local ntext "`ntext' 50% = same as the typical firm; where the 95% interval crosses the dashed line, the group is not 
+> clearly different. Shows who, not why."
+
+. local ntext "`ntext' In (c)–(d), changes starting from the highest fifth of energy use beat the typical change `fb_top
+> '% of the time, the lowest fifth `fb_bot'%:"
+
+. local ntext "`ntext' groups that start with more energy look better there partly automatically."
+
+. local ntext "`ntext' Group = the firm's status in the first year of each change (`n_cmp' changes). Each change is comp
+> ared only with the same year's changes,"
+
+. local ntext "`ntext' so a shift in how a status is recorded between years cannot create a gap by itself`fdinote'."
+
+. local ntext "`ntext' VA = value added = output value minus materials, energy and services bought (current prices). GJ 
+> = gigajoules."
+
+. local tnote "Table: every point of Figure R3-02, panel by panel, groups top to bottom; rounded as the chart labels. 95
+> % interval"
+
+. local tnote "`tnote' clustered by firm. Changes = one-year changes in the group (the number on the chart); Firms = fir
+> ms behind them."
+
+. local tnote "`tnote' Gaps against the reference group and the two check rows: tables/02_who_reduces_by_group.csv."
+
+. ctable_pdf t_panel t_dim t_grp t_v t_lo t_hi t_ch t_f t_status using "tables/02_who_reduces_by_group_table.pdf", ///
+>     title("Table R3-02. Share of yearly changes in which energy and CO2 fell more (or rose less) than at the typical f
+> irm: every plotted point") ///
+>     header("Panel" "Group family" "Group" "Share|(%)" "95%|low" "95%|high" "Changes" "Firms" "Status") ///
+>     right(4 5 6 7 8) norepeat(1 2) fontsize(9) rules(`nrow' `=2*`nrow'' `=3*`nrow'') perpage(`=2*`nrow'') ///
+>     notes("`ntext'" "`tnote'" "`srcnote'" "`devnote'")
+successfully created "/Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r3-energy-emissions-co
+> rrelates/tables/02_who_reduces_by_group_table.pdf"
+
+. display "table -> tables/02_who_reduces_by_group_table.pdf"
+table -> tables/02_who_reduces_by_group_table.pdf
+
+. * --- end of PART 2 ------------------------------------------------------------
+. 
 . timer off 1
 
 . quietly timer list 1
@@ -853,6 +1127,6 @@ file
 . local elapsed = strtrim(string(r(t1), "%9.1f"))
 
 . display "FINISHED: figure -> figures/02_who_reduces_by_group.png (elapsed `elapsed' s)"
-FINISHED: figure -> figures/02_who_reduces_by_group.png (elapsed 6.4 s)
+FINISHED: figure -> figures/02_who_reduces_by_group.png (elapsed 8.0 s)
 
 . quietly log close

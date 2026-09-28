@@ -3,7 +3,7 @@
        log:  /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r3-energy-emissions-correlates/
 > logs/04_trait_associations_fe.log
   log type:  text
- opened on:  25 Sep 2026, 04:22:08
+ opened on:  28 Sep 2026, 17:00:01
 
 . timer clear 1
 
@@ -26,8 +26,8 @@
 
 . 
 . *---------------------------------------------------------------------------
-. display "Step 1/8: load the variables; find years where foreign ownership jumps"
-Step 1/8: load the variables; find years where foreign ownership jumps
+. display "Step 1/9: load the variables; find years where foreign ownership jumps"
+Step 1/9: load the variables; find years where foreign ownership jumps
 
 . *---------------------------------------------------------------------------
 . use firm_id year total_gj_s1 co2_total_s1 value_added_nominal workers ///
@@ -64,8 +64,8 @@ Panel variable: firm_id (unbalanced)
 
 . 
 . *---------------------------------------------------------------------------
-. display "Step 2/8: one-year changes, as in R3-01 (same code)"
-Step 2/8: one-year changes, as in R3-01 (same code)
+. display "Step 2/9: one-year changes, as in R3-01 (same code)"
+Step 2/9: one-year changes, as in R3-01 (same code)
 
 . *---------------------------------------------------------------------------
 . gen double energy    = total_gj_s1
@@ -107,8 +107,8 @@ Panel variable: firm_id (unbalanced)
 
 . 
 . *---------------------------------------------------------------------------
-. display "Step 3/8: traits at the START of each change"
-Step 3/8: traits at the START of each change
+. display "Step 3/9: traits at the START of each change"
+Step 3/9: traits at the START of each change
 
 . *---------------------------------------------------------------------------
 . gen int    start_year = year - 1 if cmp
@@ -187,8 +187,8 @@ Step 3/8: traits at the START of each change
 
 . 
 . *---------------------------------------------------------------------------
-. display "Step 4/8: the three comparisons, four outcomes, with and without starting level"
-Step 4/8: the three comparisons, four outcomes, with and without starting level
+. display "Step 4/9: the three comparisons, four outcomes, with and without starting level"
+Step 4/9: the three comparisons, four outcomes, with and without starting level
 
 . *---------------------------------------------------------------------------
 . * check: with year effects, comparing with the year's typical change changes nothing
@@ -215,7 +215,7 @@ Step 4/8: the three comparisons, four outcomes, with and without starting level
 
 . postfile `P' str10 outcome str14 spec str8 term double(b se p lo hi) long(changes firms singletons) using `coefs', rep
 > lace
-(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_93129.000002 not found)
+(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_95955.000002 not found)
 
 . foreach y in energy_va co2_va energy co2 {
   2.     foreach s in A B C A_lev B_lev C_lev A_keepbreak A_noowngen B_split2016 A_early A_late {
@@ -258,8 +258,8 @@ Step 4/8: the three comparisons, four outcomes, with and without starting level
 
 . 
 . *---------------------------------------------------------------------------
-. display "Step 5/8: firms whose trait changes (these alone drive comparison B)"
-Step 5/8: firms whose trait changes (these alone drive comparison B)
+. display "Step 5/9: firms whose trait changes (these alone drive comparison B)"
+Step 5/9: firms whose trait changes (these alone drive comparison B)
 
 . *---------------------------------------------------------------------------
 . quietly reghdfe chg_energy_va `X' if use, absorb(firm_id year) vce(cluster firm_id)
@@ -272,7 +272,7 @@ Step 5/8: firms whose trait changes (these alone drive comparison B)
 
 . postfile `W' str8 term long(changes_with_trait firms_B switch_firms switch_gap_only changes_of_switchers) using `sw', 
 > replace
-(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_93129.000003 not found)
+(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_95955.000003 not found)
 
 . egen byte tagB = tag(firm_id) if inB
 
@@ -340,8 +340,8 @@ Panel variable: firm_id (unbalanced)
 
 . 
 . *---------------------------------------------------------------------------
-. display "Step 6/8: leave out one pair of years at a time (comparison A)"
-Step 6/8: leave out one pair of years at a time (comparison A)
+. display "Step 6/9: leave out one pair of years at a time (comparison A)"
+Step 6/9: leave out one pair of years at a time (comparison A)
 
 . *---------------------------------------------------------------------------
 . tempname L
@@ -349,7 +349,7 @@ Step 6/8: leave out one pair of years at a time (comparison A)
 . tempfile loo
 
 . postfile `L' str10 outcome str14 spec str8 term int left_out double b using `loo', replace
-(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_93129.000004 not found)
+(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_95955.000004 not found)
 
 . quietly levelsof start_year if use, local(sys)
 
@@ -397,7 +397,7 @@ Step 6/8: leave out one pair of years at a time (comparison A)
 . tempfile full
 
 . save `full'
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_93129.000006 saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_95955.000006 saved as .dta format
 
 . use `loo', clear
 
@@ -441,8 +441,8 @@ file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_93129.000006 saved as .
 
 . 
 . *---------------------------------------------------------------------------
-. display "Step 7/8: turn coefficients into % differences -> two CSV files"
-Step 7/8: turn coefficients into % differences -> two CSV files
+. display "Step 7/9: turn coefficients into % differences -> two CSV files"
+Step 7/9: turn coefficients into % differences -> two CSV files
 
 . *---------------------------------------------------------------------------
 . * Outcome = one-year change in logs. A yes/no trait with coefficient b means:
@@ -455,7 +455,7 @@ Step 7/8: turn coefficients into % differences -> two CSV files
 . tempfile loosum
 
 . save `loosum'
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_93129.000007 saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_95955.000007 saved as .dta format
 
 . use `coefs', clear
 
@@ -556,7 +556,7 @@ xij variables:
 . tempfile el
 
 . save `el'
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_93129.000009 saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_95955.000009 saved as .dta format
 
 . restore
 
@@ -614,6 +614,10 @@ file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_93129.000009 saved as .
 >     switch_firms switch_gap_only changes_of_switchers loo_min_pct loo_max_pct pct_A_before2016 pct_A_after2016 ///
 >     using "tables/04_trait_associations_fe.csv", datafmt replace
 file tables/04_trait_associations_fe.csv saved
+
+. tempfile ctsrc                     // same numbers, full precision, for the companion tables (Step 9)
+
+. quietly save `ctsrc'
 
 . list outcome spec term pct pct_lo pct_hi changes firms switch_firms loo_min_pct loo_max_pct, noobs sep(0) abbreviate(2
 > 4)
@@ -699,8 +703,8 @@ file tables/04_trait_associations_fe.csv saved
 
 . 
 . *---------------------------------------------------------------------------
-. display "Step 8/8: dot-and-whisker plot, four panels on one shared scale ((C) is in the CSV only)"
-Step 8/8: dot-and-whisker plot, four panels on one shared scale ((C) is in the CSV only)
+. display "Step 8/9: dot-and-whisker plot, four panels on one shared scale ((C) is in the CSV only)"
+Step 8/9: dot-and-whisker plot, four panels on one shared scale ((C) is in the CSV only)
 
 . *---------------------------------------------------------------------------
 . * (C) moves no marker visibly from (A): it stays in the CSV, not in the figure
@@ -840,6 +844,512 @@ file
     > /04_trait_associations_fe.pdf saved as PDF format
 
 . 
+. 
+. *---------------------------------------------------------------------------
+. display "Step 9/9: companion tables: every plotted point, and the regression table"
+Step 9/9: companion tables: every plotted point, and the regression table
+
+. *---------------------------------------------------------------------------
+. * ==== COMPANION TABLE (pattern for all exhibits) =============================
+. * Owner rule, 28 Sep 2026: every chart gets a table of every plotted point, and
+. * every chart of regression coefficients also gets a regression table, written
+. * by the same do-file (spec: TABLE_BRIEF.md). This step runs AFTER the graph
+. * export, so the chart and the CSV stay byte-identical.
+. *
+. * How to use it in another exhibit file:
+. *   PART 1 (the writer, program ctable_pdf) is copied UNCHANGED.
+. *   PART 2 is the only exhibit-specific part: put the numbers in memory (the
+. *   tempfile saved right after the CSV export, or the CSV itself), build one
+. *   STRING variable per table column, one row per plotted point in chart order
+. *   (years not drawn included, with the reason in a status column), then call
+. *   ctable_pdf. Format numbers with string(x, "%9.1f") etc. so the table shows
+. *   exactly the rounding of the chart labels.
+. *
+. * ctable_pdf strvars using "tables/NN_name_table.pdf",
+. *     title("Table R1-02. ...: every plotted point")    first line, bold
+. *     header("Col 1" "Col 2" ...)       one text per column; "|" = line break
+. *     [right(numlist)]                  columns right-aligned (numbers)
+. *     [norepeat(numlist)]               columns whose repeated text is shown
+. *                                       only on the first row of a run
+. *     [rules(numlist)]                  thin gray line under these data rows
+. *     [notes("line 1" "line 2" ...)]    footer paragraphs (Notes, Source, dev line)
+. *     [subtitle(text)] [fontsize(#)] [perpage(#)] [landscape|portrait]
+. * Landscape is chosen automatically when there are more than 6 columns. Long
+. * tables continue on a new page with the header repeated ("(continued)"); a page
+. * never breaks inside a block whose first column is empty (e.g. an SE row).
+. * --- PART 1: the writer (identical in every file; do not edit) ---------------
+. capture program drop ctable_pdf
+
+. program define ctable_pdf
+  1.     version 17
+  2.     syntax varlist(string) using/, TItle(string) HEADer(string asis) ///
+>         [RIGHT(numlist integer >0) NOREPeat(numlist integer >0) RULES(numlist integer >0) ///
+>          NOTEs(string asis) SUBtitle(string) FONTsize(real 9.5) PERpage(integer 0) ///
+>          LANDscape PORTrait]
+  3.     local nc : word count `varlist'
+  4.     local nh : word count `header'
+  5.     if `nh' != `nc' {
+  6.         display as error "ctable_pdf: `nc' columns but `nh' header texts"
+  7.         exit 198
+  8.     }
+  9.     local orient = cond(`nc' > 6, "landscape", "")
+ 10.     if "`landscape'" != "" local orient "landscape"
+ 11.     if "`portrait'"  != "" local orient ""
+ 12.     * rows per page: a conservative guess for 9-10 pt text (wrapped cells take more)
+.     if `perpage' == 0 local perpage = cond("`orient'" == "landscape", 24, 40)
+ 13.     preserve
+ 14.     quietly {
+ 15.         keep `varlist'
+ 16.         rename (`varlist') (__c#), addnumber      // __c1 __c2 ... in the order given
+ 17.         forvalues j = 1/`nc' {
+ 18.             replace __c`j' = strtrim(__c`j')
+ 19.         }
+ 20.         local N = _N
+ 21.         gen long row = _n
+ 22.         * page chunks: fill up to perpage rows; prefer to end a page at a rule,
+.         * never start a page on a row whose first column is empty
+.         gen int chunk = .
+ 23.         local start 1
+ 24.         local k 0
+ 25.         while `start' <= `N' {
+ 26.             local ++k
+ 27.             local end = min(`start' + `perpage' - 1, `N')
+ 28.             if `end' < `N' {
+ 29.                 local best 0
+ 30.                 foreach r of local rules {
+ 31.                     if `r' >= `start' + floor(`perpage' / 2) & `r' <= `end' & `r' > `best' local best `r'
+ 32.                 }
+ 33.                 if `best' > 0 local end `best'
+ 34.                 else {
+ 35.                     while `end' > `start' & __c1[`end' + 1] == "" {
+ 36.                         local --end
+ 37.                     }
+ 38.                 }
+ 39.             }
+ 40.             replace chunk = `k' in `start'/`end'
+ 41.             local start = `end' + 1
+ 42.         }
+ 43.         local nk `k'
+ 44.         * blank repeated labels inside each page; a column is blanked only while the
+.         * norepeat columns to its left are unchanged too (a new panel shows its series)
+.         gen byte same = _n > 1 & chunk == chunk[_n - 1]
+ 45.         foreach j of local norepeat {
+ 46.             gen strL o`j' = __c`j'
+ 47.             replace same = same & o`j' == o`j'[_n - 1]
+ 48.             replace __c`j' = "" if same
+ 49.             drop o`j'
+ 50.         }
+ 51.         drop same
+ 52.         * column widths (% of the page), from the longest text in each column;
+.         * long text columns are capped so they wrap instead of squeezing numbers
+.         matrix W = J(1, `nc', 0)
+ 53.         local tot 0
+ 54.         forvalues j = 1/`nc' {
+ 55.             gen long L`j' = udstrlen(__c`j')
+ 56.             summarize L`j', meanonly
+ 57.             local w = max(r(max), 3)
+ 58.             local h : word `j' of `header'
+ 59.             local h = subinstr(`"`h'"', "|", " ", .)
+ 60.             foreach hw of local h {
+ 61.                 local w = max(`w', udstrlen(`"`hw'"'))
+ 62.             }
+ 63.             local w = min(`w', 34) + 2          // + 2 = room for the cell margins
+ 64.             matrix W[1, `j'] = `w'
+ 65.             local tot = `tot' + `w'
+ 66.             drop L`j'
+ 67.         }
+ 68.         local used 0
+ 69.         forvalues j = 1/`nc' {
+ 70.             if `j' < `nc' {
+ 71.                 matrix W[1, `j'] = max(floor(100 * W[1, `j'] / `tot'), 3)
+ 72.                 local used = `used' + W[1, `j']
+ 73.             }
+ 74.             else matrix W[1, `j'] = 100 - `used'
+ 75.         }
+ 76.     }
+ 77.     putpdf clear
+ 78.     putpdf begin, pagesize(A4) `orient' font("Times New Roman", `fontsize') ///
+>         margin(left, 0.8in) margin(right, 0.8in) margin(top, 0.5in) margin(bottom, 0.5in)
+ 79.     forvalues k = 1/`nk' {
+ 80.         if `k' > 1 putpdf pagebreak
+ 81.         putpdf paragraph, spacing(after, 4pt)
+ 82.         local tt = cond(`k' == 1, `"`title'"', `"`title' (continued)"')
+ 83.         putpdf text (`"`tt'"'), bold font("Times New Roman", `=`fontsize' + 1.5')
+ 84.         if `k' == 1 & `"`subtitle'"' != "" {
+ 85.             putpdf paragraph, spacing(after, 4pt)
+ 86.             putpdf text (`"`subtitle'"')
+ 87.         }
+ 88.         quietly count if chunk == `k'
+ 89.         local nr = r(N) + 1
+ 90.         quietly putpdf table T`k' = data(__c1-__c`nc') if chunk == `k', varnames border(all, nil) width(W)
+ 91.         forvalues j = 1/`nc' {
+ 92.             * header text; "|" starts a new line inside the cell
+.             local rest : word `j' of `header'
+ 93.             local opt ""
+ 94.             while `"`rest'"' != "" {
+ 95.                 gettoken part rest : rest, parse("|")
+ 96.                 if `"`part'"' == "|" {
+ 97.                     putpdf table T`k'(1, `j') = (""), linebreak append
+ 98.                     continue
+ 99.                 }
+100.                 putpdf table T`k'(1, `j') = (`"`part'"'), valign(bottom) `opt'
+101.                 local opt "append"
+102.             }
+103.             local al = cond(`: list j in right', "right", "left")
+104.             putpdf table T`k'(., `j'), halign(`al') margin(top, 0pt) margin(bottom, 0pt)
+105.         }
+106.         putpdf table T`k'(1, .), border(top, single, black) border(bottom, single, black)
+107.         putpdf table T`k'(`nr', .), border(bottom, single, black)
+108.         foreach r of local rules {
+109.             quietly summarize row if chunk == `k', meanonly
+110.             if `r' >= r(min) & `r' < r(max) {
+111.                 putpdf table T`k'(`=`r' - r(min) + 2', .), border(bottom, single, "A6A6A6")
+112.             }
+113.         }
+114.     }
+115.     local first 1
+116.     foreach n of local notes {
+117.         putpdf paragraph, spacing(before, `=cond(`first', 6, 1)'pt)
+118.         putpdf text (`"`n'"'), font("Times New Roman", `=`fontsize' - 0.5')
+119.         local first 0
+120.     }
+121.     putpdf save `"`using'"', replace
+122.     restore
+123. end
+
+. * --- end of PART 1 ------------------------------------------------------------
+. 
+. * --- PART 2: the rows of this exhibit (the only part that changes per file) ---
+. * Source: the figure table saved right after the CSV export, and the
+. * coefficient file of Step 4 (full precision, the same estimation run).
+. * (1) Points table: one row per marker, in chart order: panel (a) to (d),
+. * traits top to bottom, (A) then (B) within each trait. Comparison (C) is in
+. * the CSV only (no marker) and is in the regression table.
+. use `ctsrc', clear
+
+. keep if spec_n < 3
+(24 observations deleted)
+
+. sort panel row spec_n
+
+. local npan = _N / 4
+
+. gen str30 t_panel = cond(panel == 1, "(a) Energy per unit of VA", cond(panel == 2, "(b) CO2 per unit of VA", ///
+>                     cond(panel == 3, "(c) Energy use (GJ)", "(d) CO2 emitted (tonnes)")))
+
+. * trait names exactly as on the chart's axis
+. gen str40 t_trait = ""
+(48 missing values generated)
+
+. replace t_trait = "Workers: twice as many"        if term == "s_lnw"
+(8 real changes made)
+
+. replace t_trait = "Exporter"                      if term == "exp1"
+(8 real changes made)
+
+. replace t_trait = "Importer"                      if term == "imp1"
+(8 real changes made)
+
+. replace t_trait = "Foreign-owned (10% or more)"   if term == "fdi1"
+(8 real changes made)
+
+. replace t_trait = "Makes own electricity"         if term == "own1"
+(8 real changes made)
+
+. replace t_trait = "Starting level twice as high"  if term == "lev"
+(8 real changes made)
+
+. gen str8 t_cmp = cond(spec_n == 1, "(A)", "(B)")
+
+. * rounding as the chart labels (one decimal)
+. gen str12 t_v   = string(pct,    "%9.1f") if !missing(pct)
+
+. gen str12 t_lo  = string(pct_lo, "%9.1f") if !missing(pct_lo)
+
+. gen str12 t_hi  = string(pct_hi, "%9.1f") if !missing(pct_hi)
+
+. gen str12 t_blo = string(loo_min_pct, "%9.1f") if spec_n == 1 & !missing(loo_min_pct)
+(24 missing values generated)
+
+. gen str12 t_bhi = string(loo_max_pct, "%9.1f") if spec_n == 1 & !missing(loo_max_pct)
+(24 missing values generated)
+
+. gen str12 t_ch  = string(changes, "%12.0fc")
+
+. gen str12 t_f   = string(firms, "%12.0fc")
+
+. gen str40 t_status = cond(spec_n == 1, "drawn: black dot, labelled", "drawn: gray hollow triangle")
+
+. replace t_status = "not drawn: term dropped" if missing(pct)
+(0 real changes made)
+
+. * checks: 12 markers per panel, every drawn one with a number and an interval
+. assert _N == 4 * 12
+
+. assert t_v != "" & t_lo != "" & t_hi != "" if !strpos(t_status, "not drawn")
+
+. assert t_blo != "" & t_bhi != "" if spec_n == 1
+
+. local ntext "Notes: Marker = the one-year change of firms with the trait against similar firms without it, in % (below
+>  0 = fell more or rose less)."
+
+. local ntext "`ntext' Where a 95% interval crosses 0, there is no clear gap. Gray bar = where (A) moves if any one pair
+>  of years is left out. Shows which traits, not why."
+
+. local ntext "`ntext' `loonote' `brknote'"
+
+. local ntext "`ntext' Traits at the start of each change (`n_use' changes, `f_use' firms); 'not recorded' is its own gr
+> oup, not shown. (B) uses only firms whose trait changes,"
+
+. local ntext "`ntext' which may be recording shifts. Starting level = the panel's measure at the start; part of its fal
+> l is automatic, as a high year tends to be"
+
+. local ntext "`ntext' followed by a normal one. VA = value added = output minus materials, energy and services bought (
+> current prices). GJ = gigajoules."
+
+. local ntext = itrim(`"`ntext'"')
+
+. local tnote "Table: every marker of Figure R3-04 in chart order; rounded as the chart labels. % = 100 × (exp(b) − 1), 
+> or 100 × (2^b − 1)"
+
+. local tnote "`tnote' for workers and starting level (b = regression table; starting level from columns (4)–(5)). Chang
+> es and Firms = the"
+
+. local tnote "`tnote' model's sample. Full precision: tables/04_trait_associations_fe.csv."
+
+. ctable_pdf t_panel t_trait t_cmp t_v t_lo t_hi t_blo t_bhi t_ch t_f t_status using "tables/04_trait_associations_fe_ta
+> ble.pdf", ///
+>     title("Table R3-04. Which firm traits go with bigger one-year cuts in energy and CO2, with the other traits held f
+> ixed: every plotted point") ///
+>     header("Panel" "Trait at the start" "Compar-|ison" "%|difference" "95%|low" "95%|high" "Gray bar|low" "Gray bar|hi
+> gh" "Changes" "Firms" "Status") ///
+>     right(4 5 6 7 8 9 10) norepeat(1 2) fontsize(9) rules(`npan' `=2*`npan'' `=3*`npan'') perpage(`=2*`npan'') ///
+>     notes("`ntext'" "`tnote'" "`srcnote'" "`devnote'")
+successfully created "/Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r3-energy-emissions-co
+> rrelates/tables/04_trait_associations_fe_table.pdf"
+
+. display "table -> tables/04_trait_associations_fe_table.pdf"
+table -> tables/04_trait_associations_fe_table.pdf
+
+. 
+. * (2) Regression table (AER style): one column per comparison, without and with
+. * the starting level; one block per outcome (panel); rows = the terms drawn (the
+. * three "not recorded" markers are in every model: all terms are in the
+. * all-terms CSV). Coefficient in log points on the first line, (standard error)
+. * on the second. show_pct = 1 adds a third
+. * line, [%], for every term (the drawn %s are in the points table).
+. local show_pct 0
+
+. use `coefs', clear
+
+. keep if inlist(spec, "A", "B", "C", "A_lev", "B_lev", "C_lev")
+(152 observations deleted)
+
+. gen byte m = 1*(spec == "A") + 2*(spec == "B") + 3*(spec == "C") + 4*(spec == "A_lev") + 5*(spec == "B_lev") + 6*(spec
+>  == "C_lev")
+
+. * check: the coefficients are those in the CSV just written (4 decimals there)
+. preserve
+
+. import delimited using "tables/04_trait_associations_fe_all_terms.csv", clear varnames(1) stringcols(1 2 3)
+(encoding automatically selected: ISO-8859-1)
+(18 vars, 356 obs)
+
+. keep outcome spec term b
+
+. rename b b_csv
+
+. tempfile csvb
+
+. save `csvb'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_95955.00000c saved as .dta format
+
+. restore
+
+. merge 1:1 outcome spec term using `csvb', keep(master match)
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                               204  (_merge==3)
+    -----------------------------------------
+
+. assert _merge == 3
+
+. drop _merge
+
+. assert abs(b - b_csv) <= 0.00005 + 1e-9 if !missing(b)
+
+. assert missing(b_csv) if missing(b)
+(null assertion)
+
+. drop b_csv
+
+. * the fixed effects of each column, from the same rules as Step 4
+. forvalues s = 1/6 {
+  2.     local sp : word `s' of A B C A_lev B_lev C_lev
+  3.     local ab "year sector province"
+  4.     if inlist("`sp'", "B", "B_lev") local ab "firm_id year"
+  5.     if inlist("`sp'", "C", "C_lev") local ab "sector#year province#year"
+  6.     local fe_f`s'  = cond(strpos(" `ab' ", " firm_id "), "Yes", "No")
+  7.     local fe_y`s'  = cond(strpos(" `ab' ", " year "), "Yes", "No")
+  8.     local fe_s`s'  = cond(strpos(" `ab' ", " sector "), "Yes", "No")
+  9.     local fe_p`s'  = cond(strpos(" `ab' ", " province "), "Yes", "No")
+ 10.     local fe_sy`s' = cond(strpos(" `ab' ", " sector#year "), "Yes", "No")
+ 11.     local fe_py`s' = cond(strpos(" `ab' ", " province#year "), "Yes", "No")
+ 12. }
+
+. tempname RG
+
+. tempfile R
+
+. postfile `RG' str60 t_lab str24(t1 t2 t3 t4 t5 t6) using `R'
+
+. local nrow 0
+
+. local rl ""
+
+. foreach y in energy_va co2_va energy co2 {
+  2.     if "`y'" == "energy_va" local pn "(a) Energy per unit of VA"
+  3.     if "`y'" == "co2_va"    local pn "(b) CO2 per unit of VA"
+  4.     if "`y'" == "energy"    local pn "(c) Energy use (GJ)"
+  5.     if "`y'" == "co2"       local pn "(d) CO2 emitted (tonnes)"
+  6.     post `RG' ("Outcome `pn'") ("") ("") ("") ("") ("") ("")
+  7.     local ++nrow
+  8.     foreach t in s_lnw exp1 imp1 fdi1 own1 lev {
+  9.         if "`t'" == "s_lnw"  local tl "Workers (log)"
+ 10.         if "`t'" == "exp1"   local tl "Exporter"
+ 11.         if "`t'" == "exp_nr" local tl "Export status not recorded"
+ 12.         if "`t'" == "imp1"   local tl "Importer"
+ 13.         if "`t'" == "fdi1"   local tl "Foreign-owned 10% or more"
+ 14.         if "`t'" == "fdi_nr" local tl "Foreign status not recorded"
+ 15.         if "`t'" == "own1"   local tl "Makes own electricity"
+ 16.         if "`t'" == "own_nr" local tl "Own-electricity status not recorded"
+ 17.         if "`t'" == "lev"    local tl "Starting level (log)"
+ 18.         forvalues s = 1/6 {
+ 19.             quietly count if outcome == "`y'" & m == `s' & term == "`t'"
+ 20.             if r(N) == 0 {                        // term not in this model
+ 21.                 local b`s' ""
+ 22.                 local s`s' ""
+ 23.                 local p`s' ""
+ 24.                 continue
+ 25.             }
+ 26.             quietly summarize b if outcome == "`y'" & m == `s' & term == "`t'", meanonly
+ 27.             if r(N) == 0 {                        // term dropped (no one has it)
+ 28.                 local b`s' "—"
+ 29.                 local s`s' ""
+ 30.                 local p`s' ""
+ 31.                 continue
+ 32.             }
+ 33.             local b`s' = string(r(mean), "%9.3f")
+ 34.             local kk = cond(inlist("`t'", "s_lnw", "lev"), ln(2), 1)
+ 35.             local pp = 100 * (exp(`kk' * r(mean)) - 1)
+ 36.             local p`s' = "[" + cond(`pp' > 0, "+", "") + string(`pp', "%9.1f") + "%]"
+ 37.             quietly summarize se if outcome == "`y'" & m == `s' & term == "`t'", meanonly
+ 38.             local s`s' = "(" + string(r(mean), "%9.3f") + ")"
+ 39.         }
+ 40.         post `RG' ("`tl'") ("`b1'") ("`b2'") ("`b3'") ("`b4'") ("`b5'") ("`b6'")
+ 41.         post `RG' ("")     ("`s1'") ("`s2'") ("`s3'") ("`s4'") ("`s5'") ("`s6'")
+ 42.         if `show_pct' post `RG' ("") ("`p1'") ("`p2'") ("`p3'") ("`p4'") ("`p5'") ("`p6'")
+ 43.         local nrow = `nrow' + 2 + `show_pct'
+ 44.     }
+ 45.     local rl "`rl' `nrow'"
+ 46. }
+
+. * whole-model rows: one sample per column, the same for the four outcomes (checked)
+. forvalues s = 1/6 {
+  2.     foreach v in changes firms singletons {
+  3.         quietly summarize `v' if m == `s'
+  4.         assert r(min) == r(max)
+  5.         local `v'`s' = string(r(max), "%12.0fc")
+  6.     }
+  7. }
+
+. post `RG' ("Observations (one-year changes)") ("`changes1'") ("`changes2'") ("`changes3'") ("`changes4'") ("`changes5'
+> ") ("`changes6'")
+
+. post `RG' ("Firms (clusters)")                ("`firms1'") ("`firms2'") ("`firms3'") ("`firms4'") ("`firms5'") ("`firm
+> s6'")
+
+. post `RG' ("Singleton changes dropped")       ("`singletons1'") ("`singletons2'") ("`singletons3'") ("`singletons4'") 
+> ("`singletons5'") ("`singletons6'")
+
+. post `RG' ("'Not recorded' markers (export, foreign, own electricity)") ("Yes") ("Yes") ("Yes") ("Yes") ("Yes") ("Yes"
+> )
+
+. post `RG' ("Firm fixed effects")            ("`fe_f1'") ("`fe_f2'") ("`fe_f3'") ("`fe_f4'") ("`fe_f5'") ("`fe_f6'")
+
+. post `RG' ("Year fixed effects")            ("`fe_y1'") ("`fe_y2'") ("`fe_y3'") ("`fe_y4'") ("`fe_y5'") ("`fe_y6'")
+
+. post `RG' ("Sector fixed effects")          ("`fe_s1'") ("`fe_s2'") ("`fe_s3'") ("`fe_s4'") ("`fe_s5'") ("`fe_s6'")
+
+. post `RG' ("Province fixed effects")        ("`fe_p1'") ("`fe_p2'") ("`fe_p3'") ("`fe_p4'") ("`fe_p5'") ("`fe_p6'")
+
+. post `RG' ("Sector × year fixed effects")   ("`fe_sy1'") ("`fe_sy2'") ("`fe_sy3'") ("`fe_sy4'") ("`fe_sy5'") ("`fe_sy6
+> '")
+
+. post `RG' ("Province × year fixed effects") ("`fe_py1'") ("`fe_py2'") ("`fe_py3'") ("`fe_py4'") ("`fe_py5'") ("`fe_py6
+> '")
+
+. post `RG' ("Weights")                       ("None") ("None") ("None") ("None") ("None") ("None")
+
+. post `RG' ("Standard errors clustered by")  ("Firm") ("Firm") ("Firm") ("Firm") ("Firm") ("Firm")
+
+. postclose `RG'
+
+. use `R', clear
+
+. local rsub "Outcome: one-year change in the log of the panel's measure. Log points; standard errors in parentheses"
+
+. local rsub = cond(`show_pct', "`rsub'; [% as drawn].", "`rsub'.")
+
+. local rnote "Notes: Each column is one regression, per outcome, of the firm's one-year change in the log of the measur
+> e on its traits"
+
+. local rnote "`rnote' at the start of the change (log workers; exporter, importer, foreign-owned 10% or more, makes own
+>  electricity, each"
+
+. local rnote "`rnote' with its own 'not recorded' marker); columns (4)–(6) add the log starting level of the measure. (
+> A) year, sector and"
+
+. local rnote "`rnote' province effects; (B) firm and year effects, so only firms whose trait changes inform a trait; (C
+> ) sector × year and"
+
+. local rnote "`rnote' province × year effects (not drawn). Figure R3-04 draws the five traits from columns (1)–(2) and 
+> the starting level"
+
+. local rnote "`rnote' from (4)–(5), as % = 100 × (exp(b) − 1), or 100 × (2^b − 1) for the two log terms. Sample: `n_use
+> ' one-year"
+
+. local rnote "`rnote' changes of `f_use' firms. `brknote' Observations exclude singleton changes (one change in a firm 
+> or group, which"
+
+. local rnote "`rnote' the effects absorb). Other checks (leave out one pair of years, before and after 2016, break year
+>  kept, without own"
+
+. local rnote "`rnote' electricity, firm effects split at 2016) and the 'not recorded' coefficients: tables/04_trait_ass
+> ociations_fe_all_terms.csv."
+
+. local rnote "`rnote' No stars."
+
+. local rnote = itrim(`"`rnote'"')
+
+. ctable_pdf t_lab t1 t2 t3 t4 t5 t6 using "tables/04_trait_associations_fe_regression.pdf", ///
+>     title("Table R3-04, regression. Which firm traits go with bigger one-year cuts in energy and CO2: estimates behind
+>  the chart") ///
+>     subtitle("`rsub'") ///
+>     header("Trait at the start of the change" "(1)|(A)" "(2)|(B)" "(3)|(C)" "(4)|(A) with|starting level" "(5)|(B) wit
+> h|starting level" "(6)|(C) with|starting level") ///
+>     right(2 3 4 5 6 7) rules(`rl') portrait fontsize(9) perpage(40) ///
+>     notes("`rnote'" "`srcnote'" "`devnote'")
+successfully created "/Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r3-energy-emissions-co
+> rrelates/tables/04_trait_associations_fe_regression.pdf"
+
+. display "table -> tables/04_trait_associations_fe_regression.pdf"
+table -> tables/04_trait_associations_fe_regression.pdf
+
+. * --- end of PART 2 ------------------------------------------------------------
+. 
 . timer off 1
 
 . quietly timer list 1
@@ -847,6 +1357,6 @@ file
 . local elapsed = strtrim(string(r(t1), "%9.1f"))
 
 . display "FINISHED: figure -> figures/04_trait_associations_fe.png (elapsed `elapsed' s)"
-FINISHED: figure -> figures/04_trait_associations_fe.png (elapsed 19.2 s)
+FINISHED: figure -> figures/04_trait_associations_fe.png (elapsed 21.9 s)
 
 . quietly log close

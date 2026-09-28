@@ -9,6 +9,7 @@
            tables/05_motivation_proxies.csv     (numbers in the figure + checks)
            tables/05_motivation_proxies_fe.csv  (companion: R3-04 comparison A
                                                  with each answer added; not drawn)
+           tables/05_motivation_proxies_table.pdf (every plotted point)
   Development data - obscured values, fictional firm panel. Not BPS findings.
 ==========================================================================*/
 version 17
@@ -68,7 +69,7 @@ program define yearspan, rclass
 end
 
 *---------------------------------------------------------------------------
-display "Step 1/8: load the variables; find the years each question was asked"
+display "Step 1/9: load the variables; find the years each question was asked"
 *---------------------------------------------------------------------------
 * env_amdal_flag / env_ukl_upl_flag / env_sppl_flag = the firm holds that environmental
 *   permit document (AMDAL strictest, for large impacts; UKL-UPL middle; SPPL simplest)
@@ -113,7 +114,7 @@ encode province_code, gen(province)
 xtset firm_id year
 
 *---------------------------------------------------------------------------
-display "Step 2/8: one-year changes, as in R3-01 (same code)"
+display "Step 2/9: one-year changes, as in R3-01 (same code)"
 *---------------------------------------------------------------------------
 gen double energy    = total_gj_s1
 gen double co2       = co2_total_s1
@@ -131,7 +132,7 @@ bysort year: egen double med_all_energy_va = pctile(chg_energy_va), p(50)   // m
 xtset firm_id year                // the bysort call above changed the sort order
 
 *---------------------------------------------------------------------------
-display "Step 3/8: each firm's answer in the FIRST year of each change"
+display "Step 3/9: each firm's answer in the FIRST year of each change"
 *---------------------------------------------------------------------------
 gen int start_year = year - 1 if cmp
 gen double ln_e0 = ln(L.total_gj_s1) if cmp                     // energy at the start (log), for the notes
@@ -190,7 +191,7 @@ foreach f in doc waste rd inn proc {
 display "   'Yes' firms start with more energy in `nhi' of `nq' questions"
 
 *---------------------------------------------------------------------------
-display "Step 4/8: did each change beat the typical firm that ANSWERED the same question that year?"
+display "Step 4/9: did each change beat the typical firm that ANSWERED the same question that year?"
 *---------------------------------------------------------------------------
 * Firms without an answer differ a lot from firms with one, and the years a
 * question was asked differ, so each change is compared with the typical
@@ -209,7 +210,7 @@ gen byte b_all_energy_va = (chg_energy_va < med_all_energy_va) if cmp
 xtset firm_id year
 
 *---------------------------------------------------------------------------
-display "Step 5/8: share beating the typical answering firm, per answer, with 95% intervals"
+display "Step 5/9: share beating the typical answering firm, per answer, with 95% intervals"
 *---------------------------------------------------------------------------
 tempname P
 tempfile rows
@@ -298,7 +299,7 @@ foreach f of local fams {
 postclose `P'
 
 *---------------------------------------------------------------------------
-display "Step 6/8: companion - R3-04 comparison (A) with each answer added (CSV only)"
+display "Step 6/9: companion - R3-04 comparison (A) with each answer added (CSV only)"
 *---------------------------------------------------------------------------
 * Same traits as R3-04 (A): workers, exporter, importer, foreign-owned, own
 * electricity, each with its own "not recorded" indicator; year, sector and
@@ -361,7 +362,7 @@ foreach f in doc waste rd inn proc {
 postclose `E'
 
 *---------------------------------------------------------------------------
-display "Step 7/8: write the numbers (CSV) before drawing"
+display "Step 7/9: write the numbers (CSV) before drawing"
 *---------------------------------------------------------------------------
 preserve
 use `fe', clear
@@ -375,13 +376,15 @@ use `rows', clear
 format changes firms %9.0f
 format pct_* lo_* hi_* gap_* loo_* %6.2f
 export delimited using "tables/05_motivation_proxies.csv", datafmt replace
+tempfile ctsrc                     // same numbers, full precision, for the companion table (Step 9)
+quietly save `ctsrc'
 list row_order family group answers_from changes firms pct_energy_va lo_energy_va hi_energy_va gap_energy_va ///
     pct_energy gap_energy loo_min_energy_va loo_max_energy_va pct_energy_va_not_provisional pct_energy_va_vs_all_firms, ///
     noobs sep(0) abbreviate(24)
 assert lo_energy_va <= pct_energy_va & pct_energy_va <= hi_energy_va if firms >= 2
 
 *---------------------------------------------------------------------------
-display "Step 8/8: dot plot, four panels on one shared scale"
+display "Step 8/9: dot plot, four panels on one shared scale"
 *---------------------------------------------------------------------------
 * numbers for the notes (read from the data, never typed)
 yearspan `prov_yrs'
@@ -474,6 +477,233 @@ twoway (rspike lo hi y if answered == 1, horizontal lcolor(black) lwidth(thin)) 
 
 graph export "figures/05_motivation_proxies.png", width(3000) replace
 graph export "figures/05_motivation_proxies.pdf", replace
+
+
+*---------------------------------------------------------------------------
+display "Step 9/9: companion table: every plotted point"
+*---------------------------------------------------------------------------
+* ==== COMPANION TABLE (pattern for all exhibits) =============================
+* Owner rule, 28 Sep 2026: every chart gets a table of every plotted point, and
+* every chart of regression coefficients also gets a regression table, written
+* by the same do-file (spec: TABLE_BRIEF.md). This step runs AFTER the graph
+* export, so the chart and the CSV stay byte-identical.
+*
+* How to use it in another exhibit file:
+*   PART 1 (the writer, program ctable_pdf) is copied UNCHANGED.
+*   PART 2 is the only exhibit-specific part: put the numbers in memory (the
+*   tempfile saved right after the CSV export, or the CSV itself), build one
+*   STRING variable per table column, one row per plotted point in chart order
+*   (years not drawn included, with the reason in a status column), then call
+*   ctable_pdf. Format numbers with string(x, "%9.1f") etc. so the table shows
+*   exactly the rounding of the chart labels.
+*
+* ctable_pdf strvars using "tables/NN_name_table.pdf",
+*     title("Table R1-02. ...: every plotted point")    first line, bold
+*     header("Col 1" "Col 2" ...)       one text per column; "|" = line break
+*     [right(numlist)]                  columns right-aligned (numbers)
+*     [norepeat(numlist)]               columns whose repeated text is shown
+*                                       only on the first row of a run
+*     [rules(numlist)]                  thin gray line under these data rows
+*     [notes("line 1" "line 2" ...)]    footer paragraphs (Notes, Source, dev line)
+*     [subtitle(text)] [fontsize(#)] [perpage(#)] [landscape|portrait]
+* Landscape is chosen automatically when there are more than 6 columns. Long
+* tables continue on a new page with the header repeated ("(continued)"); a page
+* never breaks inside a block whose first column is empty (e.g. an SE row).
+* --- PART 1: the writer (identical in every file; do not edit) ---------------
+capture program drop ctable_pdf
+program define ctable_pdf
+    version 17
+    syntax varlist(string) using/, TItle(string) HEADer(string asis) ///
+        [RIGHT(numlist integer >0) NOREPeat(numlist integer >0) RULES(numlist integer >0) ///
+         NOTEs(string asis) SUBtitle(string) FONTsize(real 9.5) PERpage(integer 0) ///
+         LANDscape PORTrait]
+    local nc : word count `varlist'
+    local nh : word count `header'
+    if `nh' != `nc' {
+        display as error "ctable_pdf: `nc' columns but `nh' header texts"
+        exit 198
+    }
+    local orient = cond(`nc' > 6, "landscape", "")
+    if "`landscape'" != "" local orient "landscape"
+    if "`portrait'"  != "" local orient ""
+    * rows per page: a conservative guess for 9-10 pt text (wrapped cells take more)
+    if `perpage' == 0 local perpage = cond("`orient'" == "landscape", 24, 40)
+    preserve
+    quietly {
+        keep `varlist'
+        rename (`varlist') (__c#), addnumber      // __c1 __c2 ... in the order given
+        forvalues j = 1/`nc' {
+            replace __c`j' = strtrim(__c`j')
+        }
+        local N = _N
+        gen long row = _n
+        * page chunks: fill up to perpage rows; prefer to end a page at a rule,
+        * never start a page on a row whose first column is empty
+        gen int chunk = .
+        local start 1
+        local k 0
+        while `start' <= `N' {
+            local ++k
+            local end = min(`start' + `perpage' - 1, `N')
+            if `end' < `N' {
+                local best 0
+                foreach r of local rules {
+                    if `r' >= `start' + floor(`perpage' / 2) & `r' <= `end' & `r' > `best' local best `r'
+                }
+                if `best' > 0 local end `best'
+                else {
+                    while `end' > `start' & __c1[`end' + 1] == "" {
+                        local --end
+                    }
+                }
+            }
+            replace chunk = `k' in `start'/`end'
+            local start = `end' + 1
+        }
+        local nk `k'
+        * blank repeated labels inside each page; a column is blanked only while the
+        * norepeat columns to its left are unchanged too (a new panel shows its series)
+        gen byte same = _n > 1 & chunk == chunk[_n - 1]
+        foreach j of local norepeat {
+            gen strL o`j' = __c`j'
+            replace same = same & o`j' == o`j'[_n - 1]
+            replace __c`j' = "" if same
+            drop o`j'
+        }
+        drop same
+        * column widths (% of the page), from the longest text in each column;
+        * long text columns are capped so they wrap instead of squeezing numbers
+        matrix W = J(1, `nc', 0)
+        local tot 0
+        forvalues j = 1/`nc' {
+            gen long L`j' = udstrlen(__c`j')
+            summarize L`j', meanonly
+            local w = max(r(max), 3)
+            local h : word `j' of `header'
+            local h = subinstr(`"`h'"', "|", " ", .)
+            foreach hw of local h {
+                local w = max(`w', udstrlen(`"`hw'"'))
+            }
+            local w = min(`w', 34) + 2          // + 2 = room for the cell margins
+            matrix W[1, `j'] = `w'
+            local tot = `tot' + `w'
+            drop L`j'
+        }
+        local used 0
+        forvalues j = 1/`nc' {
+            if `j' < `nc' {
+                matrix W[1, `j'] = max(floor(100 * W[1, `j'] / `tot'), 3)
+                local used = `used' + W[1, `j']
+            }
+            else matrix W[1, `j'] = 100 - `used'
+        }
+    }
+    putpdf clear
+    putpdf begin, pagesize(A4) `orient' font("Times New Roman", `fontsize') ///
+        margin(left, 0.8in) margin(right, 0.8in) margin(top, 0.5in) margin(bottom, 0.5in)
+    forvalues k = 1/`nk' {
+        if `k' > 1 putpdf pagebreak
+        putpdf paragraph, spacing(after, 4pt)
+        local tt = cond(`k' == 1, `"`title'"', `"`title' (continued)"')
+        putpdf text (`"`tt'"'), bold font("Times New Roman", `=`fontsize' + 1.5')
+        if `k' == 1 & `"`subtitle'"' != "" {
+            putpdf paragraph, spacing(after, 4pt)
+            putpdf text (`"`subtitle'"')
+        }
+        quietly count if chunk == `k'
+        local nr = r(N) + 1
+        quietly putpdf table T`k' = data(__c1-__c`nc') if chunk == `k', varnames border(all, nil) width(W)
+        forvalues j = 1/`nc' {
+            * header text; "|" starts a new line inside the cell
+            local rest : word `j' of `header'
+            local opt ""
+            while `"`rest'"' != "" {
+                gettoken part rest : rest, parse("|")
+                if `"`part'"' == "|" {
+                    putpdf table T`k'(1, `j') = (""), linebreak append
+                    continue
+                }
+                putpdf table T`k'(1, `j') = (`"`part'"'), valign(bottom) `opt'
+                local opt "append"
+            }
+            local al = cond(`: list j in right', "right", "left")
+            putpdf table T`k'(., `j'), halign(`al') margin(top, 0pt) margin(bottom, 0pt)
+        }
+        putpdf table T`k'(1, .), border(top, single, black) border(bottom, single, black)
+        putpdf table T`k'(`nr', .), border(bottom, single, black)
+        foreach r of local rules {
+            quietly summarize row if chunk == `k', meanonly
+            if `r' >= r(min) & `r' < r(max) {
+                putpdf table T`k'(`=`r' - r(min) + 2', .), border(bottom, single, "A6A6A6")
+            }
+        }
+    }
+    local first 1
+    foreach n of local notes {
+        putpdf paragraph, spacing(before, `=cond(`first', 6, 1)'pt)
+        putpdf text (`"`n'"'), font("Times New Roman", `=`fontsize' - 0.5')
+        local first 0
+    }
+    putpdf save `"`using'"', replace
+    restore
+end
+* --- end of PART 1 ------------------------------------------------------------
+
+* --- PART 2: the rows of this exhibit (the only part that changes per file) ---
+* Source: the answer table saved right after the CSV export (full precision,
+* same run as the chart). One row per point, in chart order: panel (a) to (d),
+* questions and answers top to bottom. The three single-document rows (AMDAL,
+* UKL-UPL, SPPL held) are CSV-only checks, not chart positions, and are not
+* listed; the regressions of tables/05_motivation_proxies_fe.csv are not drawn.
+use `ctsrc', clear
+keep if in_figure
+sort row_order
+local nrow = _N
+expand 4
+bysort row_order: gen byte panel = _n
+sort panel row_order
+gen str30 t_panel = cond(panel == 1, "(a) Energy per unit of VA", cond(panel == 2, "(b) CO2 per unit of VA", ///
+                    cond(panel == 3, "(c) Energy use (GJ)", "(d) CO2 emitted (tonnes)")))
+* question header exactly as on the chart's axis: name (years of the answers[, provisional])
+gen str80 t_q = ""
+forvalues i = 1/`=_N' {
+    local fnm = family[`i']
+    local afr = answers_from[`i']
+    if `allprov_`fnm'' local afr "`afr', provisional"
+    quietly replace t_q = question[`i'] + " (`afr')" in `i'
+}
+gen str30 t_grp = group
+gen double v  = cond(panel == 1, pct_energy_va, cond(panel == 2, pct_co2_va, cond(panel == 3, pct_energy, pct_co2)))
+gen double lo = cond(panel == 1, lo_energy_va,  cond(panel == 2, lo_co2_va,  cond(panel == 3, lo_energy,  lo_co2)))
+gen double hi = cond(panel == 1, hi_energy_va,  cond(panel == 2, hi_co2_va,  cond(panel == 3, hi_energy,  hi_co2)))
+* rounding as the chart labels (one decimal)
+gen str12 t_v  = string(v,  "%9.1f") if !missing(v)
+gen str12 t_lo = string(lo, "%9.1f") if !missing(lo)
+gen str12 t_hi = string(hi, "%9.1f") if !missing(hi)
+gen str12 t_ch = string(changes, "%12.0fc")
+gen str12 t_f  = string(firms, "%12.0fc")
+gen str60 t_status = cond(answered == 1, "drawn: solid dot", "drawn: hollow gray (no answer)")
+* checks: one row per drawn point, each with a number and an interval
+assert t_v != "" & t_lo != "" & t_hi != ""
+assert _N == 4 * `nrow'
+* notes: the chart's notes, how to read the table, Source, development-data line
+local ntext "Notes: The survey never asks why; these answers are stand-ins (rules faced, capacity to change). Shows who, not why. GJ = gigajoules."
+local ntext "`ntext' Dot = share of the group's one-year changes that fell more or rose less than the typical (median) change of firms answering the question that year."
+local ntext "`ntext' 50% = same as that typical firm; where a 95% interval crosses the dashed line, the group is not clearly different from it. Compare 'Yes' with 'No'."
+local ntext "`ntext' Hollow gray = no answer recorded, never counted as 'No'. These records can differ in other ways, so their distance from 50% is not a result."
+local ntext "`ntext' `fbnote'"
+local ntext "`ntext' `provnote'VA = value added = output minus materials, energy and services bought (current prices)."
+local ntext = itrim(`"`ntext'"')
+local tnote "Table: every point of Figure R3-05, panel by panel, answers top to bottom; rounded as the chart labels. 95% interval"
+local tnote "`tnote' clustered by firm. Changes = one-year changes with that answer (the number on the chart); Firms = firms behind them."
+local tnote "`tnote' Gaps against the reference answer, checks and the single-document rows: tables/05_motivation_proxies.csv."
+ctable_pdf t_panel t_q t_grp t_v t_lo t_hi t_ch t_f t_status using "tables/05_motivation_proxies_table.pdf", ///
+    title("Table R3-05. Share of one-year changes that fell more (or rose less) than the typical answering firm's, by permit, waste treatment, R&D and innovation answer: every plotted point") ///
+    header("Panel" "Question (answers from)" "Answer at start" "Share|(%)" "95%|low" "95%|high" "Changes" "Firms" "Status") ///
+    right(4 5 6 7 8) norepeat(1 2) fontsize(9) rules(`nrow' `=2*`nrow'' `=3*`nrow'') perpage(`nrow') ///
+    notes("`ntext'" "`tnote'" "`srcnote'" "`devnote'")
+display "table -> tables/05_motivation_proxies_table.pdf"
+* --- end of PART 2 ------------------------------------------------------------
 
 timer off 1
 quietly timer list 1

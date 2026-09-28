@@ -3,7 +3,7 @@
        log:  /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r3-energy-emissions-correlates/
 > logs/06_own_electricity_reducers.log
   log type:  text
- opened on:  25 Sep 2026, 05:41:45
+ opened on:  28 Sep 2026, 17:09:36
 
 . timer clear 1
 
@@ -26,8 +26,8 @@
 
 . 
 . *---------------------------------------------------------------------------
-. display "Step 1/8: load the variables we need"
-Step 1/8: load the variables we need
+. display "Step 1/9: load the variables we need"
+Step 1/9: load the variables we need
 
 . *---------------------------------------------------------------------------
 . * own_gen_positive_reported = 1 if the firm made some of its own electricity
@@ -62,8 +62,8 @@ Panel variable: firm_id (unbalanced)
 
 . 
 . *---------------------------------------------------------------------------
-. display "Step 2/8: one-year changes and the R3 reducer flag (same code as R3-01)"
-Step 2/8: one-year changes and the R3 reducer flag (same code as R3-01)
+. display "Step 2/9: one-year changes and the R3 reducer flag (same code as R3-01)"
+Step 2/9: one-year changes and the R3 reducer flag (same code as R3-01)
 
 . *---------------------------------------------------------------------------
 . gen double energy    = total_gj_s1
@@ -134,8 +134,8 @@ Panel variable: firm_id (unbalanced)
 
 . 
 . *---------------------------------------------------------------------------
-. display "Step 3/8: own electricity at the start and end of each change"
-Step 3/8: own electricity at the start and end of each change
+. display "Step 3/9: own electricity at the start and end of each change"
+Step 3/9: own electricity at the start and end of each change
 
 . *---------------------------------------------------------------------------
 . * beat = the change was below the typical (median) change that year: it fell more or rose less.
@@ -206,8 +206,8 @@ Panel variable: firm_id (unbalanced)
 
 . 
 . *---------------------------------------------------------------------------
-. display "Step 4/8: which start year drives the own-electricity gap? (leave one out)"
-Step 4/8: which start year drives the own-electricity gap? (leave one out)
+. display "Step 4/9: which start year drives the own-electricity gap? (leave one out)"
+Step 4/9: which start year drives the own-electricity gap? (leave one out)
 
 . *---------------------------------------------------------------------------
 . * Gap = share beating the typical change (energy per unit of VA), firms making
@@ -311,7 +311,7 @@ xij variables:
 . tempfile fuel
 
 . save `fuel'
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_34118.000002 saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_13702.000002 saved as .dta format
 
 . restore
 
@@ -329,8 +329,8 @@ file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_34118.000002 saved as .
 
 . 
 . *---------------------------------------------------------------------------
-. display "Step 5/8: A - share making own electricity, reducers vs non-reducers, per year"
-Step 5/8: A - share making own electricity, reducers vs non-reducers, per year
+. display "Step 5/9: A - share making own electricity, reducers vs non-reducers, per year"
+Step 5/9: A - share making own electricity, reducers vs non-reducers, per year
 
 . *---------------------------------------------------------------------------
 . * Flag rebuilt without the changes starting in `yx' (same rule otherwise).
@@ -511,14 +511,14 @@ Number of observations (_N) was 13, now 14.
 . tempfile byyear
 
 . save `byyear'
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_34118.000004 saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_13702.000004 saved as .dta format
 
 . restore
 
 . 
 . *---------------------------------------------------------------------------
-. display "Step 6/8: B - share of changes beating the typical firm, per group, with 95% intervals"
-Step 6/8: B - share of changes beating the typical firm, per group, with 95% intervals
+. display "Step 6/9: B - share of changes beating the typical firm, per group, with 95% intervals"
+Step 6/9: B - share of changes beating the typical firm, per group, with 95% intervals
 
 . *---------------------------------------------------------------------------
 . * The interval allows for the same firm appearing in several years (clustered by firm).
@@ -537,7 +537,7 @@ Step 6/8: B - share of changes beating the typical firm, per group, with 95% int
 >            pct_co2 lo_co2 hi_co2 gap_co2 gap_lo_co2 gap_hi_co2 pct_co2_x lo_co2_x hi_co2_x ///
 >            pct_energy_va_early) long changes_early double pct_energy_va_late long changes_late ///
 >     double pct_bought_fell_more long changes_bought double median_va_change_vs_typical_pct using `rows', replace
-(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_34118.000005 not found)
+(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_13702.000005 not found)
 
 . local r 0
 
@@ -581,41 +581,43 @@ Step 6/8: B - share of changes beating the typical firm, per group, with 95% int
  36.             local lox = .
  37.             local hix = .
  38.             local nx = 0
- 39.             quietly count if cmp & g_`d' == `k' & start_year != `yx'
- 40.             if r(N) > 1 {
- 41.                 quietly mean beat_`v' if cmp & g_`d' == `k' & start_year != `yx', vce(cluster firm_id)
- 42.                 matrix T = r(table)
- 43.                 local px  = 100 * T[1,1]
- 44.                 local lox = 100 * T[5,1]
- 45.                 local hix = 100 * T[6,1]
- 46.                 local nx  = e(N)
- 47.             }
- 48.             local vals `vals' (`p') (`lo') (`hi') (`g') (`glo') (`ghi') (`px') (`lox') (`hix')
- 49.         }
- 50.         * main measure before and after the missing 2016 file
+ 39.             if "`v'" == "energy_va" local nfx_`r' = .       // for the companion table (Step 9)
+ 40.             quietly count if cmp & g_`d' == `k' & start_year != `yx'
+ 41.             if r(N) > 1 {
+ 42.                 quietly mean beat_`v' if cmp & g_`d' == `k' & start_year != `yx', vce(cluster firm_id)
+ 43.                 matrix T = r(table)
+ 44.                 local px  = 100 * T[1,1]
+ 45.                 local lox = 100 * T[5,1]
+ 46.                 local hix = 100 * T[6,1]
+ 47.                 local nx  = e(N)
+ 48.                 local nfx_`r' = e(N_clust)                    // for the companion table (Step 9)
+ 49.             }
+ 50.             local vals `vals' (`p') (`lo') (`hi') (`g') (`glo') (`ghi') (`px') (`lox') (`hix')
+ 51.         }
+ 52.         * main measure before and after the missing 2016 file
 .         quietly summarize beat_energy_va if cmp & g_`d' == `k' & year < 2016
- 51.         local pe = 100 * r(mean)
- 52.         local ne = r(N)
- 53.         quietly summarize beat_energy_va if cmp & g_`d' == `k' & year > 2016
- 54.         local pl = 100 * r(mean)
- 55.         local nl = r(N)
- 56.         * checks: bought electricity fell more than the typical firm's; value added vs typical
+ 53.         local pe = 100 * r(mean)
+ 54.         local ne = r(N)
+ 55.         quietly summarize beat_energy_va if cmp & g_`d' == `k' & year > 2016
+ 56.         local pl = 100 * r(mean)
+ 57.         local nl = r(N)
+ 58.         * checks: bought electricity fell more than the typical firm's; value added vs typical
 .         quietly summarize beat_bought if cmp & g_`d' == `k'
- 57.         local pb = 100 * r(mean)
- 58.         local nb = r(N)
- 59.         quietly summarize rel_chg_va if cmp & g_`d' == `k', detail
- 60.         local mva = 100 * (exp(r(p50)) - 1)
- 61.         post `P' (`r') ((`k' != `nrg')) ("`dn'") ("`gname'") ("`refname'") (`nn') (`nf') (`nx') (`yx') ///
+ 59.         local pb = 100 * r(mean)
+ 60.         local nb = r(N)
+ 61.         quietly summarize rel_chg_va if cmp & g_`d' == `k', detail
+ 62.         local mva = 100 * (exp(r(p50)) - 1)
+ 63.         post `P' (`r') ((`k' != `nrg')) ("`dn'") ("`gname'") ("`refname'") (`nn') (`nf') (`nx') (`yx') ///
 >             `vals' (`pe') (`ne') (`pl') (`nl') (`pb') (`nb') (`mva')
- 62.     }
- 63. }
+ 64.     }
+ 65. }
 
 . postclose `P'
 
 . 
 . *---------------------------------------------------------------------------
-. display "Step 7/8: numbers -> two CSV files (written before drawing)"
-Step 7/8: numbers -> two CSV files (written before drawing)
+. display "Step 7/9: numbers -> two CSV files (written before drawing)"
+Step 7/9: numbers -> two CSV files (written before drawing)
 
 . *---------------------------------------------------------------------------
 . use `byyear', clear
@@ -999,8 +1001,8 @@ file tables/06_own_electricity_reducers_changes.csv saved
 
 . 
 . *---------------------------------------------------------------------------
-. display "Step 8/8: draw A (lines per year) and B (dot plot), then combine"
-Step 8/8: draw A (lines per year) and B (dot plot), then combine
+. display "Step 8/9: draw A (lines per year) and B (dot plot), then combine"
+Step 8/9: draw A (lines per year) and B (dot plot), then combine
 
 . *---------------------------------------------------------------------------
 . * graph combine shrinks relative text sizes unevenly between parts, so text is
@@ -1311,6 +1313,430 @@ file
     > /06_own_electricity_reducers.pdf saved as PDF format
 
 . 
+. *---------------------------------------------------------------------------
+. display "Step 9/9: companion table: every plotted point"
+Step 9/9: companion table: every plotted point
+
+. *---------------------------------------------------------------------------
+. * ==== COMPANION TABLE (pattern for all exhibits) =============================
+. * Owner rule, 28 Sep 2026: every chart gets a table of every plotted point, and
+. * every chart of regression coefficients also gets a regression table, written
+. * by the same do-file (spec: TABLE_BRIEF.md). This step runs AFTER the graph
+. * export, so the chart and the CSV stay byte-identical.
+. *
+. * How to use it in another exhibit file:
+. *   PART 1 (the writer, program ctable_pdf) is copied UNCHANGED.
+. *   PART 2 is the only exhibit-specific part: put the numbers in memory (the
+. *   tempfile saved right after the CSV export, or the CSV itself), build one
+. *   STRING variable per table column, one row per plotted point in chart order
+. *   (years not drawn included, with the reason in a status column), then call
+. *   ctable_pdf. Format numbers with string(x, "%9.1f") etc. so the table shows
+. *   exactly the rounding of the chart labels.
+. *
+. * ctable_pdf strvars using "tables/NN_name_table.pdf",
+. *     title("Table R1-02. ...: every plotted point")    first line, bold
+. *     header("Col 1" "Col 2" ...)       one text per column; "|" = line break
+. *     [right(numlist)]                  columns right-aligned (numbers)
+. *     [norepeat(numlist)]               columns whose repeated text is shown
+. *                                       only on the first row of a run
+. *     [rules(numlist)]                  thin gray line under these data rows
+. *     [notes("line 1" "line 2" ...)]    footer paragraphs (Notes, Source, dev line)
+. *     [subtitle(text)] [fontsize(#)] [perpage(#)] [landscape|portrait]
+. * Landscape is chosen automatically when there are more than 6 columns. Long
+. * tables continue on a new page with the header repeated ("(continued)"); a page
+. * never breaks inside a block whose first column is empty (e.g. an SE row).
+. * --- PART 1: the writer (identical in every file; do not edit) ---------------
+. capture program drop ctable_pdf
+
+. program define ctable_pdf
+  1.     version 17
+  2.     syntax varlist(string) using/, TItle(string) HEADer(string asis) ///
+>         [RIGHT(numlist integer >0) NOREPeat(numlist integer >0) RULES(numlist integer >0) ///
+>          NOTEs(string asis) SUBtitle(string) FONTsize(real 9.5) PERpage(integer 0) ///
+>          LANDscape PORTrait]
+  3.     local nc : word count `varlist'
+  4.     local nh : word count `header'
+  5.     if `nh' != `nc' {
+  6.         display as error "ctable_pdf: `nc' columns but `nh' header texts"
+  7.         exit 198
+  8.     }
+  9.     local orient = cond(`nc' > 6, "landscape", "")
+ 10.     if "`landscape'" != "" local orient "landscape"
+ 11.     if "`portrait'"  != "" local orient ""
+ 12.     * rows per page: a conservative guess for 9-10 pt text (wrapped cells take more)
+.     if `perpage' == 0 local perpage = cond("`orient'" == "landscape", 24, 40)
+ 13.     preserve
+ 14.     quietly {
+ 15.         keep `varlist'
+ 16.         rename (`varlist') (__c#), addnumber      // __c1 __c2 ... in the order given
+ 17.         forvalues j = 1/`nc' {
+ 18.             replace __c`j' = strtrim(__c`j')
+ 19.         }
+ 20.         local N = _N
+ 21.         gen long row = _n
+ 22.         * page chunks: fill up to perpage rows; prefer to end a page at a rule,
+.         * never start a page on a row whose first column is empty
+.         gen int chunk = .
+ 23.         local start 1
+ 24.         local k 0
+ 25.         while `start' <= `N' {
+ 26.             local ++k
+ 27.             local end = min(`start' + `perpage' - 1, `N')
+ 28.             if `end' < `N' {
+ 29.                 local best 0
+ 30.                 foreach r of local rules {
+ 31.                     if `r' >= `start' + floor(`perpage' / 2) & `r' <= `end' & `r' > `best' local best `r'
+ 32.                 }
+ 33.                 if `best' > 0 local end `best'
+ 34.                 else {
+ 35.                     while `end' > `start' & __c1[`end' + 1] == "" {
+ 36.                         local --end
+ 37.                     }
+ 38.                 }
+ 39.             }
+ 40.             replace chunk = `k' in `start'/`end'
+ 41.             local start = `end' + 1
+ 42.         }
+ 43.         local nk `k'
+ 44.         * blank repeated labels inside each page; a column is blanked only while the
+.         * norepeat columns to its left are unchanged too (a new panel shows its series)
+.         gen byte same = _n > 1 & chunk == chunk[_n - 1]
+ 45.         foreach j of local norepeat {
+ 46.             gen strL o`j' = __c`j'
+ 47.             replace same = same & o`j' == o`j'[_n - 1]
+ 48.             replace __c`j' = "" if same
+ 49.             drop o`j'
+ 50.         }
+ 51.         drop same
+ 52.         * column widths (% of the page), from the longest text in each column;
+.         * long text columns are capped so they wrap instead of squeezing numbers
+.         matrix W = J(1, `nc', 0)
+ 53.         local tot 0
+ 54.         forvalues j = 1/`nc' {
+ 55.             gen long L`j' = udstrlen(__c`j')
+ 56.             summarize L`j', meanonly
+ 57.             local w = max(r(max), 3)
+ 58.             local h : word `j' of `header'
+ 59.             local h = subinstr(`"`h'"', "|", " ", .)
+ 60.             foreach hw of local h {
+ 61.                 local w = max(`w', udstrlen(`"`hw'"'))
+ 62.             }
+ 63.             local w = min(`w', 34) + 2          // + 2 = room for the cell margins
+ 64.             matrix W[1, `j'] = `w'
+ 65.             local tot = `tot' + `w'
+ 66.             drop L`j'
+ 67.         }
+ 68.         local used 0
+ 69.         forvalues j = 1/`nc' {
+ 70.             if `j' < `nc' {
+ 71.                 matrix W[1, `j'] = max(floor(100 * W[1, `j'] / `tot'), 3)
+ 72.                 local used = `used' + W[1, `j']
+ 73.             }
+ 74.             else matrix W[1, `j'] = 100 - `used'
+ 75.         }
+ 76.     }
+ 77.     putpdf clear
+ 78.     putpdf begin, pagesize(A4) `orient' font("Times New Roman", `fontsize') ///
+>         margin(left, 0.8in) margin(right, 0.8in) margin(top, 0.5in) margin(bottom, 0.5in)
+ 79.     forvalues k = 1/`nk' {
+ 80.         if `k' > 1 putpdf pagebreak
+ 81.         putpdf paragraph, spacing(after, 4pt)
+ 82.         local tt = cond(`k' == 1, `"`title'"', `"`title' (continued)"')
+ 83.         putpdf text (`"`tt'"'), bold font("Times New Roman", `=`fontsize' + 1.5')
+ 84.         if `k' == 1 & `"`subtitle'"' != "" {
+ 85.             putpdf paragraph, spacing(after, 4pt)
+ 86.             putpdf text (`"`subtitle'"')
+ 87.         }
+ 88.         quietly count if chunk == `k'
+ 89.         local nr = r(N) + 1
+ 90.         quietly putpdf table T`k' = data(__c1-__c`nc') if chunk == `k', varnames border(all, nil) width(W)
+ 91.         forvalues j = 1/`nc' {
+ 92.             * header text; "|" starts a new line inside the cell
+.             local rest : word `j' of `header'
+ 93.             local opt ""
+ 94.             while `"`rest'"' != "" {
+ 95.                 gettoken part rest : rest, parse("|")
+ 96.                 if `"`part'"' == "|" {
+ 97.                     putpdf table T`k'(1, `j') = (""), linebreak append
+ 98.                     continue
+ 99.                 }
+100.                 putpdf table T`k'(1, `j') = (`"`part'"'), valign(bottom) `opt'
+101.                 local opt "append"
+102.             }
+103.             local al = cond(`: list j in right', "right", "left")
+104.             putpdf table T`k'(., `j'), halign(`al') margin(top, 0pt) margin(bottom, 0pt)
+105.         }
+106.         putpdf table T`k'(1, .), border(top, single, black) border(bottom, single, black)
+107.         putpdf table T`k'(`nr', .), border(bottom, single, black)
+108.         foreach r of local rules {
+109.             quietly summarize row if chunk == `k', meanonly
+110.             if `r' >= r(min) & `r' < r(max) {
+111.                 putpdf table T`k'(`=`r' - r(min) + 2', .), border(bottom, single, "A6A6A6")
+112.             }
+113.         }
+114.     }
+115.     local first 1
+116.     foreach n of local notes {
+117.         putpdf paragraph, spacing(before, `=cond(`first', 6, 1)'pt)
+118.         putpdf text (`"`n'"'), font("Times New Roman", `=`fontsize' - 0.5')
+119.         local first 0
+120.     }
+121.     putpdf save `"`using'"', replace
+122.     restore
+123. end
+
+. * --- end of PART 1 ------------------------------------------------------------
+. 
+. * --- PART 2: the rows of this exhibit (the only part that changes per file) ---
+. * Source: the two tables saved in memory before the CSV export (`byyear' for A,
+. * `rows' for B: full precision, same run as the chart). One row per point, in
+. * chart order: A left (reducers, then non-reducers, every axis year, 2016 with
+. * the reason), A right (the same), then B panels (a)-(d), each group top to
+. * bottom, the dot (all changes) then the triangle (without `yx'). Not-recorded
+. * groups have a dot only, as on the chart. Points are shares, not regression
+. * coefficients: no regression table.
+. * (A) share making own electricity, per year
+. use `byyear', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if !missing(year)
+(1 observation deleted)
+
+. local ny = _N
+
+. keep year annual_file firms_reducer pct_own_reducer firms_nonreducer pct_own_nonreducer ///
+>      firms_reducer_x pct_own_reducer_x firms_nonreducer_x pct_own_nonreducer_x
+
+. expand 4
+(39 observations created)
+
+. bysort year: gen byte series = _n        // 1-2 = A left (reducers, non-reducers), 3-4 = A right
+
+. sort series year
+
+. gen str70 t_panel  = cond(series <= 2, "A left (all changes)", "A right (without `yx')")
+
+. gen str40 t_series = cond(inlist(series, 1, 3), "Reducers", "Non-reducers")
+
+. gen str40 t_pos    = string(year)
+
+. gen double v  = cond(series == 1, pct_own_reducer, cond(series == 2, pct_own_nonreducer, ///
+>                 cond(series == 3, pct_own_reducer_x, pct_own_nonreducer_x)))
+(4 missing values generated)
+
+. gen double nf = cond(series == 1, firms_reducer, cond(series == 2, firms_nonreducer, ///
+>                 cond(series == 3, firms_reducer_x, firms_nonreducer_x)))
+(4 missing values generated)
+
+. * rounding as the chart's end-of-line labels: one decimal
+. gen str12 t_v  = string(v, "%9.1f") if !missing(v)
+(4 missing values generated)
+
+. gen str12 t_lo = ""
+(52 missing values generated)
+
+. gen str12 t_hi = ""
+(52 missing values generated)
+
+. gen str12 t_n  = string(nf, "%12.0fc") if !missing(nf)
+(4 missing values generated)
+
+. gen str12 t_c  = ""
+(52 missing values generated)
+
+. gen str90 t_status = "drawn"
+
+. replace t_status = "not drawn: under 30 firms in the group" if missing(v) & annual_file == 1
+(0 real changes made)
+
+. replace t_status = "not drawn: no annual file" if annual_file == 0
+(4 real changes made)
+
+. quietly count if t_status == "drawn"
+
+. local ndrawA = r(N)
+
+. assert _N == 4 * `ny'
+
+. assert t_v != "" if t_status == "drawn"
+
+. gen int ord = _n
+
+. keep ord t_*
+
+. tempfile ctA
+
+. quietly save `ctA'
+
+. * (B) share of changes beating the typical firm, four panels
+. use `rows', clear
+
+. sort row_order
+
+. quietly count if recorded == 1
+
+. local nrec = r(N)
+
+. quietly count if recorded == 0
+
+. local nnr = r(N)
+
+. local nperB = 2 * `nrec' + `nnr'                 // rows per B panel
+
+. gen double nfx = .
+(8 missing values generated)
+
+. quietly levelsof row_order, local(ros)
+
+. foreach r of local ros {
+  2.     quietly replace nfx = `nfx_`r'' if row_order == `r'
+  3. }
+
+. expand 8
+(56 observations created)
+
+. bysort row_order: gen byte k = _n
+
+. gen byte panel = ceil(k / 2)
+
+. gen byte ver   = 2 - mod(k, 2)            // 1 = all changes (dot), 2 = without `yx' (triangle)
+
+. drop if ver == 2 & recorded == 0          // not-recorded rows: one dot only, as on the chart
+(8 observations deleted)
+
+. gen double v  = .
+(56 missing values generated)
+
+. gen double lo = .
+(56 missing values generated)
+
+. gen double hi = .
+(56 missing values generated)
+
+. local meas "energy_va co2_va energy co2"
+
+. forvalues p = 1/4 {
+  2.     local m : word `p' of `meas'
+  3.     quietly replace v  = pct_`m'  if panel == `p' & ver == 1
+  4.     quietly replace lo = lo_`m'   if panel == `p' & ver == 1
+  5.     quietly replace hi = hi_`m'   if panel == `p' & ver == 1
+  6.     quietly replace v  = pct_`m'_x if panel == `p' & ver == 2
+  7.     quietly replace lo = lo_`m'_x  if panel == `p' & ver == 2
+  8.     quietly replace hi = hi_`m'_x  if panel == `p' & ver == 2
+  9. }
+
+. gen str70 t_panel = ""
+(56 missing values generated)
+
+. replace t_panel = "B (a) Energy per VA"  if panel == 1
+(14 real changes made)
+
+. replace t_panel = "B (b) CO2 per VA"     if panel == 2
+(14 real changes made)
+
+. replace t_panel = "B (c) Energy use"     if panel == 3
+(14 real changes made)
+
+. replace t_panel = "B (d) CO2 emitted"    if panel == 4
+(14 real changes made)
+
+. gen str40 t_series = cond(ver == 1, "All changes", "Without `yx'")
+
+. gen str40 t_pos = group                   // group names are unique across the two blocks
+
+. * rounding as the chart labels: one decimal
+. gen str12 t_v  = string(v,  "%9.1f")
+
+. gen str12 t_lo = string(lo, "%9.1f") if !missing(lo)
+
+. gen str12 t_hi = string(hi, "%9.1f") if !missing(hi)
+
+. gen str12 t_n  = string(cond(ver == 1, firms, nfx), "%12.0fc")
+
+. gen str12 t_c  = string(cond(ver == 1, changes, changes_x), "%12.0fc")
+
+. gen str90 t_status = "drawn: dot"
+
+. replace t_status = "drawn: triangle" if ver == 2
+(24 real changes made)
+
+. replace t_status = "drawn: hollow gray (not a result)" if recorded == 0
+(8 real changes made)
+
+. sort panel row_order ver
+
+. assert _N == 4 * `nperB'
+
+. assert t_v != "" & t_lo != "" & t_hi != "" & t_n != "" & t_c != ""
+
+. gen int ord = 1000 + _n
+
+. keep ord t_*
+
+. append using `ctA'
+
+. sort ord
+
+. * check: every drawn point of the chart is one row with a number
+. quietly count if !strpos(t_status, "not drawn")
+
+. assert r(N) == `ndrawA' + 4 * `nperB'
+
+. * notes: the chart's notes (non-empty lines), how to read the table, Source, dev line
+. local nA = 4 * `ny'
+
+. local tnote "Table: every point of Figure R3-06 in chart order, with the years not drawn and why. Values rounded as th
+> e chart labels"
+
+. local tnote "`tnote' (A labels only the first and last year). A left: reducers found from all one-year changes; A righ
+> t: found without"
+
+. local tnote "`tnote' changes starting in `yx'; Firms = the group's firms with own electricity recorded that year. B: g
+> roups Makes some,"
+
+. local tnote "`tnote' Makes none and Not recorded = own electricity at the start of the change; the other five = from s
+> tart to end of the"
+
+. local tnote "`tnote' change. All changes = dot; Without `yx' = triangle (changes starting in `yx' left out). 95% inter
+> val clustered by firm;"
+
+. local tnote "`tnote' Firms and One-year changes = those behind the point."
+
+. local tnote "`tnote' Full precision: tables/06_own_electricity_reducers_by_year.csv and _changes.csv."
+
+. local cnotes `""Notes: Own electricity = the firm made some of its own power that year. Not recorded: left out of A; h
+> ollow gray in B, not a result. Shows who, not why.""'
+
+. local cnotes `"`cnotes' "A: reducer = firm with 2+ one-year changes whose energy per unit of VA fell on average more, 
+> or rose less, than the typical firm's in the same years.""'
+
+. local cnotes `"`cnotes' "B: dot = share of the group's one-year changes that fell more (or rose less) than the typical
+>  firm's that year; interval crossing 50% = no clear gap.""'
+
+. foreach n in fuelnote loonote fbnote enote {
+  2.     if `"``n''"' != "" local cnotes `"`cnotes' "``n''""'
+  3. }
+
+. local cnotes `"`cnotes' "A gap in (a) but not in (c) comes from value added (VA = output minus materials, energy and s
+> ervices bought, current prices). GJ = gigajoules.""'
+
+. ctable_pdf t_panel t_series t_pos t_v t_lo t_hi t_n t_c t_status using "tables/06_own_electricity_reducers_table.pdf",
+>  ///
+>     title("Table R3-06. Do the firms that cut energy and CO2 make their own electricity? Every plotted point") ///
+>     header("Panel" "Series" "Year or|group" "Plotted|value (%)" "95%|low" "95%|high" "Firms" "One-year|changes" "Statu
+> s") ///
+>     right(4 5 6 7 8) norepeat(1) fontsize(9) ///
+>     rules(`ny' `=2*`ny'' `=3*`ny'' `nA' `=`nA' + `nperB'' `=`nA' + 2*`nperB'' `=`nA' + 3*`nperB'') perpage(26) /// 26:
+>  one B panel per page, so the notes fit under the last one
+>     notes(`cnotes' "`tnote'" "`srcnote'" "`devnote'")
+successfully created "/Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r3-energy-emissions-co
+> rrelates/tables/06_own_electricity_reducers_table.pdf"
+
+. display "table -> tables/06_own_electricity_reducers_table.pdf"
+table -> tables/06_own_electricity_reducers_table.pdf
+
+. * --- end of PART 2 ------------------------------------------------------------
+. 
 . timer off 1
 
 . quietly timer list 1
@@ -1318,6 +1744,6 @@ file
 . local elapsed = strtrim(string(r(t1), "%9.1f"))
 
 . display "FINISHED: figure -> figures/06_own_electricity_reducers.png (elapsed `elapsed' s)"
-FINISHED: figure -> figures/06_own_electricity_reducers.png (elapsed 9.3 s)
+FINISHED: figure -> figures/06_own_electricity_reducers.png (elapsed 11.1 s)
 
 . quietly log close

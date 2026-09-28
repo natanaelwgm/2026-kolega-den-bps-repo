@@ -14,6 +14,8 @@
   Output : figures/07_productivity_reducers.png (+ .pdf)
            tables/07_productivity_reducers_firms.csv    (A: firm level)
            tables/07_productivity_reducers_changes.csv  (B: per quarter)
+           tables/07_productivity_reducers_table.pdf (every plotted point)
+           tables/07_productivity_reducers_regression.pdf (the regressions behind A)
   Development data - obscured values, fictional firm panel. Not BPS findings.
 ==========================================================================*/
 version 17
@@ -48,7 +50,7 @@ local devnote "Development data — obscured values, fictional firm panel. Not B
 local srcnote "Source: SI/IBS annual files 2010–2022 (masked), analysis_ready_data.dta."
 
 *---------------------------------------------------------------------------
-display "Step 1/8: load the variables; how many firm-years have a productivity figure?"
+display "Step 1/9: load the variables; how many firm-years have a productivity figure?"
 *---------------------------------------------------------------------------
 * dev_nominal_tfp_lp = productivity residual: log value added minus what the
 *   firm's workers and last year's capital stock predict (Levinsohn-Petrin,
@@ -86,7 +88,7 @@ drop tags sec_has
 xtset firm_id year
 
 *---------------------------------------------------------------------------
-display "Step 2/8: one-year changes and the R3 reducer flag (same code as R3-01)"
+display "Step 2/9: one-year changes and the R3 reducer flag (same code as R3-01)"
 *---------------------------------------------------------------------------
 gen double energy    = total_gj_s1
 gen double co2       = co2_total_s1
@@ -114,7 +116,7 @@ foreach v in energy co2 energy_va co2_va {
 xtset firm_id year                // the bysort calls above changed the sort order
 
 *---------------------------------------------------------------------------
-display "Step 3/8: productivity compared with firms of the same sector and year"
+display "Step 3/9: productivity compared with firms of the same sector and year"
 *---------------------------------------------------------------------------
 * The residual is in logs and in current prices, so its level drifts with
 * prices from year to year and differs by sector: each figure is taken
@@ -168,7 +170,7 @@ display "   one-year changes: `n_cmp'; with productivity at the start: `n_bq'"
 tab start_year if cmp & g_q < 5
 
 *---------------------------------------------------------------------------
-display "Step 4/8: which start year drives the productivity gap? (leave one out)"
+display "Step 4/9: which start year drives the productivity gap? (leave one out)"
 *---------------------------------------------------------------------------
 * Gap = firm-average productivity, reducers minus non-reducers (main flag).
 * The start year whose removal moves the gap most is shown separately in A.
@@ -219,7 +221,7 @@ foreach v in energy_va co2_va energy co2 {
 xtset firm_id year
 
 *---------------------------------------------------------------------------
-display "Step 5/8: A - productivity gap, reducers vs non-reducers (one row per firm)"
+display "Step 5/9: A - productivity gap, reducers vs non-reducers (one row per firm)"
 *---------------------------------------------------------------------------
 * The gap is in log points; 100*(exp(gap)-1) turns it into a % difference.
 * One row per firm, so a plain robust interval is right.
@@ -256,8 +258,16 @@ foreach spec in "tfp_lp energy_va m" "tfp_lp energy_va x" "tfp_lp co2_va m" "tfp
     local g = .
     local glo = .
     local ghi = .
+    foreach k in rb rse rcb rcs rn {                         // for the regression table (Step 9)
+        local `k'_`r' = .
+    }
     if `n1' > 1 & `n0' > 1 {
         quietly regress avg_`m' i.`flag' if tagf, vce(robust)
+        local rb_`r'  = _b[1.`flag']                         // for the regression table (Step 9)
+        local rse_`r' = _se[1.`flag']
+        local rcb_`r' = _b[_cons]
+        local rcs_`r' = _se[_cons]
+        local rn_`r'  = e(N)
         local g   = _b[1.`flag']
         local glo = _b[1.`flag'] - invttail(e(df_r), 0.025) * _se[1.`flag']
         local ghi = _b[1.`flag'] + invttail(e(df_r), 0.025) * _se[1.`flag']
@@ -278,7 +288,7 @@ foreach spec in "tfp_lp energy_va m" "tfp_lp energy_va x" "tfp_lp co2_va m" "tfp
 postclose `P'
 
 *---------------------------------------------------------------------------
-display "Step 6/8: B - share of changes beating the typical firm, by productivity quarter at the start"
+display "Step 6/9: B - share of changes beating the typical firm, by productivity quarter at the start"
 *---------------------------------------------------------------------------
 * The interval allows for the same firm appearing in several years (clustered by firm).
 * Gap = this quarter minus the least productive quarter.
@@ -374,7 +384,7 @@ local n_yx_b = r(N)
 display "   changes in B that start in `yx': `n_yx_b'"
 
 *---------------------------------------------------------------------------
-display "Step 7/8: numbers -> two CSV files (written before drawing)"
+display "Step 7/9: numbers -> two CSV files (written before drawing)"
 *---------------------------------------------------------------------------
 use `arows', clear
 format firms_* reducers nonreducers %9.0f
@@ -439,7 +449,7 @@ if !missing(`e_ratio') & abs(ln(`e_ratio')) > ln(1.5) {          // only when st
 }
 
 *---------------------------------------------------------------------------
-display "Step 8/8: draw A (gap per reducer measure) and B (dot plot per quarter), then combine"
+display "Step 8/9: draw A (gap per reducer measure) and B (dot plot per quarter), then combine"
 *---------------------------------------------------------------------------
 * graph combine shrinks relative text sizes unevenly between parts, so text is
 * set in points: 13pt = "small", 10pt = "vsmall" in the other R3 figures.
@@ -575,6 +585,361 @@ graph combine pA pB, cols(1) iscale(1) imargin(0 0 1 1) ///
 
 graph export "figures/07_productivity_reducers.png", width(3150) replace
 graph export "figures/07_productivity_reducers.pdf", replace
+
+*---------------------------------------------------------------------------
+display "Step 9/9: companion tables: every plotted point, and the regression table"
+*---------------------------------------------------------------------------
+* ==== COMPANION TABLE (pattern for all exhibits) =============================
+* Owner rule, 28 Sep 2026: every chart gets a table of every plotted point, and
+* every chart of regression coefficients also gets a regression table, written
+* by the same do-file (spec: TABLE_BRIEF.md). This step runs AFTER the graph
+* export, so the chart and the CSV stay byte-identical.
+*
+* How to use it in another exhibit file:
+*   PART 1 (the writer, program ctable_pdf) is copied UNCHANGED.
+*   PART 2 is the only exhibit-specific part: put the numbers in memory (the
+*   tempfile saved right after the CSV export, or the CSV itself), build one
+*   STRING variable per table column, one row per plotted point in chart order
+*   (years not drawn included, with the reason in a status column), then call
+*   ctable_pdf. Format numbers with string(x, "%9.1f") etc. so the table shows
+*   exactly the rounding of the chart labels.
+*
+* ctable_pdf strvars using "tables/NN_name_table.pdf",
+*     title("Table R1-02. ...: every plotted point")    first line, bold
+*     header("Col 1" "Col 2" ...)       one text per column; "|" = line break
+*     [right(numlist)]                  columns right-aligned (numbers)
+*     [norepeat(numlist)]               columns whose repeated text is shown
+*                                       only on the first row of a run
+*     [rules(numlist)]                  thin gray line under these data rows
+*     [notes("line 1" "line 2" ...)]    footer paragraphs (Notes, Source, dev line)
+*     [subtitle(text)] [fontsize(#)] [perpage(#)] [landscape|portrait]
+* Landscape is chosen automatically when there are more than 6 columns. Long
+* tables continue on a new page with the header repeated ("(continued)"); a page
+* never breaks inside a block whose first column is empty (e.g. an SE row).
+* --- PART 1: the writer (identical in every file; do not edit) ---------------
+capture program drop ctable_pdf
+program define ctable_pdf
+    version 17
+    syntax varlist(string) using/, TItle(string) HEADer(string asis) ///
+        [RIGHT(numlist integer >0) NOREPeat(numlist integer >0) RULES(numlist integer >0) ///
+         NOTEs(string asis) SUBtitle(string) FONTsize(real 9.5) PERpage(integer 0) ///
+         LANDscape PORTrait]
+    local nc : word count `varlist'
+    local nh : word count `header'
+    if `nh' != `nc' {
+        display as error "ctable_pdf: `nc' columns but `nh' header texts"
+        exit 198
+    }
+    local orient = cond(`nc' > 6, "landscape", "")
+    if "`landscape'" != "" local orient "landscape"
+    if "`portrait'"  != "" local orient ""
+    * rows per page: a conservative guess for 9-10 pt text (wrapped cells take more)
+    if `perpage' == 0 local perpage = cond("`orient'" == "landscape", 24, 40)
+    preserve
+    quietly {
+        keep `varlist'
+        rename (`varlist') (__c#), addnumber      // __c1 __c2 ... in the order given
+        forvalues j = 1/`nc' {
+            replace __c`j' = strtrim(__c`j')
+        }
+        local N = _N
+        gen long row = _n
+        * page chunks: fill up to perpage rows; prefer to end a page at a rule,
+        * never start a page on a row whose first column is empty
+        gen int chunk = .
+        local start 1
+        local k 0
+        while `start' <= `N' {
+            local ++k
+            local end = min(`start' + `perpage' - 1, `N')
+            if `end' < `N' {
+                local best 0
+                foreach r of local rules {
+                    if `r' >= `start' + floor(`perpage' / 2) & `r' <= `end' & `r' > `best' local best `r'
+                }
+                if `best' > 0 local end `best'
+                else {
+                    while `end' > `start' & __c1[`end' + 1] == "" {
+                        local --end
+                    }
+                }
+            }
+            replace chunk = `k' in `start'/`end'
+            local start = `end' + 1
+        }
+        local nk `k'
+        * blank repeated labels inside each page; a column is blanked only while the
+        * norepeat columns to its left are unchanged too (a new panel shows its series)
+        gen byte same = _n > 1 & chunk == chunk[_n - 1]
+        foreach j of local norepeat {
+            gen strL o`j' = __c`j'
+            replace same = same & o`j' == o`j'[_n - 1]
+            replace __c`j' = "" if same
+            drop o`j'
+        }
+        drop same
+        * column widths (% of the page), from the longest text in each column;
+        * long text columns are capped so they wrap instead of squeezing numbers
+        matrix W = J(1, `nc', 0)
+        local tot 0
+        forvalues j = 1/`nc' {
+            gen long L`j' = udstrlen(__c`j')
+            summarize L`j', meanonly
+            local w = max(r(max), 3)
+            local h : word `j' of `header'
+            local h = subinstr(`"`h'"', "|", " ", .)
+            foreach hw of local h {
+                local w = max(`w', udstrlen(`"`hw'"'))
+            }
+            local w = min(`w', 34) + 2          // + 2 = room for the cell margins
+            matrix W[1, `j'] = `w'
+            local tot = `tot' + `w'
+            drop L`j'
+        }
+        local used 0
+        forvalues j = 1/`nc' {
+            if `j' < `nc' {
+                matrix W[1, `j'] = max(floor(100 * W[1, `j'] / `tot'), 3)
+                local used = `used' + W[1, `j']
+            }
+            else matrix W[1, `j'] = 100 - `used'
+        }
+    }
+    putpdf clear
+    putpdf begin, pagesize(A4) `orient' font("Times New Roman", `fontsize') ///
+        margin(left, 0.8in) margin(right, 0.8in) margin(top, 0.5in) margin(bottom, 0.5in)
+    forvalues k = 1/`nk' {
+        if `k' > 1 putpdf pagebreak
+        putpdf paragraph, spacing(after, 4pt)
+        local tt = cond(`k' == 1, `"`title'"', `"`title' (continued)"')
+        putpdf text (`"`tt'"'), bold font("Times New Roman", `=`fontsize' + 1.5')
+        if `k' == 1 & `"`subtitle'"' != "" {
+            putpdf paragraph, spacing(after, 4pt)
+            putpdf text (`"`subtitle'"')
+        }
+        quietly count if chunk == `k'
+        local nr = r(N) + 1
+        quietly putpdf table T`k' = data(__c1-__c`nc') if chunk == `k', varnames border(all, nil) width(W)
+        forvalues j = 1/`nc' {
+            * header text; "|" starts a new line inside the cell
+            local rest : word `j' of `header'
+            local opt ""
+            while `"`rest'"' != "" {
+                gettoken part rest : rest, parse("|")
+                if `"`part'"' == "|" {
+                    putpdf table T`k'(1, `j') = (""), linebreak append
+                    continue
+                }
+                putpdf table T`k'(1, `j') = (`"`part'"'), valign(bottom) `opt'
+                local opt "append"
+            }
+            local al = cond(`: list j in right', "right", "left")
+            putpdf table T`k'(., `j'), halign(`al') margin(top, 0pt) margin(bottom, 0pt)
+        }
+        putpdf table T`k'(1, .), border(top, single, black) border(bottom, single, black)
+        putpdf table T`k'(`nr', .), border(bottom, single, black)
+        foreach r of local rules {
+            quietly summarize row if chunk == `k', meanonly
+            if `r' >= r(min) & `r' < r(max) {
+                putpdf table T`k'(`=`r' - r(min) + 2', .), border(bottom, single, "A6A6A6")
+            }
+        }
+    }
+    local first 1
+    foreach n of local notes {
+        putpdf paragraph, spacing(before, `=cond(`first', 6, 1)'pt)
+        putpdf text (`"`n'"'), font("Times New Roman", `=`fontsize' - 0.5')
+        local first 0
+    }
+    putpdf save `"`using'"', replace
+    restore
+end
+* --- end of PART 1 ------------------------------------------------------------
+
+* --- PART 2: the rows of this exhibit (the only part that changes per file) ---
+* Source: the two tables saved in memory before the CSV export (`arows' for A,
+* `brows' for B: full precision, same estimation run as the chart).
+* (1) Points table: one row per point, in chart order: A rows (a)-(d), each the
+* dot (all changes) then the triangle (without `yx'); then B panels (a)-(d),
+* each productivity quarter top to bottom, and the table-only group (not drawn).
+use `arows', clear
+keep if in_figure
+gen byte ver = cond(missing(left_out_start_year), 1, 2)
+gen byte y = cond(measure == "energy_va", 1, cond(measure == "co2_va", 2, cond(measure == "energy", 3, 4)))
+sort y ver
+local lets "a b c d"
+gen str40 t_panel  = "A"
+gen str40 t_series = cond(ver == 1, "All changes", "Without `yx'")
+gen str60 t_pos = ""
+forvalues i = 1/4 {
+    local let : word `i' of `lets'
+    quietly replace t_pos = "(`let') " + measure_label if y == `i'
+}
+* rounding as the chart labels: whole-number %
+gen str12 t_v  = string(gap_pct,    "%9.0f")
+gen str12 t_lo = string(gap_pct_lo, "%9.0f")
+gen str12 t_hi = string(gap_pct_hi, "%9.0f")
+gen str24 t_n  = string(reducers, "%12.0fc") + " / " + string(nonreducers, "%12.0fc")
+gen str12 t_c  = ""
+gen str90 t_status = cond(ver == 1, "drawn: dot", "drawn: triangle")
+local nA = _N
+assert `nA' == 8
+assert !missing(gap_pct, gap_pct_lo, gap_pct_hi)
+gen int ord = _n
+keep ord t_*
+tempfile ctA
+quietly save `ctA'
+use `brows', clear
+sort row_order
+quietly count if in_figure
+local nqB = r(N)
+expand 4
+bysort row_order: gen byte panel = _n
+gen double v  = cond(panel == 1, pct_energy_va, cond(panel == 2, pct_co2_va, cond(panel == 3, pct_energy, pct_co2)))
+gen double lo = cond(panel == 1, lo_energy_va,  cond(panel == 2, lo_co2_va,  cond(panel == 3, lo_energy,  lo_co2)))
+gen double hi = cond(panel == 1, hi_energy_va,  cond(panel == 2, hi_co2_va,  cond(panel == 3, hi_energy,  hi_co2)))
+gen str40 t_panel = ""
+replace t_panel = "B (a) Energy per VA" if panel == 1
+replace t_panel = "B (b) CO2 per VA"    if panel == 2
+replace t_panel = "B (c) Energy use"    if panel == 3
+replace t_panel = "B (d) CO2 emitted"   if panel == 4
+gen str40 t_series = "Share (%)"
+gen str60 t_pos = group
+* rounding as the chart labels: one decimal
+gen str12 t_v  = string(v,  "%9.1f")
+gen str12 t_lo = string(lo, "%9.1f")
+gen str12 t_hi = string(hi, "%9.1f")
+gen str24 t_n  = string(firms, "%12.0fc")
+gen str12 t_c  = string(changes, "%12.0fc")
+gen str90 t_status = cond(in_figure, "drawn: dot", "not drawn: table only (no figure at start)")
+sort panel row_order
+local nperB = _N / 4
+gen int ord = 100 + _n
+keep ord t_*
+append using `ctA'
+sort ord
+* check: every drawn point of the chart is one row with a number
+quietly count if !strpos(t_status, "not drawn")
+assert r(N) == `nA' + 4 * `nqB'
+assert t_v != "" & t_lo != "" & t_hi != ""
+local tnote "Table: every point of Figure R3-07 in chart order. Values rounded as the chart labels. A: % difference = 100 × (exp(b) − 1),"
+local tnote "`tnote' b = the regression table's coefficient; All changes = dot, Without `yx' = triangle (reducers found without changes"
+local tnote "`tnote' starting in `yx'); Firms = reducers / non-reducers with a productivity figure. B: 95% interval clustered by firm; Firms"
+local tnote "`tnote' and One-year changes = those behind the point; the last group is in the CSV only. Full precision:"
+local tnote "`tnote' tables/07_productivity_reducers_firms.csv and _changes.csv."
+local cnotes `""Notes: Productivity = value added (VA) beyond what the firm's workers and capital (buildings, machines) predict, compared with firms of the same sector and year.""'
+local cnotes `"`cnotes' "A: reducer = firm with 2+ one-year changes in the row's measure that fell on average more, or rose less, than the typical firm's. Shows who, not why.""'
+local cnotes `"`cnotes' "B: dot = share of the group's one-year changes that fell more (or rose less) than the typical firm's that year; interval crossing the line = no clear gap.""'
+foreach n in recnote yxnote vanote fbnote covnote {
+    if `"``n''"' != "" local cnotes `"`cnotes' "``n''""'
+}
+local cnotes `"`cnotes' "VA = output minus materials, energy and services bought, current prices. GJ = gigajoules.""'
+ctable_pdf t_panel t_series t_pos t_v t_lo t_hi t_n t_c t_status using "tables/07_productivity_reducers_table.pdf", ///
+    title("Table R3-07. Are the firms that cut energy and CO2 more productive? Every plotted point") ///
+    header("Panel" "Series" "Row" "Plotted|value (%)" "95%|low" "95%|high" "Firms" "One-year|changes" "Status") ///
+    right(4 5 6 7 8) norepeat(1) fontsize(9) ///
+    rules(`nA' `=`nA' + `nperB'' `=`nA' + 2*`nperB'' `=`nA' + 3*`nperB'') perpage(`=`nA' + 2*`nperB'') /// A + B (a)-(b), then B (c)-(d) with the notes
+    notes(`cnotes' "`tnote'" "`srcnote'" "`devnote'")
+display "table -> tables/07_productivity_reducers_table.pdf"
+
+* (2) Regression table (AER style) for A, whose points are regression
+* coefficients: one column per regression (the 8 drawn, then the 3 other
+* productivity methods, table only); coefficient, (standard error), [% difference].
+use `arows', clear
+sort row_order
+* check: the coefficients are those in the CSV just written (3 decimals there)
+preserve
+import delimited using "tables/07_productivity_reducers_firms.csv", clear varnames(1)
+keep row_order gap_log
+rename gap_log b_csv
+tempfile csvb
+quietly save `csvb'
+restore
+merge 1:1 row_order using `csvb', assert(match) nogenerate
+assert abs(gap_log - b_csv) <= 0.0005 + 1e-9
+local nm = _N
+local lets "a b c d"
+foreach k in b s p c cs n r nr meth flg drw {
+    local L_`k' ""
+}
+forvalues j = 1/`nm' {
+    local r = row_order[`j']
+    assert `rn_`r'' == reducers[`j'] + nonreducers[`j']        // firms in the regression
+    assert abs(gap_log[`j'] - `rb_`r'') < 1e-12                  // same estimate as drawn
+    local L_b  `"`L_b' ("`=string(gap_log[`j'], "%9.3f")'")"'
+    local L_s  `"`L_s' ("(`=strtrim(string(`rse_`r'', "%9.3f"))')")"'
+    local pp = gap_pct[`j']
+    local L_p  `"`L_p' ("[`=cond(`pp' > 0, "+", "")'`=strtrim(string(`pp', "%9.1f"))'%]")"'
+    local L_c  `"`L_c' ("`=string(`rcb_`r'', "%9.3f")'")"'
+    local L_cs `"`L_cs' ("(`=strtrim(string(`rcs_`r'', "%9.3f"))')")"'
+    local L_n  `"`L_n' ("`=strtrim(string(`rn_`r'', "%12.0fc"))'")"'
+    local L_r  `"`L_r' ("`=strtrim(string(reducers[`j'], "%12.0fc"))'")"'
+    local L_nr `"`L_nr' ("`=strtrim(string(nonreducers[`j'], "%12.0fc"))'")"'
+    local pm = productivity[`j']
+    local mt = cond("`pm'" == "tfp_lp", "LP", cond("`pm'" == "tfp_acf", "ACF", cond("`pm'" == "tfp_wrdg", "Wooldridge", "LP, common sample")))
+    local L_meth `"`L_meth' ("`mt'")"'
+    local fv = cond(missing(left_out_start_year[`j']), "All changes", "Without `yx'")
+    local L_flg `"`L_flg' ("`fv'")"'
+    local ms = measure[`j']
+    local yi = cond("`ms'" == "energy_va", 1, cond("`ms'" == "co2_va", 2, cond("`ms'" == "energy", 3, 4)))
+    local let : word `yi' of `lets'
+    local dw = cond(in_figure[`j'], "A (`let') " + cond(missing(left_out_start_year[`j']), "dot", "triangle"), "No")
+    local L_drw `"`L_drw' ("`dw'")"'
+}
+tempname P
+tempfile R
+local tv ""
+forvalues j = 1/`nm' {
+    local tv `tv' t`j'
+}
+postfile `P' str60 t_lab str24(`tv') using `R'
+post `P' ("Reducer (1 = yes)") `L_b'
+post `P' ("") `L_s'
+post `P' ("") `L_p'
+post `P' ("Constant") `L_c'
+post `P' ("") `L_cs'
+post `P' ("Observations (firms)") `L_n'
+post `P' ("Reducers") `L_r'
+post `P' ("Non-reducers") `L_nr'
+local nY ""
+local nN ""
+local nR ""
+local nU ""
+forvalues j = 1/`nm' {
+    local nY `"`nY' ("Yes")"'
+    local nN `"`nN' ("No")"'
+    local nR `"`nR' ("Robust")"'
+    local nU `"`nU' ("None")"'
+}
+post `P' ("Productivity method") `L_meth'
+post `P' ("Reducer flag from") `L_flg'
+post `P' ("Firm fixed effects") `nN'
+post `P' ("Year fixed effects") `nN'
+post `P' ("Weights") `nU'
+post `P' ("Standard errors") `nR'
+post `P' ("Drawn in the figure") `L_drw'
+postclose `P'
+use `R', clear
+local hdr ""
+forvalues j = 1/`nm' {
+    local ms : word `j' of "Energy per VA" "Energy per VA" "CO2 per VA" "CO2 per VA" "Energy use" "Energy use" "CO2 emitted" "CO2 emitted" "Energy per VA" "Energy per VA" "Energy per VA"
+    local hdr `"`hdr' "(`j')|`ms'""'
+}
+local rnote "Notes: Each column is one regression across firms (one row per firm) of the firm's average productivity, in logs and relative"
+local rnote "`rnote' to the average of its sector and year, on a reducer marker (1 = reducer by the column's measure, 0 = non-reducer)."
+local rnote "`rnote' Reducer = firm with 2+ one-year changes in the measure that fell on average more, or rose less, than the typical firm's;"
+local rnote "`rnote' Without `yx' = the same flag with the changes starting in `yx' left out. Productivity = development residual in current"
+local rnote "`rnote' prices: LP = Levinsohn-Petrin (drawn), ACF = Ackerberg-Caves-Frazer, Wooldridge, and LP on the smaller sample where all"
+local rnote "`rnote' methods exist (table only). Log points; standard errors in parentheses (robust); [% = 100 × (exp(b) − 1)], as drawn."
+local rnote "`rnote' Constant = non-reducers' average. Standard errors robust (one row per firm, so no clustering needed). 95% interval in"
+local rnote "`rnote' the chart = b ± t(0.975, firms − 2) × SE. No stars."
+ctable_pdf t_lab `tv' using "tables/07_productivity_reducers_regression.pdf", ///
+    title("Table R3-07, regression. Are the firms that cut energy and CO2 more productive? Estimates behind panel A") ///
+    subtitle("Outcome: firm-average productivity (log, relative to the sector-year average). Columns = reducer measure") ///
+    header("Reducer measure:" `hdr') right(2/`=`nm' + 1') rules(3 5 8) fontsize(9) perpage(60) ///
+    notes("`rnote'" "`srcnote'" "`devnote'")
+display "table -> tables/07_productivity_reducers_regression.pdf"
+* --- end of PART 2 ------------------------------------------------------------
 
 timer off 1
 quietly timer list 1
