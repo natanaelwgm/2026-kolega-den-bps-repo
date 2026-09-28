@@ -10,6 +10,7 @@ Tables that go with the charts: every chart has a table PDF with each plotted po
 
 - 01: `tables/01_margins_export_start_regression.pdf`, `tables/01_margins_export_start_table.pdf`
 - 02: `tables/02_fuels_vs_electricity_regression.pdf`, `tables/02_fuels_vs_electricity_table.pdf`
+- 03: `tables/03_energy_mix_shares_regression.pdf`, `tables/03_energy_mix_shares_table.pdf`
 <!-- tables-end -->
 
 
@@ -17,6 +18,7 @@ Tables that go with the charts: every chart has a table PDF with each plotted po
 |---|---|---|---|
 | `01_margins_export_start.do` → `figures/01_margins_export_start.png` (+ .pdf), `tables/01_margins_export_start.csv`, `tables/01_margins_export_start_table.pdf`, `tables/01_margins_export_start_regression.pdf` | After a firm starts exporting: the change in value added per tonne of CO2 and per GJ against firms never seen exporting, and the parts that make it up (value added, energy used, CO2 per GJ = energy mix, output). One dot per part = average of years 0 to +5. Every row uses the same firm-years, so the parts combine exactly. | "How do exporters decarbonise? What adjustment margins explain the energy/carbon productivity gains?"; "Event study untuk melihat perubahan energy use" | done, reviewed |
 | `02_fuels_vs_electricity.do` → `figures/02_fuels_vs_electricity.png` (+ .pdf), `tables/02_fuels_vs_electricity.csv`, `tables/02_fuels_vs_electricity_table.pdf`, `tables/02_fuels_vs_electricity_regression.pdf` | After a firm starts exporting: fuels burned on site (source of scope-1 CO2) and electricity bought from PLN and other suppliers (source of scope-2 CO2), year by year, starters minus never-exporters, on the same firm-years (both above 0); plus the share of firm-years burning no fuel or buying no electricity. | "How do exporters decarbonise? What adjustment margins explain the energy/carbon productivity gains?"; "Event study untuk melihat perubahan energy use" | done, reviewed |
+| `03_energy_mix_shares.do` → `figures/03_energy_mix_shares.png` (+ .pdf), `tables/03_energy_mix_shares.csv`, `tables/03_energy_mix_shares_table.pdf`, `tables/03_energy_mix_shares_regression.pdf` | After a firm starts exporting, against firms never seen exporting: does its energy mix change (bought electricity's share of energy and of CO2; oil, coal and gas shares of fuel) and does CO2 per GJ change? One dot per row = average of years 0 to +5; beside each, the same row counted with only the four fuels asked in every file. | "What adjustment margins explain the energy/carbon productivity gains?"; "Event study untuk melihat perubahan energy use" | done, reviewed |
 
 ## Details kept out of the figures
 
@@ -49,3 +51,13 @@ Tables that go with the charts: every chart has a table PDF with each plotted po
 - Bought electricity excludes power the firm makes itself (its fuel is already in fuels burned; own generation is R6-04).
 - Companion tables: every plotted point (26 rows, 1 page) and the 10 regressions (2 pages: years, then model rows with fixed effects, weights and clustering; coefficient over standard error, no stars).
 - Shows timing, not cause. Firm links are fictional: this tests the method, not a finding. Add-ons: reghdfe, ftools, require.
+
+**03 — Energy mix and CO2 per GJ after an export start.**
+- Same starters, never-exporters and model as R6-01 (shared sample block copied exactly; the CO2-per-GJ row reproduces R6-01's row (5), the file stops otherwise). 742 starters and 2,832 never-exporters; 20,070 firm-years, 18,001 of them with some fuel (fuel shares use only those).
+- Main (all fuels in the file): oil products' share of fuel −4.3 points (95% interval −7.5 to −1.1) and gas's share +2.8 (0.3 to 5.3) are clearly different from 0; bought electricity's share of energy −1.3, electricity's share of CO2 −1.9, coal +1.5, CO2 per GJ −1.3% and CO2 per GJ of fuels −0.3% are not.
+- **Not a clear fuel switch.** Counting only the four fuels asked in every file (diesel, petrol, coal, LPG), oil is −1.9 (−5.0 to 1.2) and gas +0.7 (−1.6 to 2.9), both not clear: part of the shift comes from fuels added to or dropped from the questions (kerosene asked 2010–2015, city gas 2010–2019, other gas 2012–2014 and 2017–2019, coal briquettes 2012–2014 and 2017–2022). The reviewer's check puts the whole clear gas rise in city gas and other gas (+2.1 points); LPG +0.7 is not clear; gas's share 2 to 5 years before the start was already about as high (+0.5 against those years).
+- Coal's share already differed before the start (p = 0.035; 0.018 with the four fuels). It is clear only for starters seen not exporting the year before (+3.5), where the before-start check fails (p < 0.001).
+- 2017: coal is 37% of the average firm's fuel (4–7% before, 13–20% after); leaving every 2017 row out keeps oil −4.8 and gas +3.3. The share of firms burning some coal stays high 2017–2019 (36–38%), which the year effects absorb only where starters and never-exporters are alike.
+- Each firm's own shares count equally; the file's summed fuel is never used (a few firms make coal up to 99.9% of it in a year). Natural gas, biomass and fuel oils (2020–2022 only) are outside the energy total, so gas is under-counted then.
+- CSV (728 rows): 8 rows (the 7 drawn + "burns some coal") × 7 versions (main, four every-year fuels, without 2017 rows, without doubtful records, without 2017 starters, exact starters, without 2018–19) × every year since the start. Oil stays clear in 4 of the 5 other versions and gas in 2 of 5 (the exact-starter version fails the before-start check for oil). Companion tables: every plotted point (1 page) and the regressions (2 pages; Panels B and C averages only, year by year in the CSV).
+- CO2 = GJ × standard rates, so CO2 per GJ moves only with the mix. Shows timing, not cause; firm links are fictional: this tests the method, not a finding. Add-ons: reghdfe, ftools, require.
