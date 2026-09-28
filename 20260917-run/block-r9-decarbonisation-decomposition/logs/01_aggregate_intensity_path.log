@@ -1,0 +1,1514 @@
+------------------------------------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r9-decarbonisation-decompositio
+> n/logs/01_aggregate_intensity_path.log
+  log type:  text
+ opened on:  28 Sep 2026, 16:45:29
+
+. timer clear 1
+
+. timer on 1
+
+. display _newline "=== [R9-01] STARTING: CO2 and energy per unit of value added, all firms together, by year ==="
+
+=== [R9-01] STARTING: CO2 and energy per unit of value added, all firms together, by year ===
+
+. 
+. * ---- chart style (identical block in every file) ----
+. set scheme s1mono
+
+. capture graph set window fontface "Times New Roman"   // GUI Stata; console Stata keeps its default font
+
+. * Note: this changes your Stata graph font permanently; undo with: graph set window fontface default
+. local devnote "Development data — obscured values, fictional firm panel. Not BPS findings."
+
+. local srcnote "Source: SI/IBS annual files 2010–2022 (masked), analysis_ready_data.dta."
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 1/7: load the variables we need"
+Step 1/7: load the variables we need
+
+. *---------------------------------------------------------------------------
+. * total_gj_s1  = energy use in GJ (nine fuels + purchased electricity; partial scope)
+. * co2_total_s1 = CO2 in tonnes from the same fuels and electricity (energy x standard factors)
+. * value_added_nominal  = value added, current prices (masked money unit)
+. * gross_output_nominal = output value, current prices (for the CO2-per-output variant)
+. * industry2_reported   = 2-digit sector (used by the extreme-record rule)
+. use firm_id year value_added_nominal gross_output_nominal total_gj_s1 co2_total_s1 ///
+>     industry2_reported identity_real_link_verified using "$DATA", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. isid firm_id year
+
+. assert year != 2016
+
+. * the firm links of the development file are fictional: read it from the data, not typed
+. quietly count if identity_real_link_verified != 1
+
+. local fict_links = r(N) == _N
+
+. drop identity_real_link_verified
+
+. 
+. * ===========================================================================
+. * R9 UNIVERSE, WEIGHTS AND INTERVALS (copy exactly into later R9 files)
+. * ---------------------------------------------------------------------------
+. * Needs in memory, one row per firm and year (isid firm_id year):
+. *   firm_id year value_added_nominal gross_output_nominal total_gj_s1
+. *   co2_total_s1 industry2_reported
+. * Makes (all firm-year variables start with r9_):
+. *   r9_U      1 = in the as-filed universe: value added > 0 and energy > 0,
+. *               CO2 known. Energy 0 is left out, not read as "no energy":
+. *               the energy fields cover only some fuels.
+. *   r9_ratio  energy (GJ) per unit of value added (universe only)
+. *   r9_med    median r9_ratio of universe firms in the same 2-digit sector
+. *               and year (whole-year median if the sector is unknown)
+. *   r9_x      1 = extreme record: r9_ratio more than $R9_RULE times r9_med.
+. *               The rule is on energy and also sets the record aside for CO2.
+. *               A sector-year with one or two firms can never be flagged.
+. *   r9_M      1 = in the main universe (r9_U and not r9_x)
+. *   r9_s      value-added share among the year's main universe (sums to 1)
+. *   r9_so     output share among the year's main universe with output > 0
+. *   r9_a_co2  tonnes CO2 per million of value added   (firm ratio a_it)
+. *   r9_a_gj   GJ per million of value added
+. *   r9_o_co2  tonnes CO2 per million of output
+. *   Aggregate level I_t = sum of CO2 / sum of value added = sum_i r9_s * r9_a_co2
+. * Globals: R9_RULE, R9_RULE_ALT (other cut-offs, shown as checks),
+. *   R9_INTERVALS (the three periods, start and end year), R9_PERIODS (their names), R9_LONG (whole span), R9_JUMP_YRS 
+> (energy
+. *   recording jump), R9_DOUBT_YRS (energy records partly doubtful),
+. *   R9_YEARS (years with a file), R9_PAIRS (every pair of consecutive files).
+. * Programs:
+. *   r9_interval_sample A B [asfiled]  keeps one period's two years (A, B);
+. *       stayer = firm in both years; entrant = in B only; leaver = in A only.
+. *       Main version: extreme records are set aside and a stayer with an
+. *       extreme record in either year is set aside in BOTH years (so it does
+. *       not turn into a fake entrant or leaver). Likewise a firm in both files
+. *       but outside the universe in one of them (energy 0, value added <= 0)
+. *       is set aside in both years. "asfiled" keeps every universe record.
+. *       Recomputes r9_s and r9_so inside the period sample; makes r9_grp
+. *       (1 stayer, 2 entrant, 3 leaver). Use it between preserve/restore.
+. *   r9_interval_note A B  returns r(note): data warnings for that period.
+. * ---------------------------------------------------------------------------
+. global R9_RULE      100                  // extreme = more than 100 x the sector-year median
+
+. global R9_RULE_ALT  "30 50 300 1000"     // other cut-offs, reported as checks (R9-01 table, R9-07)
+
+. global R9_INTERVALS `""2010 2015" "2015 2018" "2018 2022""'
+
+. global R9_PERIODS   `""before Paris" "across Paris" "after Paris""'
+
+. global R9_LONG      "2010 2022"
+
+. global R9_JUMP_YRS  "2017"               // energy records jump: never a period end
+
+. global R9_DOUBT_YRS "2019 2020 2021 2022" // energy records partly doubtful (importers, export status unknown)
+
+. 
+. * universe and firm ratios
+. capture drop r9_*
+
+. gen byte r9_U = value_added_nominal > 0 & total_gj_s1 > 0 ///
+>     & !missing(value_added_nominal, total_gj_s1, co2_total_s1)
+
+. assert co2_total_s1 >= 0 if r9_U
+
+. gen double r9_ratio = total_gj_s1 / value_added_nominal if r9_U
+(514 missing values generated)
+
+. gen double r9_a_co2 = 1e6 * co2_total_s1 / value_added_nominal if r9_U
+(514 missing values generated)
+
+. gen double r9_a_gj  = 1e6 * total_gj_s1  / value_added_nominal if r9_U
+(514 missing values generated)
+
+. gen double r9_o_co2 = 1e6 * co2_total_s1 / gross_output_nominal ///
+>     if r9_U & gross_output_nominal > 0 & !missing(gross_output_nominal)
+(514 missing values generated)
+
+. 
+. * extreme-record rule (medians via pctile: egen median() computes in float)
+. bysort year industry2_reported: egen double r9_med = pctile(r9_ratio) if r9_U, p(50)
+(514 missing values generated)
+
+. bysort year: egen double r9_medy = pctile(r9_ratio) if r9_U, p(50)
+(514 missing values generated)
+
+. replace r9_med = r9_medy if r9_U & missing(industry2_reported)
+(0 real changes made)
+
+. drop r9_medy
+
+. gen byte r9_x = r9_U & r9_ratio > $R9_RULE * r9_med
+
+. gen byte r9_M = r9_U & !r9_x
+
+. 
+. * value-added and output weights on the main universe, per year
+. bysort year: egen double r9_tva = total(cond(r9_M, value_added_nominal, .))
+
+. gen double r9_s = value_added_nominal / r9_tva if r9_M
+(794 missing values generated)
+
+. bysort year: egen double r9_tgo = total(cond(r9_M & !missing(r9_o_co2), gross_output_nominal, .))
+
+. gen double r9_so = gross_output_nominal / r9_tgo if r9_M & !missing(r9_o_co2)
+(794 missing values generated)
+
+. drop r9_tva r9_tgo
+
+. bysort year: egen double r9_chk = total(r9_s)
+
+. assert abs(r9_chk - 1) < 1e-12 if r9_M
+
+. drop r9_chk
+
+. 
+. * years with a file and every pair of consecutive files (2015-2017 spans the missing 2016)
+. quietly levelsof year if r9_U, local(r9_yrs)
+
+. global R9_YEARS "`r9_yrs'"
+
+. global R9_PAIRS ""
+
+. local r9_prev ""
+
+. foreach y of global R9_YEARS {
+  2.     if "`r9_prev'" != "" global R9_PAIRS `"$R9_PAIRS "`r9_prev' `y'""'
+  3.     local r9_prev `y'
+  4. }
+
+. * every period end must have a file and must not be a jump year or 2016
+. local r9_jump "$R9_JUMP_YRS"
+
+. foreach p of global R9_INTERVALS {
+  2.     foreach y of local p {
+  3.         assert `: list y in r9_yrs'
+  4.         assert `: list y in r9_jump' == 0
+  5.     }
+  6. }
+
+. 
+. capture program drop r9_interval_sample
+
+. program define r9_interval_sample, rclass
+  1.     args a b mode
+  2.     if !inlist("`mode'", "", "main", "asfiled") {
+  3.         display as error "r9_interval_sample: third argument must be main or asfiled"
+  4.         exit 198
+  5.     }
+  6.     quietly {
+  7.         keep if inlist(year, `a', `b')
+  8.         * a firm in both files but outside the universe in one year (energy 0 or
+.         * value added <= 0) would look like an entrant or leaver: set aside in main
+.         bysort firm_id: gen byte r9_fstay = _N == 2
+  9.         bysort firm_id: egen byte r9_ufirm = min(r9_U)
+ 10.         count if r9_fstay & !r9_ufirm & r9_U
+ 11.         return scalar n_stayers_outside_universe = r(N)
+ 12.         if "`mode'" != "asfiled" drop if r9_fstay & !r9_ufirm
+ 13.         keep if r9_U
+ 14.         drop r9_fstay r9_ufirm
+ 15.         bysort firm_id: gen byte r9_stay = _N == 2
+ 16.         bysort firm_id: egen byte r9_xfirm = max(r9_x)
+ 17.         count if r9_stay & r9_xfirm & year == `a'
+ 18.         return scalar n_stayers_set_aside = r(N)
+ 19.         count if r9_x | (r9_stay & r9_xfirm)
+ 20.         return scalar n_records_set_aside = r(N)
+ 21.         if "`mode'" != "asfiled" drop if r9_x | (r9_stay & r9_xfirm)
+ 22.         gen byte r9_grp = cond(r9_stay, 1, cond(year == `b', 2, 3))
+ 23.         label define r9_grp 1 "stayer" 2 "entrant (appears)" 3 "leaver (disappears)", replace
+ 24.         label values r9_grp r9_grp
+ 25.         drop r9_stay r9_xfirm r9_s r9_so
+ 26.         bysort year: egen double r9_tva = total(value_added_nominal)
+ 27.         gen double r9_s = value_added_nominal / r9_tva
+ 28.         bysort year: egen double r9_tgo = total(cond(!missing(r9_o_co2), gross_output_nominal, .))
+ 29.         gen double r9_so = gross_output_nominal / r9_tgo if !missing(r9_o_co2)
+ 30.         drop r9_tva r9_tgo
+ 31.         count if r9_grp == 1 & year == `a'
+ 32.         return scalar n_stayers = r(N)
+ 33.         count if r9_grp == 2
+ 34.         return scalar n_entrants = r(N)
+ 35.         count if r9_grp == 3
+ 36.         return scalar n_leavers = r(N)
+ 37.     }
+ 38. end
+
+. 
+. capture program drop r9_interval_note
+
+. program define r9_interval_note, rclass
+  1.     args a b
+  2.     local note ""
+  3.     local yrs "$R9_YEARS"
+  4.     forvalues y = `=`a' + 1'/`=`b' - 1' {
+  5.         if !`: list y in yrs' local note = cond("`note'" == "", "", "`note'; ") + "no annual file for `y'"
+  6.     }
+  7.     foreach y of global R9_JUMP_YRS {
+  8.         if inlist(`y', `a', `b') local note = cond("`note'" == "", "", "`note'; ") + "energy recording jump in `y'"
+  9.     }
+ 10.     local d ""
+ 11.     foreach y of global R9_DOUBT_YRS {
+ 12.         if inlist(`y', `a', `b') local d "energy records partly doubtful"
+ 13.     }
+ 14.     if "`d'" != "" local note = cond("`note'" == "", "", "`note'; ") + "`d'"
+ 15.     return local note "`note'"
+ 16. end
+
+. * ============ end of R9 UNIVERSE, WEIGHTS AND INTERVALS ============
+. 
+. display "   extreme-record rule: more than $R9_RULE x the sector-year median energy per value added"
+   extreme-record rule: more than 100 x the sector-year median energy per value added
+
+. display `"   periods: $R9_INTERVALS  (whole span $R9_LONG)"'
+   periods: "2010 2015" "2015 2018" "2018 2022"  (whole span 2010 2022)
+
+. display `"   consecutive pairs: $R9_PAIRS"'
+   consecutive pairs:  "2010 2011" "2011 2012" "2012 2013" "2013 2014" "2014 2015" "2015 2017" "2017 2018" "2018 2019" "
+> 2019 2020" "2020 2021" "2021 2022"
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 2/7: yearly totals and levels, as filed and main"
+Step 2/7: yearly totals and levels, as filed and main
+
+. *---------------------------------------------------------------------------
+. * Level = total CO2 (or GJ) of the universe / its total value added, in tonnes (GJ)
+. * per million money units. Check: it equals the value-added-weighted average of firm ratios.
+. gen byte one = 1
+
+. gen byte out = !r9_U
+
+. gen double co2_x = co2_total_s1 if r9_x
+(32,769 missing values generated)
+
+. gen double gj_x  = total_gj_s1  if r9_x
+(32,769 missing values generated)
+
+. gen double va_x  = value_added_nominal if r9_x
+(32,769 missing values generated)
+
+. gen double sa    = r9_s * r9_a_co2
+(794 missing values generated)
+
+. gen double sg    = r9_s * r9_a_gj
+(794 missing values generated)
+
+. gen double so    = r9_so * r9_o_co2
+(794 missing values generated)
+
+. * largest single firm's share of the year's CO2 and value added
+. bysort year: egen double tco2M = total(cond(r9_M, co2_total_s1, .))
+
+. bysort year: egen double tco2U = total(cond(r9_U, co2_total_s1, .))
+
+. gen double shco2M = co2_total_s1 / tco2M if r9_M
+(794 missing values generated)
+
+. gen double shco2U = co2_total_s1 / tco2U if r9_U
+(514 missing values generated)
+
+. * cells of the extreme-record rule
+. bysort year industry2_reported: egen int ncell = total(r9_U)
+
+. bysort year industry2_reported: gen byte cell1 = _n == 1 & ncell > 0
+
+. gen byte cell_small = cell1 & ncell < 10
+
+. tempfile firmyears
+
+. save `firmyears'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_66051.000001 saved as .dta format
+
+. 
+. preserve
+
+. collapse (sum) firm_years_in_file = one n_outside_universe = out n_universe_as_filed = r9_U ///
+>          n_set_aside = r9_x n_universe_main = r9_M n_sector_cells = cell1 n_sector_cells_under10 = cell_small ///
+>          co2_set_aside = co2_x gj_set_aside = gj_x va_set_aside = va_x ///
+>          sum_va_shares_main = r9_s sum_output_shares_main = r9_so ///
+>          weighted_co2_per_mva_main = sa weighted_gj_per_mva_main = sg weighted_co2_per_mout_main = so ///
+>          (max) top_firm_co2_share_main = shco2M top_firm_va_share_main = r9_s ///
+>                top_firm_co2_share_asfiled = shco2U, by(year)
+
+. tempfile counts
+
+. save `counts'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_66051.000003 saved as .dta format
+
+. restore
+
+. foreach g in main asfiled {
+  2.     preserve
+  3.     if "`g'" == "main"    keep if r9_M
+  4.     if "`g'" == "asfiled" keep if r9_U
+  5.     gen double go_o = gross_output_nominal if !missing(r9_o_co2)
+  6.     gen double co2_o = co2_total_s1 if !missing(r9_o_co2)
+  7.     collapse (sum) va_total_`g' = value_added_nominal co2_total_`g' = co2_total_s1 ///
+>              gj_total_`g' = total_gj_s1 output_total_`g' = go_o co2_o, by(year)
+  8.     gen double co2_per_mva_`g'  = 1e6 * co2_total_`g' / va_total_`g'
+  9.     gen double gj_per_mva_`g'   = 1e6 * gj_total_`g'  / va_total_`g'
+ 10.     gen double co2_per_mout_`g' = 1e6 * co2_o / output_total_`g'
+ 11.     drop co2_o
+ 12.     tempfile lev_`g'
+ 13.     save `lev_`g''
+ 14.     restore
+ 15. }
+(794 observations deleted)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_66051.000005 saved as .dta format
+(514 observations deleted)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_66051.000007 saved as .dta format
+
+. * the main line at other cut-offs (a check: where the line is drawn matters in some years)
+. foreach k of global R9_RULE_ALT {
+  2.     preserve
+  3.     keep if r9_U & !(r9_ratio > `k' * r9_med)
+  4.     collapse (sum) c = co2_total_s1 v = value_added_nominal, by(year)
+  5.     gen double co2_per_mva_cut`k' = 1e6 * c / v
+  6.     keep year co2_per_mva_cut`k'
+  7.     tempfile cut`k'
+  8.     save `cut`k''
+  9.     restore
+ 10. }
+(1,424 observations deleted)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_66051.000009 saved as .dta format
+(1,060 observations deleted)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_66051.00000b saved as .dta format
+(642 observations deleted)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_66051.00000d saved as .dta format
+(548 observations deleted)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_66051.00000f saved as .dta format
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 3/7: the three periods: who stays, appears, disappears (main version)"
+Step 3/7: the three periods: who stays, appears, disappears (main version)
+
+. *---------------------------------------------------------------------------
+. * These samples are the ones R9-02 to R9-07 split up. Firm links in the development
+. * file are fictional, so "appears" and "disappears" mean nothing here (pipeline check).
+. tempname h
+
+. tempfile ivals
+
+. postfile `h' str9 interval str10 kind str14 period int(start_year end_year years_between) ///
+>     long(n_stayers n_entrants n_leavers n_stayers_set_aside n_records_set_aside n_stayers_outside_universe) ///
+>     double(va_share_stayers_start va_share_stayers_end va_share_leavers_start va_share_entrants_end ///
+>            co2_per_mva_start co2_per_mva_end gj_per_mva_start gj_per_mva_end ///
+>            co2_per_mva_start_asfiled co2_per_mva_end_asfiled) str80 data_warning using `ivals', replace
+(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_66051.00000g not found)
+
+. local allp `"$R9_INTERVALS "$R9_LONG" $R9_PAIRS"'
+
+. local k 0
+
+. foreach p of local allp {
+  2.     local ++k
+  3.     local a : word 1 of `p'
+  4.     local b : word 2 of `p'
+  5.     local kind "pair"
+  6.     local pname ""
+  7.     if `k' <= 3 {
+  8.         local kind "main"
+  9.         local pname : word `k' of $R9_PERIODS
+ 10.     }
+ 11.     if `k' == 4 local kind "whole span"
+ 12.     r9_interval_note `a' `b'
+ 13.     local warn "`r(note)'"
+ 14.     foreach m in asfiled main {
+ 15.         use `firmyears', clear
+ 16.         r9_interval_sample `a' `b' `m'
+ 17.         foreach r in n_stayers n_entrants n_leavers n_stayers_set_aside n_records_set_aside n_stayers_outside_unive
+> rse {
+ 18.             local `r' = r(`r')
+ 19.         }
+ 20.         * Sum of shares is 1 in each year; the aggregate level equals the weighted firm ratios
+.         bysort year: egen double chk = total(r9_s)
+ 21.         assert abs(chk - 1) < 1e-12
+ 22.         foreach t in `a' `b' {
+ 23.             quietly summarize co2_total_s1 if year == `t'
+ 24.             local c = r(sum)
+ 25.             quietly summarize total_gj_s1 if year == `t'
+ 26.             local e = r(sum)
+ 27.             quietly summarize value_added_nominal if year == `t'
+ 28.             local v = r(sum)
+ 29.             local I_`m'_`t'  = 1e6 * `c' / `v'
+ 30.             local G_`m'_`t'  = 1e6 * `e' / `v'
+ 31.             gen double w = r9_s * r9_a_co2 if year == `t'
+ 32.             quietly summarize w
+ 33.             assert reldif(r(sum), `I_`m'_`t'') < 1e-12
+ 34.             drop w
+ 35.         }
+ 36.         if "`m'" == "main" {
+ 37.             quietly summarize r9_s if r9_grp == 1 & year == `a'
+ 38.             local sca = r(sum)
+ 39.             quietly summarize r9_s if r9_grp == 1 & year == `b'
+ 40.             local scb = r(sum)
+ 41.             quietly summarize r9_s if r9_grp == 3
+ 42.             local sx = r(sum)
+ 43.             quietly summarize r9_s if r9_grp == 2
+ 44.             local sn = r(sum)
+ 45.             assert abs(`sca' + `sx' - 1) < 1e-12 & abs(`scb' + `sn' - 1) < 1e-12
+ 46.         }
+ 47.     }
+ 48.     post `h' ("`a'-`b'") ("`kind'") ("`pname'") (`a') (`b') (`b' - `a') ///
+>         (`n_stayers') (`n_entrants') (`n_leavers') (`n_stayers_set_aside') (`n_records_set_aside') (`n_stayers_outside
+> _universe') ///
+>         (`sca') (`scb') (`sx') (`sn') (`I_main_`a'') (`I_main_`b'') (`G_main_`a'') (`G_main_`b'') ///
+>         (`I_asfiled_`a'') (`I_asfiled_`b'') ("`warn'")
+ 49.     display "   `a'->`b' (`kind'): stayers `n_stayers', entrants `n_entrants', leavers `n_leavers'; " ///
+>         "stayers set aside `n_stayers_set_aside'; CO2 per million VA " %8.2f `I_main_`a'' " -> " %8.2f `I_main_`b''
+ 50. }
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(2,586 missing values generated)
+(2,278 missing values generated)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(2,556 missing values generated)
+(2,253 missing values generated)
+   2010->2015 (main): stayers 1046, entrants 1510, leavers 1207; stayers set aside 8; CO2 per million VA    27.33 ->    
+> 38.06
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(2,966 missing values generated)
+(2,586 missing values generated)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(2,932 missing values generated)
+(2,567 missing values generated)
+   2015->2018 (main): stayers 1608, entrants 1324, leavers 959; stayers set aside 8; CO2 per million VA    38.05 ->    2
+> 1.02
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(3,114 missing values generated)
+(2,966 missing values generated)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(3,088 missing values generated)
+(2,932 missing values generated)
+   2018->2022 (main): stayers 1447, entrants 1641, leavers 1485; stayers set aside 6; CO2 per million VA    20.99 ->    
+> 16.99
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(3,114 missing values generated)
+(2,278 missing values generated)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(3,089 missing values generated)
+(2,260 missing values generated)
+   2010->2022 (whole span): stayers 582, entrants 2507, leavers 1678; stayers set aside 5; CO2 per million VA    27.52 -
+> >    16.90
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(2,307 missing values generated)
+(2,278 missing values generated)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(2,268 missing values generated)
+(2,255 missing values generated)
+   2010->2011 (pair): stayers 1729, entrants 539, leavers 526; stayers set aside 10; CO2 per million VA    27.24 ->    3
+> 1.17
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(2,323 missing values generated)
+(2,307 missing values generated)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(2,307 missing values generated)
+(2,285 missing values generated)
+   2011->2012 (pair): stayers 1764, entrants 543, leavers 521; stayers set aside 6; CO2 per million VA    31.22 ->    44
+> .79
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(2,331 missing values generated)
+(2,323 missing values generated)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(2,312 missing values generated)
+(2,297 missing values generated)
+   2012->2013 (pair): stayers 1743, entrants 569, leavers 554; stayers set aside 5; CO2 per million VA    45.49 ->    62
+> .64
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(2,406 missing values generated)
+(2,331 missing values generated)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(2,376 missing values generated)
+(2,307 missing values generated)
+   2013->2014 (pair): stayers 1742, entrants 634, leavers 565; stayers set aside 7; CO2 per million VA    62.62 ->    60
+> .16
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(2,586 missing values generated)
+(2,406 missing values generated)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(2,552 missing values generated)
+(2,367 missing values generated)
+   2014->2015 (pair): stayers 1832, entrants 720, leavers 535; stayers set aside 10; CO2 per million VA    60.54 ->    3
+> 8.05
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(3,303 missing values generated)
+(2,586 missing values generated)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(3,114 missing values generated)
+(2,460 missing values generated)
+   2015->2017 (pair): stayers 1898, entrants 1216, leavers 562; stayers set aside 112; CO2 per million VA    36.47 ->   
+> 605.01
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(2,966 missing values generated)
+(3,303 missing values generated)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(2,821 missing values generated)
+(3,128 missing values generated)
+   2017->2018 (pair): stayers 2221, entrants 600, leavers 907; stayers set aside 124; CO2 per million VA   588.65 ->    
+> 21.24
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(2,992 missing values generated)
+(2,966 missing values generated)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(2,957 missing values generated)
+(2,942 missing values generated)
+   2018->2019 (pair): stayers 2231, entrants 726, leavers 711; stayers set aside 12; CO2 per million VA    20.83 ->    1
+> 1.37
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(2,887 missing values generated)
+(2,992 missing values generated)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(2,858 missing values generated)
+(2,954 missing values generated)
+   2019->2020 (pair): stayers 2158, entrants 700, leavers 796; stayers set aside 15; CO2 per million VA    11.38 ->    2
+> 2.19
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(3,042 missing values generated)
+(2,887 missing values generated)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(2,986 missing values generated)
+(2,849 missing values generated)
+   2020->2021 (pair): stayers 2230, entrants 756, leavers 619; stayers set aside 17; CO2 per million VA    22.28 ->    2
+> 1.72
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(3,114 missing values generated)
+(3,042 missing values generated)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(3,069 missing values generated)
+(2,975 missing values generated)
+   2021->2022 (pair): stayers 2290, entrants 779, leavers 685; stayers set aside 23; CO2 per million VA    19.80 ->    1
+> 7.11
+
+. postclose `h'
+
+. use `ivals', clear
+
+. gen double change_co2_pct_of_start = 100 * (co2_per_mva_end - co2_per_mva_start) / co2_per_mva_start
+
+. gen double change_gj_pct_of_start  = 100 * (gj_per_mva_end  - gj_per_mva_start)  / gj_per_mva_start
+
+. * the same years on the yearly line (all main-universe firms of the year): the period
+. * levels differ slightly because stayers set aside in one year are set aside in both
+. gen int row = _n                 // keep the row order through the merges
+
+. foreach e in start end {
+  2.     gen int year = `e'_year
+  3.     merge m:1 year using `lev_main', keepusing(co2_per_mva_main) keep(master match) nogenerate
+  4.     rename co2_per_mva_main co2_per_mva_`e'_yearly
+  5.     drop year
+  6. }
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                                15  
+    -----------------------------------------
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                                15  
+    -----------------------------------------
+
+. sort row
+
+. drop row
+
+. gen str80 note = "Development data: firm links fictional; entrants/leavers = sample rotation"
+
+. if !`fict_links' replace note = ""
+
+. order interval kind period start_year end_year years_between n_stayers n_entrants n_leavers ///
+>       n_stayers_set_aside n_records_set_aside n_stayers_outside_universe va_share_* ///
+>       co2_per_mva_start co2_per_mva_end co2_per_mva_start_yearly co2_per_mva_end_yearly ///
+>       change_co2_pct_of_start gj_per_mva_start gj_per_mva_end change_gj_pct_of_start ///
+>       co2_per_mva_start_asfiled co2_per_mva_end_asfiled data_warning note
+
+. format va_share_* %9.4f
+
+. format co2_per_mva_* gj_per_mva_* %12.3f
+
+. format change_* %8.2f
+
+. export delimited using "tables/`fname'_intervals.csv", datafmt replace
+file tables/01_aggregate_intensity_path_intervals.csv saved
+
+. list interval kind n_stayers n_entrants n_leavers va_share_stayers_start va_share_stayers_end ///
+>      co2_per_mva_start co2_per_mva_end data_warning if kind != "pair", noobs sep(0) abbreviate(24)
+
+  +-------------------------------------------------------------------------------------------------------------+
+  |  interval |       kind | n_stayers | n_entrants | n_leavers | va_share_stayers_start | va_share_stayers_end |
+  | 2010-2015 |       main |      1046 |       1510 |      1207 |                 0.3067 |               0.1666 |
+  |-------------------------------------------------------------------------------------------------------------|
+  |   co2_per_mva_start   |   co2_per_mva_end    |                                              data_warning    |
+  |              27.334   |            38.059    |                                                              |
+  +-------------------------------------------------------------------------------------------------------------+
+
+  +-------------------------------------------------------------------------------------------------------------+
+  |  interval |       kind | n_stayers | n_entrants | n_leavers | va_share_stayers_start | va_share_stayers_end |
+  | 2015-2018 |       main |      1608 |       1324 |       959 |                 0.3872 |               0.3128 |
+  |-------------------------------------------------------------------------------------------------------------|
+  |   co2_per_mva_start   |   co2_per_mva_end    |                                              data_warning    |
+  |              38.055   |            21.017    |                                   no annual file for 2016    |
+  +-------------------------------------------------------------------------------------------------------------+
+
+  +-------------------------------------------------------------------------------------------------------------+
+  |  interval |       kind | n_stayers | n_entrants | n_leavers | va_share_stayers_start | va_share_stayers_end |
+  | 2018-2022 |       main |      1447 |       1641 |      1485 |                 0.3706 |               0.4292 |
+  |-------------------------------------------------------------------------------------------------------------|
+  |   co2_per_mva_start   |   co2_per_mva_end    |                                              data_warning    |
+  |              20.989   |            16.991    |                            energy records partly doubtful    |
+  +-------------------------------------------------------------------------------------------------------------+
+
+  +-------------------------------------------------------------------------------------------------------------+
+  |  interval |       kind | n_stayers | n_entrants | n_leavers | va_share_stayers_start | va_share_stayers_end |
+  | 2010-2022 | whole span |       582 |       2507 |      1678 |                 0.1820 |               0.0843 |
+  |-------------------------------------------------------------------------------------------------------------|
+  |   co2_per_mva_start   |   co2_per_mva_end    |                                              data_warning    |
+  |              27.518   |            16.896    |   no annual file for 2016; energy records partly doubtful    |
+  +-------------------------------------------------------------------------------------------------------------+
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 4/7: yearly table -> CSV (numbers written before drawing)"
+Step 4/7: yearly table -> CSV (numbers written before drawing)
+
+. *---------------------------------------------------------------------------
+. use `counts', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. merge 1:1 year using `lev_main', nogenerate assert(match)
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                                12  
+    -----------------------------------------
+
+. merge 1:1 year using `lev_asfiled', nogenerate assert(match)
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                                12  
+    -----------------------------------------
+
+. foreach k of global R9_RULE_ALT {
+  2.     merge 1:1 year using `cut`k'', nogenerate assert(match)
+  3. }
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                                12  
+    -----------------------------------------
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                                12  
+    -----------------------------------------
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                                12  
+    -----------------------------------------
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                                12  
+    -----------------------------------------
+
+. * identities: weights sum to 1; level = value-added-weighted firm ratios
+. assert abs(sum_va_shares_main - 1) < 1e-12
+
+. assert abs(sum_output_shares_main - 1) < 1e-12
+
+. assert reldif(weighted_co2_per_mva_main, co2_per_mva_main) < 1e-12
+
+. assert reldif(weighted_gj_per_mva_main, gj_per_mva_main) < 1e-12
+
+. assert reldif(weighted_co2_per_mout_main, co2_per_mout_main) < 1e-12
+
+. assert firm_years_in_file == n_outside_universe + n_universe_main + n_set_aside
+
+. gen double set_aside_share_firmyears_pct = 100 * n_set_aside / n_universe_as_filed
+
+. gen double set_aside_share_co2_pct = 100 * co2_set_aside / co2_total_asfiled
+
+. gen double set_aside_share_gj_pct  = 100 * gj_set_aside  / gj_total_asfiled
+
+. gen double set_aside_share_va_pct  = 100 * va_set_aside  / va_total_asfiled
+
+. foreach v in top_firm_co2_share_main top_firm_va_share_main top_firm_co2_share_asfiled {
+  2.     replace `v' = 100 * `v'
+  3.     rename `v' `v'_pct
+  4. }
+(12 real changes made)
+(12 real changes made)
+(12 real changes made)
+
+. gen int rule_times_median = $R9_RULE
+
+. * data warnings and period ends per year
+. gen str40 records = ""
+(12 missing values generated)
+
+. foreach y of global R9_JUMP_YRS {
+  2.     replace records = "energy recording jump (drawn hollow)" if year == `y'
+  3. }
+(1 real change made)
+
+. foreach y of global R9_DOUBT_YRS {
+  2.     replace records = "energy records partly doubtful (drawn hollow)" if year == `y'
+  3. }
+variable records was str40 now str45
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+
+. gen str60 period_end = ""
+(12 missing values generated)
+
+. local k 0
+
+. foreach p of global R9_INTERVALS {
+  2.     local ++k
+  3.     local pn : word `k' of $R9_PERIODS
+  4.     local a : word 1 of `p'
+  5.     local b : word 2 of `p'
+  6.     replace period_end = cond(period_end == "", "", period_end + "; ") + "start of `pn'" if year == `a'
+  7.     replace period_end = cond(period_end == "", "", period_end + "; ") + "end of `pn'" if year == `b'
+  8. }
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+
+. set obs `=_N + 1'
+Number of observations (_N) was 12, now 13.
+
+. replace year = 2016 in L
+(1 real change made)
+
+. gen byte annual_file = year != 2016
+
+. replace records = "No annual file" if year == 2016
+(1 real change made)
+
+. sort year
+
+. order year annual_file records period_end firm_years_in_file n_outside_universe n_universe_as_filed n_set_aside ///
+>       n_universe_main rule_times_median co2_per_mva_main gj_per_mva_main co2_per_mout_main ///
+>       co2_per_mva_asfiled gj_per_mva_asfiled co2_per_mout_asfiled co2_per_mva_cut* ///
+>       set_aside_share_firmyears_pct set_aside_share_co2_pct set_aside_share_gj_pct ///
+>       set_aside_share_va_pct top_firm_co2_share_main_pct top_firm_va_share_main_pct ///
+>       top_firm_co2_share_asfiled_pct va_total_main co2_total_main gj_total_main output_total_main ///
+>       va_total_asfiled co2_total_asfiled gj_total_asfiled output_total_asfiled ///
+>       sum_va_shares_main sum_output_shares_main weighted_co2_per_mva_main weighted_gj_per_mva_main ///
+>       weighted_co2_per_mout_main n_sector_cells n_sector_cells_under10
+
+. drop co2_set_aside gj_set_aside va_set_aside
+
+. format firm_years_in_file n_* %9.0f
+
+. format co2_per_* gj_per_* weighted_* %12.3f
+
+. format *_pct %8.2f
+
+. format va_total_* co2_total_* gj_total_* output_total_* %20.0f
+
+. format sum_* %12.10f
+
+. export delimited using "tables/`fname'.csv", datafmt replace
+file tables/01_aggregate_intensity_path.csv saved
+
+. tempfile yearly
+
+. save `yearly'           // kept for the companion points table (Step 7)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_66051.00000h saved as .dta format
+
+. list year n_universe_as_filed n_set_aside co2_per_mva_asfiled co2_per_mva_main gj_per_mva_main ///
+>      set_aside_share_co2_pct top_firm_co2_share_main_pct, noobs sep(0) abbreviate(24)
+
+  +-----------------------------------------------------------------------------------------------------+
+  | year | n_universe_as_filed | n_set_aside | co2_per_mva_asfiled | co2_per_mva_main | gj_per_mva_main |
+  | 2010 |                2278 |           6 |              27.907 |           27.503 |         264.262 |
+  |-----------------------------------------------------------------------------------------------------|
+  |             set_aside_share_co2_pct             |             top_firm_co2_share_mai~t              |
+  |                                1.46             |                                10.44              |
+  +-----------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------+
+  | year | n_universe_as_filed | n_set_aside | co2_per_mva_asfiled | co2_per_mva_main | gj_per_mva_main |
+  | 2011 |                2307 |           6 |              32.710 |           31.177 |         272.084 |
+  |-----------------------------------------------------------------------------------------------------|
+  |             set_aside_share_co2_pct             |             top_firm_co2_share_mai~t              |
+  |                                4.78             |                                13.27              |
+  +-----------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------+
+  | year | n_universe_as_filed | n_set_aside | co2_per_mva_asfiled | co2_per_mva_main | gj_per_mva_main |
+  | 2012 |                2323 |           3 |              45.127 |           45.051 |         440.326 |
+  |-----------------------------------------------------------------------------------------------------|
+  |             set_aside_share_co2_pct             |             top_firm_co2_share_mai~t              |
+  |                                0.17             |                                14.51              |
+  +-----------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------+
+  | year | n_universe_as_filed | n_set_aside | co2_per_mva_asfiled | co2_per_mva_main | gj_per_mva_main |
+  | 2013 |                2331 |           4 |              63.002 |           62.592 |         614.299 |
+  |-----------------------------------------------------------------------------------------------------|
+  |             set_aside_share_co2_pct             |             top_firm_co2_share_mai~t              |
+  |                                0.67             |                                57.01              |
+  +-----------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------+
+  | year | n_universe_as_filed | n_set_aside | co2_per_mva_asfiled | co2_per_mva_main | gj_per_mva_main |
+  | 2014 |                2406 |           9 |              61.352 |           59.972 |         499.908 |
+  |-----------------------------------------------------------------------------------------------------|
+  |             set_aside_share_co2_pct             |             top_firm_co2_share_mai~t              |
+  |                                2.30             |                                39.15              |
+  +-----------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------+
+  | year | n_universe_as_filed | n_set_aside | co2_per_mva_asfiled | co2_per_mva_main | gj_per_mva_main |
+  | 2015 |                2586 |          10 |             214.558 |           38.053 |         335.194 |
+  |-----------------------------------------------------------------------------------------------------|
+  |             set_aside_share_co2_pct             |             top_firm_co2_share_mai~t              |
+  |                               82.30             |                                12.17              |
+  +-----------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------+
+  | year | n_universe_as_filed | n_set_aside | co2_per_mva_asfiled | co2_per_mva_main | gj_per_mva_main |
+  | 2016 |                   . |           . |                   . |                . |               . |
+  |-----------------------------------------------------------------------------------------------------|
+  |             set_aside_share_co2_pct             |             top_firm_co2_share_mai~t              |
+  |                                   .             |                                    .              |
+  +-----------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------+
+  | year | n_universe_as_filed | n_set_aside | co2_per_mva_asfiled | co2_per_mva_main | gj_per_mva_main |
+  | 2017 |                3303 |         160 |            2717.365 |          588.783 |        6129.883 |
+  |-----------------------------------------------------------------------------------------------------|
+  |             set_aside_share_co2_pct             |             top_firm_co2_share_mai~t              |
+  |                               79.96             |                                 9.67              |
+  +-----------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------+
+  | year | n_universe_as_filed | n_set_aside | co2_per_mva_asfiled | co2_per_mva_main | gj_per_mva_main |
+  | 2018 |                2966 |          11 |              33.666 |           20.955 |         158.248 |
+  |-----------------------------------------------------------------------------------------------------|
+  |             set_aside_share_co2_pct             |             top_firm_co2_share_mai~t              |
+  |                               37.82             |                                 9.70              |
+  +-----------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------+
+  | year | n_universe_as_filed | n_set_aside | co2_per_mva_asfiled | co2_per_mva_main | gj_per_mva_main |
+  | 2019 |                2992 |          15 |              11.624 |           11.368 |          82.138 |
+  |-----------------------------------------------------------------------------------------------------|
+  |             set_aside_share_co2_pct             |             top_firm_co2_share_mai~t              |
+  |                                2.24             |                                15.38              |
+  +-----------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------+
+  | year | n_universe_as_filed | n_set_aside | co2_per_mva_asfiled | co2_per_mva_main | gj_per_mva_main |
+  | 2020 |                2887 |          14 |              58.686 |           22.226 |         159.949 |
+  |-----------------------------------------------------------------------------------------------------|
+  |             set_aside_share_co2_pct             |             top_firm_co2_share_mai~t              |
+  |                               62.48             |                                12.13              |
+  +-----------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------+
+  | year | n_universe_as_filed | n_set_aside | co2_per_mva_asfiled | co2_per_mva_main | gj_per_mva_main |
+  | 2021 |                3042 |          27 |            1577.703 |           21.654 |         142.707 |
+  |-----------------------------------------------------------------------------------------------------|
+  |             set_aside_share_co2_pct             |             top_firm_co2_share_mai~t              |
+  |                               98.64             |                                17.89              |
+  +-----------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------+
+  | year | n_universe_as_filed | n_set_aside | co2_per_mva_asfiled | co2_per_mva_main | gj_per_mva_main |
+  | 2022 |                3114 |          15 |              29.115 |           16.994 |         118.988 |
+  |-----------------------------------------------------------------------------------------------------|
+  |             set_aside_share_co2_pct             |             top_firm_co2_share_mai~t              |
+  |                               41.97             |                                 6.25              |
+  +-----------------------------------------------------------------------------------------------------+
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 5/7: notes (numbers and years read from the data, never typed)"
+Step 5/7: notes (numbers and years read from the data, never typed)
+
+. *---------------------------------------------------------------------------
+. local jy : word 1 of $R9_JUMP_YRS
+
+. local nd : word count $R9_DOUBT_YRS
+
+. local d1 : word 1 of $R9_DOUBT_YRS
+
+. local d2 : word `nd' of $R9_DOUBT_YRS
+
+. local fic ""
+
+. * how much the set-aside records weigh: read from the yearly table in memory
+. quietly summarize set_aside_share_firmyears_pct
+
+. local fymax = ceil(r(max))
+
+. quietly summarize set_aside_share_co2_pct
+
+. local comax = round(r(max))
+
+. if `fict_links' local fic "; firm links here are fictional, so those splits are only a pipeline check"
+
+. local ntext "Notes: Each line treats all firms as one: total CO2 (or energy) over total value added (masked money unit
+> s). Energy = gigajoules (GJ) of fuel and bought electricity (not all fuels); CO2 = energy times standard factors. Valu
+> e added = output value minus materials, energy and services bought, at current prices, so price rises alone push the l
+> ines down. Main line sets aside a firm-year whose energy per unit of value added is over $R9_RULE times that of its se
+> ctor's middle (median) firm that year: at most `fymax' in 100 of a year's firm-years, yet up to `comax'% of a year's C
+> O2; the line moves with this cut-off (companion table). Hollow gray: `jy' energy recording jump; `d1'–`d2' records par
+> tly in doubt. Brackets: periods split up in R9-02 to R9-07 (firms getting cleaner, value added shifting, firms appeari
+> ng or disappearing)`fic'. Shows totals only, not which firms changed or why."
+
+. local notelines ""
+
+. local line ""
+
+. foreach w of local ntext {
+  2.     if ustrlen("`line' `w'") > 138 & "`line'" != "" {
+  3.         local notelines `"`notelines' "`line'""'
+  4.         local line "`w'"
+  5.     }
+  6.     else local line = strtrim("`line' `w'")
+  7. }
+
+. local notelines `"`notelines' "`line'""'
+
+. local nlines : word count `notelines'
+
+. display "   notes: `nlines' lines"
+   notes: 7 lines
+
+. if `nlines' > 7 display as error "   WARNING: the notes run to `nlines' lines (limit 7)"
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 6/7: draw: (a) CO2, (b) energy, per million of value added, shared log scale"
+Step 6/7: draw: (a) CO2, (b) energy, per million of value added, shared log scale
+
+. *---------------------------------------------------------------------------
+. keep year annual_file co2_per_mva_main gj_per_mva_main co2_per_mva_asfiled gj_per_mva_asfiled
+
+. expand 2
+(13 observations created)
+
+. bysort year: gen byte panel = _n
+
+. label define panel 1 "(a) CO2 (tonnes) per million of value added, log scale" ///
+>                    2 "(b) Energy (GJ) per million of value added, log scale"
+
+. label values panel panel
+
+. gen double ym = cond(panel == 1, co2_per_mva_main, gj_per_mva_main)
+(2 missing values generated)
+
+. gen double ya = cond(panel == 1, co2_per_mva_asfiled, gj_per_mva_asfiled)
+(2 missing values generated)
+
+. gen byte flagged = 0
+
+. foreach y in $R9_JUMP_YRS $R9_DOUBT_YRS {
+  2.     replace flagged = 1 if year == `y'
+  3. }
+(2 real changes made)
+(2 real changes made)
+(2 real changes made)
+(2 real changes made)
+(2 real changes made)
+
+. * shared log axis: labels 1, 3, 10, 30, ... ; bottom leaves room for the period brackets
+. quietly summarize ym
+
+. local vmin = r(min)
+
+. local vmax = r(max)
+
+. quietly summarize ya
+
+. local vmin = min(`vmin', r(min))
+
+. local vmax = max(`vmax', r(max))
+
+. local bot = 10^floor(log10(`vmin' / 3))
+
+. if 3 * `bot' <= `vmin' / 3 local bot = 3 * `bot'
+
+. local top = 1.3 * `vmax'
+
+. local ylab ""
+
+. local v = `bot'
+
+. while `v' <= `top' {
+  2.     local t = cond(`v' >= 1, strofreal(`v', "%12.0fc"), strofreal(`v', "%9.2g"))
+  3.     local ylab `"`ylab' `v' "`t'""'
+  4.     local v = cond(strofreal(`v' / 10^floor(log10(`v') + 1e-9), "%3.1f") == "1.0", 3 * `v', 10 * `v' / 3)
+  5.     local v = real(strofreal(`v', "%12.4g"))
+  6. }
+
+. display `"   y labels: `ylab'"'
+   y labels:  3 "3" 10 "10" 30 "30" 100 "100" 300 "300" 1000 "1,000" 3000 "3,000" 10000 "10,000" 30000 "30,000"
+
+. 
+. * period ends labelled on the main line; first and last year labelled on the as-filed line
+. gen str10 lm = ""
+(26 missing values generated)
+
+. foreach p of global R9_INTERVALS {
+  2.     foreach y of local p {
+  3.         replace lm = strofreal(ym, cond(panel == 1, "%9.1f", "%9.0fc")) if year == `y'
+  4.     }
+  5. }
+(2 real changes made)
+(2 real changes made)
+(0 real changes made)
+(2 real changes made)
+(0 real changes made)
+(2 real changes made)
+
+. quietly summarize year if !missing(ya)
+
+. gen str10 la = strofreal(ya, cond(panel == 1, "%9.1f", "%9.0fc")) if inlist(year, r(min), r(max)) & !missing(ya)
+(22 missing values generated)
+
+. gen byte lapos = cond(year == r(max), 3, 12)   // last year: right of the point, clear of the dashed line
+
+. * flagged years move to hollow gray layers, not joined to the solid lines
+. gen double ymf = ym if flagged
+(16 missing values generated)
+
+. gen double yaf = ya if flagged
+(16 missing values generated)
+
+. gen str10 lmf = lm if flagged
+(24 missing values generated)
+
+. gen str10 laf = la if flagged
+(24 missing values generated)
+
+. replace ym = . if flagged
+(10 real changes made, 10 to missing)
+
+. replace ya = . if flagged
+(10 real changes made, 10 to missing)
+
+. replace lm = "" if flagged
+(2 real changes made)
+
+. replace la = "" if flagged
+(2 real changes made)
+
+. 
+. * 2016 band and Paris line (end of 2015)
+. gen double blo = `bot' if year == 2016
+(24 missing values generated)
+
+. gen double bhi = `top' if year == 2016
+(24 missing values generated)
+
+. gen double px  = 2015.5 if year == 2016
+(24 missing values generated)
+
+. * period brackets near the bottom of each panel, named in the middle
+. gen double bx1 = .
+(26 missing values generated)
+
+. gen double bx2 = .
+(26 missing values generated)
+
+. gen double bxm = .
+(26 missing values generated)
+
+. gen str14 btx = ""
+(26 missing values generated)
+
+. local k 0
+
+. foreach p of global R9_INTERVALS {
+  2.     local ++k
+  3.     local a : word 1 of `p'
+  4.     local b : word 2 of `p'
+  5.     local pn : word `k' of $R9_PERIODS
+  6.     replace bx1 = `a' + 0.08 if year == `a'
+  7.     replace bx2 = `b' - 0.08 if year == `a'
+  8.     * a period that spans the 2016 band is named to the right of the band and the Paris line
+.     replace bxm = cond(`a' < 2016 & `b' > 2016, (2016.4 + `b') / 2, (`a' + `b') / 2) if year == `a'
+  9.     replace btx = "`pn'" if year == `a'
+ 10. }
+(2 real changes made)
+(2 real changes made)
+(2 real changes made)
+(2 real changes made)
+(2 real changes made)
+(2 real changes made)
+(2 real changes made)
+(2 real changes made)
+(2 real changes made)
+(2 real changes made)
+(2 real changes made)
+(2 real changes made)
+
+. gen double by = `bot' * 1.45 if !missing(bx1)
+(20 missing values generated)
+
+. 
+. sort panel year
+
+. twoway (rbar blo bhi year, barwidth(0.8) color(gs14) lwidth(none)) ///
+>     (rspike blo bhi px, lcolor(gs4) lpattern(shortdash) lwidth(thin)) ///
+>     (rcap bx1 bx2 by, horizontal lcolor(gs6) lwidth(thin) msize(small)) ///
+>     (scatter by bxm, msymbol(none) mlabel(btx) mlabposition(12) mlabgap(0.4) mlabsize(vsmall) mlabcolor(gs5)) ///
+>     (connected ya year, cmissing(n) lcolor(gs7) lpattern(shortdash) lwidth(medthin) msymbol(T) msize(small) mcolor(gs7
+> ) ///
+>         mlabel(la) mlabvposition(lapos) mlabsize(vsmall) mlabcolor(gs6)) ///
+>     (connected ym year, cmissing(n) lcolor(black) lpattern(solid) lwidth(medthin) msymbol(O) msize(small) mcolor(black
+> ) ///
+>         mlabel(lm) mlabposition(6) mlabsize(vsmall) mlabcolor(black)) ///
+>     (connected yaf year, cmissing(n) lcolor(gs11) lpattern(shortdash) lwidth(thin) msymbol(Th) msize(small) mcolor(gs1
+> 0) ///
+>         mlabel(laf) mlabvposition(lapos) mlabsize(vsmall) mlabcolor(gs8)) ///
+>     (connected ymf year, cmissing(n) lcolor(gs8) lpattern(solid) lwidth(thin) msymbol(Oh) msize(small) mcolor(gs7) ///
+>         mlabel(lmf) mlabposition(6) mlabsize(vsmall) mlabcolor(gs6)), ///
+>     by(panel, cols(2) graphregion(color(white) lcolor(white) ilcolor(white)) legend(pos(6)) ///
+>         title("Figure R9-01. CO2 and energy per unit of value added, all manufacturing firms together", size(small) po
+> s(11) span) ///
+>         note(`notelines' "`srcnote'" "`devnote'", size(vsmall) span linegap(0.6))) ///
+>     subtitle(, pos(11) nobox fcolor(white) lcolor(white) size(small)) ///
+>     yscale(log noline range(`bot' `top')) ylabel(`ylab', angle(0) noticks tlength(0) grid glcolor(gs15) glwidth(vthin)
+>  labsize(vsmall)) ///
+>     ytitle("") xlabel(2010(2)2022, noticks tlength(0) labsize(vsmall)) xscale(range(2009.4 2022.8) lcolor(gs10)) xtitl
+> e("") ///
+>     legend(order(6 "Extreme records set aside (main)" 5 "As filed (all records)" 8 "Hollow gray = energy records in do
+> ubt" ///
+>                  1 "No annual file" 2 "Paris Agreement adopted (December 2015)" 3 "Periods split up in R9-02 to R9-07"
+> ) ///
+>         rows(2) region(lcolor(none)) size(vsmall) symxsize(6) keygap(1) colgap(4) rowgap(0.3)) ///
+>     plotregion(style(none)) xsize(8) ysize(6)
+
+. 
+. graph export "figures/`fname'.png", width(2400) replace
+file
+    /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r9-decarbonisation-decomposition/figur
+    > es/01_aggregate_intensity_path.png saved as PNG format
+
+. graph export "figures/`fname'.pdf", replace
+file
+    /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r9-decarbonisation-decomposition/figur
+    > es/01_aggregate_intensity_path.pdf saved as PDF format
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 7/7: companion table: every plotted point (putpdf)"
+Step 7/7: companion table: every plotted point (putpdf)
+
+. *---------------------------------------------------------------------------
+. * One row per plotted point, in chart order: panel (a) then (b); main line then as filed;
+. * years in order. 2016 rows are kept with the reason they are not drawn.
+. use `yearly', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. quietly count if annual_file
+
+. local nyears = r(N)
+
+. keep year annual_file n_universe_main n_universe_as_filed co2_per_mva_main gj_per_mva_main ///
+>      co2_per_mva_asfiled gj_per_mva_asfiled
+
+. expand 4
+(39 observations created)
+
+. bysort year: gen byte k = _n            // 1 (a) main, 2 (a) as filed, 3 (b) main, 4 (b) as filed
+
+. gen str20 c_panel  = cond(k <= 2, "(a) CO2 (tonnes)", "(b) Energy (GJ)")
+
+. gen str40 c_series = cond(mod(k, 2) == 1, "Extreme records set aside (main)", "As filed (all records)")
+
+. gen str4  c_year   = string(year)
+
+. gen double v = cond(k == 1, co2_per_mva_main, cond(k == 2, co2_per_mva_asfiled, ///
+>                cond(k == 3, gj_per_mva_main, gj_per_mva_asfiled)))
+(4 missing values generated)
+
+. * same rounding as the chart labels: CO2 one decimal, energy whole GJ
+. gen str12 c_value = cond(k <= 2, strofreal(v, "%12.1fc"), strofreal(v, "%12.0fc")) if annual_file
+(4 missing values generated)
+
+. gen str8  c_firms = strofreal(cond(mod(k, 2) == 1, n_universe_main, n_universe_as_filed), "%12.0fc") if annual_file
+(4 missing values generated)
+
+. gen str70 c_status = "solid" if annual_file
+(4 missing values generated)
+
+. foreach y of global R9_JUMP_YRS {
+  2.     replace c_status = "hollow gray: recording jump" if year == `y'
+  3. }
+(4 real changes made)
+
+. foreach y of global R9_DOUBT_YRS {
+  2.     replace c_status = "hollow gray: records in doubt" if year == `y'
+  3. }
+(4 real changes made)
+(4 real changes made)
+(4 real changes made)
+(4 real changes made)
+
+. replace c_status = "not drawn: no annual file" if !annual_file
+(4 real changes made)
+
+. * points whose value is printed on the chart: main line at period ends, as filed at first and last year
+. gen byte lab = 0
+
+. foreach p of global R9_INTERVALS {
+  2.     foreach y of local p {
+  3.         replace lab = 1 if year == `y' & mod(k, 2) == 1
+  4.     }
+  5. }
+(2 real changes made)
+(2 real changes made)
+(0 real changes made)
+(2 real changes made)
+(0 real changes made)
+(2 real changes made)
+
+. quietly summarize year if annual_file
+
+. replace lab = 1 if inlist(year, r(min), r(max)) & mod(k, 2) == 0
+(4 real changes made)
+
+. replace c_status = c_status + "; value printed" if lab & annual_file
+(12 real changes made)
+
+. * check: one row per plotted point (4 per year with a file) plus the 2016 rows
+. quietly count if annual_file
+
+. assert r(N) == 4 * `nyears'
+
+. sort k year
+
+. * show the panel and series name only where they change (easier to read)
+. by k: replace c_series = "" if _n > 1
+(48 real changes made)
+
+. replace c_panel = "" if !inlist(k, 1, 3) | year != year[1]
+(50 real changes made)
+
+. bysort k (year): replace c_panel = "" if _n > 1
+(0 real changes made)
+
+. sort k year
+
+. local nrows = _N + 1
+
+. putpdf clear
+
+. putpdf begin, pagesize(letter) font("Times New Roman", 9) margin(all, 0.7in)
+
+. putpdf paragraph, spacing(after, 4pt)
+
+. putpdf text ("Table R9-01. CO2 and energy per unit of value added, all manufacturing firms together: every plotted poi
+> nt"), bold font("Times New Roman", 10)
+
+. matrix colw = (13, 22, 6, 13, 8, 38)     // column widths, % of the text width
+
+. putpdf table tb = data(c_panel c_series c_year c_value c_firms c_status), varnames width(colw) ///
+>     border(all, nil) halign(left)
+
+. putpdf table tb(.,.), margin(top, 1pt) margin(bottom, 1pt)
+
+. putpdf table tb(1,1) = ("Panel"), bold
+
+. putpdf table tb(1,2) = ("Line (legend)"), bold
+
+. putpdf table tb(1,3) = ("Year"), bold halign(right)
+
+. putpdf table tb(1,4) = ("Per million of VA"), bold halign(right)
+
+. putpdf table tb(1,5) = ("Firms"), bold halign(right)
+
+. putpdf table tb(1,6) = ("Status on chart"), bold
+
+. putpdf table tb(.,3), halign(right)
+
+. putpdf table tb(.,4), halign(right)
+
+. putpdf table tb(.,5), halign(right)
+
+. * booktabs-like: rule above and below the header, rule at the bottom; no vertical lines
+. putpdf table tb(1,.), border(top, single, black)
+
+. putpdf table tb(1,.), border(bottom, single, black)
+
+. putpdf table tb(`nrows',.), border(bottom, single, black)
+
+. putpdf paragraph, spacing(before, 6pt) font("Times New Roman", 8)
+
+. putpdf text (`"`ntext' Per million of VA = tonnes of CO2 (a) or GJ (b) per million money units of value added. Firms =
+>  firm-years behind the point (one row per firm and year)."')
+
+. putpdf paragraph, font("Times New Roman", 8)
+
+. putpdf text ("`srcnote'")
+
+. putpdf paragraph, font("Times New Roman", 8)
+
+. putpdf text ("`devnote'")
+
+. 
+. * second table: what the extreme-record rule sets aside each year, and the main
+. * line at other cut-offs (the as-filed line = no cut-off)
+. use `yearly', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep year annual_file n_universe_as_filed n_set_aside set_aside_share_firmyears_pct set_aside_share_co2_pct ///
+>      set_aside_share_gj_pct set_aside_share_va_pct co2_per_mva_main co2_per_mva_cut* co2_per_mva_asfiled
+
+. local cutcols ""
+
+. foreach k of global R9_RULE_ALT {
+  2.     if `k' < $R9_RULE local cutcols "`cutcols' `k'"
+  3. }
+
+. local cutcols "`cutcols' $R9_RULE"
+
+. foreach k of global R9_RULE_ALT {
+  2.     if `k' > $R9_RULE local cutcols "`cutcols' `k'"
+  3. }
+
+. gen str4 t_year = string(year)
+
+. gen str8 t_n  = strofreal(n_set_aside, "%12.0fc") if annual_file
+(1 missing value generated)
+
+. gen str8 t_fy = strofreal(set_aside_share_firmyears_pct, "%9.1f") if annual_file
+(1 missing value generated)
+
+. gen str8 t_co = strofreal(set_aside_share_co2_pct, "%9.1f") if annual_file
+(1 missing value generated)
+
+. gen str8 t_gj = strofreal(set_aside_share_gj_pct, "%9.1f") if annual_file
+(1 missing value generated)
+
+. gen str8 t_va = strofreal(set_aside_share_va_pct, "%9.1f") if annual_file
+(1 missing value generated)
+
+. local tvars "t_year t_n t_fy t_co t_gj t_va"
+
+. foreach k of local cutcols {
+  2.     if `k' == $R9_RULE gen str10 t_c`k' = strofreal(co2_per_mva_main, "%12.1fc") if annual_file
+  3.     else gen str10 t_c`k' = strofreal(co2_per_mva_cut`k', "%12.1fc") if annual_file
+  4.     local tvars "`tvars' t_c`k'"
+  5. }
+(1 missing value generated)
+(1 missing value generated)
+(1 missing value generated)
+(1 missing value generated)
+(1 missing value generated)
+
+. gen str10 t_none = strofreal(co2_per_mva_asfiled, "%12.1fc") if annual_file
+(1 missing value generated)
+
+. replace t_n = "no annual file" if !annual_file
+variable t_n was str8 now str14
+(1 real change made)
+
+. local tvars "`tvars' t_none"
+
+. local ncol : word count `tvars'
+
+. local nrows2 = _N + 1
+
+. putpdf sectionbreak, pagesize(letter) landscape margin(all, 0.7in)
+
+. putpdf paragraph, spacing(after, 4pt)
+
+. putpdf text ("Table R9-01b. Firm-years set aside by the extreme-record rule, and CO2 per million of value added at oth
+> er cut-offs"), bold font("Times New Roman", 10)
+
+. matrix colw2 = (6, 11, 8, 7, 7, 8, 8, 8, 9, 9, 9, 10)   // % of the text width
+
+. if colsof(colw2) != `ncol' matrix colw2 = J(1, `ncol', 100 / `ncol')
+
+. putpdf table tc = data(`tvars'), varnames width(colw2) border(all, nil) halign(left)
+
+. putpdf table tc(.,.), margin(top, 1pt) margin(bottom, 1pt) halign(right) font("Times New Roman", 9)
+
+. putpdf table tc(.,1), halign(left)
+
+. putpdf table tc(1,1) = ("Year"), bold halign(left) font("Times New Roman", 9)
+
+. putpdf table tc(1,2) = ("Set aside (firm-years)"), bold halign(right) font("Times New Roman", 9)
+
+. putpdf table tc(1,3) = ("% of firm-years"), bold halign(right) font("Times New Roman", 9)
+
+. putpdf table tc(1,4) = ("% of CO2"), bold halign(right) font("Times New Roman", 9)
+
+. putpdf table tc(1,5) = ("% of energy"), bold halign(right) font("Times New Roman", 9)
+
+. putpdf table tc(1,6) = ("% of value added"), bold halign(right) font("Times New Roman", 9)
+
+. local c 6
+
+. foreach k of local cutcols {
+  2.     local ++c
+  3.     local hd "Cut-off `k'×"
+  4.     if `k' == $R9_RULE local hd "Cut-off `k'× (main line)"
+  5.     putpdf table tc(1,`c') = ("`hd'"), bold halign(right) font("Times New Roman", 9)
+  6. }
+
+. putpdf table tc(1,`ncol') = ("No cut-off (as filed)"), bold halign(right) font("Times New Roman", 9)
+
+. putpdf table tc(1,.), border(top, single, black)
+
+. putpdf table tc(1,.), border(bottom, single, black)
+
+. putpdf table tc(`nrows2',.), border(bottom, single, black)
+
+. putpdf paragraph, spacing(before, 6pt) font("Times New Roman", 8)
+
+. putpdf text ("Notes: A firm-year is set aside when its energy per unit of value added is over the cut-off times that o
+> f the middle (median) firm of its 2-digit sector that year. Shares are of the year's as-filed totals. The last columns
+>  give CO2 (tonnes) per million money units of value added, all firms together, with the cut-off at each multiple; the 
+> main line uses $R9_RULE. Energy records: `jy' recording jump; `d1'–`d2' partly in doubt.")
+
+. putpdf paragraph, font("Times New Roman", 8)
+
+. putpdf text ("`srcnote'")
+
+. putpdf paragraph, font("Times New Roman", 8)
+
+. putpdf text ("`devnote'")
+
+. putpdf save "tables/`fname'_table.pdf", replace
+successfully created "/Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r9-decarbonisation-dec
+> omposition/tables/01_aggregate_intensity_path_table.pdf"
+
+. display "table -> tables/`fname'_table.pdf"
+table -> tables/01_aggregate_intensity_path_table.pdf
+
+. timer off 1
+
+. quietly timer list 1
+
+. local elapsed = strtrim(string(r(t1), "%9.1f"))
+
+. display "FINISHED: figure -> figures/`fname'.png (elapsed `elapsed' s)"
+FINISHED: figure -> figures/01_aggregate_intensity_path.png (elapsed 3.6 s)
+
+. quietly log close          // keeps FINISHED as the last output line of the log
