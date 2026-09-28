@@ -450,10 +450,9 @@ foreach x in exp imp fdi {
             * --- pooled term (Bu Deasy's "x Post2020"), same rows ---
             quietly reghdfe y`k' tpost if es, absorb(`ab_`v'') vce(cluster firm_id)
             assert e(N) == `N'
-            local S2 = e(num_singletons)
-            if "`S2'" == "" local S2 0
+            * singletons: those the yearly model dropped (the pooled model runs on its rows, so it drops none)
             post `P' ("`x'") ("`v'") (`k') ("pooled") (.) (_b[tpost]) (_se[tpost]) (e(df_r)) (e(N)) (e(N_clust)) ///
-                (`S2') (.) (.) (`r1') (`r0') (`fg1') (`fg0') (`bp')
+                (`S') (.) (.) (`r1') (`r0') (`fg1') (`fg0') (`bp')
         }
     }
 }

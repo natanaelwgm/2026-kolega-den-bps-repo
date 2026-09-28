@@ -3,7 +3,7 @@
        log:  /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r10-covid-resilience-internatio
 > nalised/logs/04_all_firms_output_jobs.log
   log type:  text
- opened on:  28 Sep 2026, 17:38:08
+ opened on:  28 Sep 2026, 18:13:16
 
 . timer clear 1
 
@@ -73,7 +73,7 @@ Step 1/8: load identity, industry, province, status flags and the two outcomes
 . tempfile firmyear0
 
 . save `firmyear0'                          // the firm-year rows; the cohort block keeps one row per firm
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_65406.000001 saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.000001 saved as .dta format
 
 . 
 . *---------------------------------------------------------------------------
@@ -303,7 +303,7 @@ Step 2/8: the COVID cohort and the frozen groups (blocks copied unchanged from R
 . tempfile cohort
 
 . save `cohort'
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_65406.000002 saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.000002 saved as .dta format
 
 . use `firmyear0', clear
 (G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
@@ -576,7 +576,7 @@ unavailabl |        closed
 . tempfile evdata
 
 . save `evdata'
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_65406.000003 saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.000003 saved as .dta format
 
 . 
 . *---------------------------------------------------------------------------
@@ -608,7 +608,7 @@ Step 4/8: regressions: group x each file (reference 2019), and the pooled term
 . postfile `P' str8 grouping str8 version byte outcome_id str8 term int year double(b se df_r) ///
 >     long(rows firms singletons n_g1 n_g0 cl_g1 cl_g0 ref_g1 ref_g0 firms_g1 firms_g0 closed_rows) ///
 >     double before_p using `res', replace
-(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_65406.000004 not found)
+(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.000004 not found)
 
 . foreach x in exp imp fdi {
   2.     display "   group `x'"
@@ -692,14 +692,12 @@ Step 4/8: regressions: group x each file (reference 2019), and the pooled term
  71.             * --- pooled term (Bu Deasy's "x Post2020"), same rows ---
 .             quietly reghdfe y`k' tpost if es, absorb(`ab_`v'') vce(cluster firm_id)
  72.             assert e(N) == `N'
- 73.             local S2 = e(num_singletons)
- 74.             if "`S2'" == "" local S2 0
- 75.             post `P' ("`x'") ("`v'") (`k') ("pooled") (.) (_b[tpost]) (_se[tpost]) (e(df_r)) (e(N)) (e(N_clust)) //
-> /
->                 (`S2') (.) (.) (.) (.) (`r1') (`r0') (`fg1') (`fg0') (`ncl') (`bp')
- 76.         }
- 77.     }
- 78. }
+ 73.             * singletons: those the yearly model dropped (the pooled model runs on its rows, so it drops none)
+.             post `P' ("`x'") ("`v'") (`k') ("pooled") (.) (_b[tpost]) (_se[tpost]) (e(df_r)) (e(N)) (e(N_clust)) ///
+>                 (`S') (.) (.) (.) (.) (`r1') (`r0') (`fg1') (`fg0') (`ncl') (`bp')
+ 74.         }
+ 75.     }
+ 76. }
    group exp
 (G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
 (3,892 observations deleted)
@@ -777,7 +775,7 @@ Step 5/8: tables -> CSV (numbers written before drawing)
 . tempfile refrows
 
 . save `refrows'
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_65406.000006 saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.000006 saved as .dta format
 
 . restore
 
@@ -805,7 +803,7 @@ file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_65406.000006 saved as .
 (0 real changes made)
 (0 real changes made)
 (0 real changes made)
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_65406.000008 saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.000008 saved as .dta format
 
 . gen byte reference = term == "`cohort_year'"
 
@@ -1739,30 +1737,30 @@ file tables/04_all_firms_output_jobs.csv saved
   +------------------------------------------------------------------------------------------------------+
   | grouping    version   outcome_id   before_p   firms_g1   firms_g0    rows   closed_rows   singletons |
   |------------------------------------------------------------------------------------------------------|
-  |      exp     closed            1     0.0054        401       1198    9387          1262            0 |
-  |      exp     closed            2     0.0931        401       1198    9385          1262            0 |
-  |      exp       stay            1     0.0345        243        801    6165             0            0 |
-  |      exp       stay            2     0.1305        243        801    6163             0            0 |
-  |      exp     infile            1     0.0095        401       1198    8114             0            0 |
-  |      exp     infile            2     0.0883        401       1198    8112             0            0 |
+  |      exp     closed            1     0.0054        401       1198    9387          1262           29 |
+  |      exp     closed            2     0.0931        401       1198    9385          1262           29 |
+  |      exp       stay            1     0.0345        243        801    6165             0           32 |
+  |      exp       stay            2     0.1305        243        801    6163             0           32 |
+  |      exp     infile            1     0.0095        401       1198    8114             0           26 |
+  |      exp     infile            2     0.0883        401       1198    8112             0           26 |
   |      exp   fyclosed            1     0.0330        402       1202    9416          1276            0 |
   |      exp   fyclosed            2     0.0456        402       1202    9414          1276            0 |
   |------------------------------------------------------------------------------------------------------|
-  |      imp     closed            1     0.0060       1328        933   13279          1760            0 |
-  |      imp     closed            2     0.2178       1328        933   13277          1760            0 |
-  |      imp       stay            1     0.4871        847        634    8748             0            0 |
-  |      imp       stay            2     0.6912        847        634    8746             0            0 |
-  |      imp     infile            1     0.0032       1328        933   11512             0            0 |
-  |      imp     infile            2     0.2434       1328        933   11510             0            0 |
+  |      imp     closed            1     0.0060       1328        933   13279          1760           29 |
+  |      imp     closed            2     0.2178       1328        933   13277          1760           29 |
+  |      imp       stay            1     0.4871        847        634    8748             0           22 |
+  |      imp       stay            2     0.6912        847        634    8746             0           22 |
+  |      imp     infile            1     0.0032       1328        933   11512             0           22 |
+  |      imp     infile            2     0.2434       1328        933   11510             0           22 |
   |      imp   fyclosed            1     0.0000       1329        937   13308          1774            0 |
   |      imp   fyclosed            2     0.0050       1329        937   13306          1774            0 |
   |------------------------------------------------------------------------------------------------------|
-  |      fdi     closed            1     0.1623        126       2135   13279          1760            0 |
-  |      fdi     closed            2     0.6295        126       2135   13277          1760            0 |
-  |      fdi       stay            1     0.0479         63       1418    8748             0            0 |
-  |      fdi       stay            2     0.4056         63       1418    8746             0            0 |
-  |      fdi     infile            1     0.1287        126       2135   11512             0            0 |
-  |      fdi     infile            2     0.6097        126       2135   11510             0            0 |
+  |      fdi     closed            1     0.1623        126       2135   13279          1760           29 |
+  |      fdi     closed            2     0.6295        126       2135   13277          1760           29 |
+  |      fdi       stay            1     0.0479         63       1418    8748             0           22 |
+  |      fdi       stay            2     0.4056         63       1418    8746             0           22 |
+  |      fdi     infile            1     0.1287        126       2135   11512             0           22 |
+  |      fdi     infile            2     0.6097        126       2135   11510             0           22 |
   |      fdi   fyclosed            1     0.3567        127       2139   13308          1774            0 |
   |      fdi   fyclosed            2     0.9445        127       2139   13306          1774            0 |
   +------------------------------------------------------------------------------------------------------+
@@ -1770,7 +1768,7 @@ file tables/04_all_firms_output_jobs.csv saved
 . tempfile ctsrc
 
 . save `ctsrc'
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_65406.000009 saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.000009 saved as .dta format
 
 . 
 . * Totals (table only): each group's total output and workers in each file as % of the same
@@ -1807,62 +1805,62 @@ file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_65406.000009 saved as .
  22.     }
  23. }
 (0 observations deleted)
-(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_65406.00000a not found)
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_65406.00000a saved as .dta format
+(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.00000a not found)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.00000a saved as .dta format
 (2 observations deleted)
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_65406.00000a saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.00000a saved as .dta format
 (0 observations deleted)
 (4,538 observations deleted)
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_65406.00000a saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.00000a saved as .dta format
 (2 observations deleted)
 (4,538 observations deleted)
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_65406.00000a saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.00000a saved as .dta format
 (0 observations deleted)
 (3,892 missing values generated)
 (3,892 observations deleted)
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_65406.00000a saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.00000a saved as .dta format
 (2 observations deleted)
 (3,892 missing values generated)
 (3,892 observations deleted)
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_65406.00000a saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.00000a saved as .dta format
 (0 observations deleted)
 (4,538 observations deleted)
 (2,573 missing values generated)
 (2,573 observations deleted)
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_65406.00000a saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.00000a saved as .dta format
 (2 observations deleted)
 (4,538 observations deleted)
 (2,573 missing values generated)
 (2,573 observations deleted)
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_65406.00000a saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.00000a saved as .dta format
 (0 observations deleted)
 (0 observations deleted)
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_65406.00000a saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.00000a saved as .dta format
 (2 observations deleted)
 (0 observations deleted)
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_65406.00000a saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.00000a saved as .dta format
 (0 observations deleted)
 (4,538 observations deleted)
 (0 observations deleted)
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_65406.00000a saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.00000a saved as .dta format
 (2 observations deleted)
 (4,538 observations deleted)
 (0 observations deleted)
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_65406.00000a saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.00000a saved as .dta format
 (0 observations deleted)
 (0 observations deleted)
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_65406.00000a saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.00000a saved as .dta format
 (2 observations deleted)
 (0 observations deleted)
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_65406.00000a saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.00000a saved as .dta format
 (0 observations deleted)
 (4,538 observations deleted)
 (0 observations deleted)
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_65406.00000a saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.00000a saved as .dta format
 (2 observations deleted)
 (4,538 observations deleted)
 (0 observations deleted)
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_65406.00000a saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.00000a saved as .dta format
 
 . use `tot', clear
 (G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
@@ -1948,7 +1946,7 @@ file tables/04_all_firms_output_jobs_totals.csv saved
 . tempfile totsrc
 
 . save `totsrc'
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_65406.00000r saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.00000r saved as .dta format
 
 . 
 . *---------------------------------------------------------------------------
@@ -2684,7 +2682,7 @@ table -> tables/04_all_firms_output_jobs_table.pdf (96 rows; 90 drawn or printed
 . tempfile csvb
 
 . save `csvb'
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_65406.00000t saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.00000t saved as .dta format
 
 . restore
 
@@ -2870,11 +2868,11 @@ file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_65406.00000t saved as .
 113.     restore
 114.     display "table -> tables/`file`tb''.pdf"
 115. }
-(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_65406.00000u not found)
+(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.00000u not found)
 successfully created "/Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r10-covid-resilience-i
 > nternationalised/tables/04_all_firms_output_jobs_regression.pdf"
 table -> tables/04_all_firms_output_jobs_regression.pdf
-(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_65406.00000w not found)
+(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.00000w not found)
 successfully created "/Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r10-covid-resilience-i
 > nternationalised/tables/04_all_firms_output_jobs_checks.pdf"
 table -> tables/04_all_firms_output_jobs_checks.pdf
@@ -2985,6 +2983,6 @@ table -> tables/04_all_firms_output_jobs_totals.pdf (28 rows)
 . local elapsed = strtrim(string(r(t1), "%9.1f"))
 
 . display "FINISHED: figure -> figures/`fname'.png (elapsed `elapsed' s)"
-FINISHED: figure -> figures/04_all_firms_output_jobs.png (elapsed 11.3 s)
+FINISHED: figure -> figures/04_all_firms_output_jobs.png (elapsed 12.2 s)
 
 . quietly log close          // keeps FINISHED as the last output line of the log

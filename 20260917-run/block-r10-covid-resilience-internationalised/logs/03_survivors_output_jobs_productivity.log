@@ -3,7 +3,7 @@
        log:  /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r10-covid-resilience-internatio
 > nalised/logs/03_survivors_output_jobs_productivity.log
   log type:  text
- opened on:  28 Sep 2026, 17:29:38
+ opened on:  28 Sep 2026, 18:12:58
 
 . timer clear 1
 
@@ -75,7 +75,7 @@ Step 1/8: load identity, industry, province, status flags and the outcomes
 . tempfile firmyear0
 
 . save `firmyear0'                          // the firm-year rows; the cohort block keeps one row per firm
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_49765.000001 saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26392.000001 saved as .dta format
 
 . 
 . *---------------------------------------------------------------------------
@@ -305,7 +305,7 @@ Step 2/8: the COVID cohort and the frozen groups (blocks copied unchanged from R
 . tempfile cohort
 
 . save `cohort'
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_49765.000002 saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26392.000002 saved as .dta format
 
 . use `firmyear0', clear
 (G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
@@ -517,7 +517,7 @@ Step 3/8: the sample, the outcomes and who stayed
 . tempfile evdata
 
 . save `evdata'
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_49765.000003 saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26392.000003 saved as .dta format
 
 . 
 . *---------------------------------------------------------------------------
@@ -546,7 +546,7 @@ Step 4/8: regressions: group x each file (reference 2019), and the pooled term
 
 . postfile `P' str8 grouping str8 version byte outcome_id str8 term int year double(b se df_r) ///
 >     long(rows firms singletons n_g1 n_g0 ref_g1 ref_g0 firms_g1 firms_g0) double before_p using `res', replace
-(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_49765.000004 not found)
+(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26392.000004 not found)
 
 . foreach x in exp imp fdi {
   2.     display "   group `x'"
@@ -625,14 +625,12 @@ Step 4/8: regressions: group x each file (reference 2019), and the pooled term
  66.             * --- pooled term (Bu Deasy's "x Post2020"), same rows ---
 .             quietly reghdfe y`k' tpost if es, absorb(`ab_`v'') vce(cluster firm_id)
  67.             assert e(N) == `N'
- 68.             local S2 = e(num_singletons)
- 69.             if "`S2'" == "" local S2 0
- 70.             post `P' ("`x'") ("`v'") (`k') ("pooled") (.) (_b[tpost]) (_se[tpost]) (e(df_r)) (e(N)) (e(N_clust)) //
-> /
->                 (`S2') (.) (.) (`r1') (`r0') (`fg1') (`fg0') (`bp')
- 71.         }
- 72.     }
- 73. }
+ 68.             * singletons: those the yearly model dropped (the pooled model runs on its rows, so it drops none)
+.             post `P' ("`x'") ("`v'") (`k') ("pooled") (.) (_b[tpost]) (_se[tpost]) (e(df_r)) (e(N)) (e(N_clust)) ///
+>                 (`S') (.) (.) (`r1') (`r0') (`fg1') (`fg0') (`bp')
+ 69.         }
+ 70.     }
+ 71. }
    group exp
 (G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
 (3,394 observations deleted)
@@ -698,7 +696,7 @@ Step 5/8: table -> CSV (numbers written before drawing)
 . tempfile refrows
 
 . save `refrows'
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_49765.000006 saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26392.000006 saved as .dta format
 
 . restore
 
@@ -724,7 +722,7 @@ file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_49765.000006 saved as .
 (33 real changes made, 33 to missing)
 (0 real changes made)
 (0 real changes made)
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_49765.000008 saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26392.000008 saved as .dta format
 
 . gen byte reference = term == "`cohort_year'"
 
@@ -1066,38 +1064,38 @@ file tables/03_survivors_output_jobs_productivity.csv saved
   +---------------------------------------------------------------------------------------+
   | grouping   version   outcome_id   before_p   firms_g1   firms_g0    rows   singletons |
   |---------------------------------------------------------------------------------------|
-  |      exp      stay            1     0.0217        243        801    6165            0 |
-  |      exp      stay            2     0.1539        243        801    6163            0 |
-  |      exp      stay            3     0.0048        243        801    6163            0 |
-  |      exp      stay            4     0.1333        182        633    2758            0 |
-  |      exp      stay            5     0.0009        243        801    6163            0 |
-  |      exp       all            1     0.0034        401       1198    8114            0 |
-  |      exp       all            2     0.1348        401       1198    8112            0 |
-  |      exp       all            3     0.0006        401       1198    8112            0 |
+  |      exp      stay            1     0.0217        243        801    6165           32 |
+  |      exp      stay            2     0.1539        243        801    6163           32 |
+  |      exp      stay            3     0.0048        243        801    6163           32 |
+  |      exp      stay            4     0.1333        182        633    2758          133 |
+  |      exp      stay            5     0.0009        243        801    6163           32 |
+  |      exp       all            1     0.0034        401       1198    8114           26 |
+  |      exp       all            2     0.1348        401       1198    8112           26 |
+  |      exp       all            3     0.0006        401       1198    8112           26 |
   |      exp    fystay            1     0.0328        243        806    6197            0 |
   |      exp    fystay            2     0.0656        243        806    6195            0 |
   |      exp    fystay            3     0.0106        243        806    6195            0 |
   |---------------------------------------------------------------------------------------|
-  |      imp      stay            1     0.4189        847        634    8748            0 |
-  |      imp      stay            2     0.7622        847        634    8746            0 |
-  |      imp      stay            3     0.4770        847        634    8746            0 |
-  |      imp      stay            4     0.2795        421        550    3175            0 |
-  |      imp      stay            5     0.4662        847        634    8746            0 |
-  |      imp       all            1     0.0023       1328        933   11512            0 |
-  |      imp       all            2     0.3387       1328        933   11510            0 |
-  |      imp       all            3     0.0224       1328        933   11510            0 |
+  |      imp      stay            1     0.4189        847        634    8748           22 |
+  |      imp      stay            2     0.7622        847        634    8746           22 |
+  |      imp      stay            3     0.4770        847        634    8746           22 |
+  |      imp      stay            4     0.2795        421        550    3175          244 |
+  |      imp      stay            5     0.4662        847        634    8746           22 |
+  |      imp       all            1     0.0023       1328        933   11512           22 |
+  |      imp       all            2     0.3387       1328        933   11510           22 |
+  |      imp       all            3     0.0224       1328        933   11510           22 |
   |      imp    fystay            1     0.0023        848        636    8770            0 |
   |      imp    fystay            2     0.0018        848        636    8768            0 |
   |      imp    fystay            3     0.2245        848        636    8768            0 |
   |---------------------------------------------------------------------------------------|
-  |      fdi      stay            1     0.0657         63       1418    8748            0 |
-  |      fdi      stay            2     0.3508         63       1418    8746            0 |
-  |      fdi      stay            3     0.0977         63       1418    8746            0 |
-  |      fdi      stay            4     0.9698         36        935    3175            0 |
-  |      fdi      stay            5     0.0767         63       1418    8746            0 |
-  |      fdi       all            1     0.1572        126       2135   11512            0 |
-  |      fdi       all            2     0.5150        126       2135   11510            0 |
-  |      fdi       all            3     0.0101        126       2135   11510            0 |
+  |      fdi      stay            1     0.0657         63       1418    8748           22 |
+  |      fdi      stay            2     0.3508         63       1418    8746           22 |
+  |      fdi      stay            3     0.0977         63       1418    8746           22 |
+  |      fdi      stay            4     0.9698         36        935    3175          244 |
+  |      fdi      stay            5     0.0767         63       1418    8746           22 |
+  |      fdi       all            1     0.1572        126       2135   11512           22 |
+  |      fdi       all            2     0.5150        126       2135   11510           22 |
+  |      fdi       all            3     0.0101        126       2135   11510           22 |
   |      fdi    fystay            1     0.0460         63       1421    8770            0 |
   |      fdi    fystay            2     0.2631         63       1421    8768            0 |
   |      fdi    fystay            3     0.1342         63       1421    8768            0 |
@@ -1106,7 +1104,7 @@ file tables/03_survivors_output_jobs_productivity.csv saved
 . tempfile ctsrc
 
 . save `ctsrc'
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_49765.000009 saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26392.000009 saved as .dta format
 
 . 
 . *---------------------------------------------------------------------------
@@ -1841,7 +1839,7 @@ table -> tables/03_survivors_output_jobs_productivity_table.pdf (144 rows; 117 d
 . tempfile csvb
 
 . save `csvb'
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_49765.00000b saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26392.00000b saved as .dta format
 
 . restore
 
@@ -1862,7 +1860,7 @@ file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_49765.00000b saved as .
 . tempfile regsrc
 
 . save `regsrc'
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_49765.00000c saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26392.00000c saved as .dta format
 
 . local ntabs 2
 
@@ -2040,11 +2038,11 @@ file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_49765.00000c saved as .
 119.     restore
 120.     display "table -> tables/`file`tb''.pdf"
 121. }
-(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_49765.00000d not found)
+(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26392.00000d not found)
 successfully created "/Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r10-covid-resilience-i
 > nternationalised/tables/03_survivors_output_jobs_productivity_regression.pdf"
 table -> tables/03_survivors_output_jobs_productivity_regression.pdf
-(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_49765.00000f not found)
+(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26392.00000f not found)
 successfully created "/Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r10-covid-resilience-i
 > nternationalised/tables/03_survivors_output_jobs_productivity_checks.pdf"
 table -> tables/03_survivors_output_jobs_productivity_checks.pdf
@@ -2058,6 +2056,6 @@ table -> tables/03_survivors_output_jobs_productivity_checks.pdf
 . local elapsed = strtrim(string(r(t1), "%9.1f"))
 
 . display "FINISHED: figure -> figures/`fname'.png (elapsed `elapsed' s)"
-FINISHED: figure -> figures/03_survivors_output_jobs_productivity.png (elapsed 13.3 s)
+FINISHED: figure -> figures/03_survivors_output_jobs_productivity.png (elapsed 14.7 s)
 
 . quietly log close          // keeps FINISHED as the last output line of the log
