@@ -1,0 +1,1299 @@
+------------------------------------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r7-foreign-acquisition-green-te
+> chnology/logs/01_acquisition_registry.log
+  log type:  text
+ opened on:  28 Sep 2026, 16:52:21
+
+. timer clear 1
+
+. timer on 1
+
+. display _newline "=== [`exhibit'] STARTING: foreign acquisitions by year (the R7 acquisition registry) ==="
+
+=== [R7-01] STARTING: foreign acquisitions by year (the R7 acquisition registry) ===
+
+. 
+. * ---- chart style (identical block in every file) ----
+. set scheme s1mono
+
+. capture graph set window fontface "Times New Roman"   // GUI Stata; console Stata keeps its default font
+
+. * Note: this changes your Stata graph font permanently; undo with: graph set window fontface default
+. local devnote "Development data — obscured values, fictional firm panel. Not BPS findings."
+
+. local srcnote "Source: SI/IBS annual files 2010–2022 (masked), analysis_ready_data.dta."
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 1/7: load ownership, export and import status"
+Step 1/7: load ownership, export and import status
+
+. *---------------------------------------------------------------------------
+. * foreign_ownership_pct = share of the firm's capital held by foreign owners (0-100 %)
+. * fdi_10_flag           = 1 if that share is 10% or more (checked against the share below)
+. * export_flag, import_flag = used only to count firms that also start exporting or
+. *                         importing in their acquisition year
+. use firm_id year foreign_ownership_pct fdi_10_flag export_flag import_flag using "$DATA", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. isid firm_id year
+
+. local N_rows = _N
+
+. sort firm_id year
+
+. * The calendar years with no annual file (found in the data, never typed).
+. quietly summarize year
+
+. local yr0 = r(min)
+
+. local yr1 = r(max)
+
+. local gapyr ""
+
+. forvalues t = `yr0'/`yr1' {
+  2.     quietly count if year == `t'
+  3.     if r(N) == 0 local gapyr `gapyr' `t'
+  4. }
+
+. display "   files from `yr0' to `yr1'; calendar years with no file: `gapyr'"
+   files from 2010 to 2022; calendar years with no file: 2016
+
+. local gapcs = subinstr(strtrim(itrim("`gapyr' 0")), " ", ",", .)   // comma list for inlist() (0 = none)
+
+. 
+. *===========================================================================
+. * ACQUISITION REGISTRY (copy exactly into later R7 files)
+. *---------------------------------------------------------------------------
+. * Needs in memory: firm_id year foreign_ownership_pct fdi_10_flag export_flag
+. *   import_flag, one row per firm and year (other variables may be there too).
+. * Missing ownership is unknown, never read as "domestic".
+. * Main rule (rule A of R2-08, same dates): acquisition year = the first year a
+. *   firm is seen with 10%+ foreign ownership, if it was seen below 10% in some
+. *   earlier year. Every answer of the year in acq_bad is treated as unknown.
+. *   A firm foreign-owned when first seen can never be dated (left out).
+. * Makes, one value per firm repeated on all its rows:
+. *   acq_key       9001 never seen 10%+ foreign-owned (the comparison firms)
+. *                 9002 10%+ foreign-owned when first seen (start unknown: left out)
+. *                 9003 no usable ownership answer (left out)
+. *                 otherwise the acquisition year
+. *   acq_year      acquisition year (missing = not an acquirer)
+. *   acq_exact     1 = seen below 10% in the calendar year just before (exact date);
+. *                 0 = the last "below 10%" answer is 2+ years earlier (approximate)
+. *   acq_after     0 = acquired up to the Paris year (acq_paris), 1 = acquired later
+. *   acq_share     foreign share (%) in the acquisition year
+. *   acq_major     1 = 50%+ foreign in the acquisition year (majority), 0 = 10-49%
+. *   acq_from0     1 = the last answer before the acquisition was exactly 0%
+. *   acq_next      foreign share (%) at the next usable answer (missing = none)
+. *   acq_stays     1 = still 10%+ at the next answer, 0 = back below 10%, . = no later answer
+. *   acq_blip      1 = back below 10% in the calendar year right after (one-year blip),
+. *                 0 = still 10%+ that year, . = no usable answer that year
+. *   acq_rev       1 = seen back below 10% in any later year, 0 = never, . = no later answer
+. *   acq_exp_start 1 = starts exporting in the acquisition year (last known answer
+. *                 before it "no", this year "yes"); acq_imp_start the same for importing
+. * The same rule with other ownership lines (key, year, exact for each):
+. *   _raw  10%+, every answer as filed (acq_bad year kept)
+. *   _maj  below 10% -> 50%+ (majority); comparison = never 50%+
+. *   _any  exactly 0% -> above 0%; comparison = never above 0%
+. *---------------------------------------------------------------------------
+. local acq_bad   "2020"          // ownership answers of this year are treated as unknown
+
+. local acq_paris "2015"          // Paris Agreement adopted December 2015
+
+. isid firm_id year                // the registry needs one row per firm and year
+
+. * Check: the 10% flag is the foreign share cut at 10%.
+. assert fdi_10_flag == (foreign_ownership_pct >= 10) if !missing(foreign_ownership_pct)
+
+. assert missing(fdi_10_flag) if missing(foreign_ownership_pct)
+
+. * Check: in acq_bad far more firms are marked foreign-owned than in the other years.
+. preserve
+
+. collapse (mean) acq_sh = fdi_10_flag, by(year)
+
+. quietly summarize acq_sh if year != `acq_bad', detail
+
+. local acq_sh_other = r(p50)
+
+. quietly summarize acq_sh if year == `acq_bad'
+
+. local acq_sh_bad = r(mean)
+
+. restore
+
+. if `acq_sh_bad' < 2 * `acq_sh_other' display "   WARNING: 10%+ foreign share in `acq_bad' looks normal (" %4.2f `acq_s
+> h_bad' " vs " %4.2f `acq_sh_other' ") - re-check acq_bad"
+
+. else display "   10%+ foreign share: `acq_bad' " %4.2f `acq_sh_bad' " vs middle of other years " %4.2f `acq_sh_other' 
+> " (`acq_bad' answers treated as unknown)"
+   10%+ foreign share: 2020 0.47 vs middle of other years 0.09 (2020 answers treated as unknown)
+
+. gen double acq_own = foreign_ownership_pct
+(311 missing values generated)
+
+. replace acq_own = . if year == `acq_bad'
+(2,936 real changes made, 2,936 to missing)
+
+. sort firm_id year
+
+. foreach r in main raw maj any {
+  2.     local s   = cond("`r'" == "main", "", "_`r'")
+  3.     local own = cond("`r'" == "raw", "foreign_ownership_pct", "acq_own")
+  4.     local yes "`own' >= 10"                       // foreign-owned
+  5.     local no  "`own' < 10"                        // domestic
+  6.     if "`r'" == "maj" local yes "`own' >= 50"
+  7.     if "`r'" == "any" local yes "`own' > 0"
+  8.     if "`r'" == "any" local no  "`own' == 0"
+  9.     by firm_id: egen int acq_fy = min(cond(`yes' & !missing(`own'), year, .))   // first "yes"
+ 10.     by firm_id: egen int acq_fn = min(cond(`no'  & !missing(`own'), year, .))   // first "no"
+ 11.     by firm_id: egen int acq_nk = total(!missing(`own'))                       // usable answers
+ 12.     gen int acq_key`s' = .
+ 13.     replace acq_key`s' = 9003 if acq_nk == 0
+ 14.     replace acq_key`s' = 9001 if acq_nk > 0 & missing(acq_fy)
+ 15.     replace acq_key`s' = 9002 if acq_nk > 0 & !missing(acq_fy) & (missing(acq_fn) | acq_fn > acq_fy)
+ 16.     replace acq_key`s' = acq_fy if acq_nk > 0 & !missing(acq_fy, acq_fn) & acq_fn < acq_fy
+ 17.     assert !missing(acq_key`s')
+ 18.     gen int acq_year`s' = acq_key`s' if acq_key`s' < 9000
+ 19.     by firm_id: egen int acq_ln = max(cond(`no' & !missing(`own', acq_year`s') & year < acq_year`s', year, .))
+ 20.     gen byte acq_exact`s' = acq_ln == acq_year`s' - 1 if !missing(acq_year`s')
+ 21.     drop acq_fy acq_fn acq_nk acq_ln
+ 22. }
+(24,333 missing values generated)
+(1,356 missing values generated)
+(33,049 missing values generated)
+(398 real changes made)
+(23,935 real changes made)
+(3,099 real changes made)
+(5,617 real changes made)
+(27,432 missing values generated)
+(27,432 missing values generated)
+(27,432 missing values generated)
+(17,404 missing values generated)
+(1,095 missing values generated)
+(33,049 missing values generated)
+(32 real changes made)
+(17,372 real changes made)
+(3,668 real changes made)
+(11,977 real changes made)
+(21,072 missing values generated)
+(21,072 missing values generated)
+(21,072 missing values generated)
+(25,018 missing values generated)
+(1,356 missing values generated)
+(33,049 missing values generated)
+(398 real changes made)
+(24,620 real changes made)
+(2,853 real changes made)
+(5,178 real changes made)
+(27,871 missing values generated)
+(27,871 missing values generated)
+(27,871 missing values generated)
+(24,210 missing values generated)
+(1,378 missing values generated)
+(33,049 missing values generated)
+(398 real changes made)
+(23,812 real changes made)
+(3,157 real changes made)
+(5,682 real changes made)
+(27,367 missing values generated)
+(27,367 missing values generated)
+(27,367 missing values generated)
+
+. assert acq_year != `acq_bad'
+
+. gen byte acq_after = acq_year > `acq_paris' if !missing(acq_year)
+(27,432 missing values generated)
+
+. * Details of the main acquisition (every earlier answer is below 10% by construction).
+. by firm_id: egen double acq_share = max(cond(year == acq_year, acq_own, .))
+(27,432 missing values generated)
+
+. gen byte acq_major = acq_share >= 50 if !missing(acq_year)
+(27,432 missing values generated)
+
+. by firm_id: egen int acq_py = max(cond(!missing(acq_own, acq_year) & year < acq_year, year, .))
+(27,432 missing values generated)
+
+. by firm_id: egen double acq_prev = max(cond(year == acq_py, acq_own, .))
+(27,432 missing values generated)
+
+. gen byte acq_from0 = acq_prev == 0 if !missing(acq_year)
+(27,432 missing values generated)
+
+. by firm_id: egen int acq_ny = min(cond(!missing(acq_own, acq_year) & year > acq_year, year, .))
+(28,585 missing values generated)
+
+. by firm_id: egen double acq_next = max(cond(year == acq_ny, acq_own, .))
+(28,585 missing values generated)
+
+. gen byte acq_stays = acq_next >= 10 if !missing(acq_year, acq_next)
+(28,585 missing values generated)
+
+. * Unknown stays unknown: no answer in the next calendar year -> blip missing;
+. * no later answer at all -> "ever back below" missing (never read as 0).
+. gen byte acq_blip = acq_next < 10 if !missing(acq_year, acq_next) & acq_ny == acq_year + 1
+(29,581 missing values generated)
+
+. by firm_id: egen byte acq_rev = max(!missing(acq_own, acq_year) & year > acq_year & acq_own < 10)
+
+. replace acq_rev = . if missing(acq_year, acq_ny)
+(28,585 real changes made, 28,585 to missing)
+
+. * Starting to export or import in the acquisition year: this year "yes" and the
+. * last known answer before it "no" (any gap in between).
+. foreach x in exp imp {
+  2.     local v = cond("`x'" == "exp", "export_flag", "import_flag")
+  3.     gen byte acq_pv = .
+  4.     by firm_id: replace acq_pv = cond(!missing(`v'[_n-1]), `v'[_n-1], acq_pv[_n-1]) if _n > 1
+  5.     by firm_id: egen byte acq_`x'_start = max(year == acq_year & `v' == 1 & acq_pv == 0)
+  6.     replace acq_`x'_start = . if missing(acq_year)
+  7.     drop acq_pv
+  8. }
+(33,049 missing values generated)
+(18,588 real changes made)
+(27,432 real changes made, 27,432 to missing)
+(33,049 missing values generated)
+(22,586 real changes made)
+(27,432 real changes made, 27,432 to missing)
+
+. drop acq_py acq_prev acq_ny
+
+. assert inlist(acq_major, 0, 1) & inlist(acq_exact, 0, 1) if !missing(acq_year)
+
+. assert acq_share >= 10 & !missing(acq_share) if !missing(acq_year)
+
+. * ---- end of ACQUISITION REGISTRY ----
+. *===========================================================================
+. 
+. *---------------------------------------------------------------------------
+. display "Step 2/7: counts by acquisition year and by firm group (one row per firm)"
+Step 2/7: counts by acquisition year and by firm group (one row per firm)
+
+. *---------------------------------------------------------------------------
+. tempfile rows firmfile yearly
+
+. save `rows'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_80439.000002 saved as .dta format
+
+. * Where the as-filed acq_bad starts go once that year's answers are unknown.
+. egen byte ftag = tag(firm_id)
+
+. quietly count if ftag & acq_year_raw == `acq_bad'
+
+. local n_bad = r(N)
+
+. quietly count if ftag & acq_year_raw == `acq_bad' & acq_key == 9001
+
+. local n_bad_never = r(N)
+
+. quietly count if ftag & acq_year_raw == `acq_bad' & !missing(acq_year)
+
+. local n_bad_later = r(N)
+
+. assert `n_bad' == `n_bad_never' + `n_bad_later'
+
+. display "   starts dated `acq_bad' as filed: `n_bad'; with `acq_bad' unknown `n_bad_later' get a later year and `n_bad
+> _never' count as never foreign-owned"
+   starts dated 2020 as filed: 854; with 2020 unknown 56 get a later year and 798 count as never foreign-owned
+
+. keep if ftag
+(22,586 observations deleted)
+
+. keep firm_id acq_*
+
+. save `firmfile'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_80439.000003 saved as .dta format
+
+. local N_firms = _N
+
+. * The row skeleton: every calendar year from the first to the last file, the
+. * two Paris periods, all acquirers, the three other firm groups, all firms.
+. clear
+
+. local ny = `yr1' - `yr0' + 1
+
+. set obs `=`ny' + 7'
+Number of observations (_N) was 0, now 20.
+
+. gen int row_order = _n
+
+. gen int row_key = `yr0' - 1 + _n if _n <= `ny'
+(7 missing values generated)
+
+. replace row_key = 8001 if _n == `ny' + 1       // acquired up to the Paris year
+(1 real change made)
+
+. replace row_key = 8002 if _n == `ny' + 2       // acquired after it
+(1 real change made)
+
+. replace row_key = 8000 if _n == `ny' + 3       // all acquirers
+(1 real change made)
+
+. replace row_key = 9001 if _n == `ny' + 4
+(1 real change made)
+
+. replace row_key = 9002 if _n == `ny' + 5
+(1 real change made)
+
+. replace row_key = 9003 if _n == `ny' + 6
+(1 real change made)
+
+. replace row_key = 9999 if _n == `ny' + 7
+(1 real change made)
+
+. tempfile skel
+
+. save `skel'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_80439.000005 saved as .dta format
+
+. * Main-rule counts per acquisition year (and per firm group).
+. use `firmfile', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. gen byte one = 1
+
+. gen byte minor   = acq_major == 0
+
+. gen byte approx  = acq_exact == 0
+
+. gen byte later   = !missing(acq_stays)
+
+. gen byte back    = acq_stays == 0
+
+. gen byte samemaj = acq_year_maj == acq_year & !missing(acq_year)
+
+. gen byte sameany = acq_year_any == acq_year & !missing(acq_year)
+
+. collapse (sum) acq_firms = one acq_majority = acq_major acq_minority = minor acq_exact_date = acq_exact ///
+>     acq_approx_date = approx acq_from_zero = acq_from0 acq_with_later_answer = later ///
+>     acq_still_10plus_next = acq_stays acq_back_below_next = back acq_blip_next_year = acq_blip ///
+>     acq_back_below_ever = acq_rev acq_export_start_same_year = acq_exp_start ///
+>     acq_import_start_same_year = acq_imp_start, by(acq_key)
+
+. rename acq_key row_key
+
+. tempfile cm
+
+. save `cm'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_80439.000006 saved as .dta format
+
+. * The other three rules: firms per start year / group, and how many keep the main date.
+. foreach r in raw maj any {
+  2.     use `firmfile', clear
+  3.     gen byte same = acq_year_`r' == acq_year & !missing(acq_year_`r')
+  4.     collapse (count) firms_`r' = firm_id (sum) same_date_`r' = same, by(acq_key_`r')
+  5.     rename acq_key_`r' row_key
+  6.     tempfile c`r'
+  7.     save `c`r''
+  8. }
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_80439.000007 saved as .dta format
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_80439.000008 saved as .dta format
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_80439.000009 saved as .dta format
+
+. use `skel', clear
+
+. foreach f in cm craw cmaj cany {
+  2.     merge 1:1 row_key using ``f'', nogenerate
+  3. }
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             7
+        from master                         7  
+        from using                          0  
+
+    Matched                                13  
+    -----------------------------------------
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             6
+        from master                         6  
+        from using                          0  
+
+    Matched                                14  
+    -----------------------------------------
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             7
+        from master                         7  
+        from using                          0  
+
+    Matched                                13  
+    -----------------------------------------
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             7
+        from master                         7  
+        from using                          0  
+
+    Matched                                13  
+    -----------------------------------------
+
+. assert !missing(row_order)
+
+. * Paris periods and totals from the year rows.
+. local cnt acq_firms acq_majority acq_minority acq_exact_date acq_approx_date acq_from_zero ///
+>     acq_with_later_answer acq_still_10plus_next acq_back_below_next acq_blip_next_year ///
+>     acq_back_below_ever acq_export_start_same_year acq_import_start_same_year
+
+. local oth firms_raw same_date_raw firms_maj same_date_maj firms_any same_date_any
+
+. foreach v of local cnt {
+  2.     replace `v' = 0 if missing(`v') & row_key < 8000 & !inlist(row_key, `yr0', `gapcs')
+  3.     quietly summarize `v' if row_key < 8000 & row_key <= `acq_paris'
+  4.     replace `v' = r(sum) if row_key == 8001
+  5.     quietly summarize `v' if row_key < 8000 & row_key > `acq_paris'
+  6.     replace `v' = r(sum) if row_key == 8002
+  7.     quietly summarize `v' if row_key < 8000
+  8.     replace `v' = r(sum) if row_key == 8000
+  9. }
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+
+. foreach v of local oth {
+  2.     replace `v' = 0 if missing(`v') & row_key < 8000 & !inlist(row_key, `yr0', `gapcs')
+  3.     quietly summarize `v' if row_key < 8000
+  4.     replace `v' = r(sum) if row_key == 8000
+  5. }
+(0 real changes made)
+(1 real change made)
+(0 real changes made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+
+. foreach v in firms_raw firms_maj firms_any {
+  2.     quietly summarize `v' if row_key < 8000 | inrange(row_key, 9001, 9003)
+  3.     replace `v' = r(sum) if row_key == 9999
+  4. }
+(1 real change made)
+(1 real change made)
+(1 real change made)
+
+. quietly summarize acq_firms if inlist(row_key, 8000, 9001, 9002, 9003)
+
+. replace acq_firms = r(sum) if row_key == 9999
+(1 real change made)
+
+. * The main rule gives no start in acq_bad (answers unknown): keep that cell empty, not 0.
+. foreach v of local cnt {
+  2.     replace `v' = . if row_key == `acq_bad'
+  3. }
+(1 real change made, 1 to missing)
+(1 real change made, 1 to missing)
+(1 real change made, 1 to missing)
+(1 real change made, 1 to missing)
+(1 real change made, 1 to missing)
+(1 real change made, 1 to missing)
+(1 real change made, 1 to missing)
+(1 real change made, 1 to missing)
+(1 real change made, 1 to missing)
+(1 real change made, 1 to missing)
+(1 real change made, 1 to missing)
+(1 real change made, 1 to missing)
+(1 real change made, 1 to missing)
+
+. * The majority and above-0% rules also treat acq_bad answers as unknown: empty too.
+. foreach v in firms_maj same_date_maj firms_any same_date_any {
+  2.     replace `v' = . if row_key == `acq_bad'
+  3. }
+(1 real change made, 1 to missing)
+(1 real change made, 1 to missing)
+(1 real change made, 1 to missing)
+(1 real change made, 1 to missing)
+
+. * No acquirer of the year has a later answer (last file): what happens next is unknown.
+. foreach v in acq_still_10plus_next acq_back_below_next acq_back_below_ever {
+  2.     replace `v' = . if row_key < 8000 & acq_with_later_answer == 0
+  3. }
+(1 real change made, 1 to missing)
+(1 real change made, 1 to missing)
+(1 real change made, 1 to missing)
+
+. * A one-year blip cannot be seen when the next calendar year has no file, no
+. * usable answer, or is after the last file: leave that cell empty, not 0.
+. foreach g in `gapyr' `acq_bad' `=`yr1'+1' {
+  2.     replace acq_blip_next_year = . if row_key == `g' - 1
+  3. }
+(1 real change made, 1 to missing)
+(1 real change made, 1 to missing)
+(1 real change made, 1 to missing)
+
+. foreach v in same_date_raw same_date_maj same_date_any {
+  2.     replace `v' = . if row_key > 9000
+  3. }
+(3 real changes made, 3 to missing)
+(3 real changes made, 3 to missing)
+(3 real changes made, 3 to missing)
+
+. * Firm-group rows carry only the firm count (the details are about acquirers).
+. foreach v of local cnt {
+  2.     if "`v'" != "acq_firms" replace `v' = . if inrange(row_key, 9001, 9999)
+  3. }
+(3 real changes made, 3 to missing)
+(3 real changes made, 3 to missing)
+(3 real changes made, 3 to missing)
+(3 real changes made, 3 to missing)
+(3 real changes made, 3 to missing)
+(3 real changes made, 3 to missing)
+(3 real changes made, 3 to missing)
+(3 real changes made, 3 to missing)
+(3 real changes made, 3 to missing)
+(3 real changes made, 3 to missing)
+(3 real changes made, 3 to missing)
+(3 real changes made, 3 to missing)
+
+. * Structural checks (hold on any data).
+. assert acq_firms == `N_firms' & firms_raw == `N_firms' & firms_maj == `N_firms' & firms_any == `N_firms' if row_key ==
+>  9999
+
+. assert acq_majority + acq_minority == acq_firms if row_key < 9000
+
+. assert acq_exact_date + acq_approx_date == acq_firms if row_key < 9000
+
+. assert acq_still_10plus_next + acq_back_below_next == acq_with_later_answer if row_key < 9000 & acq_with_later_answer 
+> > 0
+
+. assert (acq_blip_next_year <= acq_back_below_next | missing(acq_blip_next_year)) & acq_back_below_next <= acq_back_bel
+> ow_ever if row_key < 9000
+
+. quietly summarize acq_firms if inlist(row_key, 8001, 8002)
+
+. local chk = r(sum)
+
+. quietly summarize acq_firms if row_key == 8000
+
+. assert `chk' == r(sum)
+
+. assert firms_raw == `n_bad' if row_key == `acq_bad'
+
+. save `yearly'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_80439.000004 saved as .dta format
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 3/7: year-to-year ownership changes (all firms, every crossing, not only the first)"
+Step 3/7: year-to-year ownership changes (all firms, every crossing, not only the first)
+
+. *---------------------------------------------------------------------------
+. * Compared with the firm's previous usable answer (any gap). Main = acq_bad unknown.
+. use `rows', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. foreach r in main raw {
+  2.     local own = cond("`r'" == "raw", "foreign_ownership_pct", "acq_own")
+  3.     gen double pv = .
+  4.     by firm_id: replace pv = cond(!missing(`own'[_n-1]), `own'[_n-1], pv[_n-1]) if _n > 1
+  5.     gen byte tr_known_`r'   = !missing(pv, `own')
+  6.     gen byte tr_up10_`r'    = tr_known_`r' & pv < 10 & `own' >= 10
+  7.     gen byte tr_down10_`r'  = tr_known_`r' & pv >= 10 & `own' < 10
+  8.     if "`r'" == "main" {
+  9.         gen byte tr_up_any_main   = tr_known_`r' & pv == 0 & `own' > 0
+ 10.         gen byte tr_up_minor_main = tr_up10_main & `own' < 50
+ 11.         gen byte tr_up_major_main = tr_up10_main & `own' >= 50
+ 12.     }
+ 13.     drop pv
+ 14. }
+(33,049 missing values generated)
+(22,136 real changes made)
+(33,049 missing values generated)
+(22,538 real changes made)
+
+. * One-year blips (as filed, neighbouring calendar years only): firms below 10%
+. * in both the year before and the year after; how many are 10%+ in between.
+. tsset firm_id year
+
+Panel variable: firm_id (unbalanced)
+ Time variable: year, 2010 to 2022, but with gaps
+         Delta: 1 unit
+
+. gen byte below_both_sides = L.foreign_ownership_pct < 10 & F.foreign_ownership_pct < 10 ///
+>     & !missing(L.foreign_ownership_pct, F.foreign_ownership_pct, foreign_ownership_pct)
+
+. gen byte blip_10plus_between = below_both_sides & foreign_ownership_pct >= 10
+
+. gen byte one = 1
+
+. collapse (sum) file_rows = one tr_* below_both_sides blip_10plus_between ///
+>     (mean) share_10plus_as_filed = fdi_10_flag, by(year)
+
+. rename year row_key
+
+. merge 1:1 row_key using `yearly', nogenerate
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             8
+        from master                         0  
+        from using                          8  
+
+    Matched                                12  
+    -----------------------------------------
+
+. foreach v of varlist tr_* below_both_sides blip_10plus_between {
+  2.     replace `v' = . if row_key == `yr0'                  // nothing earlier to compare with
+  3.     replace `v' = . if inlist(row_key, `acq_bad') & strpos("`v'", "_main")
+  4. }
+(1 real change made, 1 to missing)
+(1 real change made, 1 to missing)
+(1 real change made, 1 to missing)
+(1 real change made, 1 to missing)
+(1 real change made, 1 to missing)
+(1 real change made, 1 to missing)
+(1 real change made, 1 to missing)
+(1 real change made, 1 to missing)
+(1 real change made, 1 to missing)
+(1 real change made, 1 to missing)
+(1 real change made, 1 to missing)
+(1 real change made, 1 to missing)
+(1 real change made, 1 to missing)
+(0 real changes made)
+(1 real change made, 1 to missing)
+(0 real changes made)
+(1 real change made, 1 to missing)
+(0 real changes made)
+(1 real change made, 1 to missing)
+(0 real changes made)
+(1 real change made, 1 to missing)
+(0 real changes made)
+
+. replace below_both_sides = . if below_both_sides == 0 & row_key < 8000   // no neighbouring files
+(3 real changes made, 3 to missing)
+
+. replace blip_10plus_between = . if missing(below_both_sides)
+(3 real changes made, 3 to missing)
+
+. gen double blip_share = blip_10plus_between / below_both_sides
+(12 missing values generated)
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 4/7: labels and notes -> CSV (numbers written before drawing)"
+Step 4/7: labels and notes -> CSV (numbers written before drawing)
+
+. *---------------------------------------------------------------------------
+. gen int acquisition_year = row_key if row_key < 8000
+(7 missing values generated)
+
+. gen str70 group = ""
+(20 missing values generated)
+
+. replace group = "Acquired in " + string(row_key) if row_key < 8000
+(13 real changes made)
+
+. replace group = "Acquired up to `acq_paris' (before Paris)" if row_key == 8001
+(1 real change made)
+
+. replace group = "Acquired after `acq_paris' (after Paris)"  if row_key == 8002
+(1 real change made)
+
+. replace group = "All acquirers"                                        if row_key == 8000
+(1 real change made)
+
+. replace group = "Never seen 10%+ foreign-owned (comparison firms)"     if row_key == 9001
+(1 real change made)
+
+. replace group = "10%+ foreign-owned when first seen (left out)"        if row_key == 9002
+(1 real change made)
+
+. replace group = "No usable ownership answer (left out)"                if row_key == 9003
+(1 real change made)
+
+. replace group = "All firms"                                            if row_key == 9999
+(1 real change made)
+
+. gen str100 note = ""
+(20 missing values generated)
+
+. replace note = "First file: no acquisition can be seen" if row_key == `yr0'
+(1 real change made)
+
+. foreach g of local gapyr {
+  2.     replace note = "No annual file" if row_key == `g'
+  3. }
+(1 real change made)
+
+. replace note = "Ownership answers treated as unknown; as filed `n_bad' starts (`n_bad_later' re-dated later, `n_bad_ne
+> ver' never foreign-owned)" if row_key == `acq_bad'
+variable note was str100 now str102
+(1 real change made)
+
+. replace note = "Other rules' columns: firms in the matching group of that rule" if inrange(row_key, 9001, 9003)
+(3 real changes made)
+
+. format acq_* firms_* same_date_* file_rows tr_* below_both_sides blip_10plus_between %9.0f
+
+. format share_10plus_as_filed blip_share %9.3f
+
+. sort row_order
+
+. order row_order row_key group acquisition_year acq_firms acq_majority acq_minority acq_exact_date acq_approx_date ///
+>     acq_from_zero acq_with_later_answer acq_still_10plus_next acq_back_below_next acq_blip_next_year acq_back_below_ev
+> er ///
+>     acq_export_start_same_year acq_import_start_same_year firms_raw same_date_raw firms_maj same_date_maj ///
+>     firms_any same_date_any file_rows share_10plus_as_filed tr_known_main tr_up_any_main tr_up10_main ///
+>     tr_up_minor_main tr_up_major_main tr_down10_main tr_known_raw tr_up10_raw tr_down10_raw ///
+>     below_both_sides blip_10plus_between blip_share note
+
+. drop row_key
+
+. export delimited using "tables/`fname'.csv", datafmt replace
+file tables/01_acquisition_registry.csv saved
+
+. list group acq_firms acq_majority acq_exact_date acq_with_later_answer acq_back_below_next firms_raw ///
+>     firms_maj firms_any, noobs sep(0) abbreviate(24) clean
+
+                                               group   acq_firms   acq_majority   acq_exact_date   acq_with_later_answer
+>    acq_back_below_next   firms_raw   firms_maj   firms_any  
+                                    Acquired in 2010           .              .                .                       .
+>                      .           .           .           .  
+                                    Acquired in 2011          93             73               93                      67
+>                     50          93          73          93  
+                                    Acquired in 2012          66             54               66                      52
+>                     42          66          58          67  
+                                    Acquired in 2013          65             56               65                      50
+>                     41          65          60          66  
+                                    Acquired in 2014          83             75               83                      68
+>                     50          83          77          82  
+                                    Acquired in 2015          65             59               65                      54
+>                     48          65          62          66  
+                                    Acquired in 2016           .              .                .                       .
+>                      .           .           .           .  
+                                    Acquired in 2017          81             77                0                      58
+>                     50          81          78          82  
+                                    Acquired in 2018          92             84               92                      75
+>                     57          92          86          93  
+                                    Acquired in 2019         106             95              106                      70
+>                     58         106         100         105  
+                                    Acquired in 2020           .              .                .                       .
+>                      .         854           .           .  
+                                    Acquired in 2021          78             70                0                      65
+>                     51          76          72          78  
+                                    Acquired in 2022         115            101              111                       0
+>                      .          82         106         118  
+                  Acquired up to 2015 (before Paris)         372            317              372                     291
+>                    231           .           .           .  
+                   Acquired after 2015 (after Paris)         472            427              309                     268
+>                    216           .           .           .  
+                                       All acquirers         844            744              681                     559
+>                    447        1663         772         850  
+    Never seen 10%+ foreign-owned (comparison firms)        8011              .                .                       .
+>                      .        7237        8198        7982  
+       10%+ foreign-owned when first seen (left out)        1213              .                .                       .
+>                      .        1531        1098        1236  
+               No usable ownership answer (left out)         395              .                .                       .
+>                      .          32         395         395  
+                                           All firms       10463              .                .                       .
+>                      .       10463       10463       10463  
+
+. list group tr_up10_main tr_down10_main tr_up10_raw below_both_sides blip_share if !missing(acquisition_year), ///
+>     noobs sep(0) abbreviate(24) clean
+
+               group   tr_up10_main   tr_down10_main   tr_up10_raw   below_both_sides   blip_share  
+    Acquired in 2010              .                .             .                  .            .  
+    Acquired in 2011             93               72            93               1374        0.036  
+    Acquired in 2012             78               93            78               1343        0.034  
+    Acquired in 2013             82               81            82               1342        0.039  
+    Acquired in 2014            104               80           104               1382        0.043  
+    Acquired in 2015             96              107            96                  .            .  
+    Acquired in 2016              .                .             .                  .            .  
+    Acquired in 2017            105              147           105                  .            .  
+    Acquired in 2018            142              140           142               1689        0.049  
+    Acquired in 2019            160              116           160                914        0.094  
+    Acquired in 2020              .                .           962               1448        0.523  
+    Acquired in 2021            116              115           113                779        0.074  
+    Acquired in 2022            157              144           156                  .            .  
+
+. * Cross-check with R2-01 (same as-filed rule A): warn only, never stop.
+. local r2csv "../block-r2-internationalisation-energy-efficiency/tables/01_export_entry_cohorts.csv"
+
+. capture confirm file "`r2csv'"
+
+. if !_rc {
+.     preserve
+.     import delimited using "`r2csv'", clear varnames(1)
+(encoding automatically selected: ISO-8859-1)
+(17 vars, 57 obs)
+.     keep if margin == "fdi10" & !missing(cohort_year)
+(44 observations deleted)
+.     keep cohort_year simple_firms
+.     rename (cohort_year simple_firms) (acquisition_year r2_firms)
+.     tempfile r2
+.     save `r2'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_80439.00000b saved as .dta format
+.     restore
+.     preserve
+.     keep if !missing(acquisition_year)
+(7 observations deleted)
+.     merge 1:1 acquisition_year using `r2', nogenerate keep(master match)
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                                13  
+    -----------------------------------------
+.     quietly count if !missing(r2_firms) & r2_firms != firms_raw
+.     if r(N) display "   WARNING: as-filed starts differ from R2-01's foreign-ownership rows in " r(N) " years"
+.     else display "   cross-check: as-filed starts match R2-01's foreign-ownership rows year by year"
+   cross-check: as-filed starts match R2-01's foreign-ownership rows year by year
+.     restore
+. }
+
+. else display "   (R2-01 table not found: cross-check skipped)"
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 5/7: numbers for the figure notes (read from the table, never typed)"
+Step 5/7: numbers for the figure notes (read from the table, never typed)
+
+. *---------------------------------------------------------------------------
+. foreach v in acq_firms acq_with_later_answer acq_back_below_next acq_majority {
+  2.     quietly summarize `v' if group == "All acquirers"
+  3.     local t_`v' = strtrim(string(r(sum), "%9.0fc"))
+  4. }
+
+. foreach k in 9001 9002 9003 {
+  2.     local lbl = cond(`k' == 9001, "Never seen", cond(`k' == 9002, "10%+ foreign-owned when", "No usable"))
+  3.     quietly summarize acq_firms if strpos(group, "`lbl'") == 1
+  4.     local g`k' = strtrim(string(r(sum), "%9.0fc"))
+  5. }
+
+. * Years whose starts are all approximate (no usable answer the year before).
+. local apx ""
+
+. quietly levelsof acquisition_year if acq_firms > 0 & acq_exact_date == 0 & !missing(acq_firms), local(apx)
+
+. local napx : word count `apx'
+
+. local apxtxt ""
+
+. forvalues j = 1/`napx' {
+  2.     local w : word `j' of `apx'
+  3.     local sep = cond(`j' == 1, "", cond(`j' == `napx', " and ", ", "))
+  4.     local apxtxt "`apxtxt'`sep'`w'"
+  5. }
+
+. local s_bad = string(100 * `acq_sh_bad', "%9.0f")
+
+. local s_oth = string(100 * `acq_sh_other', "%9.0f")
+
+. local n_bad_c       = strtrim(string(`n_bad', "%9.0fc"))
+
+. local n_bad_never_c = strtrim(string(`n_bad_never', "%9.0fc"))
+
+. local n_bad_later_c = strtrim(string(`n_bad_later', "%9.0fc"))
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 6/7: bars by acquisition year: majority / minority, and how many are back below 10% next time"
+Step 6/7: bars by acquisition year: majority / minority, and how many are back below 10% next time
+
+. *---------------------------------------------------------------------------
+. keep if !missing(acquisition_year)
+(7 observations deleted)
+
+. gen double x   = acquisition_year
+
+. gen double xa  = x - 0.2                    // acquisitions (left bar)
+
+. gen double xb  = x + 0.2                    // back below 10% at the next answer (right bar)
+
+. gen double zero = 0
+
+. gen double maj  = acq_majority
+(3 missing values generated)
+
+. gen double tot  = acq_firms
+(3 missing values generated)
+
+. gen double back = acq_back_below_next if acq_with_later_answer > 0
+(4 missing values generated)
+
+. quietly summarize tot
+
+. local step = 10^floor(log10(r(max)))                        // axis step that grows with the counts
+
+. if r(max)/`step' < 2       local step = `step'/5
+
+. else if r(max)/`step' < 5  local step = `step'/2
+
+. local ytop = `step' * ceil(1.1*r(max)/`step')               // headroom for the count labels
+
+. * Bands: the year with no annual file, and the year whose ownership answers are not used.
+. gen double band_lo = 0 if strpos(" `gapyr' ", " " + string(x) + " ")
+(12 missing values generated)
+
+. gen double band_hi = `ytop' if !missing(band_lo)
+(12 missing values generated)
+
+. gen double bad_lo = 0 if x == `acq_bad'
+(12 missing values generated)
+
+. gen double bad_hi = `ytop' if x == `acq_bad'
+(12 missing values generated)
+
+. gen str8 tot_lbl  = string(tot, "%9.0fc") if tot > 0 & !missing(tot)
+(3 missing values generated)
+
+. gen str8 back_lbl = string(back, "%9.0fc") if !missing(back)
+(4 missing values generated)
+
+. * Notes as one text, wrapped by printed width (R2-08's rule; widths in em).
+. local txt "Notes: Acquisition here = the first year a firm reports foreign owners holding 10% or more of its capital, 
+> after an earlier year below 10%."
+
+. local txt "`txt' It is a change in the reported share, not a verified purchase: the chart cannot show who bought the f
+> irm or why. Each firm is counted"
+
+. local txt "`txt' once, in that year. Majority = 50% or more foreign in that year. Right bars: of these firms, those ba
+> ck below 10% at their next answer"
+
+. local txt "`txt' (`t_acq_back_below_next' of the `t_acq_with_later_answer' with a later answer; none is possible after
+>  the last file)."
+
+. if "`apxtxt'" != "" local txt "`txt' Starts in `apxtxt' are dated approximately: the year before has no file or no usa
+> ble answer."
+
+. local txt "`txt' All `acq_bad' ownership answers are treated as unknown (`s_bad'% of firms marked 10%+ foreign-owned, 
+> about `s_oth'% in other years);"
+
+. local txt "`txt' as filed, `n_bad_c' firms would start in `acq_bad' (here `n_bad_later_c' get a later year, `n_bad_nev
+> er_c' count as never foreign-owned)."
+
+. local txt "`txt' Not shown: `g9001' firms never seen 10%+ foreign-owned (the comparison firms in later R7 figures), `g
+> 9002' foreign-owned when"
+
+. local txt "`txt' first seen (start unknown), `g9003' with no usable answer. Firm links are fictional, so most starts a
+> nd reversals here come from the"
+
+. local txt "`txt' fake panel: a test of the method only."
+
+. local maxw 54                                           // widest note line that fits the 8-inch PDF
+
+. local nl 0
+
+. local line ""
+
+. local lw 0
+
+. foreach w of local txt {
+  2.     local n  = ustrlen(`"`w'"')
+  3.     local na = `n' - ustrlen(ustrregexra(`"`w'"', "[ijltfr.,;:'()\-]", ""))
+  4.     local wi = `n' - ustrlen(ustrregexra(`"`w'"', "[A-Zmw]", ""))
+  5.     local pc = `n' - ustrlen(ustrregexra(`"`w'"', "%", ""))
+  6.     local dg = `n' - ustrlen(ustrregexra(`"`w'"', "[0-9+=]", ""))
+  7.     local ww = 0.29*`na' + 0.7*`wi' + 0.83*`pc' + 0.52*`dg' + 0.47*(`n' - `na' - `wi' - `pc' - `dg')
+  8.     local try = `lw' + 0.25*(`"`line'"' != "") + `ww'
+  9.     if `try' > `maxw' & `"`line'"' != "" {
+ 10.         local ++nl
+ 11.         local L`nl' `"`line'"'
+ 12.         local W`nl' = `lw'
+ 13.         local line `"`w'"'
+ 14.         local lw = `ww'
+ 15.     }
+ 16.     else {
+ 17.         local line = strtrim(`"`line' `w'"')
+ 18.         local lw = `try'
+ 19.     }
+ 20. }
+
+. local ++nl
+
+. local L`nl' `"`line'"'
+
+. local W`nl' = `lw'
+
+. local notes ""
+
+. forvalues j = 1/`nl' {
+  2.     display "   note line `j': " udstrlen(`"`L`j''"') " characters, width " %4.1f `W`j'' " of `maxw' em"
+  3.     local notes `"`notes' "`L`j''""'
+  4. }
+   note line 1: 134 characters, width 52.1 of 54 em
+   note line 2: 130 characters, width 51.9 of 54 em
+   note line 3: 135 characters, width 53.2 of 54 em
+   note line 4: 135 characters, width 53.4 of 54 em
+   note line 5: 120 characters, width 50.1 of 54 em
+   note line 6: 126 characters, width 49.7 of 54 em
+   note line 7: 118 characters, width 48.6 of 54 em
+   note line 8: 133 characters, width 53.3 of 54 em
+   note line 9: 52 characters, width 20.6 of 54 em
+
+. twoway (rbar band_lo band_hi x, barwidth(0.9) fcolor(gs15) lcolor(gs15) lwidth(none)) ///
+>     (rbar bad_lo bad_hi x, barwidth(0.9) fcolor(white) lcolor(gs8) lpattern(dash) lwidth(thin)) ///
+>     (rbar zero maj xa if tot > 0, barwidth(0.36) fcolor(gs4) lcolor(gs4) lwidth(vthin)) ///
+>     (rbar maj tot xa if tot > 0, barwidth(0.36) fcolor(white) lcolor(gs4) lwidth(thin)) ///
+>     (rbar zero back xb if !missing(back), barwidth(0.36) fcolor(gs11) lcolor(gs11) lwidth(vthin)) ///
+>     (scatter tot xa if tot_lbl != "", msymbol(none) mlabel(tot_lbl) mlabposition(12) mlabgap(0.4) ///
+>         mlabcolor(black) mlabsize(vsmall)) ///
+>     (scatter back xb if back_lbl != "", msymbol(none) mlabel(back_lbl) mlabposition(12) mlabgap(0.4) ///
+>         mlabcolor(gs6) mlabsize(vsmall)) ///
+>     , xlabel(`yr0'(1)`yr1', labsize(vsmall) noticks) xscale(range(`=`yr0'-0.5' `=`yr1'+0.5') lcolor(gs10)) ///
+>     ylabel(0(`step')`ytop', angle(0) labsize(vsmall) grid glcolor(gs14) glwidth(vthin) noticks tlength(0) labgap(1.5))
+>  ///
+>     yscale(range(0 `ytop') noline) ///
+>     xtitle("Acquisition year (first year seen with 10%+ foreign ownership)", size(vsmall) margin(t+1)) ///
+>     ytitle("Number of firms", size(vsmall) margin(r+2)) ///
+>     text(`=0.08*`ytop'' `yr0' "First" "file", size(vsmall) color(gs7)) ///
+>     text(`=0.90*`ytop'' `acq_bad' "As" "filed:" "`n_bad_c'" "starts", size(vsmall) color(gs6) placement(s)) ///
+>     legend(order(3 "Acquired, majority foreign-owned (50%+)" 4 "Acquired, minority foreign-owned (10–49%)" ///
+>                  5 "Of these, back below 10% at the next answer" 1 "No annual file" ///
+>                  2 "Ownership answers treated as unknown") ///
+>         cols(2) position(6) region(lstyle(none)) size(vsmall) symysize(2.5) symxsize(4) keygap(1) colgap(4) rowgap(0.3
+> )) ///
+>     title("Figure `exhibit'. Firms first seen with a foreign owner holding 10% or more, by year", size(small) position
+> (11) justification(left) span) ///
+>     note(`notes' "`srcnote'" "`devnote'", size(vsmall) span linegap(0.6)) ///
+>     graphregion(color(white) lcolor(white) margin(r+3)) plotregion(style(none) margin(t+2 b=0)) ///
+>     xsize(8) ysize(6.5)
+
+. 
+. graph export "figures/`fname'.png", width(2400) replace
+file
+    /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r7-foreign-acquisition-green-technolog
+    > y/figures/01_acquisition_registry.png saved as PNG format
+
+. graph export "figures/`fname'.pdf", replace
+file
+    /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r7-foreign-acquisition-green-technolog
+    > y/figures/01_acquisition_registry.pdf saved as PDF format
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 7/7: companion table: every plotted point (putpdf)"
+Step 7/7: companion table: every plotted point (putpdf)
+
+. *---------------------------------------------------------------------------
+. * One row per plotted bar or bar label, in chart order (year, then left bar
+. * segments, its total label, then the right bar). Years or bars not drawn are
+. * listed with the reason. Chart and CSV are already written and stay unchanged.
+. keep acquisition_year acq_firms acq_majority acq_minority acq_with_later_answer acq_back_below_next firms_raw
+
+. expand 4
+(39 observations created)
+
+. bysort acquisition_year: gen byte s = _n
+
+. gen str60 series = ""
+(52 missing values generated)
+
+. replace series = "Acquired, majority foreign-owned (50%+)"     if s == 1
+(13 real changes made)
+
+. replace series = "Acquired, minority foreign-owned (10–49%)"   if s == 2
+(13 real changes made)
+
+. replace series = "Acquired, all (count on top of the bar)"      if s == 3
+(13 real changes made)
+
+. replace series = "Of these, back below 10% at the next answer"  if s == 4
+(13 real changes made)
+
+. gen double v  = cond(s == 1, acq_majority, cond(s == 2, acq_minority, cond(s == 3, acq_firms, acq_back_below_next)))
+(13 missing values generated)
+
+. gen double of = cond(s == 4, acq_with_later_answer, acq_firms)
+(12 missing values generated)
+
+. gen str80 status = "drawn"
+
+. replace status = "drawn (top label)" if s == 3
+(13 real changes made)
+
+. replace status = "not drawn: no acquirer has a later answer (last file)" if s == 4 & acq_with_later_answer == 0
+(1 real change made)
+
+. replace v  = . if s == 4 & acq_with_later_answer == 0
+(0 real changes made)
+
+. replace of = . if s == 4 & acq_with_later_answer == 0
+(1 real change made, 1 to missing)
+
+. * Years with no bars: one row each, with the reason.
+. gen byte nobar = missing(acq_firms)
+
+. drop if nobar & s > 1
+(9 observations deleted)
+
+. replace series = "All series" if nobar
+(3 real changes made)
+
+. replace status = "not drawn: first file, no earlier year to compare with" if nobar & acquisition_year == `yr0'
+(1 real change made)
+
+. foreach g of local gapyr {
+  2.     replace status = "not drawn: no annual file" if nobar & acquisition_year == `g'
+  3. }
+(1 real change made)
+
+. replace series = "As filed (text in the dashed box)" if nobar & acquisition_year == `acq_bad'
+(1 real change made)
+
+. replace v = firms_raw if nobar & acquisition_year == `acq_bad'
+(1 real change made)
+
+. replace status = "text only: ownership answers treated as unknown" if nobar & acquisition_year == `acq_bad'
+(1 real change made)
+
+. replace v  = . if nobar & acquisition_year != `acq_bad'
+(0 real changes made)
+
+. replace of = . if nobar
+(0 real changes made)
+
+. sort acquisition_year s
+
+. gen str6  c_year = string(acquisition_year, "%4.0f")
+
+. gen str10 c_v    = cond(missing(v), "", string(v, "%9.0fc"))
+(3 missing values generated)
+
+. gen str10 c_of   = cond(missing(of), "", string(of, "%9.0fc"))
+(4 missing values generated)
+
+. quietly count
+
+. local nrow = r(N)
+
+. quietly count if strpos(status, "drawn") == 1
+
+. display "   points table: `nrow' rows, " r(N) " drawn points or labels"
+   points table: 43 rows, 39 drawn points or labels
+
+. putpdf clear
+
+. putpdf begin, pagesize(letter) font("Times New Roman", 9) margin(left, 0.8in) margin(right, 0.8in)
+
+. putpdf paragraph, spacing(after, 4pt)
+
+. putpdf text ("Table `exhibit'. Firms first seen with a foreign owner holding 10% or more, by year: every plotted point
+> "), bold font("Times New Roman", 11)
+
+. matrix colw = (7, 37, 10, 10, 36)                 // column widths, % of the text width
+
+. putpdf table T = data(c_year series c_v c_of status), varnames border(all, nil) width(colw) halign(center)
+
+. putpdf table T(1,1) = ("Year")
+
+. putpdf table T(1,2) = ("Series (as in the legend)")
+
+. putpdf table T(1,3) = ("Firms plotted")
+
+. putpdf table T(1,4) = ("Out of (firms)")
+
+. putpdf table T(1,5) = ("Status")
+
+. putpdf table T(1,.), border(top, single, black) border(bottom, single, black) bold
+
+. putpdf table T(`=`nrow'+1',.), border(bottom, single, black)
+
+. putpdf table T(.,1), halign(left)
+
+. putpdf table T(.,3/4), halign(right)
+
+. putpdf table T(1,3/4), halign(right)
+
+. putpdf table T(.,5), margin(left, 12pt)
+
+. putpdf paragraph, spacing(before, 6pt) font("Times New Roman", 8)
+
+. local tnote "Out of = all acquirers of that year (left bar) or those with a later ownership answer (right bar)."
+
+. forvalues j = 1/`nl' {
+  2.     local tnote `"`tnote' `L`j''"'
+  3. }
+
+. local tnote = subinstr(`"`tnote'"', "Notes: ", "Chart notes: ", 1)
+
+. putpdf text (`"`tnote'"')
+
+. putpdf paragraph, font("Times New Roman", 8)
+
+. putpdf text ("`srcnote'")
+
+. putpdf paragraph, font("Times New Roman", 8)
+
+. putpdf text ("`devnote'")
+
+. putpdf save "tables/`fname'_table.pdf", replace
+successfully created "/Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r7-foreign-acquisition
+> -green-technology/tables/01_acquisition_registry_table.pdf"
+
+. display "   table -> tables/`fname'_table.pdf"
+   table -> tables/01_acquisition_registry_table.pdf
+
+. 
+. timer off 1
+
+. quietly timer list 1
+
+. local elapsed = strtrim(string(r(t1), "%9.1f"))
+
+. display "FINISHED: figure -> figures/`fname'.png (elapsed `elapsed' s)"
+FINISHED: figure -> figures/01_acquisition_registry.png (elapsed 2.5 s)
+
+. quietly log close          // keeps FINISHED as the last output line of the log
