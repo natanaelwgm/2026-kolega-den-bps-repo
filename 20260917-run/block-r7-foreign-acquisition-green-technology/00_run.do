@@ -15,7 +15,7 @@ global OUTDIR "/Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917
 * The two paths above are passed to every exhibit file, so you edit them once here.
 
 * Exhibit files, in order (added as each exhibit passes review).
-local files "01_acquisition_registry 02_acquisition_support 03_who_gets_acquired 04_energy_per_va_acquisition 05_scale_vs_intensity"
+local files "01_acquisition_registry 02_acquisition_support 03_who_gets_acquired 04_energy_per_va_acquisition 05_scale_vs_intensity 06_before_after_paris"
 
 local n : word count `files'
 local i 0
