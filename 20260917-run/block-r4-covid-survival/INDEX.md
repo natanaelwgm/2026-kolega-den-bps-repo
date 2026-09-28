@@ -12,6 +12,7 @@ Tables that go with the charts: every chart has a table PDF with each plotted po
 - 02: `tables/02_states_normal_vs_covid_table.pdf`
 - 03: `tables/03_composition_before_after_table.pdf`
 - 04: `tables/04_leaving_hazard_regression.pdf`, `tables/04_leaving_hazard_table.pdf`
+- 06: `tables/06_survivors_shrink_grow_recovery_table.pdf`
 <!-- tables-end -->
 
 
@@ -21,6 +22,7 @@ Tables that go with the charts: every chart has a table PDF with each plotted po
 | `02_states_normal_vs_covid.do` → `figures/02_states_normal_vs_covid.png`, `tables/02_states_normal_vs_covid.csv`, `tables/02_states_normal_vs_covid_table.pdf` | For the firms of every annual file 2012–2019, the share still in all of the next three files, back after a gap, gone later, or gone at once; the 2019 firms (followed through 2020–22) against earlier files, for all firms and for firms also in one of the two files before. | "Impact covid: Survival analysis??", "Which firms survived"; "Melihat firms yg bertahan, mati dan hidup selama shock covid" | done (read on the real files) |
 | `03_composition_before_after.do` → `figures/03_composition_before_after.png`, `tables/03_composition_before_after.csv`, `tables/03_composition_before_after_pairs.csv`, `tables/03_composition_before_after_table.pdf` | Change in the share of firms and of workers by size, importer, foreign-owned and sector between the 2019 and 2022 files, against the 2012→2015 change and the range over normal years; panel (c) splits each change in the share of firms into firms that left, firms that came in, and change within firms in both files. | "Did COVID change the composition of Indonesian manufacturing?"; "Melihat firms yg bertahan, mati dan hidup selama shock covid" | done, reviewed (panels a–b read on these files; panel c only on the real files) |
 | `04_leaving_hazard.do` → `figures/04_leaving_hazard.png`, `tables/04_leaving_hazard.csv`, `tables/04_leaving_hazard_table.pdf`, `tables/04_leaving_hazard_regression.pdf` | For the firms of the 2019 file (followed 2020–22) and of the 2012 file (followed 2013–15), how much more or less likely a firm with each trait known by the starting file was to be missing from the next file: size, value added per worker, exporter, importer, foreign-owned, new to the files. One logit per starting file (pooled), dots in percentage points with 95% intervals; odds ratios, model checks and calibration in the tables. | "Survival analysis??", "Which firms survived"; strategy "Survival/hazard model menggunakan pre-COVID characteristics" | done, reviewed (read on the real files) |
+| `06_survivors_shrink_grow_recovery.do` → `figures/06_survivors_shrink_grow_recovery.png`, `tables/06_survivors_shrink_grow_recovery.csv`, `tables/06_survivors_shrink_grow_recovery_table.pdf` | The 2019 firms still in every file 2020–2022 against the 2012 firms still in every file 2013–2015 (normal years). For each group: the middle firm's workers and output in each later file against its own starting level (= 100), the share down more than 10%, within 10% either way or up more than 10% by the third later file, and, of those more than 10% down in the first later file, the share back within 10% or above. Output in current prices on this file. | "Which firms survived and recovered?"; strategy "multinomial outcomes: ... survive-shrink, survive-grow" | done, reviewed (read on the real files; output in current prices here) |
 
 ## Details kept out of the figures
 
@@ -78,3 +80,29 @@ Tables that go with the charts: every chart has a table PDF with each plotted po
 - Checks: 0 rows dropped for perfect prediction; 30.2 / 24.7 leaving events per coefficient; area under the ROC curve 0.766 / 0.788; Hosmer–Lemeshow p 0.083 / 0.030 (largest gap 2.9 / 3.3 points). One pooled model so the difference can use the 946 firms in both files; its point estimates equal two separate logits.
 - Importers are not like for like: 21% of the 2012 firms, 53% of the 2019 firms (the recorded share jumps in 2017).
 - Association, not the effect of COVID. Leaving is not proof of closure. Firm links are fictional in the development data, so who stays, leaves or comes back means nothing here; read these results on the real BPS files.
+
+**06 — firms still in every file after 2019: shrank, grew or came back up, against 2012.**
+- Stayers are firms of the starting file that are in all three later files: 1,678 of the 3,007 firms of the 2019 file and 1,346 of the 2,359 firms of the 2012 file. None came back after a gap (the fictional panel never skips a file).
+- Each stayer is set against its own level in the starting file (= 100). Dots show the middle firm (median) with an exact 95% interval.
+  - Workers, dev data: 96.2 in 2020, 89.6 in 2021, 81.8 in 2022 (95%: 78.9–85.7), against 103.3, 104.8 and 100.0 for the 2012 firms in 2013–15.
+  - Output (current prices): 76.0, 78.9 and 76.0, against 116.9, 148.6 and 169.1.
+- By the third later file, down more than 10% / within 10% / up more than 10%:
+  - Workers: 55.7 / 12.0 / 32.2% (935 / 202 / 541 firms, as in 01), against 38.9 / 19.2 / 41.9% for the 2012 firms.
+  - Output: 57.6 / 7.9 / 34.4%, against 25.1 / 7.2 / 67.7%.
+- Came back up, meaning more than 10% down in the first later file and within 10% or above by the third:
+  - Workers: 29.3% (215 of 734), against 37.6% (173 of 460).
+  - Output: 29.7% (295 of 993), against 53.3% (257 of 482).
+- Prices: the file has no price index, and every deflator and constant-price variable is empty. Output is therefore in current prices: it rises when prices rise even if a firm makes the same amount, and prices rose by different amounts in 2013–15 and 2020–22.
+  - On this file the middle output of all firms in each file moves almost the same way as the stayers': 2012 file = 100 gives 120.1, 164.7, 174.0; 2019 file = 100 gives 79.9, 92.8, 78.5 (table, Check 2).
+  - So the output line mostly shows how the masked files' money levels move, not the firms.
+  - Workers are not affected by prices and are the main measure.
+  - On the real files, use constant-price output if BPS has it (the file switches automatically). Otherwise read (b) together with Check 2.
+- Bands: within 5% holds 6.3% (workers) and 3.9% (output) of the 2019 stayers; within 20% holds 23.6% and 16.5% (CSV). The masked values are noisy, so few firms stay "about the same".
+- Other normal-years starting files (CSV): the middle firm's workers in the third later file are 105.3 (2010) and 106.4 (2011); output is 155.7 and 180.3.
+- How this differs from R10-03. Both use the same stayers, output rule and workers. R10-03:
+  - keeps only stayers also in 2017 or 2018 (1,484);
+  - compares exporters, importers and foreign-owned stayers with similar stayers of the same industry and province, in regressions on logs;
+  - drops firms with 0 workers later.
+  - R4-06 instead shows every stayer against its own starting level, with no model, and counts 0 workers as down 100%.
+  - R10-03's firms give nearly the same numbers here (Check 1 in the table): 2022 workers 81.8, output 75.5; came back up 28.7% (workers) and 29.2% (output).
+- What happened to the stayers, not the effect of COVID. Firms that left the files are in 01 (left is not proof of closure). Firm links are fictional in the development data, so who stays, leaves or comes back means nothing here; read these results on the real BPS files.
