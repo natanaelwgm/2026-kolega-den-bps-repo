@@ -1,0 +1,1711 @@
+------------------------------------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r3-energy-emissions-correlates/
+> logs/09_who_reduces_by_province.log
+  log type:  text
+ opened on:  28 Sep 2026, 17:10:01
+
+. timer clear 1
+
+. timer on 1
+
+. display _newline "=== [R3-09] STARTING: which provinces cut energy and CO2 more often than the typical firm ==="
+
+=== [R3-09] STARTING: which provinces cut energy and CO2 more often than the typical firm ===
+
+. 
+. * ---- chart style (identical block in every file) ----
+. set scheme s1mono
+
+. capture graph set window fontface "Times New Roman"   // GUI Stata; console Stata keeps its default font
+
+. * Note: this changes your Stata graph font permanently; undo with: graph set window fontface default
+. local devnote "Development data — obscured values, fictional firm panel. Not BPS findings."
+
+. local srcnote "Source: SI/IBS annual files 2010–2022 (masked), analysis_ready_data.dta."
+
+. local minchg 100                 // a province is drawn on its own only with at least this many one-year changes
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 1/9: load; province code as a number; island group; each province's share of all energy and CO2"
+Step 1/9: load; province code as a number; island group; each province's share of all energy and CO2
+
+. *---------------------------------------------------------------------------
+. * province_code = two-digit province code as recorded (text). The file has no
+. * province names, so the exhibit shows codes. Island group = first digit of the
+. * code (BPS numbering): 1-2 Sumatra (21 = Riau Islands), 3 Java, 5-9 other
+. * islands (Bali and Nusa Tenggara, Kalimantan, Sulawesi, Maluku, Papua).
+. * industry2_reported = two-digit sector, used only to hold sector fixed (table).
+. use firm_id year province_code industry2_reported total_gj_s1 co2_total_s1 value_added_nominal using "$DATA", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. isid firm_id year
+
+. gen int prov = real(province_code)
+
+. quietly count if missing(prov)
+
+. display "   rows with no readable province code (their own group, 'Province not recorded'): " r(N)
+   rows with no readable province code (their own group, 'Province not recorded'): 0
+
+. assert inlist(substr(province_code, 1, 1), "1", "2", "3", "5", "6", "7", "8", "9") if !missing(prov)
+
+. gen byte isl = cond(inlist(substr(province_code, 1, 1), "1", "2"), 1, cond(substr(province_code, 1, 1) == "3", 2, 3))
+
+. replace isl = 4 if missing(prov)
+(0 real changes made)
+
+. replace prov = 99 if missing(prov)              // 99 is not a province code: "not recorded"
+(0 real changes made)
+
+. gen int sector = real(industry2_reported)
+
+. replace sector = 99 if missing(sector)          // unreadable sector = its own group
+(0 real changes made)
+
+. preserve
+
+. collapse (sum) gj = total_gj_s1 tco2 = co2_total_s1 (count) rows = firm_id, by(prov)
+
+. quietly summarize gj
+
+. gen double pct_all_energy = 100 * gj / r(sum)
+
+. quietly summarize tco2
+
+. gen double pct_all_co2 = 100 * tco2 / r(sum)
+
+. keep prov rows pct_all_energy pct_all_co2
+
+. rename prov code
+
+. tempfile shares
+
+. save `shares'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_14474.000002 saved as .dta format
+
+. restore
+
+. xtset firm_id year
+
+Panel variable: firm_id (unbalanced)
+ Time variable: year, 2010 to 2022, but with gaps
+         Delta: 1 unit
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 2/9: one-year changes, as in R3-01 (same code)"
+Step 2/9: one-year changes, as in R3-01 (same code)
+
+. *---------------------------------------------------------------------------
+. gen double energy    = total_gj_s1
+
+. gen double co2       = co2_total_s1
+
+. gen double energy_va = total_gj_s1  / value_added_nominal
+
+. gen double co2_va    = co2_total_s1 / value_added_nominal
+
+. gen byte pair1 = !missing(L.total_gj_s1)                        // firm is in last year's file
+
+. gen byte cmp = pair1 & total_gj_s1>0 & L.total_gj_s1>0 & co2_total_s1>0 & L.co2_total_s1>0 ///
+>                & value_added_nominal>0 & L.value_added_nominal>0
+
+. assert pair1 == 0 if year == 2017                               // no 2016 file
+
+. foreach v in energy co2 energy_va co2_va {
+  2.     gen double chg_`v' = ln(`v') - ln(L.`v') if cmp
+  3. }
+(12,880 missing values generated)
+(12,880 missing values generated)
+(12,880 missing values generated)
+(12,880 missing values generated)
+
+. foreach v in energy co2 energy_va co2_va {
+  2.     * Year-adjusted: this firm's change minus the typical (median) change of all
+.     * compared firms in the same year, so the years a firm happens to be
+.     * observed in do not decide whether it is a reducer.
+.     bysort year: egen double med_chg_`v' = pctile(chg_`v'), p(50)   // median; egen median() would ignore "double"
+  3.     gen double rel_chg_`v' = chg_`v' - med_chg_`v'
+  4.     bysort firm_id: egen int    n_chg_`v'   = count(chg_`v')
+  5.     bysort firm_id: egen double avg_chg_`v' = mean(chg_`v')
+  6.     bysort firm_id: egen double avg_rel_`v' = mean(rel_chg_`v')
+  7.     gen byte reducer_`v'     = (avg_chg_`v' < 0) if n_chg_`v' >= 2
+  8.     gen byte reducer_adj_`v' = (avg_rel_`v' < 0) if n_chg_`v' >= 2
+  9. }
+(5,691 missing values generated)
+(12,880 missing values generated)
+(5,402 missing values generated)
+(5,402 missing values generated)
+(8,713 missing values generated)
+(8,713 missing values generated)
+(5,691 missing values generated)
+(12,880 missing values generated)
+(5,402 missing values generated)
+(5,402 missing values generated)
+(8,713 missing values generated)
+(8,713 missing values generated)
+(5,691 missing values generated)
+(12,880 missing values generated)
+(5,402 missing values generated)
+(5,402 missing values generated)
+(8,713 missing values generated)
+(8,713 missing values generated)
+(5,691 missing values generated)
+(12,880 missing values generated)
+(5,402 missing values generated)
+(5,402 missing values generated)
+(8,713 missing values generated)
+(8,713 missing values generated)
+
+. xtset firm_id year                // the bysort calls above changed the sort order
+
+Panel variable: firm_id (unbalanced)
+ Time variable: year, 2010 to 2022, but with gaps
+         Delta: 1 unit
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 3/9: did each change beat the typical firm? province, sector and starting level at the start"
+Step 3/9: did each change beat the typical firm? province, sector and starting level at the start
+
+. *---------------------------------------------------------------------------
+. * beat = the change was below the typical (median) change that year: it fell more or rose less.
+. foreach v in energy_va co2_va energy co2 {
+  2.     gen byte beat_`v' = (rel_chg_`v' < 0) if cmp
+  3.     quietly count if cmp & rel_chg_`v' == 0
+  4.     display "   `v': changes exactly at the typical change (counted as not beating it) = " r(N)
+  5. }
+(12,880 missing values generated)
+   energy_va: changes exactly at the typical change (counted as not beating it) = 7
+(12,880 missing values generated)
+   co2_va: changes exactly at the typical change (counted as not beating it) = 7
+(12,880 missing values generated)
+   energy: changes exactly at the typical change (counted as not beating it) = 7
+(12,880 missing values generated)
+   co2: changes exactly at the typical change (counted as not beating it) = 7
+
+. quietly summarize beat_energy_va
+
+. assert inrange(r(mean), 0.49, 0.51)            // about half beat the median by construction
+
+. gen int  g_prov = L.prov   if cmp               // province in the first year of the change
+(12,880 missing values generated)
+
+. gen byte g_isl  = L.isl    if cmp
+(12,880 missing values generated)
+
+. gen int  g_sec  = L.sector if cmp
+(12,880 missing values generated)
+
+. gen int  start  = L.year   if cmp               // start year of the change
+(12,880 missing values generated)
+
+. quietly count if cmp & g_prov != prov
+
+. display "   changes whose province differs between the two years: " r(N)
+   changes whose province differs between the two years: 0
+
+. assert !missing(g_prov, g_isl, g_sec) if cmp
+
+. quietly count if cmp
+
+. local n_cmp_num = r(N)
+
+. local n_cmp = strtrim(string(r(N), "%9.0fc"))
+
+. * Starting level (checks in the table only): fifth of each measure's starting
+. * level among all changes starting in the same year. High starts tend to fall back.
+. foreach v in energy_va co2_va energy co2 {
+  2.     gen double ls_`v' = ln(L.`v') if cmp
+  3.     gen byte q5_`v' = .
+  4. }
+(12,880 missing values generated)
+(33,049 missing values generated)
+(12,880 missing values generated)
+(33,049 missing values generated)
+(12,880 missing values generated)
+(33,049 missing values generated)
+(12,880 missing values generated)
+(33,049 missing values generated)
+
+. quietly levelsof year if cmp, local(yy)
+
+. foreach v in energy_va co2_va energy co2 {
+  2.     foreach y of local yy {
+  3.         quietly xtile t_q = ls_`v' if cmp & year == `y', nq(5)
+  4.         quietly replace q5_`v' = t_q if cmp & year == `y'
+  5.         drop t_q
+  6.     }
+  7. }
+
+. assert !missing(q5_energy_va, q5_co2_va, q5_energy, q5_co2) if cmp
+
+. * typical starting energy relative to the typical firm starting that year (table: start_energy_ratio)
+. bysort year: egen double med_ls_energy = pctile(ls_energy), p(50)
+(5,691 missing values generated)
+
+. gen double rel_ls_energy = ls_energy - med_ls_energy
+(12,880 missing values generated)
+
+. xtset firm_id year
+
+Panel variable: firm_id (unbalanced)
+ Time variable: year, 2010 to 2022, but with gaps
+         Delta: 1 unit
+
+. * fall-back numbers for the notes (read from the data, never typed)
+. quietly summarize beat_energy if cmp & q5_energy == 1
+
+. local q1pct = string(100 * r(mean), "%4.0f")
+
+. quietly summarize beat_energy if cmp & q5_energy == 5
+
+. local q5pct = string(100 * r(mean), "%4.0f")
+
+. display "   energy use: lowest fifth of starting energy beats the typical change in `q1pct'%, highest fifth in `q5pct'
+> %"
+   energy use: lowest fifth of starting energy beats the typical change in 30%, highest fifth in 69%
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 4/9: drawing groups - provinces with enough changes, the rest together per island group"
+Step 4/9: drawing groups - provinces with enough changes, the rest together per island group
+
+. *---------------------------------------------------------------------------
+. bysort g_prov: egen long n_prov_chg = count(beat_energy_va)
+
+. gen int grp = cond(n_prov_chg >= `minchg', g_prov, 900 + g_isl) if cmp   // 901-904 = smaller provinces together
+(12,880 missing values generated)
+
+. xtset firm_id year
+
+Panel variable: firm_id (unbalanced)
+ Time variable: year, 2010 to 2022, but with gaps
+         Delta: 1 unit
+
+. * list the province codes that sit in each "together" row (kept in the table)
+. forvalues i = 1/4 {
+  2.     local codes_90`i' ""
+  3.     local np_90`i' 0
+  4.     quietly levelsof g_prov if cmp & grp == 900 + `i', local(pp)
+  5.     foreach p of local pp {
+  6.         local codes_90`i' = strtrim("`codes_90`i'' `p'")
+  7.         local ++np_90`i'
+  8.     }
+  9.     display "   island group `i': smaller provinces shown together: `np_90`i'' (`codes_90`i'')"
+ 10. }
+   island group 1: smaller provinces shown together: 6 (11 13 15 16 17 19)
+   island group 2: smaller provinces shown together: 0 ()
+   island group 3: smaller provinces shown together: 16 (52 53 61 62 63 64 65 71 72 74 75 76 81 82 91 94)
+   island group 4: smaller provinces shown together: 0 ()
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 5/9: share per row with 95% intervals (clustered by firm); checks without 2017 and early/late"
+Step 5/9: share per row with 95% intervals (clustered by firm); checks without 2017 and early/late
+
+. *---------------------------------------------------------------------------
+. * The interval allows for the same firm appearing in several years. Rows:
+. * 1 = island group (all its provinces), 2 = one province, 3 = smaller provinces together.
+. tempname P
+
+. tempfile rows
+
+. postfile `P' byte row_type int code byte island long(changes firms) ///
+>     double(pct_energy_va lo_energy_va hi_energy_va pct_co2_va lo_co2_va hi_co2_va ///
+>            pct_energy lo_energy hi_energy pct_co2 lo_co2 hi_co2 ///
+>            pct_energy_va_no2017) long changes_2017 double pct_energy_va_early long changes_early ///
+>     double pct_energy_va_late long changes_late double start_energy_ratio using `rows', replace
+(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_14474.000003 not found)
+
+. forvalues t = 1/3 {
+  2.     if `t' == 1 local gv g_isl
+  3.     if `t' == 2 local gv g_prov
+  4.     if `t' == 3 local gv grp
+  5.     quietly levelsof `gv' if cmp, local(ss)
+  6.     foreach s of local ss {
+  7.         if `t' == 3 & `s' < 900 continue        // grp holds provinces too; only the "together" rows here
+  8.         local vals ""
+  9.         foreach v in energy_va co2_va energy co2 {
+ 10.             capture quietly mean beat_`v' if cmp & `gv' == `s', vce(cluster firm_id)
+ 11.             if _rc == 0 {
+ 12.                 matrix T = r(table)
+ 13.                 local p  = 100 * T[1,1]
+ 14.                 local lo = 100 * T[5,1]
+ 15.                 local hi = 100 * T[6,1]
+ 16.                 local nn = e(N)
+ 17.                 local nf = e(N_clust)
+ 18.             }
+ 19.             if _rc != 0 | `nf' < 2 {                // one firm only: share, no interval
+ 20.                 quietly summarize beat_`v' if cmp & `gv' == `s'
+ 21.                 local p  = 100 * r(mean)
+ 22.                 local nn = r(N)
+ 23.                 local nf = 1
+ 24.                 local lo .
+ 25.                 local hi .
+ 26.             }
+ 27.             local vals `vals' (`p') (`lo') (`hi')
+ 28.         }
+ 29.         quietly summarize beat_energy_va if cmp & `gv' == `s' & start != 2017
+ 30.         local p7 = 100 * r(mean)
+ 31.         quietly count if cmp & `gv' == `s' & start == 2017
+ 32.         local n7 = r(N)
+ 33.         quietly summarize beat_energy_va if cmp & `gv' == `s' & year < 2016
+ 34.         local pe = 100 * r(mean)
+ 35.         local ne = r(N)
+ 36.         quietly summarize beat_energy_va if cmp & `gv' == `s' & year > 2016
+ 37.         local pl = 100 * r(mean)
+ 38.         local nl = r(N)
+ 39.         quietly summarize rel_ls_energy if cmp & `gv' == `s', detail
+ 40.         local sr = exp(r(p50))
+ 41.         quietly summarize g_isl if cmp & `gv' == `s'
+ 42.         local is = r(min)
+ 43.         post `P' (`t') (`s') (`is') (`nn') (`nf') `vals' (`p7') (`n7') (`pe') (`ne') (`pl') (`nl') (`sr')
+ 44.     }
+ 45. }
+
+. postclose `P'
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 6/9: same shares holding sector fixed, and holding the starting level fixed (table only)"
+Step 6/9: same shares holding sector fixed, and holding the starting level fixed (table only)
+
+. *---------------------------------------------------------------------------
+. * Sector fixed: share predicted from a linear model of 'beat' on the row and the
+. * sector, averaged over all changes = the row's share if its changes had the
+. * sector mix of all firms. Starting level fixed: the same with the fifth of the
+. * starting level (within the start year) instead of the sector.
+. foreach v in energy_va co2_va energy co2 {
+  2.     foreach a in sec q5 {
+  3.         local ctl = cond("`a'" == "sec", "i.g_sec", "i.q5_`v'")
+  4.         quietly regress beat_`v' i.grp `ctl' if cmp, vce(cluster firm_id)
+  5.         quietly testparm i.grp
+  6.         display "   `v', `a' held fixed: do rows differ? F(" r(df) ", " r(df_r) ") = " %6.2f r(F) ", p = " %6.4f r(
+> p)
+  7.         quietly margins grp
+  8.         matrix G_`v'_`a' = r(table)
+  9.         quietly regress beat_`v' i.g_isl `ctl' if cmp, vce(cluster firm_id)
+ 10.         quietly margins g_isl
+ 11.         matrix I_`v'_`a' = r(table)
+ 12.     }
+ 13.     quietly regress beat_`v' i.grp if cmp, vce(cluster firm_id)
+ 14.     quietly testparm i.grp
+ 15.     display "   `v', as drawn: do rows differ? F(" r(df) ", " r(df_r) ") = " %6.2f r(F) ", p = " %6.4f r(p)
+ 16. }
+   energy_va, sec held fixed: do rows differ? F(13, 5278) =   1.16, p = 0.3019
+   energy_va, q5 held fixed: do rows differ? F(13, 5278) =   6.35, p = 0.0000
+   energy_va, as drawn: do rows differ? F(13, 5278) =   1.16, p = 0.3048
+   co2_va, sec held fixed: do rows differ? F(13, 5278) =   1.44, p = 0.1339
+   co2_va, q5 held fixed: do rows differ? F(13, 5278) =   4.87, p = 0.0000
+   co2_va, as drawn: do rows differ? F(13, 5278) =   1.44, p = 0.1305
+   energy, sec held fixed: do rows differ? F(13, 5278) =   1.86, p = 0.0302
+   energy, q5 held fixed: do rows differ? F(13, 5278) =   4.22, p = 0.0000
+   energy, as drawn: do rows differ? F(13, 5278) =   2.64, p = 0.0011
+   co2, sec held fixed: do rows differ? F(13, 5278) =   1.80, p = 0.0374
+   co2, q5 held fixed: do rows differ? F(13, 5278) =   3.45, p = 0.0000
+   co2, as drawn: do rows differ? F(13, 5278) =   2.78, p = 0.0006
+
+. tempname A
+
+. tempfile adj
+
+. postfile `A' byte row_type int code double(sf_pct_energy_va sf_lo_energy_va sf_hi_energy_va ///
+>     sf_pct_co2_va sf_lo_co2_va sf_hi_co2_va sf_pct_energy sf_lo_energy sf_hi_energy sf_pct_co2 sf_lo_co2 sf_hi_co2 ///
+>     st_pct_energy_va st_lo_energy_va st_hi_energy_va st_pct_co2_va st_lo_co2_va st_hi_co2_va ///
+>     st_pct_energy st_lo_energy st_hi_energy st_pct_co2 st_lo_co2 st_hi_co2) using `adj', replace
+(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_14474.000004 not found)
+
+. foreach k in G I {
+  2.     local gv = cond("`k'" == "G", "grp", "g_isl")
+  3.     quietly levelsof `gv' if cmp, local(ss)
+  4.     local j 0
+  5.     foreach s of local ss {                         // margins columns come in ascending level order
+  6.         local ++j
+  7.         local vals ""
+  8.         foreach a in sec q5 {
+  9.             foreach v in energy_va co2_va energy co2 {
+ 10.                 local vals `vals' (100 * `k'_`v'_`a'[1,`j']) (100 * `k'_`v'_`a'[5,`j']) (100 * `k'_`v'_`a'[6,`j'])
+ 11.             }
+ 12.         }
+ 13.         if "`k'" == "I" post `A' (1) (`s') `vals'
+ 14.         else if `s' >= 900 post `A' (3) (`s') `vals'
+ 15.         else post `A' (2) (`s') `vals'
+ 16.     }
+ 17. }
+
+. postclose `A'
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 7/9: firm-level companion (the R3 reducer flag), by the same rows"
+Step 7/9: firm-level companion (the R3 reducer flag), by the same rows
+
+. *---------------------------------------------------------------------------
+. preserve
+
+. bysort firm_id: egen int first_cmp = min(cond(cmp, year, .))
+(5,402 missing values generated)
+
+. bysort firm_id: egen int f_grp = max(cond(year == first_cmp, grp, .))
+(5,402 missing values generated)
+
+. bysort firm_id: egen int f_isl = max(cond(year == first_cmp, g_isl, .))
+(5,402 missing values generated)
+
+. bysort firm_id: keep if _n == 1
+(22,586 observations deleted)
+
+. keep if !missing(reducer_adj_energy_va)         // firms with at least two changes
+(6,754 observations deleted)
+
+. tempname F
+
+. tempfile firmrows
+
+. postfile `F' byte row_type int code long(firms changes reducer_adj_firms) double(pct_reducer_adj lo hi) using `firmrow
+> s', replace
+(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_14474.000006 not found)
+
+. forvalues t = 1/2 {
+  2.     local gv = cond(`t' == 1, "f_isl", "f_grp")
+  3.     quietly levelsof `gv', local(fs)
+  4.     foreach s of local fs {
+  5.         local rt = cond(`t' == 1, 1, cond(`s' >= 900, 3, 2))
+  6.         quietly count if `gv' == `s' & reducer_adj_energy_va == 1
+  7.         local nr = r(N)
+  8.         quietly summarize n_chg_energy_va if `gv' == `s'
+  9.         local nch = r(sum)
+ 10.         local nf  = r(N)
+ 11.         if `nf' >= 2 {
+ 12.             quietly ci proportions reducer_adj_energy_va if `gv' == `s', wilson
+ 13.             post `F' (`rt') (`s') (`nf') (`nch') (`nr') (100 * r(proportion)) (100 * r(lb)) (100 * r(ub))
+ 14.         }
+ 15.         else post `F' (`rt') (`s') (`nf') (`nch') (`nr') (100 * `nr' / `nf') (.) (.)
+ 16.     }
+ 17. }
+
+. postclose `F'
+
+. restore
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 8/9: names, drawing order -> CSVs (numbers written before drawing), then the dot plot"
+Step 8/9: names, drawing order -> CSVs (numbers written before drawing), then the dot plot
+
+. *---------------------------------------------------------------------------
+. use `rows', clear
+
+. merge 1:1 row_type code using `adj', nogen
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                            22
+        from master                        22  
+        from using                          0  
+
+    Matched                                17  
+    -----------------------------------------
+
+. merge m:1 code using `shares', keep(master match) nogen      // rows and energy shares: province rows only
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             5
+        from master                         5  
+        from using                          0  
+
+    Matched                                34  
+    -----------------------------------------
+
+. foreach v in rows pct_all_energy pct_all_co2 {
+  2.     replace `v' = . if row_type != 2
+  3. }
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+
+. label define islname 1 "Sumatra" 2 "Java" 3 "Other islands" 4 "Province not recorded"
+
+. label values island islname
+
+. decode island, gen(island_name)
+
+. label values island
+
+. gen str244 codes_in_row = string(code) if row_type == 2
+(5 missing values generated)
+
+. gen int n_provinces = 1 if row_type == 2
+(5 missing values generated)
+
+. forvalues i = 1/4 {
+  2.     replace codes_in_row = "`codes_90`i''" if row_type == 3 & code == 900 + `i'
+  3.     replace n_provinces = `np_90`i'' if row_type == 3 & code == 900 + `i'
+  4. }
+(1 real change made)
+(1 real change made)
+(0 real changes made)
+(0 real changes made)
+(1 real change made)
+(1 real change made)
+(0 real changes made)
+(0 real changes made)
+
+. bysort island: egen int n_prov_isl = total(row_type == 2)
+
+. replace n_provinces = n_prov_isl if row_type == 1
+(3 real changes made)
+
+. drop n_prov_isl
+
+. forvalues i = 1/4 {
+  2.     quietly levelsof code if row_type == 2 & island == `i', local(cc)
+  3.     replace codes_in_row = "`cc'" if row_type == 1 & code == `i'
+  4. }
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(0 real changes made)
+
+. gen str80 row_label = ""
+(39 missing values generated)
+
+. replace row_label = island_name + ", all provinces (" + strtrim(string(changes, "%9.0fc")) + ")" if row_type == 1
+(3 real changes made)
+
+. replace row_label = "Province " + string(code) + " (" + strtrim(string(changes, "%9.0fc")) + ")" if row_type == 2
+(34 real changes made)
+
+. replace row_label = "Province not recorded (" + strtrim(string(changes, "%9.0fc")) + ")" if row_type == 2 & code == 99
+(0 real changes made)
+
+. replace row_label = string(n_provinces) + " smaller provinces together (" + strtrim(string(changes, "%9.0fc")) + ")" /
+> //
+>     if row_type == 3 & n_provinces > 1
+(2 real changes made)
+
+. replace row_label = "Smaller province " + codes_in_row + " (" + strtrim(string(changes, "%9.0fc")) + ")" ///
+>     if row_type == 3 & n_provinces == 1
+(0 real changes made)
+
+. label define rtype 1 "island group" 2 "province" 3 "smaller provinces together"
+
+. label values row_type rtype
+
+. decode row_type, gen(row_kind)
+
+. label values row_type
+
+. * drawn: island rows, provinces with enough changes, "together" rows with enough changes
+. gen byte in_figure = (row_type == 1) | (row_type == 2 & changes >= `minchg') | (row_type == 3 & changes >= `minchg')
+
+. * checks: every change sits in exactly one island row and in exactly one province row
+. quietly summarize changes if row_type == 1
+
+. assert r(sum) == `n_cmp_num'
+
+. quietly summarize changes if row_type == 2
+
+. assert r(sum) == `n_cmp_num'
+
+. quietly summarize changes if row_type == 3 | (row_type == 2 & changes >= `minchg')
+
+. assert r(sum) == `n_cmp_num'
+
+. * a province with under `minchg' changes is shown only inside its "together" row: its own
+. * share stays in the table, without an interval (with a handful of changes it would be meaningless)
+. foreach v in energy_va co2_va energy co2 {
+  2.     replace lo_`v' = . if row_type == 2 & changes < `minchg'
+  3.     replace hi_`v' = . if row_type == 2 & changes < `minchg'
+  4. }
+(21 real changes made, 21 to missing)
+(21 real changes made, 21 to missing)
+(22 real changes made, 22 to missing)
+(22 real changes made, 22 to missing)
+(22 real changes made, 22 to missing)
+(22 real changes made, 22 to missing)
+(22 real changes made, 22 to missing)
+(22 real changes made, 22 to missing)
+
+. assert lo_energy_va <= pct_energy_va & pct_energy_va <= hi_energy_va if in_figure
+
+. assert !missing(sf_pct_energy_va, st_pct_energy_va) if in_figure
+
+. preserve                                        // row names for the firm-level companion
+
+. keep row_type code row_kind island_name row_label
+
+. tempfile labs
+
+. save `labs'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_14474.000008 saved as .dta format
+
+. restore
+
+. * drawing order: island group, its island row, its provinces by panel (a), its "together" row
+. gen byte sub = cond(row_type == 1, 1, cond(row_type == 2, 2, 3))
+
+. gen byte notdrawn = !in_figure
+
+. gsort notdrawn island sub -pct_energy_va code
+
+. gen int row_order = _n if in_figure
+(22 missing values generated)
+
+. order row_order in_figure row_kind island_name code row_label codes_in_row n_provinces changes firms rows ///
+>     pct_all_energy pct_all_co2
+
+. drop row_type sub notdrawn island
+
+. rename code row_code
+
+. format pct_* lo_* hi_* sf_* st_* %6.2f
+
+. format start_energy_ratio %8.3f
+
+. export delimited using "tables/09_who_reduces_by_province.csv", datafmt replace
+file tables/09_who_reduces_by_province.csv saved
+
+. tempfile ctsrc                     // same numbers, full precision, for the companion table (Step 9)
+
+. quietly save `ctsrc'
+
+. list row_order row_kind row_code changes firms pct_energy_va lo_energy_va hi_energy_va sf_pct_energy_va ///
+>     st_pct_energy_va pct_energy pct_co2 st_pct_energy, noobs sep(0) abbreviate(24)
+
+  +-------------------------------------------------------------------------------------------------------------------+
+  | row_order |                   row_kind | row_code | changes | firms | pct_energy_va | lo_energy_va | hi_energy_va |
+  |         1 |               island group |        1 |    1469 |   581 |         49.01 |        46.83 |        51.19 |
+  |-------------------------------------------------------------------------------------------------------------------|
+  |    sf_pct_energy_va     |     st_pct_energy_va     |     pct_energy     |     pct_co2     |     st_pct_energy     |
+  |               48.79     |                45.10     |          49.35     |       50.03     |             44.38     |
+  +-------------------------------------------------------------------------------------------------------------------+
+
+  +-------------------------------------------------------------------------------------------------------------------+
+  | row_order |                   row_kind | row_code | changes | firms | pct_energy_va | lo_energy_va | hi_energy_va |
+  |         2 |                   province |       14 |     170 |    55 |         54.12 |        45.95 |        62.28 |
+  |-------------------------------------------------------------------------------------------------------------------|
+  |    sf_pct_energy_va     |     st_pct_energy_va     |     pct_energy     |     pct_co2     |     st_pct_energy     |
+  |               53.08     |                54.24     |          58.82     |       58.82     |             45.89     |
+  +-------------------------------------------------------------------------------------------------------------------+
+
+  +-------------------------------------------------------------------------------------------------------------------+
+  | row_order |                   row_kind | row_code | changes | firms | pct_energy_va | lo_energy_va | hi_energy_va |
+  |         3 |                   province |       21 |     150 |    85 |         50.67 |        43.29 |        58.05 |
+  |-------------------------------------------------------------------------------------------------------------------|
+  |    sf_pct_energy_va     |     st_pct_energy_va     |     pct_energy     |     pct_co2     |     st_pct_energy     |
+  |               52.54     |                51.08     |          48.00     |       47.33     |             40.93     |
+  +-------------------------------------------------------------------------------------------------------------------+
+
+  +-------------------------------------------------------------------------------------------------------------------+
+  | row_order |                   row_kind | row_code | changes | firms | pct_energy_va | lo_energy_va | hi_energy_va |
+  |         4 |                   province |       12 |     655 |   205 |         48.85 |        45.83 |        51.88 |
+  |-------------------------------------------------------------------------------------------------------------------|
+  |    sf_pct_energy_va     |     st_pct_energy_va     |     pct_energy     |     pct_co2     |     st_pct_energy     |
+  |               48.55     |                43.79     |          48.85     |       49.31     |             47.11     |
+  +-------------------------------------------------------------------------------------------------------------------+
+
+  +-------------------------------------------------------------------------------------------------------------------+
+  | row_order |                   row_kind | row_code | changes | firms | pct_energy_va | lo_energy_va | hi_energy_va |
+  |         5 |                   province |       18 |     189 |    65 |         47.09 |        41.50 |        52.68 |
+  |-------------------------------------------------------------------------------------------------------------------|
+  |    sf_pct_energy_va     |     st_pct_energy_va     |     pct_energy     |     pct_co2     |     st_pct_energy     |
+  |               46.09     |                38.30     |          48.15     |       48.15     |             41.97     |
+  +-------------------------------------------------------------------------------------------------------------------+
+
+  +-------------------------------------------------------------------------------------------------------------------+
+  | row_order |                   row_kind | row_code | changes | firms | pct_energy_va | lo_energy_va | hi_energy_va |
+  |         6 | smaller provinces together |      901 |     305 |   171 |         46.89 |        41.82 |        51.95 |
+  |-------------------------------------------------------------------------------------------------------------------|
+  |    sf_pct_energy_va     |     st_pct_energy_va     |     pct_energy     |     pct_co2     |     st_pct_energy     |
+  |               46.24     |                43.91     |          46.56     |       49.18     |             40.21     |
+  +-------------------------------------------------------------------------------------------------------------------+
+
+  +-------------------------------------------------------------------------------------------------------------------+
+  | row_order |                   row_kind | row_code | changes | firms | pct_energy_va | lo_energy_va | hi_energy_va |
+  |         7 |               island group |        2 |   17745 |  4268 |         50.07 |        49.48 |        50.66 |
+  |-------------------------------------------------------------------------------------------------------------------|
+  |    sf_pct_energy_va     |     st_pct_energy_va     |     pct_energy     |     pct_co2     |     st_pct_energy     |
+  |               50.08     |                50.53     |          50.05     |       50.02     |             50.41     |
+  +-------------------------------------------------------------------------------------------------------------------+
+
+  +-------------------------------------------------------------------------------------------------------------------+
+  | row_order |                   row_kind | row_code | changes | firms | pct_energy_va | lo_energy_va | hi_energy_va |
+  |         8 |                   province |       36 |    1773 |   549 |         51.61 |        49.63 |        53.59 |
+  |-------------------------------------------------------------------------------------------------------------------|
+  |    sf_pct_energy_va     |     st_pct_energy_va     |     pct_energy     |     pct_co2     |     st_pct_energy     |
+  |               51.47     |                55.62     |          51.72     |       50.76     |             46.97     |
+  +-------------------------------------------------------------------------------------------------------------------+
+
+  +-------------------------------------------------------------------------------------------------------------------+
+  | row_order |                   row_kind | row_code | changes | firms | pct_energy_va | lo_energy_va | hi_energy_va |
+  |         9 |                   province |       31 |    1103 |   366 |         50.86 |        48.30 |        53.42 |
+  |-------------------------------------------------------------------------------------------------------------------|
+  |    sf_pct_energy_va     |     st_pct_energy_va     |     pct_energy     |     pct_co2     |     st_pct_energy     |
+  |               51.06     |                53.90     |          50.14     |       50.95     |             50.23     |
+  +-------------------------------------------------------------------------------------------------------------------+
+
+  +-------------------------------------------------------------------------------------------------------------------+
+  | row_order |                   row_kind | row_code | changes | firms | pct_energy_va | lo_energy_va | hi_energy_va |
+  |        10 |                   province |       32 |    6329 |  1378 |         50.83 |        49.84 |        51.82 |
+  |-------------------------------------------------------------------------------------------------------------------|
+  |    sf_pct_energy_va     |     st_pct_energy_va     |     pct_energy     |     pct_co2     |     st_pct_energy     |
+  |               50.84     |                51.21     |          51.67     |       51.81     |             49.30     |
+  +-------------------------------------------------------------------------------------------------------------------+
+
+  +-------------------------------------------------------------------------------------------------------------------+
+  | row_order |                   row_kind | row_code | changes | firms | pct_energy_va | lo_energy_va | hi_energy_va |
+  |        11 |                   province |       33 |    3258 |   748 |         49.17 |        47.78 |        50.56 |
+  |-------------------------------------------------------------------------------------------------------------------|
+  |    sf_pct_energy_va     |     st_pct_energy_va     |     pct_energy     |     pct_co2     |     st_pct_energy     |
+  |               49.45     |                48.72     |          48.62     |       47.94     |             53.54     |
+  +-------------------------------------------------------------------------------------------------------------------+
+
+  +-------------------------------------------------------------------------------------------------------------------+
+  | row_order |                   row_kind | row_code | changes | firms | pct_energy_va | lo_energy_va | hi_energy_va |
+  |        12 |                   province |       35 |    5049 |  1120 |         49.06 |        48.00 |        50.12 |
+  |-------------------------------------------------------------------------------------------------------------------|
+  |    sf_pct_energy_va     |     st_pct_energy_va     |     pct_energy     |     pct_co2     |     st_pct_energy     |
+  |               48.97     |                48.42     |          48.54     |       48.74     |             50.98     |
+  +-------------------------------------------------------------------------------------------------------------------+
+
+  +-------------------------------------------------------------------------------------------------------------------+
+  | row_order |                   row_kind | row_code | changes | firms | pct_energy_va | lo_energy_va | hi_energy_va |
+  |        13 |                   province |       34 |     233 |   107 |         48.50 |        43.00 |        54.00 |
+  |-------------------------------------------------------------------------------------------------------------------|
+  |    sf_pct_energy_va     |     st_pct_energy_va     |     pct_energy     |     pct_co2     |     st_pct_energy     |
+  |               49.14     |                48.83     |          45.92     |       48.07     |             52.08     |
+  +-------------------------------------------------------------------------------------------------------------------+
+
+  +-------------------------------------------------------------------------------------------------------------------+
+  | row_order |                   row_kind | row_code | changes | firms | pct_energy_va | lo_energy_va | hi_energy_va |
+  |        14 |               island group |        3 |     955 |   430 |         49.84 |        46.97 |        52.72 |
+  |-------------------------------------------------------------------------------------------------------------------|
+  |    sf_pct_energy_va     |     st_pct_energy_va     |     pct_energy     |     pct_co2     |     st_pct_energy     |
+  |               49.94     |                47.32     |          49.63     |       49.21     |             50.74     |
+  +-------------------------------------------------------------------------------------------------------------------+
+
+  +-------------------------------------------------------------------------------------------------------------------+
+  | row_order |                   row_kind | row_code | changes | firms | pct_energy_va | lo_energy_va | hi_energy_va |
+  |        15 |                   province |       73 |     264 |    96 |         48.86 |        43.55 |        54.17 |
+  |-------------------------------------------------------------------------------------------------------------------|
+  |    sf_pct_energy_va     |     st_pct_energy_va     |     pct_energy     |     pct_co2     |     st_pct_energy     |
+  |               47.75     |                45.14     |          50.38     |       47.73     |             50.86     |
+  +-------------------------------------------------------------------------------------------------------------------+
+
+  +-------------------------------------------------------------------------------------------------------------------+
+  | row_order |                   row_kind | row_code | changes | firms | pct_energy_va | lo_energy_va | hi_energy_va |
+  |        16 |                   province |       51 |     217 |   100 |         48.85 |        43.71 |        53.98 |
+  |-------------------------------------------------------------------------------------------------------------------|
+  |    sf_pct_energy_va     |     st_pct_energy_va     |     pct_energy     |     pct_co2     |     st_pct_energy     |
+  |               49.51     |                45.53     |          46.54     |       46.54     |             51.55     |
+  +-------------------------------------------------------------------------------------------------------------------+
+
+  +-------------------------------------------------------------------------------------------------------------------+
+  | row_order |                   row_kind | row_code | changes | firms | pct_energy_va | lo_energy_va | hi_energy_va |
+  |        17 | smaller provinces together |      903 |     474 |   234 |         50.84 |        46.42 |        55.27 |
+  |-------------------------------------------------------------------------------------------------------------------|
+  |    sf_pct_energy_va     |     st_pct_energy_va     |     pct_energy     |     pct_co2     |     st_pct_energy     |
+  |               50.94     |                49.31     |          50.63     |       51.27     |             50.36     |
+  +-------------------------------------------------------------------------------------------------------------------+
+
+  +-------------------------------------------------------------------------------------------------------------------+
+  | row_order |                   row_kind | row_code | changes | firms | pct_energy_va | lo_energy_va | hi_energy_va |
+  |         . |                   province |       11 |      27 |    18 |         51.85 |            . |            . |
+  |-------------------------------------------------------------------------------------------------------------------|
+  |    sf_pct_energy_va     |     st_pct_energy_va     |     pct_energy     |     pct_co2     |     st_pct_energy     |
+  |                   .     |                    .     |          37.04     |       48.15     |                 .     |
+  +-------------------------------------------------------------------------------------------------------------------+
+
+  +-------------------------------------------------------------------------------------------------------------------+
+  | row_order |                   row_kind | row_code | changes | firms | pct_energy_va | lo_energy_va | hi_energy_va |
+  |         . |                   province |       16 |      87 |    49 |         50.57 |            . |            . |
+  |-------------------------------------------------------------------------------------------------------------------|
+  |    sf_pct_energy_va     |     st_pct_energy_va     |     pct_energy     |     pct_co2     |     st_pct_energy     |
+  |                   .     |                    .     |          49.43     |       52.87     |                 .     |
+  +-------------------------------------------------------------------------------------------------------------------+
+
+  +-------------------------------------------------------------------------------------------------------------------+
+  | row_order |                   row_kind | row_code | changes | firms | pct_energy_va | lo_energy_va | hi_energy_va |
+  |         . |                   province |       13 |      54 |    28 |         48.15 |            . |            . |
+  |-------------------------------------------------------------------------------------------------------------------|
+  |    sf_pct_energy_va     |     st_pct_energy_va     |     pct_energy     |     pct_co2     |     st_pct_energy     |
+  |                   .     |                    .     |          50.00     |       50.00     |                 .     |
+  +-------------------------------------------------------------------------------------------------------------------+
+
+  +-------------------------------------------------------------------------------------------------------------------+
+  | row_order |                   row_kind | row_code | changes | firms | pct_energy_va | lo_energy_va | hi_energy_va |
+  |         . |                   province |       19 |      35 |    27 |         45.71 |            . |            . |
+  |-------------------------------------------------------------------------------------------------------------------|
+  |    sf_pct_energy_va     |     st_pct_energy_va     |     pct_energy     |     pct_co2     |     st_pct_energy     |
+  |                   .     |                    .     |          48.57     |       48.57     |                 .     |
+  +-------------------------------------------------------------------------------------------------------------------+
+
+  +-------------------------------------------------------------------------------------------------------------------+
+  | row_order |                   row_kind | row_code | changes | firms | pct_energy_va | lo_energy_va | hi_energy_va |
+  |         . |                   province |       15 |      78 |    38 |         43.59 |            . |            . |
+  |-------------------------------------------------------------------------------------------------------------------|
+  |    sf_pct_energy_va     |     st_pct_energy_va     |     pct_energy     |     pct_co2     |     st_pct_energy     |
+  |                   .     |                    .     |          46.15     |       48.72     |                 .     |
+  +-------------------------------------------------------------------------------------------------------------------+
+
+  +-------------------------------------------------------------------------------------------------------------------+
+  | row_order |                   row_kind | row_code | changes | firms | pct_energy_va | lo_energy_va | hi_energy_va |
+  |         . |                   province |       17 |      24 |    11 |         37.50 |            . |            . |
+  |-------------------------------------------------------------------------------------------------------------------|
+  |    sf_pct_energy_va     |     st_pct_energy_va     |     pct_energy     |     pct_co2     |     st_pct_energy     |
+  |                   .     |                    .     |          37.50     |       37.50     |                 .     |
+  +-------------------------------------------------------------------------------------------------------------------+
+
+  +-------------------------------------------------------------------------------------------------------------------+
+  | row_order |                   row_kind | row_code | changes | firms | pct_energy_va | lo_energy_va | hi_energy_va |
+  |         . |                   province |       81 |      13 |    10 |         69.23 |            . |            . |
+  |-------------------------------------------------------------------------------------------------------------------|
+  |    sf_pct_energy_va     |     st_pct_energy_va     |     pct_energy     |     pct_co2     |     st_pct_energy     |
+  |                   .     |                    .     |          46.15     |       61.54     |                 .     |
+  +-------------------------------------------------------------------------------------------------------------------+
+
+  +-------------------------------------------------------------------------------------------------------------------+
+  | row_order |                   row_kind | row_code | changes | firms | pct_energy_va | lo_energy_va | hi_energy_va |
+  |         . |                   province |       65 |       5 |     5 |         60.00 |            . |            . |
+  |-------------------------------------------------------------------------------------------------------------------|
+  |    sf_pct_energy_va     |     st_pct_energy_va     |     pct_energy     |     pct_co2     |     st_pct_energy     |
+  |                   .     |                    .     |          80.00     |       80.00     |                 .     |
+  +-------------------------------------------------------------------------------------------------------------------+
+
+  +-------------------------------------------------------------------------------------------------------------------+
+  | row_order |                   row_kind | row_code | changes | firms | pct_energy_va | lo_energy_va | hi_energy_va |
+  |         . |                   province |       61 |      55 |    21 |         58.18 |            . |            . |
+  |-------------------------------------------------------------------------------------------------------------------|
+  |    sf_pct_energy_va     |     st_pct_energy_va     |     pct_energy     |     pct_co2     |     st_pct_energy     |
+  |                   .     |                    .     |          58.18     |       61.82     |                 .     |
+  +-------------------------------------------------------------------------------------------------------------------+
+
+  +-------------------------------------------------------------------------------------------------------------------+
+  | row_order |                   row_kind | row_code | changes | firms | pct_energy_va | lo_energy_va | hi_energy_va |
+  |         . |                   province |       62 |      53 |    20 |         54.72 |            . |            . |
+  |-------------------------------------------------------------------------------------------------------------------|
+  |    sf_pct_energy_va     |     st_pct_energy_va     |     pct_energy     |     pct_co2     |     st_pct_energy     |
+  |                   .     |                    .     |          54.72     |       52.83     |                 .     |
+  +-------------------------------------------------------------------------------------------------------------------+
+
+  +-------------------------------------------------------------------------------------------------------------------+
+  | row_order |                   row_kind | row_code | changes | firms | pct_energy_va | lo_energy_va | hi_energy_va |
+  |         . |                   province |       52 |      98 |    39 |         52.04 |            . |            . |
+  |-------------------------------------------------------------------------------------------------------------------|
+  |    sf_pct_energy_va     |     st_pct_energy_va     |     pct_energy     |     pct_co2     |     st_pct_energy     |
+  |                   .     |                    .     |          48.98     |       51.02     |                 .     |
+  +-------------------------------------------------------------------------------------------------------------------+
+
+  +-------------------------------------------------------------------------------------------------------------------+
+  | row_order |                   row_kind | row_code | changes | firms | pct_energy_va | lo_energy_va | hi_energy_va |
+  |         . |                   province |       63 |      51 |    28 |         50.98 |            . |            . |
+  |-------------------------------------------------------------------------------------------------------------------|
+  |    sf_pct_energy_va     |     st_pct_energy_va     |     pct_energy     |     pct_co2     |     st_pct_energy     |
+  |                   .     |                    .     |          56.86     |       56.86     |                 .     |
+  +-------------------------------------------------------------------------------------------------------------------+
+
+  +-------------------------------------------------------------------------------------------------------------------+
+  | row_order |                   row_kind | row_code | changes | firms | pct_energy_va | lo_energy_va | hi_energy_va |
+  |         . |                   province |       53 |      18 |     9 |         50.00 |            . |            . |
+  |-------------------------------------------------------------------------------------------------------------------|
+  |    sf_pct_energy_va     |     st_pct_energy_va     |     pct_energy     |     pct_co2     |     st_pct_energy     |
+  |                   .     |                    .     |          55.56     |       55.56     |                 .     |
+  +-------------------------------------------------------------------------------------------------------------------+
+
+  +-------------------------------------------------------------------------------------------------------------------+
+  | row_order |                   row_kind | row_code | changes | firms | pct_energy_va | lo_energy_va | hi_energy_va |
+  |         . |                   province |       76 |       2 |     2 |         50.00 |            . |            . |
+  |-------------------------------------------------------------------------------------------------------------------|
+  |    sf_pct_energy_va     |     st_pct_energy_va     |     pct_energy     |     pct_co2     |     st_pct_energy     |
+  |                   .     |                    .     |          50.00     |       50.00     |                 .     |
+  +-------------------------------------------------------------------------------------------------------------------+
+
+  +-------------------------------------------------------------------------------------------------------------------+
+  | row_order |                   row_kind | row_code | changes | firms | pct_energy_va | lo_energy_va | hi_energy_va |
+  |         . |                   province |       91 |      14 |    10 |         50.00 |            . |            . |
+  |-------------------------------------------------------------------------------------------------------------------|
+  |    sf_pct_energy_va     |     st_pct_energy_va     |     pct_energy     |     pct_co2     |     st_pct_energy     |
+  |                   .     |                    .     |          57.14     |       57.14     |                 .     |
+  +-------------------------------------------------------------------------------------------------------------------+
+
+  +-------------------------------------------------------------------------------------------------------------------+
+  | row_order |                   row_kind | row_code | changes | firms | pct_energy_va | lo_energy_va | hi_energy_va |
+  |         . |                   province |       94 |      17 |     9 |         47.06 |            . |            . |
+  |-------------------------------------------------------------------------------------------------------------------|
+  |    sf_pct_energy_va     |     st_pct_energy_va     |     pct_energy     |     pct_co2     |     st_pct_energy     |
+  |                   .     |                    .     |          52.94     |       52.94     |                 .     |
+  +-------------------------------------------------------------------------------------------------------------------+
+
+  +-------------------------------------------------------------------------------------------------------------------+
+  | row_order |                   row_kind | row_code | changes | firms | pct_energy_va | lo_energy_va | hi_energy_va |
+  |         . |                   province |       74 |      30 |    16 |         46.67 |            . |            . |
+  |-------------------------------------------------------------------------------------------------------------------|
+  |    sf_pct_energy_va     |     st_pct_energy_va     |     pct_energy     |     pct_co2     |     st_pct_energy     |
+  |                   .     |                    .     |          40.00     |       36.67     |                 .     |
+  +-------------------------------------------------------------------------------------------------------------------+
+
+  +-------------------------------------------------------------------------------------------------------------------+
+  | row_order |                   row_kind | row_code | changes | firms | pct_energy_va | lo_energy_va | hi_energy_va |
+  |         . |                   province |       71 |      52 |    20 |         46.15 |            . |            . |
+  |-------------------------------------------------------------------------------------------------------------------|
+  |    sf_pct_energy_va     |     st_pct_energy_va     |     pct_energy     |     pct_co2     |     st_pct_energy     |
+  |                   .     |                    .     |          48.08     |       48.08     |                 .     |
+  +-------------------------------------------------------------------------------------------------------------------+
+
+  +-------------------------------------------------------------------------------------------------------------------+
+  | row_order |                   row_kind | row_code | changes | firms | pct_energy_va | lo_energy_va | hi_energy_va |
+  |         . |                   province |       64 |      54 |    34 |         44.44 |            . |            . |
+  |-------------------------------------------------------------------------------------------------------------------|
+  |    sf_pct_energy_va     |     st_pct_energy_va     |     pct_energy     |     pct_co2     |     st_pct_energy     |
+  |                   .     |                    .     |          40.74     |       38.89     |                 .     |
+  +-------------------------------------------------------------------------------------------------------------------+
+
+  +-------------------------------------------------------------------------------------------------------------------+
+  | row_order |                   row_kind | row_code | changes | firms | pct_energy_va | lo_energy_va | hi_energy_va |
+  |         . |                   province |       72 |       7 |     6 |         42.86 |            . |            . |
+  |-------------------------------------------------------------------------------------------------------------------|
+  |    sf_pct_energy_va     |     st_pct_energy_va     |     pct_energy     |     pct_co2     |     st_pct_energy     |
+  |                   .     |                    .     |          28.57     |       42.86     |                 .     |
+  +-------------------------------------------------------------------------------------------------------------------+
+
+  +-------------------------------------------------------------------------------------------------------------------+
+  | row_order |                   row_kind | row_code | changes | firms | pct_energy_va | lo_energy_va | hi_energy_va |
+  |         . |                   province |       82 |       3 |     3 |         33.33 |            . |            . |
+  |-------------------------------------------------------------------------------------------------------------------|
+  |    sf_pct_energy_va     |     st_pct_energy_va     |     pct_energy     |     pct_co2     |     st_pct_energy     |
+  |                   .     |                    .     |          66.67     |       33.33     |                 .     |
+  +-------------------------------------------------------------------------------------------------------------------+
+
+  +-------------------------------------------------------------------------------------------------------------------+
+  | row_order |                   row_kind | row_code | changes | firms | pct_energy_va | lo_energy_va | hi_energy_va |
+  |         . |                   province |       75 |       2 |     2 |          0.00 |            . |            . |
+  |-------------------------------------------------------------------------------------------------------------------|
+  |    sf_pct_energy_va     |     st_pct_energy_va     |     pct_energy     |     pct_co2     |     st_pct_energy     |
+  |                   .     |                    .     |          50.00     |       50.00     |                 .     |
+  +-------------------------------------------------------------------------------------------------------------------+
+
+. * largest shifts from the checks, over drawn rows (log and INDEX, not the figure)
+. gen double d_sf = abs(sf_pct_energy_va - pct_energy_va) if in_figure
+(22 missing values generated)
+
+. gen double d_17 = abs(pct_energy_va_no2017 - pct_energy_va) if in_figure
+(22 missing values generated)
+
+. quietly summarize d_sf
+
+. display "   largest move in panel (a) when sector is held fixed: " %4.1f r(max) " points"
+   largest move in panel (a) when sector is held fixed:  1.9 points
+
+. quietly summarize d_17
+
+. display "   largest move in panel (a) without changes starting in 2017: " %4.1f r(max) " points"
+   largest move in panel (a) without changes starting in 2017:  3.5 points
+
+. drop d_sf d_17
+
+. 
+. preserve
+
+. use `firmrows', clear
+
+. merge 1:1 row_type code using `labs', keep(master match) nogen
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                                17  
+    -----------------------------------------
+
+. * the label in brackets counts one-year changes (main table); firms and changes are in their own columns
+. replace row_label = substr(row_label, 1, strrpos(row_label, " (") - 1) if strpos(row_label, " (")
+(17 real changes made)
+
+. sort row_type code
+
+. drop row_type
+
+. rename code row_code
+
+. order row_kind island_name row_code row_label firms changes reducer_adj_firms pct_reducer_adj lo hi
+
+. format pct_reducer_adj lo hi %6.2f
+
+. export delimited using "tables/09_who_reduces_by_province_firm_flag.csv", datafmt replace
+file tables/09_who_reduces_by_province_firm_flag.csv saved
+
+. list, noobs sep(0) abbreviate(24)
+
+  +---------------------------------------------------------------------------------------------------------+
+  |                   row_kind |   island_name | row_code |                     row_label | firms | changes |
+  |               island group |       Sumatra |        1 |        Sumatra, all provinces |   291 |    1179 |
+  |---------------------------------------------------------------------------------------------------------|
+  |       reducer_adj_firms        |       pct_reducer_adj        |          lo        |          hi        |
+  |                     146        |                 50.17        |       44.46        |       55.88        |
+  +---------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------+
+  |                   row_kind |   island_name | row_code |                     row_label | firms | changes |
+  |               island group |          Java |        2 |           Java, all provinces |  3207 |   16684 |
+  |---------------------------------------------------------------------------------------------------------|
+  |       reducer_adj_firms        |       pct_reducer_adj        |          lo        |          hi        |
+  |                    1629        |                 50.80        |       49.06        |       52.52        |
+  +---------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------+
+  |                   row_kind |   island_name | row_code |                     row_label | firms | changes |
+  |               island group | Other islands |        3 |  Other islands, all provinces |   211 |     736 |
+  |---------------------------------------------------------------------------------------------------------|
+  |       reducer_adj_firms        |       pct_reducer_adj        |          lo        |          hi        |
+  |                      90        |                 42.65        |       36.17        |       49.40        |
+  +---------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------+
+  |                   row_kind |   island_name | row_code |                     row_label | firms | changes |
+  |                   province |       Sumatra |       12 |                   Province 12 |   121 |     571 |
+  |---------------------------------------------------------------------------------------------------------|
+  |       reducer_adj_firms        |       pct_reducer_adj        |          lo        |          hi        |
+  |                      62        |                 51.24        |       42.43        |       59.97        |
+  +---------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------+
+  |                   row_kind |   island_name | row_code |                     row_label | firms | changes |
+  |                   province |       Sumatra |       14 |                   Province 14 |    33 |     148 |
+  |---------------------------------------------------------------------------------------------------------|
+  |       reducer_adj_firms        |       pct_reducer_adj        |          lo        |          hi        |
+  |                      23        |                 69.70        |       52.66        |       82.62        |
+  +---------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------+
+  |                   row_kind |   island_name | row_code |                     row_label | firms | changes |
+  |                   province |       Sumatra |       18 |                   Province 18 |    40 |     164 |
+  |---------------------------------------------------------------------------------------------------------|
+  |       reducer_adj_firms        |       pct_reducer_adj        |          lo        |          hi        |
+  |                      18        |                 45.00        |       30.71        |       60.17        |
+  +---------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------+
+  |                   row_kind |   island_name | row_code |                     row_label | firms | changes |
+  |                   province |       Sumatra |       21 |                   Province 21 |    34 |      99 |
+  |---------------------------------------------------------------------------------------------------------|
+  |       reducer_adj_firms        |       pct_reducer_adj        |          lo        |          hi        |
+  |                      14        |                 41.18        |       26.37        |       57.78        |
+  +---------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------+
+  |                   row_kind |   island_name | row_code |                     row_label | firms | changes |
+  |                   province |          Java |       31 |                   Province 31 |   228 |     965 |
+  |---------------------------------------------------------------------------------------------------------|
+  |       reducer_adj_firms        |       pct_reducer_adj        |          lo        |          hi        |
+  |                     127        |                 55.70        |       49.21        |       62.00        |
+  +---------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------+
+  |                   row_kind |   island_name | row_code |                     row_label | firms | changes |
+  |                   province |          Java |       32 |                   Province 32 |  1090 |    6041 |
+  |---------------------------------------------------------------------------------------------------------|
+  |       reducer_adj_firms        |       pct_reducer_adj        |          lo        |          hi        |
+  |                     619        |                 56.79        |       53.83        |       59.70        |
+  +---------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------+
+  |                   row_kind |   island_name | row_code |                     row_label | firms | changes |
+  |                   province |          Java |       33 |                   Province 33 |   586 |    3096 |
+  |---------------------------------------------------------------------------------------------------------|
+  |       reducer_adj_firms        |       pct_reducer_adj        |          lo        |          hi        |
+  |                     271        |                 46.25        |       42.25        |       50.29        |
+  +---------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------+
+  |                   row_kind |   island_name | row_code |                     row_label | firms | changes |
+  |                   province |          Java |       34 |                   Province 34 |    57 |     183 |
+  |---------------------------------------------------------------------------------------------------------|
+  |       reducer_adj_firms        |       pct_reducer_adj        |          lo        |          hi        |
+  |                      24        |                 42.11        |       30.19        |       55.02        |
+  +---------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------+
+  |                   row_kind |   island_name | row_code |                     row_label | firms | changes |
+  |                   province |          Java |       35 |                   Province 35 |   877 |    4806 |
+  |---------------------------------------------------------------------------------------------------------|
+  |       reducer_adj_firms        |       pct_reducer_adj        |          lo        |          hi        |
+  |                     386        |                 44.01        |       40.76        |       47.32        |
+  +---------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------+
+  |                   row_kind |   island_name | row_code |                     row_label | firms | changes |
+  |                   province |          Java |       36 |                   Province 36 |   369 |    1593 |
+  |---------------------------------------------------------------------------------------------------------|
+  |       reducer_adj_firms        |       pct_reducer_adj        |          lo        |          hi        |
+  |                     202        |                 54.74        |       49.64        |       59.75        |
+  +---------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------+
+  |                   row_kind |   island_name | row_code |                     row_label | firms | changes |
+  |                   province | Other islands |       51 |                   Province 51 |    50 |     167 |
+  |---------------------------------------------------------------------------------------------------------|
+  |       reducer_adj_firms        |       pct_reducer_adj        |          lo        |          hi        |
+  |                      18        |                 36.00        |       24.14        |       49.86        |
+  +---------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------+
+  |                   row_kind |   island_name | row_code |                     row_label | firms | changes |
+  |                   province | Other islands |       73 |                   Province 73 |    50 |     218 |
+  |---------------------------------------------------------------------------------------------------------|
+  |       reducer_adj_firms        |       pct_reducer_adj        |          lo        |          hi        |
+  |                      16        |                 32.00        |       20.76        |       45.81        |
+  +---------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------+
+  |                   row_kind |   island_name | row_code |                     row_label | firms | changes |
+  | smaller provinces together |       Sumatra |      901 |  6 smaller provinces together |    63 |     197 |
+  |---------------------------------------------------------------------------------------------------------|
+  |       reducer_adj_firms        |       pct_reducer_adj        |          lo        |          hi        |
+  |                      29        |                 46.03        |       34.31        |       58.21        |
+  +---------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------+
+  |                   row_kind |   island_name | row_code |                     row_label | firms | changes |
+  | smaller provinces together | Other islands |      903 | 16 smaller provinces together |   111 |     351 |
+  |---------------------------------------------------------------------------------------------------------|
+  |       reducer_adj_firms        |       pct_reducer_adj        |          lo        |          hi        |
+  |                      56        |                 50.45        |       41.29        |       59.58        |
+  +---------------------------------------------------------------------------------------------------------+
+
+. restore
+
+. 
+. * ---- figure ----
+. * "together" rows with too few changes are named under the plot, not drawn (none on this file)
+. local few ""
+
+. quietly count if row_kind == "smaller provinces together" & !in_figure
+
+. local nfew = r(N)
+
+. if `nfew' > 0 {
+.     quietly levelsof row_label if row_kind == "smaller provinces together" & !in_figure, local(few)
+. }
+
+. keep if in_figure
+(22 observations deleted)
+
+. gen byte rtype = cond(row_kind == "island group", 1, cond(row_kind == "province", 2, 3))
+
+. * y positions: header row 0; a blank line between island groups
+. sort row_order
+
+. gen double y = .
+(17 missing values generated)
+
+. local pos 0
+
+. local ylab `"0 "Province code (number of one-year changes)""'
+
+. local previsl ""
+
+. forvalues i = 1/`=_N' {
+  2.     if "`previsl'" != "" & island_name[`i'] != "`previsl'" local ++pos
+  3.     local ++pos
+  4.     quietly replace y = `pos' in `i'
+  5.     local lab = row_label[`i']
+  6.     if row_kind[`i'] == "island group" local lab "{bf:`lab'}"
+  7.     local ylab `"`ylab' `pos' "`lab'""'
+  8.     local previsl = island_name[`i']
+  9. }
+
+. local ymax = `pos' + 0.5
+
+. local lastrow = `pos'
+
+. if `nfew' > 0 {
+.     local pos = `pos' + 2
+.     local ylab `"`ylab' `pos' "{bf:Too few changes to draw (under `minchg'):}""'
+.     foreach f of local few {
+  2.         local ++pos
+  3.         local ylab `"`ylab' `pos' "`f'""'
+  4.     }
+.     local ymax = `pos' + 0.5
+. }
+
+. * numbers for the notes (read from the data, never typed): province and "together" rows only
+. quietly count if rtype != 1 & !missing(lo_energy_va, hi_energy_va)
+
+. local K = r(N)
+
+. quietly count if rtype != 1 & !missing(lo_energy_va, hi_energy_va) & (lo_energy_va > 50 | hi_energy_va < 50)
+
+. local nmiss = r(N)
+
+. local nexp = max(1, round(`K' / 20))
+
+. quietly count if rtype == 3
+
+. local has3 = r(N) > 0
+
+. expand 4
+(51 observations created)
+
+. bysort row_order: gen byte panel = _n
+
+. gen double pct = cond(panel == 1, pct_energy_va, cond(panel == 2, pct_co2_va, cond(panel == 3, pct_energy, pct_co2)))
+
+. gen double lo  = cond(panel == 1, lo_energy_va,  cond(panel == 2, lo_co2_va,  cond(panel == 3, lo_energy,  lo_co2)))
+
+. gen double hi  = cond(panel == 1, hi_energy_va,  cond(panel == 2, hi_co2_va,  cond(panel == 3, hi_energy,  hi_co2)))
+
+. gen str8   plab = string(pct, "%4.1f")
+
+. gen double labx = cond(pct < 50, lo, hi)
+
+. gen byte   labp = cond(pct < 50, 9, 3)
+
+. label define panel 1 "(a) Energy per unit of VA" 2 "(b) CO2 per unit of VA" 3 "(c) Energy use (GJ)" 4 "(d) CO2 emitted
+>  (tonnes)"
+
+. label values panel panel
+
+. local n0 = _N
+
+. set obs `=_N + 8'
+Number of observations (_N) was 68, now 76.
+
+. gen double refx = 50 if _n > `n0'
+(68 missing values generated)
+
+. gen double refy = .
+(76 missing values generated)
+
+. forvalues p = 1/4 {
+  2.     replace panel = `p' in `=`n0' + 2*`p' - 1'
+  3.     replace panel = `p' in `=`n0' + 2*`p''
+  4.     replace refy = 0.5 in `=`n0' + 2*`p' - 1'
+  5.     replace refy = `lastrow' + 0.5 in `=`n0' + 2*`p''
+  6. }
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+
+. quietly summarize lo
+
+. local dlo = 50 - r(min)
+
+. quietly summarize hi
+
+. local dhi = r(max) - 50
+
+. local half = max(10, 5 * ceil((max(`dlo', `dhi') + 3) / 5))
+
+. local xlo = 50 - `half'
+
+. local xhi = 50 + `half'
+
+. local xs  = 10 * floor(`half' / 10)
+
+. display "   x range `xlo'-`xhi'"
+   x range 30-70
+
+. sort panel refy y
+
+. * layers: 1 interval, 2 province, 3 island group, [4 together], labels, dashed line
+. local l3 ""
+
+. local k3 ""
+
+. local lref 5
+
+. if `has3' {
+.     * white-filled circle, thin black edge: stays hollow in the PDF and hides the interval line behind it
+.     local l3 "(scatter y pct if rtype == 3, msymbol(O) mfcolor(white) mlcolor(black) mlwidth(thin) msize(small))"
+.     local k3 `"4 "Smaller provinces together (each under `minchg' changes)""'
+.     local lref 6
+. }
+
+. twoway (rspike lo hi y, horizontal lcolor(black) lwidth(thin)) ///
+>     (scatter y pct if rtype == 2, msymbol(O) mcolor(black) msize(vsmall)) ///
+>     (scatter y pct if rtype == 1, msymbol(D) mcolor(black) msize(vsmall)) ///
+>     `l3' ///
+>     (scatter y labx, msymbol(none) mlabel(plab) mlabvposition(labp) mlabgap(0.6) mlabsize(vsmall) mlabcolor(gs5)) ///
+>     (line refy refx, lpattern(dash) lcolor(gs8) lwidth(thin)), ///
+>     by(panel, rows(1) graphregion(color(white) lcolor(white) ilcolor(white)) legend(pos(6)) scale(0.8125) ///
+>         title("Figure R3-09. Share of yearly changes in which energy and CO2 fell more (or rose less) than at the typi
+> cal firm," ///
+>               "by province (codes only: the file has no names), grouped by island and sorted by panel (a)", size(small
+> ) pos(11) span) ///
+>         note("Notes: Each dot = share of the province's one-year changes that fell more or rose less than the typical 
+> (median) change of all firms that year." ///
+>              "50% = same as the typical firm; where the 95% interval crosses the dashed line, the row is not clearly d
+> ifferent. Shows where, not why." ///
+>              "In (a), `nmiss' of `K' province rows are clearly different, against about `nexp' by chance. Island group
+>  = first digit: Sumatra 1–2, Java 3, other islands 5–9." ///
+>              "Firms that start high tend to fall back: in (c), `q5pct'% of changes from the top fifth of starting ener
+> gy beat the typical change, `q1pct'% from the bottom fifth;" ///
+>              "so provinces whose firms start high look better, partly automatically (the table holds sector or startin
+> g level fixed). GJ = gigajoules." ///
+>              "VA = value added = output minus materials, energy and services bought (current prices). Province = code 
+> at the start of each change." ///
+>              "`srcnote'" "`devnote'", size(vsmall) span linegap(0.6))) ///
+>     subtitle(, pos(11) nobox fcolor(white) lcolor(white) size(small)) ///
+>     yscale(reverse noline range(-0.3 `ymax')) ylabel(`ylab', angle(0) noticks tlength(0) nogrid labsize(vsmall)) ytitl
+> e("") ///
+>     xscale(range(`xlo' `xhi') lcolor(gs10)) ///
+>     xlabel(`=50 - `xs''(10)`=50 + `xs'', noticks tlength(0) labsize(vsmall) grid glcolor(gs15) glwidth(vthin)) ///
+>     xtitle("Changes that fell more or rose less than the typical firm's that year (% of the province's changes)", size
+> (vsmall)) ///
+>     legend(order(2 "Province" 3 "Island group, all its provinces" `k3' 1 "95% interval" `lref' "50% = same as the typi
+> cal firm") ///
+>         cols(3) region(lcolor(none)) size(vsmall) symxsize(8) keygap(1) colgap(6)) ///
+>     plotregion(style(none)) xsize(9.5) ysize(8)
+
+. 
+. graph export "figures/09_who_reduces_by_province.png", width(2850) replace
+file
+    /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r3-energy-emissions-correlates/figures
+    > /09_who_reduces_by_province.png saved as PNG format
+
+. graph export "figures/09_who_reduces_by_province.pdf", replace
+file
+    /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r3-energy-emissions-correlates/figures
+    > /09_who_reduces_by_province.pdf saved as PDF format
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 9/9: companion table: every plotted point"
+Step 9/9: companion table: every plotted point
+
+. *---------------------------------------------------------------------------
+. * ==== COMPANION TABLE (pattern for all exhibits) =============================
+. * Owner rule, 28 Sep 2026: every chart gets a table of every plotted point, and
+. * every chart of regression coefficients also gets a regression table, written
+. * by the same do-file (spec: TABLE_BRIEF.md). This step runs AFTER the graph
+. * export, so the chart and the CSV stay byte-identical.
+. *
+. * How to use it in another exhibit file:
+. *   PART 1 (the writer, program ctable_pdf) is copied UNCHANGED.
+. *   PART 2 is the only exhibit-specific part: put the numbers in memory (the
+. *   tempfile saved right after the CSV export, or the CSV itself), build one
+. *   STRING variable per table column, one row per plotted point in chart order
+. *   (years not drawn included, with the reason in a status column), then call
+. *   ctable_pdf. Format numbers with string(x, "%9.1f") etc. so the table shows
+. *   exactly the rounding of the chart labels.
+. *
+. * ctable_pdf strvars using "tables/NN_name_table.pdf",
+. *     title("Table R1-02. ...: every plotted point")    first line, bold
+. *     header("Col 1" "Col 2" ...)       one text per column; "|" = line break
+. *     [right(numlist)]                  columns right-aligned (numbers)
+. *     [norepeat(numlist)]               columns whose repeated text is shown
+. *                                       only on the first row of a run
+. *     [rules(numlist)]                  thin gray line under these data rows
+. *     [notes("line 1" "line 2" ...)]    footer paragraphs (Notes, Source, dev line)
+. *     [subtitle(text)] [fontsize(#)] [perpage(#)] [landscape|portrait]
+. * Landscape is chosen automatically when there are more than 6 columns. Long
+. * tables continue on a new page with the header repeated ("(continued)"); a page
+. * never breaks inside a block whose first column is empty (e.g. an SE row).
+. * --- PART 1: the writer (identical in every file; do not edit) ---------------
+. capture program drop ctable_pdf
+
+. program define ctable_pdf
+  1.     version 17
+  2.     syntax varlist(string) using/, TItle(string) HEADer(string asis) ///
+>         [RIGHT(numlist integer >0) NOREPeat(numlist integer >0) RULES(numlist integer >0) ///
+>          NOTEs(string asis) SUBtitle(string) FONTsize(real 9.5) PERpage(integer 0) ///
+>          LANDscape PORTrait]
+  3.     local nc : word count `varlist'
+  4.     local nh : word count `header'
+  5.     if `nh' != `nc' {
+  6.         display as error "ctable_pdf: `nc' columns but `nh' header texts"
+  7.         exit 198
+  8.     }
+  9.     local orient = cond(`nc' > 6, "landscape", "")
+ 10.     if "`landscape'" != "" local orient "landscape"
+ 11.     if "`portrait'"  != "" local orient ""
+ 12.     * rows per page: a conservative guess for 9-10 pt text (wrapped cells take more)
+.     if `perpage' == 0 local perpage = cond("`orient'" == "landscape", 24, 40)
+ 13.     preserve
+ 14.     quietly {
+ 15.         keep `varlist'
+ 16.         rename (`varlist') (__c#), addnumber      // __c1 __c2 ... in the order given
+ 17.         forvalues j = 1/`nc' {
+ 18.             replace __c`j' = strtrim(__c`j')
+ 19.         }
+ 20.         local N = _N
+ 21.         gen long row = _n
+ 22.         * page chunks: fill up to perpage rows; prefer to end a page at a rule,
+.         * never start a page on a row whose first column is empty
+.         gen int chunk = .
+ 23.         local start 1
+ 24.         local k 0
+ 25.         while `start' <= `N' {
+ 26.             local ++k
+ 27.             local end = min(`start' + `perpage' - 1, `N')
+ 28.             if `end' < `N' {
+ 29.                 local best 0
+ 30.                 foreach r of local rules {
+ 31.                     if `r' >= `start' + floor(`perpage' / 2) & `r' <= `end' & `r' > `best' local best `r'
+ 32.                 }
+ 33.                 if `best' > 0 local end `best'
+ 34.                 else {
+ 35.                     while `end' > `start' & __c1[`end' + 1] == "" {
+ 36.                         local --end
+ 37.                     }
+ 38.                 }
+ 39.             }
+ 40.             replace chunk = `k' in `start'/`end'
+ 41.             local start = `end' + 1
+ 42.         }
+ 43.         local nk `k'
+ 44.         * blank repeated labels inside each page; a column is blanked only while the
+.         * norepeat columns to its left are unchanged too (a new panel shows its series)
+.         gen byte same = _n > 1 & chunk == chunk[_n - 1]
+ 45.         foreach j of local norepeat {
+ 46.             gen strL o`j' = __c`j'
+ 47.             replace same = same & o`j' == o`j'[_n - 1]
+ 48.             replace __c`j' = "" if same
+ 49.             drop o`j'
+ 50.         }
+ 51.         drop same
+ 52.         * column widths (% of the page), from the longest text in each column;
+.         * long text columns are capped so they wrap instead of squeezing numbers
+.         matrix W = J(1, `nc', 0)
+ 53.         local tot 0
+ 54.         forvalues j = 1/`nc' {
+ 55.             gen long L`j' = udstrlen(__c`j')
+ 56.             summarize L`j', meanonly
+ 57.             local w = max(r(max), 3)
+ 58.             local h : word `j' of `header'
+ 59.             local h = subinstr(`"`h'"', "|", " ", .)
+ 60.             foreach hw of local h {
+ 61.                 local w = max(`w', udstrlen(`"`hw'"'))
+ 62.             }
+ 63.             local w = min(`w', 34) + 2          // + 2 = room for the cell margins
+ 64.             matrix W[1, `j'] = `w'
+ 65.             local tot = `tot' + `w'
+ 66.             drop L`j'
+ 67.         }
+ 68.         local used 0
+ 69.         forvalues j = 1/`nc' {
+ 70.             if `j' < `nc' {
+ 71.                 matrix W[1, `j'] = max(floor(100 * W[1, `j'] / `tot'), 3)
+ 72.                 local used = `used' + W[1, `j']
+ 73.             }
+ 74.             else matrix W[1, `j'] = 100 - `used'
+ 75.         }
+ 76.     }
+ 77.     putpdf clear
+ 78.     putpdf begin, pagesize(A4) `orient' font("Times New Roman", `fontsize') ///
+>         margin(left, 0.8in) margin(right, 0.8in) margin(top, 0.5in) margin(bottom, 0.5in)
+ 79.     forvalues k = 1/`nk' {
+ 80.         if `k' > 1 putpdf pagebreak
+ 81.         putpdf paragraph, spacing(after, 4pt)
+ 82.         local tt = cond(`k' == 1, `"`title'"', `"`title' (continued)"')
+ 83.         putpdf text (`"`tt'"'), bold font("Times New Roman", `=`fontsize' + 1.5')
+ 84.         if `k' == 1 & `"`subtitle'"' != "" {
+ 85.             putpdf paragraph, spacing(after, 4pt)
+ 86.             putpdf text (`"`subtitle'"')
+ 87.         }
+ 88.         quietly count if chunk == `k'
+ 89.         local nr = r(N) + 1
+ 90.         quietly putpdf table T`k' = data(__c1-__c`nc') if chunk == `k', varnames border(all, nil) width(W)
+ 91.         forvalues j = 1/`nc' {
+ 92.             * header text; "|" starts a new line inside the cell
+.             local rest : word `j' of `header'
+ 93.             local opt ""
+ 94.             while `"`rest'"' != "" {
+ 95.                 gettoken part rest : rest, parse("|")
+ 96.                 if `"`part'"' == "|" {
+ 97.                     putpdf table T`k'(1, `j') = (""), linebreak append
+ 98.                     continue
+ 99.                 }
+100.                 putpdf table T`k'(1, `j') = (`"`part'"'), valign(bottom) `opt'
+101.                 local opt "append"
+102.             }
+103.             local al = cond(`: list j in right', "right", "left")
+104.             putpdf table T`k'(., `j'), halign(`al') margin(top, 0pt) margin(bottom, 0pt)
+105.         }
+106.         putpdf table T`k'(1, .), border(top, single, black) border(bottom, single, black)
+107.         putpdf table T`k'(`nr', .), border(bottom, single, black)
+108.         foreach r of local rules {
+109.             quietly summarize row if chunk == `k', meanonly
+110.             if `r' >= r(min) & `r' < r(max) {
+111.                 putpdf table T`k'(`=`r' - r(min) + 2', .), border(bottom, single, "A6A6A6")
+112.             }
+113.         }
+114.     }
+115.     local first 1
+116.     foreach n of local notes {
+117.         putpdf paragraph, spacing(before, `=cond(`first', 6, 1)'pt)
+118.         putpdf text (`"`n'"'), font("Times New Roman", `=`fontsize' - 0.5')
+119.         local first 0
+120.     }
+121.     putpdf save `"`using'"', replace
+122.     restore
+123. end
+
+. * --- end of PART 1 ------------------------------------------------------------
+. 
+. * --- PART 2: the rows of this exhibit (the only part that changes per file) ---
+. * Source: the table saved right after the CSV export (full precision, same run
+. * as the chart). One row per point, in chart order: panels (a)-(d), and in each
+. * panel the rows top to bottom (island group, its provinces by panel (a), its
+. * "together" row). Provinces with under `minchg' changes are not drawn on their
+. * own: they follow their island's "together" row, with their share and the
+. * reason. Points are shares, not regression coefficients: no regression table.
+. use `ctsrc', clear
+
+. gen long csvrow = _n                       // CSV order (not-drawn rows: by island, then panel (a))
+
+. gen byte isl = cond(island_name == "Sumatra", 1, cond(island_name == "Java", 2, cond(island_name == "Other islands", 3
+> , 4)))
+
+. bysort isl: egen double maxro = max(row_order)
+
+. gen double key = cond(in_figure, row_order, maxro + 0.5)
+
+. assert !missing(key)
+
+. sort key csvrow
+
+. local nrow = _N
+
+. quietly count if in_figure
+
+. local ndrawnrows = r(N)
+
+. expand 4
+(117 observations created)
+
+. bysort key csvrow: gen byte panel = _n
+
+. gen double v  = cond(panel == 1, pct_energy_va, cond(panel == 2, pct_co2_va, cond(panel == 3, pct_energy, pct_co2)))
+
+. gen double lo = cond(panel == 1, lo_energy_va,  cond(panel == 2, lo_co2_va,  cond(panel == 3, lo_energy,  lo_co2)))
+(88 missing values generated)
+
+. gen double hi = cond(panel == 1, hi_energy_va,  cond(panel == 2, hi_co2_va,  cond(panel == 3, hi_energy,  hi_co2)))
+(88 missing values generated)
+
+. gen str40 t_panel = ""
+(156 missing values generated)
+
+. replace t_panel = "(a) Energy per VA" if panel == 1
+(39 real changes made)
+
+. replace t_panel = "(b) CO2 per VA"    if panel == 2
+(39 real changes made)
+
+. replace t_panel = "(c) Energy use"    if panel == 3
+(39 real changes made)
+
+. replace t_panel = "(d) CO2 emitted"   if panel == 4
+(39 real changes made)
+
+. gen str80 t_pos = row_label                   // as on the axis
+
+. * rounding as the chart labels: one decimal
+. gen str12 t_v  = string(v,  "%9.1f")
+
+. gen str12 t_lo = string(lo, "%9.1f") if !missing(lo)
+(88 missing values generated)
+
+. gen str12 t_hi = string(hi, "%9.1f") if !missing(hi)
+(88 missing values generated)
+
+. gen str12 t_c  = string(changes, "%12.0fc")
+
+. gen str12 t_n  = string(firms, "%12.0fc")
+
+. gen str60 t_status = ""
+(156 missing values generated)
+
+. replace t_status = "drawn: diamond"        if in_figure & row_kind == "island group"
+(12 real changes made)
+
+. replace t_status = "drawn: dot"            if in_figure & row_kind == "province"
+(48 real changes made)
+
+. replace t_status = "drawn: hollow circle"  if in_figure & row_kind == "smaller provinces together"
+(8 real changes made)
+
+. replace t_status = "not drawn (< `minchg')" if !in_figure & row_kind == "province"
+(88 real changes made)
+
+. replace t_status = "not drawn: too few changes" if !in_figure & row_kind == "smaller provinces together"
+(0 real changes made)
+
+. sort panel key csvrow
+
+. * checks: every drawn point is one row with a number and its interval
+. assert t_status != ""
+
+. quietly count if !strpos(t_status, "not drawn")
+
+. assert r(N) == 4 * `ndrawnrows'
+
+. assert t_v != "" & t_lo != "" & t_hi != "" if !strpos(t_status, "not drawn")
+
+. assert _N == 4 * `nrow'
+
+. local tnote "Table: every point of Figure R3-09 in chart order (panel, then rows top to bottom), values rounded as the
+>  chart labels;"
+
+. local tnote "`tnote' 95% interval clustered by firm; One-year changes and Firms = those behind the point. Rows marked 
+> not drawn (< `minchg'): provinces"
+
+. local tnote "`tnote' with under `minchg' changes, shown in the chart only inside their island's 'smaller provinces tog
+> ether' row (listed right"
+
+. local tnote "`tnote' after it); share without an interval. Full precision: tables/09_who_reduces_by_province.csv."
+
+. ctable_pdf t_panel t_pos t_v t_lo t_hi t_c t_n t_status using "tables/09_who_reduces_by_province_table.pdf", ///
+>     title("Table R3-09. Share of yearly changes in which energy and CO2 fell more (or rose less) than at the typical f
+> irm, by province: every plotted point") ///
+>     header("Panel" "Row (number of one-year changes)" "Plotted|value (%)" "95%|low" "95%|high" "One-year|changes" "Fir
+> ms|(clusters)" "Status") ///
+>     subtitle("`tnote'") right(3 4 5 6 7) norepeat(1) fontsize(9) portrait /// how-to-read note on page 1
+>     rules(`nrow' `=2*`nrow'' `=3*`nrow'') perpage(`nrow') ///
+>     notes("Notes: Each dot = share of the province's one-year changes that fell more or rose less than the typical (me
+> dian) change of all firms that year." ///
+>           "50% = same as the typical firm; where the 95% interval crosses the dashed line, the row is not clearly diff
+> erent. Shows where, not why." ///
+>           "In (a), `nmiss' of `K' province rows are clearly different, against about `nexp' by chance. Island group = 
+> first digit: Sumatra 1–2, Java 3, other islands 5–9." ///
+>           "Firms that start high tend to fall back: in (c), `q5pct'% of changes from the top fifth of starting energy 
+> beat the typical change, `q1pct'% from the bottom fifth; so provinces whose firms start high look better, partly autom
+> atically (the table holds sector or starting level fixed). GJ = gigajoules." ///
+>           "VA = value added = output minus materials, energy and services bought (current prices). Province = code at 
+> the start of each change." ///
+>           "`srcnote'" "`devnote'")
+successfully created "/Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r3-energy-emissions-co
+> rrelates/tables/09_who_reduces_by_province_table.pdf"
+
+. display "table -> tables/09_who_reduces_by_province_table.pdf"
+table -> tables/09_who_reduces_by_province_table.pdf
+
+. * --- end of PART 2 ------------------------------------------------------------
+. timer off 1
+
+. quietly timer list 1
+
+. local elapsed = strtrim(string(r(t1), "%9.1f"))
+
+. display "FINISHED: figure -> figures/09_who_reduces_by_province.png (elapsed `elapsed' s)"
+FINISHED: figure -> figures/09_who_reduces_by_province.png (elapsed 14.4 s)
+
+. quietly log close
