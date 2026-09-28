@@ -11,6 +11,7 @@ Tables that go with the charts: every chart has a table PDF with each plotted po
 - 01: `tables/01_aggregate_intensity_path_table.pdf`
 - 02: `tables/02_fhk_decomposition_table.pdf`
 - 03: `tables/03_melitz_polanec_decomposition_table.pdf`
+- 04: `tables/04_by_sector_periods.pdf`, `tables/04_by_sector_table.pdf`, `tables/04_by_sector_two_level.pdf`
 - 06: `tables/06_reconciliation_toy_tests_table.pdf`
 <!-- tables-end -->
 
@@ -20,6 +21,7 @@ Tables that go with the charts: every chart has a table PDF with each plotted po
 | `01_aggregate_intensity_path.do` → `figures/01_aggregate_intensity_path.png/.pdf`, `tables/01_aggregate_intensity_path.csv`, `tables/01_aggregate_intensity_path_intervals.csv`, `tables/01_aggregate_intensity_path_table.pdf` | CO2 and energy per unit of value added for all manufacturing firms taken together, each year. Main line (extreme energy records set aside) and as-filed line, on a log scale. The three periods split up in R9-02 to R9-07. Table R9-01b: what the rule sets aside each year, and the line at other cut-offs. | "Who decarbonised Indonesian manufacturing …?" (the change to be explained); planning-note check "weights sum to one; aggregate = weighted firm ratio" | done, reviewed |
 | `02_fhk_decomposition.do` → `figures/02_fhk_decomposition.png/.pdf`, `tables/02_fhk_decomposition.csv`, `tables/02_fhk_decomposition_table.pdf` | Each period's change in CO2 and energy per unit of value added (all firms together), split with the FHK method into staying firms' own change (within), value added shifting among them (between, cross, and reallocation = between + cross), firms appearing (entry) and firms disappearing (exit), as % of the start level. Periods 2010→15, 2015→18, 2018→22. Tables add CO2 per output, scope 1 and scope 2, the as-filed version, the whole span and the year-to-year chain. | "Who decarbonised Indonesian manufacturing: firms becoming cleaner or production reallocating toward cleaner firms?"; "Accounting decomposition, bukan causal regression. FHK decomposition … Within + reallocation + entry + exit." | done, reviewed |
 | `03_melitz_polanec_decomposition.do` → `figures/03_melitz_polanec_decomposition.png/.pdf`, `tables/03_melitz_polanec_decomposition.csv`, `tables/03_melitz_polanec_decomposition_table.pdf` | The changes of R9-02 split the Melitz–Polanec way, for three periods (before, across and after Paris), CO2 and energy per unit of value added: staying firms' plain average (within), reallocation among them (covariance), the two together, firms appearing (entry), firms disappearing (exit), total. Table R9-03: every plotted point; Table R9-03b: each firm group's number, share of value added, plain average, weighted level and covariance term | "Who decarbonised Indonesian manufacturing: firms becoming cleaner or production reallocating toward cleaner firms?"; "Melitz–Polanec dynamic decomposition. Within + reallocation + entry + exit." | done, reviewed |
+| `04_by_sector.do` → `figures/04_by_sector.png/.pdf`, `tables/04_by_sector.csv`, `tables/04_by_sector_table.pdf`, `tables/04_by_sector_periods.pdf`, `tables/04_by_sector_two_level.pdf` | R9-02's FHK split of each period's change in CO2 per unit of value added, added up by 2-digit sector, for the three periods (before, across and after Paris): each sector's staying firms' own change (within), reallocation among them (between + cross), firms appearing and disappearing, and total; sectors in code order, not ranked. Table R9-04: every plotted point; Table R9-04b: every period and sector, all five parts; Table R9-04c: the same change split with sectors as the units (inside sectors vs value added moving between sectors), next to the firm split | "Who decarbonised Indonesian manufacturing: firms becoming cleaner or production reallocating toward cleaner firms?"; "Accounting decomposition, bukan causal regression. FHK decomposition … Within + reallocation + entry + exit." | done, reviewed |
 | `06_reconciliation_toy_tests.do` → `figures/06_reconciliation_toy_tests.png`, `tables/06_reconciliation_toy_tests_cases.csv`, `tables/06_reconciliation_toy_tests_data.csv`, `tables/06_reconciliation_toy_tests_table.pdf` | Table: do the two bookkeeping methods (FHK and Melitz–Polanec) split a change correctly? (a) six made-up examples with hand-worked answers; (b) on the data, the parts add up to the actual change in every period, measure, sample and group | "Accounting decomposition … FHK decomposition + Melitz–Polanec dynamic decomposition. Within + reallocation + entry + exit." | done, reviewed |
 
 ## Details kept out of the figures
@@ -108,3 +110,31 @@ Tables that go with the charts: every chart has a table PDF with each plotted po
   - Melitz–Polanec parts do not add up firm by firm, so there are no group versions: R9-04 and R9-05 use FHK.
   - CSV only: as filed, CO2 per output, scope 1 and scope 2, whole span, year pairs with running sums.
   - Nominal value added; bookkeeping, not cause.
+
+**04 — Each sector's part in the change, and sectors as the units.**
+- **What it shows.** Each firm's FHK parts (R9-02) are measured against the all-firms start level, so they can be added
+  up by sector: staying and disappearing firms in their start-year sector, appearing firms in their end-year sector.
+  The sector rows add up exactly to R9-02's parts (asserted; the all-sectors rows equal R9-02's CSV with gap 0).
+- **Not a ranking of sectors.** Firm links in the development file are fictional. In 61 of the 72 sector bars, firms
+  appearing and disappearing weigh more than the staying firms, so the sector totals mean nothing here. The page says so
+  under the title, and the sectors stay in code order.
+- **Main, CO2 per unit of value added, all sectors, % of the start level:** 2010→15 within +25.8, reallocation −13.3,
+  appearing + disappearing +26.7, total +39.2; 2015→18 +20.8, −28.2, −37.3, −44.8; 2018→22 +50.4, −51.6, −17.8, −19.0.
+  In a few sectors within and reallocation are large but cancel (Rubber and plastics 2018→22: +30.7 and −29.7).
+- **Sectors as the units (Table R9-04c).** Needs only each year's sector totals, not firm links (except for which
+  records are set aside), so fictional links hardly touch it; values are still masked.
+  - CO2, inside sectors / value added moving between sectors (sector mix): 2010→15 +109.4 / −70.2 (they cancel);
+    2015→18 −38.2 / −6.6; 2018→22 −5.9 / −13.2.
+  - Energy: +121.1 / −93.4, −46.1 / −6.4, −13.9 / −11.0.
+- **Checks.** Independent reviewer script: all 200 period × measure × sector cells match to CSV rounding; staying-firm
+  counts exact. No firm changes sector in this file (CSV `n_switchers`); on real data a switcher counts in its
+  start-year sector.
+- **Limits.**
+  - Sector codes' cross-year bridge is unverified.
+  - Energy covers only some fuels.
+  - CO2 = energy × standard factors.
+  - Nominal value added.
+  - 2015→18 spans the missing 2016 file; 2018→22 uses partly doubtful energy records.
+  - † = fewer than 10 firms in a year: Refined petroleum (19) and Machine repair (33) in 2010→15. These have no
+    staying firms (19 has none in 2015→18 either), so their within and reallocation are 0 by definition.
+  - Bookkeeping, not cause.
