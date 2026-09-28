@@ -8,6 +8,7 @@ Item-by-item coverage of Bu Deasy's row and the review record: [TRACKER.md](TRAC
 | File | What it shows | Bu Deasy's words it answers | Status |
 |---|---|---|---|
 | `01_cohort_states_flow.do` → `figures/01_cohort_states_flow.png`, `tables/01_cohort_states_flow.csv`, `tables/01_cohort_states_flow_table.pdf` | The 3,007 firms of the 2019 file, looked up in the 2020, 2021 and 2022 files: how many stayed in all three (split by whether workers grew, stayed within 10% or shrank), came back after a gap, or left; plus the firms that first appear in 2020–22. Counts that add up to the 2019 firms. | "Impact covid: Survival analysis??", "Which firms survived"; "multinomial outcomes: exit, temporary disappearance, survive-shrink, survive-grow"; "Melihat firms yg bertahan, mati dan hidup selama shock covid" | done (read on the real files) |
+| `02_states_normal_vs_covid.do` → `figures/02_states_normal_vs_covid.png`, `tables/02_states_normal_vs_covid.csv`, `tables/02_states_normal_vs_covid_table.pdf` | For the firms of every annual file 2012–2019, the share still in all of the next three files, back after a gap, gone later, or gone at once; the 2019 firms (followed through 2020–22) against earlier files, for all firms and for firms also in one of the two files before. | "Impact covid: Survival analysis??", "Which firms survived"; "Melihat firms yg bertahan, mati dan hidup selama shock covid" | done (read on the real files) |
 
 ## Details kept out of the figures
 
@@ -27,3 +28,21 @@ Item-by-item coverage of Bu Deasy's row and the review record: [TRACKER.md](TRAC
   neutral band ±10% as a parameter, and constant-price output used automatically when present. R4-02..06 and the R10
   files copy it exactly.
 - Firm traits are not in the block; they belong to R4-04 and R4-05.
+
+**02 — the 2019 firms against earlier files.**
+- The same states as 01 for every file with two files before it and three after it (2012–2019 here), each followed in its next three
+  files. Upper bars: all firms of the file. Lower bars: only firms also in one of the two files before, because firms new to the files
+  leave far more and their share differs by year (2017 file: 50.1% stayed among all firms, 60.6% in the lower group).
+- Dev data, stayed in all three later files: 2012 57.1%, 2013 58.0%, 2014 55.3%, 2015 54.7%, 2017 50.1%, 2018 55.4%, **2019 55.8%**
+  (1,678 of 3,007). Lower group: 67.5, 68.0, 65.4, 63.8, 60.6, 63.6, **65.5%** (1,484 of 2,266).
+- Reading: the 2019 share lies inside the range of the files followed only before 2020 (54.7–58.0%; lower group 63.8–68.0%).
+  With fictional firm links this says nothing about COVID either way; read it on the real BPS files.
+- Status beside each bar: 2012 "Normal years"; 2013–2015 "Skips 2016 (no file)" (followed across the missing 2016 file, so over more
+  calendar years); 2017–2018 "Partly COVID years" (follow-up includes 2020 or later); 2019 "COVID years".
+- 2010 and 2011 are left out: the lower group needs two earlier files. Among all firms they would show 57.5% and 57.3% stayed
+  (reviewer's recount), inside the same range.
+- Absent then back is 0 in every bar (no firm skips a file in the fictional panel); the category stays for the real files.
+- The table and CSV give each share with a 95% interval (Wilson; bars share firms, so intervals are not independent), the stayers
+  split by workers and by output (±10%, current prices on this file), and the firms first seen in each later file.
+- Left the files is not proof of closure. Shares only, not the effect of COVID. Uses the shared "COVID COHORT AND STATES" block
+  (version 2) unchanged, once per starting file.
