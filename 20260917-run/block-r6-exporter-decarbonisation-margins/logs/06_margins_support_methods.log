@@ -1,0 +1,2900 @@
+------------------------------------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r6-exporter-decarbonisation-mar
+> gins/logs/06_margins_support_methods.log
+  log type:  text
+ opened on:  28 Sep 2026, 19:15:10
+
+. timer clear 1
+
+. timer on 1
+
+. display _newline "=== [`exhibit'] STARTING: each margin of the export-start change: support, before-start checks, five
+>  methods ==="
+
+=== [R6-06] STARTING: each margin of the export-start change: support, before-start checks, five methods ===
+
+. 
+. * ---- chart style (identical block in every file) ----
+. set scheme s1mono
+
+. capture graph set window fontface "Times New Roman"   // GUI Stata; console Stata keeps its default font
+
+. * Note: this changes your Stata graph font permanently; undo with: graph set window fontface default
+. local devnote "Development data — obscured values, fictional firm panel. Not BPS findings."
+
+. local srcnote "Source: SI/IBS annual files 2010–2022 (masked), analysis_ready_data.dta."
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 1/8: load export and import status, energy, CO2, value added and electricity; check the add-ons"
+Step 1/8: load export and import status, energy, CO2, value added and electricity; check the add-ons
+
+. *---------------------------------------------------------------------------
+. * The single regression needs reghdfe (with ftools and require): the file stops
+. * without them. Nothing is installed here.
+. foreach p in reghdfe ftools require {
+  2.     capture which `p'
+  3.     if _rc {
+  4.         display as error "This file needs the Stata add-on `p': type  ssc install `p'  once (see INDEX.md), then ru
+> n it again."
+  5.         exit 199
+  6.     }
+  7. }
+
+. * The four methods are user-written Stata commands (install once, e.g.
+. * -ssc install csdid-). Each needs its helper command(s). A missing one is
+. * recorded and its method gets an "unavailable" row (R2-07's guard).
+. local need_cs   "csdid drdid"
+
+. local need_sa   "eventstudyinteract avar"
+
+. local need_bjs  "did_imputation"
+
+. local need_dcdh "did_multiplegt_dyn gtools"
+
+. foreach m in cs sa bjs dcdh {
+  2.     local ok_`m' 1
+  3.     local miss_`m' ""
+  4.     foreach c of local need_`m' {
+  5.         capture which `c'
+  6.         if _rc {
+  7.             local ok_`m' 0
+  8.             local miss_`m' "`miss_`m'' `c'"
+  9.         }
+ 10.     }
+ 11.     if !`ok_`m'' display "   NOTE: not installed:`miss_`m'' - that method gets an 'unavailable' row"
+ 12. }
+
+. * export_flag          = any export activity (1 yes, 0 no, missing = unknown)
+. * import_flag          = imports raw materials (used for the doubtful energy records)
+. * total_gj_s1          = energy use in GJ (nine fuels + bought electricity); gj_fuel_s1, gj_electricity = its parts
+. * co2_total_s1         = CO2 tonnes from the same fuels and electricity (standard rates, not measured)
+. * value_added_nominal  = value added, current prices (masked money unit)
+. * elec_purchased_kwh   = electricity bought from PLN and other suppliers (kWh); never missing
+. * elec_owngen_kwh      = electricity the firm makes itself (kWh); missing = not recorded
+. * own_gen_unknown      = 1 when own electricity is not recorded
+. * own_generation_added = 1 if own electricity were inside the energy total (it must be 0)
+. use firm_id year export_flag import_flag total_gj_s1 co2_total_s1 value_added_nominal ///
+>     gj_fuel_s1 gj_electricity elec_purchased_kwh elec_owngen_kwh own_gen_unknown own_generation_added ///
+>     using "$DATA", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. isid firm_id year
+
+. assert year != 2016
+
+. sort firm_id year
+
+. * R6-04's checks: own electricity is never part of energy used (energy = fuels +
+. * BOUGHT electricity only), and "not recorded" means exactly "missing".
+. assert own_generation_added == 0
+
+. assert reldif(total_gj_s1, gj_fuel_s1 + gj_electricity) < 1e-9
+
+. assert reldif(gj_electricity, 0.0036 * elec_purchased_kwh) < 1e-9
+
+. assert own_gen_unknown == missing(elec_owngen_kwh)
+
+. assert elec_owngen_kwh >= 0 if !missing(elec_owngen_kwh)
+
+. assert !missing(elec_purchased_kwh) & elec_purchased_kwh >= 0
+
+. drop gj_fuel_s1 own_generation_added
+
+. * The calendar year with no annual file (found in the data, never typed; R2-07).
+. quietly summarize year
+
+. local gapyr ""
+
+. forvalues t = `r(min)'/`r(max)' {
+  2.     quietly count if year == `t'
+  3.     if r(N) == 0 local gapyr `gapyr' `t'
+  4. }
+
+. local gapyr = strtrim("`gapyr'")
+
+. display "   calendar years with no file: `gapyr'"
+   calendar years with no file: 2016
+
+. 
+. *###########################################################################
+. *## R6 EXPORT-START SAMPLE (copy exactly into later R6 files)
+. *## = R2's start years (rule A), comparison group, usable-row rule, doubtful
+. *##   energy records, year window (R2-02's rule) and markers, from block-r2
+. *##   files 03, 05, 08 and 09. Model: Step 5 (reghdfe, firm and year fixed
+. *##   effects, clustered by firm; average of years 0..+whi; before-start test).
+. *###########################################################################
+. display "Step 2/8: R6 export-start sample: start years, usable rows, doubtful records, year window"
+Step 2/8: R6 export-start sample: start years, usable rows, doubtful records, year window
+
+. * Years whose energy records are in doubt for importers with unknown export
+. * status (their recorded energy jumps far up, then falls to about a fifth,
+. * while value added per worker stays flat; R1-03/R1-04 reviews, R2-06).
+. * Re-checked below on any data.
+. local doubt_yrs "2017 2019 2020 2021 2022"
+
+. * Import starts dated in this year are left out (import-start version only): from
+. * this file on far more firms count as importers (likely a recording change; R2-08).
+. local imp_bad "2017"
+
+. local minfirms 30               // R2-02's rule: 30+ starters for a year of its own
+
+. * --- Start years, rule A (R2's code; R2-08's loop form, run for exporting and importing) ---
+. * Missing status is unknown, never read as "not participating".
+. * Rule A, simple first entry: the first year the firm is seen participating,
+. *   if it was seen NOT participating in some earlier year. Firms participating
+. *   when first seen cannot be dated and are left out.
+. * Comparison group: firms never seen participating.
+. * Row keys: 9001 never seen participating · 9002 already participating when first
+. * seen (excluded) · 9003 status never observed (excluded).
+. foreach m in exp imp {
+  2.     if "`m'" == "exp" local x export_flag
+  3.     if "`m'" == "imp" local x import_flag
+  4.     by firm_id: egen int first_yes = min(cond(`x' == 1, year, .))
+  5.     by firm_id: egen int first_no  = min(cond(`x' == 0, year, .))
+  6.     by firm_id: egen int n_known   = total(!missing(`x'))
+  7.     gen int keyA = .
+  8.     replace keyA = 9003 if n_known == 0                                     // status never observed
+  9.     replace keyA = 9001 if n_known > 0 & missing(first_yes)                 // never seen participating
+ 10.     replace keyA = 9002 if n_known > 0 & !missing(first_yes) & (missing(first_no) | first_no > first_yes)
+ 11.     replace keyA = first_yes if n_known > 0 & !missing(first_yes) & !missing(first_no) & first_no < first_yes
+ 12.     assert !missing(keyA)
+ 13.     gen int gA = keyA if keyA < 9000                                        // start year, rule A
+ 14.     by firm_id: egen int last_no_before = max(cond(`x' == 0 & year < gA, year, .))
+ 15.     gen byte exactA = !missing(gA) & last_no_before == gA - 1               // seen "no" the year just before
+ 16.     rename (keyA gA exactA) (key_`m' g_`m' exact_`m')
+ 17.     drop first_yes first_no n_known last_no_before
+ 18. }
+(21,821 missing values generated)
+(7,833 missing values generated)
+(33,049 missing values generated)
+(4,817 real changes made)
+(17,004 real changes made)
+(5,800 real changes made)
+(5,428 real changes made)
+(27,621 missing values generated)
+(7,833 missing values generated)
+(10,740 missing values generated)
+(4,337 missing values generated)
+(33,049 missing values generated)
+(0 real changes made)
+(10,740 real changes made)
+(9,476 real changes made)
+(12,833 real changes made)
+(20,216 missing values generated)
+(4,337 missing values generated)
+
+. * The export start is the event of this block: gA / keyA / exactA as in R2-03.
+. gen int gA     = g_exp
+(27,621 missing values generated)
+
+. gen int keyA   = key_exp
+
+. gen byte exactA = exact_exp
+
+. * Years since the start = calendar year minus start year (0 = start year,
+. * -1 = the year before). A firm's 2016 is simply missing (no file).
+. gen int kA = year - gA                                  // missing for non-starters
+(27,621 missing values generated)
+
+. * Usable row = energy, CO2 and value added all above zero, so every log exists
+. * (the same rows in R2-03, R2-04 and R2-05). A zero is left out, not read as "none".
+. gen byte usable = total_gj_s1 > 0 & co2_total_s1 > 0 & value_added_nominal > 0 ///
+>     & !missing(total_gj_s1, co2_total_s1, value_added_nominal)
+
+. * Doubtful energy records (R2-06's definition): importers whose export status is
+. * unknown, in the years listed above. Kept in the main version; left out in
+. * version "nodoubt" (drawn hollow gray) and in the import-start version.
+. local dlist = subinstr(strtrim(itrim("`doubt_yrs'")), " ", ",", .)
+
+. gen byte doubt = missing(export_flag) & import_flag == 1 & inlist(year, `dlist')
+
+. * Re-check on these data (R2-06's rule): in each listed year the doubtful rows'
+. * middle (median) energy per unit of value added should be far from the other
+. * rows' (above double or below half). If not, the year list needs a new look.
+. gen double gjva = total_gj_s1 / value_added_nominal if usable
+(514 missing values generated)
+
+. foreach yy of local doubt_yrs {
+  2.     quietly summarize gjva if doubt & year == `yy', detail
+  3.     local md = r(p50)
+  4.     local nd = r(N)
+  5.     quietly summarize gjva if !doubt & year == `yy', detail
+  6.     local ratio = `md' / r(p50)
+  7.     if `nd' == 0 display "   WARNING: no doubtful rows in `yy' - re-check doubt_yrs at the top"
+  8.     else if inrange(`ratio', 0.5, 2) display "   WARNING: in `yy' doubtful rows look normal (median ratio " %4.2f `
+> ratio' ") - re-check doubt_yrs"
+  9.     else display "   `yy': " %5.0fc `nd' " doubtful rows; their median energy per unit of value added = " %5.2f `ra
+> tio' " x the other rows'"
+ 10. }
+   2017: 1,688 doubtful rows; their median energy per unit of value added = 13.15 x the other rows'
+   2019: 1,320 doubtful rows; their median energy per unit of value added =  0.13 x the other rows'
+   2020: 1,121 doubtful rows; their median energy per unit of value added =  0.16 x the other rows'
+   2021: 1,298 doubtful rows; their median energy per unit of value added =  0.16 x the other rows'
+   2022:   972 doubtful rows; their median energy per unit of value added =  0.22 x the other rows'
+
+. drop gjva
+
+. tempfile fy smp imps est
+
+. save `fy'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_27942.000001 saved as .dta format
+
+. * Which years since the start get their own point: R2-02's rule, computed here so
+. * this file also runs on its own. A year passes when `minfirms'+ starters have a
+. * usable row in it, from starts both before and after 2016; take the widest
+. * window -K..+K in which every year passes (further out = grouped ends).
+. use `fy', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if !missing(gA) & usable
+(27,667 observations deleted)
+
+. gen byte early = gA < 2016
+
+. gen byte late  = gA > 2016
+
+. collapse (count) n = firm_id (max) early late, by(kA)
+
+. gen byte passes = n >= `minfirms' & early & late
+
+. assert passes if inlist(kA, -1, 0)
+
+. local K 0
+
+. local go 1
+
+. while `go' {
+  2.     local kk = `K' + 1
+  3.     quietly count if passes & inlist(kA, -`kk', `kk')
+  4.     if r(N) == 2 local K = `kk'
+  5.     else local go 0
+  6. }
+
+. local wlo = -`K'
+
+. local whi = `K'
+
+. * If R2-02's table is present, it must show the same window.
+. capture confirm file "$R2DIR/tables/02_event_time_support.csv"
+
+. if !_rc {
+.     import delimited using "$R2DIR/tables/02_event_time_support.csv", clear varnames(1)
+(encoding automatically selected: ISO-8859-1)
+(22 vars, 260 obs)
+.     if window_first[1] != `wlo' | window_last[1] != `whi' | min_firms[1] != `minfirms' {
+.         display as error "R2-02's table shows another year window: the R6 sample no longer matches R2's."
+.         exit 459
+.     }
+.     display "   window matches R2-02's table"
+   window matches R2-02's table
+. }
+
+. else display "   R2-02's table not found in $R2DIR: window check skipped"
+
+. local nout = `whi' + 1                                  // first grouped year on each side
+
+. display "   window (R2-02's rule, computed here): each year from `wlo' to +`whi' on its own; `nout'+ years before or a
+> fter grouped"
+   window (R2-02's rule, computed here): each year from -5 to +5 on its own; 6+ years before or after grouped
+
+. * The firms compared: the starters (rule A) and the firms never seen exporting
+. * (the comparison group, all their rows). Left out: firms already exporting when
+. * first seen (start year unknown) and firms whose export status is never recorded.
+. use `fy', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if !missing(gA) | keyA == 9001
+(10,617 observations deleted)
+
+. keep if usable
+(345 observations deleted)
+
+. gen byte never = missing(gA)
+
+. save `smp'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_27942.000002 saved as .dta format
+
+. *###########################################################################
+. *## END OF R6 EXPORT-START SAMPLE (markers and model: Step 5)
+. *###########################################################################
+. 
+. *---------------------------------------------------------------------------
+. display "Step 3/8: the margins, the firm-years each one uses or leaves out, and the markers"
+Step 3/8: the margins, the firm-years each one uses or leaves out, and the markers
+
+. *---------------------------------------------------------------------------
+. * Every firm-year of the compared firms (starters and never-exporters), before
+. * any margin's own rule: how many the usable-row rule leaves out, and why.
+. use `fy', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if !missing(gA) | keyA == 9001
+(10,617 observations deleted)
+
+. quietly count
+
+. local n_firmrows = r(N)
+
+. quietly count if !usable
+
+. local n_zero = r(N)
+
+. quietly count if !usable & !(total_gj_s1 > 0 & !missing(total_gj_s1))
+
+. local n_zero_gj = r(N)
+
+. display "   " %6.0fc `n_firmrows' " firm-years of starters and never-exporters; " %5.0fc `n_zero' ///
+>     " left out by the usable-row rule (" %5.0fc `n_zero_gj' " of them record no energy at all)"
+   22,432 firm-years of starters and never-exporters;   345 left out by the usable-row rule (  345 of them record no ene
+> rgy at all)
+
+. * The margins, on the usable rows of the R6 export-start sample (Step 2).
+. use `smp', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. gen double y1 = ln(value_added_nominal)                     // (1) = R6-01 row (3)
+
+. gen double y2 = ln(total_gj_s1)                             // (2) = R6-01 row (4)
+
+. gen double y3 = ln(co2_total_s1 / total_gj_s1)              // (3) = R6-01 row (5): moves only with the mix
+
+. gen double y4 = 100 * gj_electricity / total_gj_s1          // (4) = R6-03 row (a1), percentage points
+
+. * (5) = R6-04 panel (a): only rows where own electricity is recorded (yes or no);
+. * "not recorded" is never read as "makes none". 100 = makes some, 0 = none.
+. gen byte rec   = !missing(elec_owngen_kwh)
+
+. gen byte maker = rec & elec_owngen_kwh > 0
+
+. gen double y5 = 100 * maker if rec
+(1,767 missing values generated)
+
+. gen double y6 = ln(value_added_nominal / co2_total_s1)      // table only: = R6-01 row (1) = (1) - (2) - (3)
+
+. assert reldif(y6, y1 - y2 - y3) < 1e-9
+
+. assert !missing(y1, y2, y3, y4, y6)
+
+. * R6-04's recording rule (R1-05, R1-07), copied: per calendar year, the % of each
+. * group's rows with own electricity recorded; a year is used only if both groups
+. * reach `og_min'%. In thinly recorded years the unrecorded firms are mostly firms
+. * that make none, so dividing by recorded firms would inflate the share.
+. preserve
+
+. collapse (mean) rec_pct = rec mk_pct = y5 (count) nrows = firm_id, by(year never)
+
+. replace rec_pct = 100 * rec_pct
+(24 real changes made)
+
+. reshape wide rec_pct mk_pct nrows, i(year) j(never)
+(j = 0 1)
+
+Data                               Long   ->   Wide
+-----------------------------------------------------------------------------
+Number of observations               24   ->   12          
+Number of variables                   5   ->   7           
+j variable (2 values)             never   ->   (dropped)
+xij variables:
+                                rec_pct   ->   rec_pct0 rec_pct1
+                                 mk_pct   ->   mk_pct0 mk_pct1
+                                  nrows   ->   nrows0 nrows1
+-----------------------------------------------------------------------------
+
+. gen byte yr_ok = rec_pct0 >= `og_min' & rec_pct1 >= `og_min'
+
+. display "   own electricity recorded, % of rows (starters | never-exporters), and % making some among recorded rows:"
+   own electricity recorded, % of rows (starters | never-exporters), and % making some among recorded rows:
+
+. list year nrows0 rec_pct0 mk_pct0 nrows1 rec_pct1 mk_pct1 yr_ok, noobs abbreviate(24) clean
+
+    year   nrows0   rec_pct0     mk_pct0   nrows1   rec_pct1     mk_pct1   yr_ok  
+    2010      388        100   19.329897     1278        100   13.458529       1  
+    2011      429        100   17.715618     1297        100     15.4202       1  
+    2012      453        100   23.620309     1302        100   15.898618       1  
+    2013      479        100   23.382046     1298        100   18.567026       1  
+    2014      490    61.6327   41.390728     1287    45.6099   38.160136       0  
+    2015      490    62.0408       43.75     1327    47.7769   39.274448       0  
+    2017      510        100   51.960784     1628        100   39.742015       1  
+    2018      476        100   43.697479     1489        100   37.609134       1  
+    2019      463        100   47.948164     1522        100   35.545335       1  
+    2020      429        100   31.002331     1514        100    19.94716       1  
+    2021      411        100   28.953771     1577        100   15.789474       1  
+    2022      364        100   20.054945     1186        100   15.935919       1  
+
+. quietly levelsof year if !yr_ok, local(badyrs)
+
+. keep year yr_ok
+
+. tempfile yrs
+
+. save `yrs'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_27942.000006 saved as .dta format
+
+. restore
+
+. merge m:1 year using `yrs', assert(match) nogenerate
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                            22,087  
+    -----------------------------------------
+
+. local badtxt = subinstr("`badyrs'", " ", " and ", .)
+
+. quietly count if !rec
+
+. local n_notrec = r(N)
+
+. quietly count if rec & !yr_ok
+
+. local n_thin = r(N)
+
+. replace y5 = . if !yr_ok
+(1,827 real changes made, 1,827 to missing)
+
+. if "`badyrs'" != "" display "   own electricity: years left out (recorded for under `og_min'% of a group's rows): `bad
+> txt'"
+   own electricity: years left out (recorded for under 75% of a group's rows): 2014 and 2015
+
+. display "   own electricity: " %5.0fc `n_notrec' " usable firm-years not recorded, " %5.0fc `n_thin' " in the thinly r
+> ecorded years (left out of (5) only)"
+   own electricity: 1,767 usable firm-years not recorded, 1,827 in the thinly recorded years (left out of (5) only)
+
+. * R2-03's markers (R6-01 Step 5): one per year since the start inside the
+. * window, except -1 (the year before the start = the reference, 0 by
+. * definition), plus one for each grouped end. Never-exporters are 0 on all.
+. gen byte ev_lo = !missing(kA) & kA < `wlo'
+
+. local cand "ev_lo"
+
+. forvalues k = `wlo'/`whi' {
+  2.     if `k' == -1 continue
+  3.     local nm = cond(`k' < 0, "ev_m" + string(-`k'), "ev_p" + string(`k'))
+  4.     gen byte `nm' = (kA == `k')
+  5.     local cand `cand' `nm'
+  6. }
+
+. gen byte ev_hi = !missing(kA) & kA > `whi'
+
+. local cand `cand' ev_hi
+
+. keep firm_id year gA kA exactA never doubt y1-y6 `cand'
+
+. sort firm_id year
+
+. tempfile mk
+
+. save `mk'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_27942.000007 saved as .dta format
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 4/8: each margin under the single regression and the four methods (R2-07's code)"
+Step 4/8: each margin under the single regression and the four methods (R2-07's code)
+
+. *---------------------------------------------------------------------------
+. * All: the margin on markers of years since the start, firm and year effects,
+. * starters compared with firms never seen exporting, clustered by firm, no
+. * control variables. What differs is how start years and years since the start
+. * are combined (R2-07). Main number per method = average of years 0 to +`whi'
+. * with each year counting equally (as R6-01); each method's own single overall
+. * number is kept too (CSV and regression table).
+. * Counts behind each estimate: starters with a row from the start year on,
+. * comparison firms and rows, all inside the estimation sample (variable es).
+. capture program drop r606_used
+
+. program define r606_used, rclass
+  1.     quietly {
+  2.         egen byte r606_fs = tag(firm_id) if es & !never & year >= gA
+  3.         count if r606_fs == 1
+  4.         return scalar starters = r(N)
+  5.         egen byte r606_fc = tag(firm_id) if es & never
+  6.         count if r606_fc == 1
+  7.         return scalar comp = r(N)
+  8.         count if es
+  9.         return scalar rows = r(N)
+ 10.         drop r606_fs r606_fc
+ 11.     }
+ 12. end
+
+. tempname h
+
+. postfile `h' byte outcome byte morder str8 method str12 row_type int event_time double(b se df) ///
+>     long(starters comp_firms rows) str80 status str160 note double pin using `est'
+
+. timer clear 2
+
+. timer on 2
+
+. forvalues o = 1/`nall' {
+  2.     use `mk', clear
+  3.     keep if !missing(y`o')                              // the margin's own firm-years
+  4.     gen double y = y`o'
+  5.     quietly count
+  6.     local nrow`o' = r(N)
+  7.     tempfile smpo
+  8.     save `smpo'
+  9.     display "   [`o'] `n`o'': " %6.0fc `nrow`o'' " firm-years"
+ 10. 
+.     * ---- (1) one regression, all start years together (R6-01's model), and two
+.     * table-only versions of it: without doubtful energy records (R6-01's
+.     * "nodoubt") and only starters seen not exporting the year before ("exact").
+.     foreach s in 1 6 7 {
+ 11.         use `smpo', clear
+ 12.         if `s' == 6 keep if !doubt
+ 13.         if `s' == 7 keep if missing(gA) | exactA == 1
+ 14.         local mth = cond(`s' == 1, "twfe", cond(`s' == 6, "twfe_nd", "twfe_ex"))
+ 15.         * A marker with no starter row in this version is left out (R6-01).
+.         local terms ""
+ 16.         local pre ""
+ 17.         local post ""
+ 18.         foreach t of local cand {
+ 19.             quietly count if `t'
+ 20.             if r(N) == 0 continue
+ 21.             local terms `terms' `t'
+ 22.             if "`t'" == "ev_lo" | substr("`t'", 4, 1) == "m" local pre `pre' `t'
+ 23.             else if "`t'" != "ev_hi" local post `post' `t'
+ 24.         }
+ 25.         local lc = subinstr("`post'", " ", " + ", .)     // years 0..+`whi', for the average
+ 26.         local np : word count `post'
+ 27.         quietly reghdfe y `terms', absorb(firm_id year) vce(cluster firm_id)
+ 28.         local df = e(df_r)
+ 29.         capture drop es
+ 30.         gen byte es = e(sample)
+ 31.         r606_used
+ 32.         local st = r(starters)
+ 33.         local cf = r(comp)
+ 34.         local rw = r(rows)
+ 35.         * R6-01 counts every starter in the regression (also those with rows only
+.         * before the start); the Starters column counts those with a row from the
+.         * start year on. Keep both so the notes can say which is which.
+.         if `o' == 1 & `s' == 1 {
+ 36.             egen byte r606_fa = tag(firm_id) if es & !never
+ 37.             quietly count if r606_fa == 1
+ 38.             local nst_any = r(N)
+ 39.             drop r606_fa
+ 40.         }
+ 41.         if `s' == 1 local terms`o' `terms'
+ 42.         local sg`o'_`s' = e(num_singletons)             // firm-years of firms with one row (dropped)
+ 43.         * The fewest starters behind any single year from `wlo' to +`whi' (-1 included).
+.         local fw`o'_`s' = .
+ 44.         local fk`o'_`s' = .
+ 45.         forvalues k = `wlo'/`whi' {
+ 46.             egen byte ft = tag(firm_id) if es & kA == `k'
+ 47.             quietly count if ft == 1
+ 48.             if r(N) < `fw`o'_`s'' {
+ 49.                 local fw`o'_`s' = r(N)
+ 50.                 local fk`o'_`s' = `k'
+ 51.             }
+ 52.             drop ft
+ 53.         }
+ 54.         foreach t of local terms {
+ 55.             if "`t'" == "ev_lo"      local k = `wlo' - 1
+ 56.             else if "`t'" == "ev_hi" local k = `whi' + 1
+ 57.             else local k = cond(substr("`t'", 4, 1) == "m", -1, 1) * real(substr("`t'", 5, .))
+ 58.             local nt = cond(inlist("`t'", "ev_lo", "ev_hi"), "grouped end", "")
+ 59.             post `h' (`o') (`s') ("`mth'") ("event") (`k') (_b[`t']) (_se[`t']) (`df') (.) (.) (.) ("ok") ("`nt'") 
+> (.)
+ 60.         }
+ 61.         quietly lincom (`lc') / `np'
+ 62.         post `h' (`o') (`s') ("`mth'") ("avg") (.) (r(estimate)) (r(se)) (`df') (`st') (`cf') (`rw') ("ok") ("reghd
+> fe, R6-01's markers") (.)
+ 63.         quietly test `pre'
+ 64.         post `h' (`o') (`s') ("`mth'") ("before_check") (.) (.) (.) (.) (.) (.) (.) ("ok") ("F test, years before t
+> he start (grouped end included) = 0; p in column p") (r(p))
+ 65.         * The previous paper's two-way model: one on/off marker from the start year on.
+.         gen byte after = !never & year >= gA
+ 66.         quietly reghdfe y after, absorb(firm_id year) vce(cluster firm_id)
+ 67.         post `h' (`o') (`s') ("`mth'") ("own_overall") (.) (_b[after]) (_se[after]) (e(df_r)) (.) (.) (e(N)) ("ok")
+>  ("one on/off marker from the start year on (the previous paper's two-way model)") (.)
+ 68.     }
+ 69.     * The four methods use the main version's markers.
+.     local terms `terms`o''
+ 70.     local pre ""
+ 71.     local post ""
+ 72.     foreach t of local terms {
+ 73.         if "`t'" == "ev_lo" | substr("`t'", 4, 1) == "m" local pre `pre' `t'
+ 74.         else if "`t'" != "ev_hi" local post `post' `t'
+ 75.     }
+ 76.     local lc = subinstr("`post'", " ", " + ", .)
+ 77.     local np : word count `post'
+ 78. 
+.     * ---- (2) Callaway-Sant'Anna (csdid): each start year vs never-exporters ----
+.     * csdid lays out calendar years one by one, so the year with no file is a
+.     * real gap: starters whose year before the start has no file get no
+.     * after-start estimate. Its before-start check compares each year before
+.     * the start with the year before that, inside the window.
+.     if !`ok_cs' {
+ 79.         post `h' (`o') (2) ("cs") ("avg") (.) (.) (.) (.) (.) (.) (.) ("unavailable: package not installed (`=strtr
+> im("`miss_cs'")')") ("ssc install csdid; ssc install drdid") (.)
+ 80.     }
+ 81.     else {
+ 82.         use `smpo', clear
+ 83.         gen int gcs = cond(never, 0, gA)                   // csdid wants 0 = never started
+ 84.         capture quietly csdid y, ivar(firm_id) time(year) gvar(gcs)
+ 85.         if _rc {
+ 86.             post `h' (`o') (2) ("cs") ("avg") (.) (.) (.) (.) (.) (.) (.) ("failed: csdid stopped with error r(`=_r
+> c')") ("") (.)
+ 87.         }
+ 88.         else {
+ 89.             capture drop es
+ 90.             gen byte es = e(sample)
+ 91.             r606_used
+ 92.             local st = r(starters)
+ 93.             local cf = r(comp)
+ 94.             local rw = r(rows)
+ 95.             quietly estat simple
+ 96.             matrix bb = r(b)
+ 97.             matrix vv = r(V)
+ 98.             post `h' (`o') (2) ("cs") ("own_overall") (.) (bb[1,1]) (sqrt(vv[1,1])) (.) (.) (.) (.) ("ok") ("estat 
+> simple: all years after the start, weighted by start-year size") (.)
+ 99.             quietly estat event, window(`wlo' `whi')
+100.             matrix bb = r(b)
+101.             matrix vv = r(V)
+102.             local cn : colnames bb
+103.             foreach c of local cn {
+104.                 local j = colnumb(bb, "`c'")
+105.                 if "`c'" == "Post_avg" {
+106.                     post `h' (`o') (2) ("cs") ("avg") (.) (bb[1,`j']) (sqrt(vv[`j',`j'])) (.) (`st') (`cf') (`rw') 
+> ("ok") ("estat event Post_avg: years 0 to +`whi', each counts equally") (.)
+107.                 }
+108.                 else if inlist(substr("`c'", 1, 2), "Tm", "Tp") {
+109.                     local k = cond(substr("`c'", 2, 1) == "m", -1, 1) * real(substr("`c'", 3, .))
+110.                     local nt = cond(`k' < 0, "change from the year before (csdid's own base for years before the st
+> art)", "vs the year before the start")
+111.                     post `h' (`o') (2) ("cs") ("event") (`k') (bb[1,`j']) (sqrt(vv[`j',`j'])) (.) (.) (.) (.) ("ok"
+> ) ("`nt'") (.)
+112.                 }
+113.             }
+114.             capture quietly estat pretrend, window(`wlo' -1)
+115.             local ptxt "estat pretrend inside the window"
+116.             if _rc {
+117.                 quietly estat pretrend                    // older csdid: no window option
+118.                 local ptxt "estat pretrend, all years before the start"
+119.             }
+120.             post `h' (`o') (2) ("cs") ("before_check") (.) (.) (.) (.) (.) (.) (.) ("ok") ("`ptxt'; p in column p")
+>  (r(pchi2))
+121.             if "`ptxt'" == "estat pretrend inside the window" {
+122.                 quietly estat pretrend
+123.                 post `h' (`o') (2) ("cs") ("before_all") (.) (.) (.) (.) (.) (.) (.) ("ok") ("estat pretrend, all y
+> ears before the start (table only); p in column p") (r(pchi2))
+124.             }
+125.         }
+126.     }
+127. 
+.     * ---- (3) Sun-Abraham (eventstudyinteract): R6-01's markers, start years kept apart ----
+.     local sa_yrs`o' ""
+128.     local sa_out`o' 0
+129.     if !`ok_sa' {
+130.         post `h' (`o') (3) ("sa") ("avg") (.) (.) (.) (.) (.) (.) (.) ("unavailable: package not installed (`=strtr
+> im("`miss_sa'")')") ("ssc install eventstudyinteract; ssc install avar") (.)
+131.     }
+132.     else {
+133.         use `smpo', clear
+134.         * A start year whose year before has no row in this margin (the year after
+.         * the missing file; for own electricity also the year after a thinly
+.         * recorded year) has no reference year: the package would silently measure
+.         * those starters against their last years instead (it drops one of their
+.         * markers). Leave such start years out, as Callaway-Sant'Anna and
+.         * de Chaisemartin-D'Haultfoeuille do by construction (R2-10's fix).
+.         bysort gA: egen byte has_ref = max(kA == -1)
+135.         egen byte ft0 = tag(firm_id) if !never & !has_ref
+136.         quietly count if ft0 == 1
+137.         local sa_out`o' = r(N)
+138.         quietly levelsof gA if !never & !has_ref, local(sa_yrs`o')
+139.         drop if !never & !has_ref
+140.         drop ft0 has_ref
+141.         display "   Sun-Abraham: start years left out (no row the year before): `sa_yrs`o'' (`sa_out`o'' starters)"
+142.         local sa_terms ""
+143.         foreach t of local terms {
+144.             quietly count if `t'
+145.             if r(N) > 0 local sa_terms `sa_terms' `t'
+146.         }
+147.         assert "`sa_terms'" == "`terms'"                 // every marker still has starter rows
+148.         capture quietly eventstudyinteract y `terms', cohort(gA) control_cohort(never) absorb(i.firm_id i.year) vce
+> (cluster firm_id)
+149.         if _rc {
+150.             post `h' (`o') (3) ("sa") ("avg") (.) (.) (.) (.) (.) (.) (.) ("failed: eventstudyinteract stopped with
+>  error r(`=_rc')") ("") (.)
+151.         }
+152.         else {
+153.             capture drop es
+154.             gen byte es = e(sample)
+155.             r606_used
+156.             local st = r(starters)
+157.             local cf = r(comp)
+158.             local rw = r(rows)
+159.             local df = e(df_r)
+160.             matrix bsa = e(b_iw)
+161.             matrix vsa = e(V_iw)
+162.             ereturn post bsa vsa, dof(`df')
+163.             foreach t of local terms {
+164.                 if "`t'" == "ev_lo"      local k = `wlo' - 1
+165.                 else if "`t'" == "ev_hi" local k = `whi' + 1
+166.                 else local k = cond(substr("`t'", 4, 1) == "m", -1, 1) * real(substr("`t'", 5, .))
+167.                 local nt = cond(inlist("`t'", "ev_lo", "ev_hi"), "grouped end", "")
+168.                 post `h' (`o') (3) ("sa") ("event") (`k') (_b[`t']) (_se[`t']) (`df') (.) (.) (.) ("ok") ("`nt'") (
+> .)
+169.             }
+170.             quietly lincom (`lc') / `np'
+171.             local syl = cond("`sa_yrs`o''" == "", "none", subinstr("`sa_yrs`o''", " ", ", ", .))
+172.             post `h' (`o') (3) ("sa") ("avg") (.) (r(estimate)) (r(se)) (`df') (`st') (`cf') (`rw') ("ok") ("years 
+> 0 to +`whi', each counts equally; start years left out (no row the year before): `syl' (`sa_out`o'' starters)") (.)
+173.             quietly test `pre'
+174.             post `h' (`o') (3) ("sa") ("before_check") (.) (.) (.) (.) (.) (.) (.) ("ok") ("F test, years before th
+> e start (grouped end included) = 0; p in column p") (r(p))
+175.         }
+176.     }
+177. 
+.     * ---- (4) Borusyak-Jaravel-Spiess (did_imputation) ----
+.     * Fits firm and year effects on rows not yet (or never) exporting, predicts
+.     * each starter's path without the start, and averages actual minus
+.     * predicted. Its before-start check asks whether the years just before the
+.     * start already differ from the firm's earlier years.
+.     if !`ok_bjs' {
+178.         post `h' (`o') (4) ("bjs") ("avg") (.) (.) (.) (.) (.) (.) (.) ("unavailable: package not installed (`=strt
+> rim("`miss_bjs'")')") ("ssc install did_imputation") (.)
+179.     }
+180.     else {
+181.         use `smpo', clear
+182.         gen int Ei = gA                                  // start year; missing = never started
+183.         * minn(0): report every year; the window rule already needs 30+ starters per year.
+.         capture quietly did_imputation y firm_id year Ei, horizons(0/`whi') pretrends(`=-`wlo'') autosample minn(0)
+184.         if _rc {
+185.             post `h' (`o') (4) ("bjs") ("avg") (.) (.) (.) (.) (.) (.) (.) ("failed: did_imputation stopped with er
+> ror r(`=_rc')") ("") (.)
+186.         }
+187.         else {
+188.             capture drop es
+189.             gen byte es = e(sample)
+190.             r606_used
+191.             local st = r(starters)
+192.             local cf = r(comp)
+193.             local rw = r(rows)
+194.             local p_bjs = e(pre_p)
+195.             forvalues k = 0/`whi' {
+196.                 post `h' (`o') (4) ("bjs") ("event") (`k') (_b[tau`k']) (_se[tau`k']) (.) (.) (.) (.) ("ok") ("vs p
+> redicted path without the start") (.)
+197.             }
+198.             forvalues k = 1/`=-`wlo'' {
+199.                 post `h' (`o') (4) ("bjs") ("event") (-`k') (_b[pre`k']) (_se[pre`k']) (.) (.) (.) (.) ("ok") ("bef
+> ore-start check: vs the firm's earlier years") (.)
+200.             }
+201.             local lcb "tau0"
+202.             forvalues k = 1/`whi' {
+203.                 local lcb "`lcb' + tau`k'"
+204.             }
+205.             quietly lincom (`lcb') / `=`whi' + 1'
+206.             post `h' (`o') (4) ("bjs") ("avg") (.) (r(estimate)) (r(se)) (.) (`st') (`cf') (`rw') ("ok") ("years 0 
+> to +`whi', each counts equally") (.)
+207.             post `h' (`o') (4) ("bjs") ("before_check") (.) (.) (.) (.) (.) (.) (.) ("ok") ("joint test of the `=-`
+> wlo'' years before the start; p in column p") (`p_bjs')
+208.             capture quietly did_imputation y firm_id year Ei, autosample minn(0)
+209.             if !_rc post `h' (`o') (4) ("bjs") ("own_overall") (.) (_b[tau]) (_se[tau]) (.) (.) (.) (e(N)) ("ok") (
+> "one average over all starter rows from the start on") (.)
+210.         }
+211.     }
+212. 
+.     * ---- (5) de Chaisemartin-D'Haultfoeuille (did_multiplegt_dyn) ----
+.     * It numbers periods as they appear in the data, so every calendar year
+.     * missing inside a firm's span (the year with no file included) gets an
+.     * empty row with the start status filled in (R2-07's fix). Only
+.     * never-exporters are comparisons; starters whose year before the start has
+.     * no row drop out. "Effect_1" = the start year (year 0), Effect_2 = year +1,
+.     * ...; "Placebo_1" = year -2, Placebo_2 = -3, ...
+.     local dpl`o' = .
+213.     if !`ok_dcdh' {
+214.         post `h' (`o') (5) ("dcdh") ("avg") (.) (.) (.) (.) (.) (.) (.) ("unavailable: package not installed (`=str
+> trim("`miss_dcdh'")')") ("ssc install did_multiplegt_dyn; ssc install gtools") (.)
+215.     }
+216.     else {
+217.         use `smpo', clear
+218.         * Starters with no row from their start year on would look like firms
+.         * that never start: leave them out (as the other methods do).
+.         bysort firm_id: egen byte has_after = max(!never & year >= gA)
+219.         drop if !never & !has_after
+220.         keep firm_id year y gA never
+221.         tsset firm_id year
+222.         tsfill                                          // empty rows for missing years inside each firm's span
+223.         bysort firm_id (gA): replace gA = gA[1]
+224.         bysort firm_id (never): replace never = never[1]
+225.         gen byte D = !never & year >= gA                // start status: on from the start year, stays on
+226.         keep firm_id year y D
+227.         local ne  = `whi' + 1                           // Effect_1..Effect_`ne' = years 0..+`whi'
+228.         local npl = -`wlo' - 1                          // Placebo_1..Placebo_`npl' = years -2..`wlo'
+229.         * The package updates itself from the internet in 1 run in 100 unless
+.         * told not to. This file never installs or updates anything.
+.         * A placebo with no starter or no comparison firm behind it (e.g. year -4
+.         * for own electricity, whose 2014 and 2015 are not used) is left empty,
+.         * and the package then posts no covariances (or stops). Then ask for fewer
+.         * placebos (years -2, -3, ...) until every one asked for is estimated;
+.         * the number used is in the CSV note, the notes and the regression table.
+.         local npl0 = `npl'
+230.         local upd "_no_updates"
+231.         local redo 1
+232.         while `redo' {
+233.             local redo 0
+234.             capture quietly did_multiplegt_dyn y firm_id year D, effects(`ne') placebo(`npl') only_never_switchers 
+> graph_off `upd'
+235.             local rc = _rc
+236.             if `rc' == 198 & "`upd'" == "_no_updates" {
+237.                 local upd "no_updates"                  // older versions spell the switch-off this way
+238.                 local redo 1
+239.                 continue
+240.             }
+241.             if `rc' == 198 | `npl' == 0 continue
+242.             if `rc' {                                   // stopped without results: one placebo fewer
+243.                 local --npl
+244.                 local redo 1
+245.                 continue
+246.             }
+247.             local first0 0                              // first placebo left empty
+248.             forvalues l = 1/`npl' {
+249.                 if `first0' == 0 & missing(e(Placebo_`l')) local first0 `l'
+250.             }
+251.             if `first0' > 0 {
+252.                 local npl = `first0' - 1
+253.                 local redo 1
+254.             }
+255.         }
+256.         local pltxt = cond(`npl' < `npl0', "; only years -2 to `=-1-`npl'' (year `=-2-`npl'' has no starter with th
+> e rows it needs)", "")
+257.         local dpl`o' = `npl'                            // placebos used (for the notes and tables)
+258.         if `rc' == 198 {
+259.             post `h' (`o') (5) ("dcdh") ("avg") (.) (.) (.) (.) (.) (.) (.) ("failed: this did_multiplegt_dyn versi
+> on cannot switch off its self-update") ("update it once: ssc install did_multiplegt_dyn, replace") (.)
+260.         }
+261.         else if `rc' {
+262.             post `h' (`o') (5) ("dcdh") ("avg") (.) (.) (.) (.) (.) (.) (.) ("failed: did_multiplegt_dyn stopped wi
+> th error r(`rc')") ("") (.)
+263.         }
+264.         else {
+265.             local st = e(N_switchers_effect_1)
+266.             local rw = e(N_effect_1)
+267.             local p_dcdh = e(p_jointplacebo)
+268.             forvalues l = 1/`ne' {
+269.                 post `h' (`o') (5) ("dcdh") ("event") (`l' - 1) (e(Effect_`l')) (e(se_effect_`l')) (.) (e(N_switche
+> rs_effect_`l')) (.) (e(N_effect_`l')) ("ok") ("Effect_`l' (package name) = year `=`l'-1' since the start") (.)
+270.             }
+271.             forvalues l = 1/`npl' {
+272.                 post `h' (`o') (5) ("dcdh") ("event") (-1 - `l') (e(Placebo_`l')) (e(se_placebo_`l')) (.) (e(N_swit
+> chers_placebo_`l')) (.) (e(N_placebo_`l')) ("ok") ("Placebo_`l' (package name) = year `=-1-`l'' vs the year before the
+>  start") (.)
+273.             }
+274.             post `h' (`o') (5) ("dcdh") ("own_overall") (.) (e(Av_tot_effect)) (e(se_avg_total_effect)) (.) (.) (.)
+>  (e(N_avg_total_effect)) ("ok") ("average total effect: all its effects, weighted by starters behind each") (.)
+275.             post `h' (`o') (5) ("dcdh") ("before_check") (.) (.) (.) (.) (.) (.) (.) ("ok") ("joint test of its pla
+> cebos (years -2 to `=-1-`npl''`pltxt'); p in column p") (`p_dcdh')
+276.             local lcd "Effect_1"
+277.             forvalues l = 2/`ne' {
+278.                 local lcd "`lcd' + Effect_`l'"
+279.             }
+280.             capture quietly lincom (`lcd') / `ne'
+281.             if !_rc post `h' (`o') (5) ("dcdh") ("avg") (.) (r(estimate)) (r(se)) (.) (`st') (.) (`rw') ("ok") ("ye
+> ars 0 to +`whi', each counts equally; starters and rows = those behind year 0") (.)
+282.             else    post `h' (`o') (5) ("dcdh") ("avg") (.) (.) (.) (.) (`st') (.) (`rw') ("failed: no covariances 
+> in this package version") ("update: ssc install did_multiplegt_dyn, replace") (.)
+283.         }
+284.     }
+285.     timer off 2
+286.     quietly timer list 2
+287.     display "   [`o'] five methods done (" %5.1f r(t2) " s so far)"
+288.     timer on 2
+289. }
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(0 observations deleted)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_27942.000008 saved as .dta format
+   [1] (1) Value added: 22,087 firm-years
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(3,040 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(1,949 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(283 observations deleted)
+   Sun-Abraham: start years left out (no row the year before): 2017 (37 starters)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(16,705 missing values generated)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(6 observations deleted)
+
+Panel variable: firm_id (unbalanced)
+ Time variable: year, 2010 to 2022, but with gaps
+         Delta: 1 unit
+(486 real changes made)
+(1,620 real changes made)
+   [1] five methods done ( 47.5 s so far)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(0 observations deleted)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_27942.000009 saved as .dta format
+   [2] (2) Energy used, GJ: 22,087 firm-years
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(3,040 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(1,949 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(283 observations deleted)
+   Sun-Abraham: start years left out (no row the year before): 2017 (37 starters)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(16,705 missing values generated)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(6 observations deleted)
+
+Panel variable: firm_id (unbalanced)
+ Time variable: year, 2010 to 2022, but with gaps
+         Delta: 1 unit
+(486 real changes made)
+(1,620 real changes made)
+   [2] five methods done ( 97.9 s so far)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(0 observations deleted)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_27942.00000a saved as .dta format
+   [3] (3) CO2 per GJ of energy: 22,087 firm-years
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(3,040 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(1,949 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(283 observations deleted)
+   Sun-Abraham: start years left out (no row the year before): 2017 (37 starters)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(16,705 missing values generated)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(6 observations deleted)
+
+Panel variable: firm_id (unbalanced)
+ Time variable: year, 2010 to 2022, but with gaps
+         Delta: 1 unit
+(486 real changes made)
+(1,620 real changes made)
+   [3] five methods done (148.5 s so far)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(0 observations deleted)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_27942.00000b saved as .dta format
+   [4] (4) Bought electricity, % of energy: 22,087 firm-years
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(3,040 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(1,949 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(283 observations deleted)
+   Sun-Abraham: start years left out (no row the year before): 2017 (37 starters)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(16,705 missing values generated)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(6 observations deleted)
+
+Panel variable: firm_id (unbalanced)
+ Time variable: year, 2010 to 2022, but with gaps
+         Delta: 1 unit
+(486 real changes made)
+(1,620 real changes made)
+   [4] five methods done (198.9 s so far)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(3,594 observations deleted)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_27942.00000c saved as .dta format
+   [5] (5) Firms making some own electricity: 18,493 firm-years
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(3,040 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(1,590 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(895 observations deleted)
+   Sun-Abraham: start years left out (no row the year before): 2015 2017 (135 starters)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(14,091 missing values generated)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(110 observations deleted)
+
+Panel variable: firm_id (unbalanced)
+ Time variable: year, 2010 to 2022, but with gaps
+         Delta: 1 unit
+(1,180 real changes made)
+(3,456 real changes made)
+   [5] five methods done (251.1 s so far)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(0 observations deleted)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_27942.00000d saved as .dta format
+   [6] Value added per tonne of CO2 (table only): 22,087 firm-years
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(3,040 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(1,949 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(283 observations deleted)
+   Sun-Abraham: start years left out (no row the year before): 2017 (37 starters)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(16,705 missing values generated)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(6 observations deleted)
+
+Panel variable: firm_id (unbalanced)
+ Time variable: year, 2010 to 2022, but with gaps
+         Delta: 1 unit
+(486 real changes made)
+(1,620 real changes made)
+   [6] five methods done (302.0 s so far)
+
+. postclose `h'
+
+. timer off 2
+
+. 
+. 
+. *---------------------------------------------------------------------------
+. display "Step 5/8: intervals, the numbers as drawn, cross-checks with R6-01, R6-03 and R6-04, and the CSV"
+Step 5/8: intervals, the numbers as drawn, cross-checks with R6-01, R6-03 and R6-04, and the CSV
+
+. *---------------------------------------------------------------------------
+. use `est', clear
+
+. * 95% interval and p: t with the model's degrees of freedom where the package
+. * gives them (reghdfe-based rows), otherwise normal, as the package reports.
+. gen double crit = cond(missing(df), invnormal(0.975), invttail(df, 0.025))
+
+. gen double lo = b - crit * se
+(48 missing values generated)
+
+. gen double hi = b + crit * se
+(48 missing values generated)
+
+. gen double p  = cond(missing(df), 2 * normal(-abs(b / se)), 2 * ttail(df, abs(b / se)))
+(48 missing values generated)
+
+. replace p = pin if inlist(row_type, "before_check", "before_all")
+(48 real changes made)
+
+. gen str6 ci_basis = cond(missing(se), "", cond(missing(df), "normal", "t"))
+(48 missing values generated)
+
+. * The number as drawn: % change = 100 x (exp(b) - 1) for the log margins, and
+. * percentage points (b itself) for the two shares; interval ends converted the same way.
+. gen byte unit = .
+(604 missing values generated)
+
+. forvalues o = 1/`nall' {
+  2.     replace unit = `u`o'' if outcome == `o'
+  3. }
+(101 real changes made)
+(101 real changes made)
+(101 real changes made)
+(101 real changes made)
+(99 real changes made)
+(101 real changes made)
+
+. assert !missing(unit)
+
+. gen str18 unit_label = cond(unit == 1, "% change", "percentage points")
+
+. gen double shown    = cond(unit == 1, 100 * (exp(b)  - 1), b)
+(48 missing values generated)
+
+. gen double shown_lo = cond(unit == 1, 100 * (exp(lo) - 1), lo)
+(48 missing values generated)
+
+. gen double shown_hi = cond(unit == 1, 100 * (exp(hi) - 1), hi)
+(48 missing values generated)
+
+. * Parts = whole under every method: value added per tonne of CO2 = value added -
+. * energy used - CO2 per GJ (logs), average by average. Every method is linear in
+. * the outcome and the four margins use the same firm-years, so this must hold.
+. preserve
+
+. keep if row_type == "avg" & inlist(outcome, 1, 2, 3, 6) & !missing(b)
+(576 observations deleted)
+
+. keep outcome morder b
+
+. reshape wide b, i(morder) j(outcome)
+(j = 1 2 3 6)
+
+Data                               Long   ->   Wide
+-----------------------------------------------------------------------------
+Number of observations               28   ->   7           
+Number of variables                   3   ->   5           
+j variable (4 values)           outcome   ->   (dropped)
+xij variables:
+                                      b   ->   b1 b2 ... b6
+-----------------------------------------------------------------------------
+
+. assert reldif(b6, b1 - b2 - b3) < 1e-6 if !missing(b1, b2, b3, b6)
+
+. quietly count if !missing(b1, b2, b3, b6)
+
+. display "   value added per tonne of CO2 = (1) - (2) - (3) under all " r(N) " methods and versions (averages, logs)"
+   value added per tonne of CO2 = (1) - (2) - (3) under all 7 methods and versions (averages, logs)
+
+. restore
+
+. gen str60 outcome_label = ""
+(604 missing values generated)
+
+. gen str60 outcome_def   = ""
+(604 missing values generated)
+
+. gen str20 source        = ""
+(604 missing values generated)
+
+. forvalues o = 1/`nall' {
+  2.     replace outcome_label = "`n`o''"   if outcome == `o'
+  3.     replace source        = "`src`o''" if outcome == `o'
+  4. }
+(101 real changes made)
+(101 real changes made)
+(101 real changes made)
+(101 real changes made)
+(101 real changes made)
+(101 real changes made)
+(101 real changes made)
+(101 real changes made)
+(99 real changes made)
+(99 real changes made)
+(101 real changes made)
+(101 real changes made)
+
+. replace outcome_def = "ln(value_added_nominal)"                          if outcome == 1
+(101 real changes made)
+
+. replace outcome_def = "ln(total_gj_s1)"                                  if outcome == 2
+(101 real changes made)
+
+. replace outcome_def = "ln(co2_total_s1 / total_gj_s1)"                   if outcome == 3
+(101 real changes made)
+
+. replace outcome_def = "100 x gj_electricity / total_gj_s1"               if outcome == 4
+(101 real changes made)
+
+. replace outcome_def = "100 x (elec_owngen_kwh > 0), recorded rows, years passing the 75% rule" if outcome == 5
+variable outcome_def was str60 now str70
+(99 real changes made)
+
+. replace outcome_def = "ln(value_added_nominal / co2_total_s1) = (1) - (2) - (3)" if outcome == 6
+(101 real changes made)
+
+. gen str90 method_label = ""
+(604 missing values generated)
+
+. replace method_label = "One regression, all start years together (R6-01's model, reghdfe)"            if method == "tw
+> fe"
+(90 real changes made)
+
+. replace method_label = "Callaway-Sant'Anna (csdid): each start year vs never-exporters"                 if method == "
+> cs"
+(90 real changes made)
+
+. replace method_label = "Sun-Abraham (eventstudyinteract): R6-01's markers, start years kept apart"      if method == "
+> sa"
+(84 real changes made)
+
+. replace method_label = "Borusyak-Jaravel-Spiess (did_imputation): predicted path without the start"     if method == "
+> bjs"
+(84 real changes made)
+
+. replace method_label = "de Chaisemartin-D'Haultfoeuille (did_multiplegt_dyn): change from the year before" if method =
+> = "dcdh"
+(76 real changes made)
+
+. replace method_label = "One regression without doubtful energy records (table only)"                   if method == "t
+> wfe_nd"
+(90 real changes made)
+
+. replace method_label = "One regression, only starters seen not exporting the year before (table only)" if method == "t
+> wfe_ex"
+(90 real changes made)
+
+. gen str70 row_label = ""
+(604 missing values generated)
+
+. replace row_label = "Average of years 0 to +`whi', each year counts equally"      if row_type == "avg"
+(42 real changes made)
+
+. replace row_label = "The method's own overall number (all years after the start)" if row_type == "own_overall"
+(36 real changes made)
+
+. replace row_label = "One year since the start"                                  if row_type == "event"
+(478 real changes made)
+
+. replace row_label = "Before-start check (p only)"                               if row_type == "before_check"
+(42 real changes made)
+
+. replace row_label = "Before-start check, all years before the start (p only)"   if row_type == "before_all"
+(6 real changes made)
+
+. * The margin's support, repeated on each of its rows: every firm-year of the
+. * compared firms, the firm-years each rule leaves out, the firms with one row
+. * (dropped by the single regression), the fewest starters behind a single year.
+. gen long firmrows_all = `n_firmrows'
+
+. gen long left_no_energy = `n_zero'
+
+. gen long left_notrec = cond(outcome == 5, `n_notrec', 0)
+
+. gen long left_thin   = cond(outcome == 5, `n_thin', 0)
+
+. gen long margin_rows = .
+(604 missing values generated)
+
+. gen long left_one_row = .
+(604 missing values generated)
+
+. gen long fewest_starters = .
+(604 missing values generated)
+
+. gen int  fewest_at = .
+(604 missing values generated)
+
+. gen str20 sa_left_years = ""
+(604 missing values generated)
+
+. gen long sa_left_starters = .
+(604 missing values generated)
+
+. gen byte dcdh_placebos = .
+(604 missing values generated)
+
+. forvalues o = 1/`nall' {
+  2.     replace margin_rows = `nrow`o'' if outcome == `o'
+  3.     foreach s in 1 6 7 {
+  4.         replace left_one_row    = `sg`o'_`s'' if outcome == `o' & morder == `s'
+  5.         replace fewest_starters = `fw`o'_`s'' if outcome == `o' & morder == `s'
+  6.         replace fewest_at       = `fk`o'_`s'' if outcome == `o' & morder == `s'
+  7.     }
+  8.     replace sa_left_years    = "`sa_yrs`o''" if outcome == `o' & method == "sa"
+  9.     replace sa_left_starters = `sa_out`o''   if outcome == `o' & method == "sa"
+ 10.     replace dcdh_placebos    = `dpl`o''      if outcome == `o' & method == "dcdh"
+ 11. }
+(101 real changes made)
+(15 real changes made)
+(15 real changes made)
+(15 real changes made)
+(15 real changes made)
+(15 real changes made)
+(15 real changes made)
+(15 real changes made)
+(15 real changes made)
+(15 real changes made)
+(14 real changes made)
+(14 real changes made)
+(13 real changes made)
+(101 real changes made)
+(15 real changes made)
+(15 real changes made)
+(15 real changes made)
+(15 real changes made)
+(15 real changes made)
+(15 real changes made)
+(15 real changes made)
+(15 real changes made)
+(15 real changes made)
+(14 real changes made)
+(14 real changes made)
+(13 real changes made)
+(101 real changes made)
+(15 real changes made)
+(15 real changes made)
+(15 real changes made)
+(15 real changes made)
+(15 real changes made)
+(15 real changes made)
+(15 real changes made)
+(15 real changes made)
+(15 real changes made)
+(14 real changes made)
+(14 real changes made)
+(13 real changes made)
+(101 real changes made)
+(15 real changes made)
+(15 real changes made)
+(15 real changes made)
+(15 real changes made)
+(15 real changes made)
+(15 real changes made)
+(15 real changes made)
+(15 real changes made)
+(15 real changes made)
+(14 real changes made)
+(14 real changes made)
+(13 real changes made)
+(99 real changes made)
+(15 real changes made)
+(15 real changes made)
+(15 real changes made)
+(15 real changes made)
+(15 real changes made)
+(15 real changes made)
+(15 real changes made)
+(15 real changes made)
+(15 real changes made)
+(14 real changes made)
+(14 real changes made)
+(11 real changes made)
+(101 real changes made)
+(15 real changes made)
+(15 real changes made)
+(15 real changes made)
+(15 real changes made)
+(15 real changes made)
+(15 real changes made)
+(15 real changes made)
+(15 real changes made)
+(15 real changes made)
+(14 real changes made)
+(14 real changes made)
+(13 real changes made)
+
+. * Every firm-year is accounted for: all = used by the margin + left out by its rules;
+. * the single regression uses the margin's rows minus those of firms with one row.
+. assert firmrows_all == margin_rows + left_no_energy + left_notrec + left_thin
+
+. assert rows == margin_rows - left_one_row if method == "twfe" & row_type == "avg"
+
+. gen int window_first = `wlo'
+
+. gen int window_last  = `whi'
+
+. * ---- Cross-checks with the reviewed R6 tables (when present in tables/): each
+. * margin's single regression, main version and the two table-only versions,
+. * must equal its reviewed file's (year by year, average, before-start p, rows).
+. * R6-01's version names: main, nodoubt, exact. Stop on any mismatch. ----
+. gen str60 r6_check = ""
+(604 missing values generated)
+
+. foreach spec in "01_margins_export_start|3|1" "01_margins_export_start|4|2" "01_margins_export_start|5|3" ///
+>                 "01_margins_export_start|1|6" "03_energy_mix_shares|1|4" "04_own_electricity|1|5" {
+  2.     gettoken tf rest : spec, parse("|")
+  3.     gettoken bar rest : rest, parse("|")
+  4.     gettoken ro rest : rest, parse("|")
+  5.     gettoken bar mo : rest, parse("|")
+  6.     capture confirm file "tables/`tf'.csv"
+  7.     if _rc {
+  8.         display "   tables/`tf'.csv not found: cross-check of (`mo') skipped"
+  9.         continue
+ 10.     }
+ 11.     preserve
+ 12.     import delimited using "tables/`tf'.csv", clear varnames(1)
+ 13.     keep if outcome == `ro' & inlist(version, "main", "nodoubt", "exact")
+ 14.     gen str8 method = cond(version == "main", "twfe", cond(version == "nodoubt", "twfe_nd", "twfe_ex"))
+ 15.     keep if reference == 0 & !missing(b)
+ 16.     keep method event_time b avg_after_b before_p n_rows
+ 17.     rename (b avg_after_b before_p n_rows) (f_b f_avg f_bp f_n)
+ 18.     tempfile fig
+ 19.     save `fig'
+ 20.     restore, preserve
+ 21.     keep if outcome == `mo' & inlist(method, "twfe", "twfe_nd", "twfe_ex")
+ 22.     bysort method: egen double m_avg = max(cond(row_type == "avg", b, .))
+ 23.     bysort method: egen double m_bp  = max(cond(row_type == "before_check", p, .))
+ 24.     bysort method: egen double m_n   = max(cond(row_type == "avg", rows, .))
+ 25.     keep if row_type == "event"
+ 26.     keep method event_time b m_avg m_bp m_n
+ 27.     quietly merge 1:1 method event_time using `fig'
+ 28.     quietly count if _merge != 3 | abs(b - f_b) > 0.00005 + 1e-9 | abs(m_avg - f_avg) > 0.00005 + 1e-9 ///
+>         | abs(m_bp - f_bp) > 0.0005 + 1e-9 | m_n != f_n
+ 29.     if r(N) > 0 {
+ 30.         display as error "tables/`tf'.csv (its outcome `ro') does not match this file's margin (`mo'): the margins 
+> no longer equal the reviewed files."
+ 31.         exit 459
+ 32.     }
+ 33.     quietly count
+ 34.     display "   tables/`tf'.csv, its outcome `ro' = margin (`mo'): all " r(N) " year coefficients, averages, before
+> -start p and rows reproduced (3 versions)"
+ 35.     restore
+ 36.     replace r6_check = "`tf'.csv outcome `ro' (main, nodoubt, exact)" if outcome == `mo' & inlist(method, "twfe", "
+> twfe_nd", "twfe_ex")
+ 37. }
+(encoding automatically selected: ISO-8859-1)
+(42 vars, 623 obs)
+(584 observations deleted)
+(3 observations deleted)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_27942.00000g saved as .dta format
+(559 observations deleted)
+(9 observations deleted)
+   tables/01_margins_export_start.csv, its outcome 3 = margin (1): all 36 year coefficients, averages, before-start p an
+> d rows reproduced (3 versions)
+(45 real changes made)
+(encoding automatically selected: ISO-8859-1)
+(42 vars, 623 obs)
+(584 observations deleted)
+(3 observations deleted)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_27942.00000i saved as .dta format
+(559 observations deleted)
+(9 observations deleted)
+   tables/01_margins_export_start.csv, its outcome 4 = margin (2): all 36 year coefficients, averages, before-start p an
+> d rows reproduced (3 versions)
+(45 real changes made)
+(encoding automatically selected: ISO-8859-1)
+(42 vars, 623 obs)
+(584 observations deleted)
+(3 observations deleted)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_27942.00000k saved as .dta format
+(559 observations deleted)
+(9 observations deleted)
+   tables/01_margins_export_start.csv, its outcome 5 = margin (3): all 36 year coefficients, averages, before-start p an
+> d rows reproduced (3 versions)
+(45 real changes made)
+(encoding automatically selected: ISO-8859-1)
+(42 vars, 623 obs)
+(584 observations deleted)
+(3 observations deleted)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_27942.00000m saved as .dta format
+(559 observations deleted)
+(9 observations deleted)
+   tables/01_margins_export_start.csv, its outcome 1 = margin (6): all 36 year coefficients, averages, before-start p an
+> d rows reproduced (3 versions)
+(45 real changes made)
+(encoding automatically selected: ISO-8859-1)
+(44 vars, 728 obs)
+(689 observations deleted)
+(3 observations deleted)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_27942.00000o saved as .dta format
+(559 observations deleted)
+(9 observations deleted)
+   tables/03_energy_mix_shares.csv, its outcome 1 = margin (4): all 36 year coefficients, averages, before-start p and r
+> ows reproduced (3 versions)
+(45 real changes made)
+(encoding automatically selected: ISO-8859-1)
+(47 vars, 364 obs)
+(325 observations deleted)
+(3 observations deleted)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_27942.00000q saved as .dta format
+(559 observations deleted)
+(9 observations deleted)
+   tables/04_own_electricity.csv, its outcome 1 = margin (5): all 36 year coefficients, averages, before-start p and row
+> s reproduced (3 versions)
+(45 real changes made)
+
+. gen byte rorder = 1*(row_type == "avg") + 2*(row_type == "own_overall") + 3*(row_type == "before_check") ///
+>     + 4*(row_type == "before_all") + 6*(row_type == "event")
+
+. sort outcome morder rorder event_time
+
+. rename morder method_order
+
+. order outcome outcome_label outcome_def unit_label source method_order method method_label row_type row_label ///
+>       event_time b se lo hi p shown shown_lo shown_hi ci_basis starters comp_firms rows ///
+>       margin_rows firmrows_all left_no_energy left_notrec left_thin left_one_row fewest_starters fewest_at ///
+>       sa_left_years sa_left_starters dcdh_placebos window_first window_last r6_check status note
+
+. drop rorder crit pin df unit
+
+. format b se lo hi %9.4f
+
+. format shown shown_lo shown_hi %9.2f
+
+. format p %9.3f
+
+. format starters comp_firms rows margin_rows firmrows_all left_no_energy left_notrec left_thin left_one_row ///
+>     fewest_starters sa_left_starters %9.0f
+
+. export delimited using "tables/`fname'.csv", datafmt replace
+file tables/06_margins_support_methods.csv saved
+
+. tempfile full                      // same numbers, full precision, for the chart and the companion tables
+
+. quietly save `full'
+
+. set linesize 200
+
+. list outcome method shown shown_lo shown_hi p starters comp_firms rows status if row_type == "avg", ///
+>     noobs sepby(outcome) abbreviate(24) clean
+
+    outcome    method   shown   shown_lo   shown_hi       p   starters   comp_firms    rows   status  
+          1      twfe   18.62       7.48      30.91   0.001        740         2832   20070       ok  
+          1        cs   14.28       2.95      26.85   0.012        698         2776   19594       ok  
+          1        sa   13.90       2.97      26.00   0.011        703         2832   19787       ok  
+          1       bjs   21.79       9.82      35.07   0.000        739         4849   21483       ok  
+          1      dcdh   14.28       2.96      26.84   0.012        694            .   11429       ok  
+          1   twfe_nd   17.22       5.57      30.16   0.003        738         2657   16864       ok  
+          1   twfe_ex   19.86       6.48      34.92   0.003        510         2832   18121       ok  
+          2      twfe    9.01      -6.97      27.73   0.286        740         2832   20070       ok  
+          2        cs    5.67     -11.07      25.57   0.531        698         2776   19594       ok  
+          2        sa    3.41     -12.26      21.89   0.689        703         2832   19787       ok  
+          2       bjs   16.84       0.30      36.11   0.046        739         4849   21483       ok  
+          2      dcdh    5.67     -11.14      25.67   0.533        694            .   11429       ok  
+          2   twfe_nd    7.32      -7.47      24.47   0.351        738         2657   16864       ok  
+          2   twfe_ex   13.56      -4.93      35.64   0.161        510         2832   18121       ok  
+          3      twfe   -1.28      -4.46       2.01   0.441        740         2832   20070       ok  
+          3        cs   -2.32      -5.73       1.22   0.197        698         2776   19594       ok  
+          3        sa   -1.87      -5.16       1.54   0.280        703         2832   19787       ok  
+          3       bjs   -0.33      -3.38       2.81   0.833        739         4849   21483       ok  
+          3      dcdh   -2.32      -5.72       1.21   0.195        694            .   11429       ok  
+          3   twfe_nd   -0.30      -3.82       3.36   0.872        738         2657   16864       ok  
+          3   twfe_ex   -2.82      -6.64       1.16   0.162        510         2832   18121       ok  
+          4      twfe   -1.26      -4.23       1.70   0.403        740         2832   20070       ok  
+          4        cs   -2.15      -5.34       1.03   0.184        698         2776   19594       ok  
+          4        sa   -1.62      -4.69       1.45   0.300        703         2832   19787       ok  
+          4       bjs   -0.75      -3.59       2.08   0.603        739         4849   21483       ok  
+          4      dcdh   -2.15      -5.33       1.02   0.183        694            .   11429       ok  
+          4   twfe_nd   -0.22      -3.39       2.95   0.892        738         2657   16864       ok  
+          4   twfe_ex   -3.12      -6.75       0.52   0.093        510         2832   18121       ok  
+          5      twfe    8.07       3.73      12.42   0.000        693         2640   16589       ok  
+          5        cs    6.39       1.36      11.42   0.013        568         2640   15997       ok  
+          5        sa    7.88       3.01      12.74   0.002        571         2640   15701       ok  
+          5       bjs    5.85       2.17       9.54   0.002        667         4529   17780       ok  
+          5      dcdh    6.39       1.35      11.43   0.013        485            .    9265       ok  
+          5   twfe_nd    5.21       0.89       9.52   0.018        672         2430   13369       ok  
+          5   twfe_ex   12.28       7.42      17.14   0.000        470         2640   15003       ok  
+          6      twfe   10.23      -6.16      29.48   0.236        740         2832   20070       ok  
+          6        cs   10.71      -7.33      32.25   0.262        698         2776   19594       ok  
+          6        sa   12.24      -5.12      32.77   0.178        703         2832   19787       ok  
+          6       bjs    4.58     -10.11      21.67   0.562        739         4849   21483       ok  
+          6      dcdh   10.71      -7.42      32.39   0.265        694            .   11429       ok  
+          6   twfe_nd    9.55      -5.85      27.48   0.238        738         2657   16864       ok  
+          6   twfe_ex    8.62      -8.95      29.57   0.358        510         2832   18121       ok  
+
+. set linesize 120
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 6/8: numbers for the rows and notes (read from the table, never typed)"
+Step 6/8: numbers for the rows and notes (read from the table, never typed)
+
+. *---------------------------------------------------------------------------
+. local nb = uchar(160)                                   // no-break space: "p < 0.001" stays on one line
+
+. local mname1 "one regression"
+
+. local mname2 "Callaway–Sant'Anna"
+
+. local mname3 "Sun–Abraham"
+
+. local mname4 "Borusyak–Jaravel–Spiess"
+
+. local mname5 "de Chaisemartin–D'Haultfœuille"
+
+. gen byte ok = status == "ok" & !missing(b)
+
+. gen byte clear = ok & (lo > 0 | hi < 0)                 // interval does not cross 0
+
+. * Decimals as drawn: shares always 1; % changes whole, or 1 decimal for a margin
+. * whose averages are all small (so no "-0%").
+. forvalues o = 1/`nmeas' {
+  2.     quietly summarize shown if outcome == `o' & row_type == "avg" & method_order <= 5 & ok
+  3.     local dec`o' = cond(`u`o'' == 2 | max(abs(r(min)), abs(r(max))) < 5, 1, 0)
+  4.     local suf`o' = cond(`u`o'' == 1, "%", " points")
+  5. }
+
+. * a number as drawn, with its sign: program r606_fmt value decimals suffix
+. capture program drop r606_fmt
+
+. program define r606_fmt, rclass
+  1.     args v d suf
+  2.     local r = round(`v', 10^(-`d'))
+  3.     return local s = cond(`r' > 0, "+", "") + string(`r', "%9.`d'f") + "`suf'"
+  4. end
+
+. * (a) the single regression's answer per margin (= R6-01, R6-03, R6-04)
+. local headtxt ""
+
+. local nclr 0
+
+. local clrlist ""
+
+. forvalues o = 1/`nmeas' {
+  2.     quietly summarize shown if outcome == `o' & method == "twfe" & row_type == "avg"
+  3.     r606_fmt `r(mean)' `dec`o'' "`suf`o''"
+  4.     local tw`o' "`r(s)'"
+  5.     quietly summarize clear if outcome == `o' & method == "twfe" & row_type == "avg"
+  6.     local twc`o' = r(mean)
+  7.     if `twc`o'' {
+  8.         local ++nclr
+  9.         local clrlist = "`clrlist'" + cond(`nclr' > 1, " and ", "") + "`w`o''"
+ 10.     }
+ 11.     local sep = cond(`o' == 1, "", cond(`o' == `nmeas', " and ", ", "))
+ 12.     local headtxt "`headtxt'`sep'`w`o'' `tw`o''"
+ 13. }
+
+. local headtxt "One regression (as in R6-01, R6-03, R6-04): `headtxt'"
+
+. local headtxt = "`headtxt'; " + cond(`nclr' == 0, "none is clearly different from 0.", "clearly different from 0: `clr
+> list'.")
+
+. * (b) the five methods: each margin's range and in how many it is clear
+. local rngtxt ""
+
+. forvalues o = 1/`nmeas' {
+  2.     quietly summarize shown if outcome == `o' & row_type == "avg" & method_order <= 5 & ok
+  3.     local nav = r(N)
+  4.     r606_fmt `r(min)' `dec`o'' "`=cond(`u`o'' == 1, "%", "")'"
+  5.     local smin "`r(s)'"
+  6.     quietly summarize shown if outcome == `o' & row_type == "avg" & method_order <= 5 & ok
+  7.     r606_fmt `r(max)' `dec`o'' "`suf`o''"
+  8.     local smax "`r(s)'"
+  9.     quietly count if outcome == `o' & row_type == "avg" & method_order <= 5 & clear
+ 10.     local nc = r(N)
+ 11.     local ctx = cond(`nc' == 0, "never clear", cond(`nc' == `nav', "clear in all `nav'", "clear in `nc' of `nav'"))
+ 12.     * clear in some methods only: name them, with their own before-start p
+.     if `nc' > 0 & `nc' < `nav' {
+ 13.         local ctx ""
+ 14.         forvalues m = 1/5 {
+ 15.             quietly count if outcome == `o' & method_order == `m' & row_type == "avg" & clear
+ 16.             if r(N) == 0 continue
+ 17.             quietly summarize p if outcome == `o' & method_order == `m' & row_type == "before_check"
+ 18.             local pq = cond(r(mean) < 0.001, "p`nb'<`nb'0.001", "p`nb'=`nb'" + string(r(mean), "%5.3f"))
+ 19.             local ctx = "`ctx'" + cond("`ctx'" != "", ", ", "") + "`mname`m'' (before the start `pq')"
+ 20.         }
+ 21.         local ctx "clear only in `ctx'"
+ 22.     }
+ 23.     local sep = cond(`o' == 1, "", "; ")
+ 24.     local rngtxt "`rngtxt'`sep'`w`o'' `smin' to `smax' (`ctx')"
+ 25. }
+
+. local rngtxt "Across the five methods: `rngtxt'."
+
+. * (c) before-start checks: each method's own check, per margin (p below 0.05 = fails)
+. local bftxt ""
+
+. local nbf 0
+
+. forvalues o = 1/`nmeas' {
+  2.     local lst ""
+  3.     local nf 0
+  4.     forvalues m = 1/5 {
+  5.         quietly summarize p if outcome == `o' & method_order == `m' & row_type == "before_check"
+  6.         if r(N) > 0 & r(mean) < 0.05 {
+  7.             local ++nf
+  8.             local lst = "`lst'" + cond(`nf' > 1, ", ", "") + "`mname`m''"
+  9.         }
+ 10.     }
+ 11.     if `nf' > 0 {
+ 12.         local ++nbf
+ 13.         local bf`nbf' "`w`o'' (`lst')"
+ 14.     }
+ 15. }
+
+. local bftxt ""
+
+. forvalues j = 1/`nbf' {
+  2.     local sep = cond(`j' == 1, "", cond(`j' == `nbf', " and ", "; "))
+  3.     local bftxt "`bftxt'`sep'`bf`j''"
+  4. }
+
+. if `nbf' == 0 local bftxt "Before the start, no method's own check fails for any row (p below 0.05 would be a warning)
+> ."
+
+. else local bftxt "Before the start, the method's own check (p below 0.05 = starters already differed) fails for `bftxt
+> '."
+
+. * Callaway-Sant'Anna over all years before the start, and exact starters (table)
+. local cslist ""
+
+. local ncs 0
+
+. local exlist ""
+
+. local nex 0
+
+. forvalues o = 1/`nmeas' {
+  2.     quietly summarize p if outcome == `o' & method == "cs" & row_type == "before_all"
+  3.     if r(N) > 0 & r(mean) < 0.05 {
+  4.         local ++ncs
+  5.         local cs`ncs' "`w`o''"
+  6.     }
+  7.     quietly summarize p if outcome == `o' & method == "twfe_ex" & row_type == "before_check"
+  8.     if r(N) > 0 & r(mean) < 0.05 {
+  9.         local ++nex
+ 10.         local ex`nex' "`w`o''"
+ 11.     }
+ 12. }
+
+. foreach g in cs ex {
+  2.     local `g'list ""
+  3.     forvalues j = 1/`n`g'' {
+  4.         local sep = cond(`j' == 1, "", cond(`j' == `n`g'', " and ", ", "))
+  5.         local `g'list "``g'list'`sep'``g'`j''"
+  6.     }
+  7. }
+
+. local cstxt = cond(`ncs' == 0, "no margin", "`cslist'")
+
+. local extxt = cond(`nex' == 0, "no margin", "`exlist'")
+
+. local bf2txt "Over all years before the start (Callaway–Sant'Anna, gray line) it fails for `cstxt'; with only starters
+>  seen not exporting the year before (table) for `extxt'."
+
+. local bf2short "Callaway–Sant'Anna's check over all years before the start (gray) fails for `ncs' of `nmeas' blocks."
+
+. * (d) single years: those whose interval excludes 0 in the single regression, each
+. * with the number of the five methods in which the same year is clear.
+. local ndots 0
+
+. local nsyc 0
+
+. local nsyb 0                                            // of them: years before the start
+
+. local sytxt ""
+
+. forvalues o = 1/`nmeas' {
+  2.     quietly count if outcome == `o' & method == "twfe" & row_type == "event" & !missing(b)
+  3.     local ndots = `ndots' + r(N)
+  4.     quietly levelsof event_time if outcome == `o' & method == "twfe" & row_type == "event" & clear, local(ks)
+  5.     local part ""
+  6.     local nk 0
+  7.     foreach k of local ks {
+  8.         local ++nk
+  9.         if `k' < 0 local ++nsyb
+ 10.         quietly summarize shown if outcome == `o' & method == "twfe" & row_type == "event" & event_time == `k'
+ 11.         r606_fmt `r(mean)' `=cond(`u`o'' == 2, 1, 0)' "`suf`o''"
+ 12.         local pv "`r(s)'"
+ 13.         quietly count if outcome == `o' & method_order <= 5 & row_type == "event" & event_time == `k' & clear
+ 14.         local nmc = r(N)
+ 15.         local kl = cond(`k' > 0, "+", "") + string(`k')
+ 16.         if `k' < `wlo' local kl "≤`nb'`kl'"
+ 17.         if `k' > `whi' local kl "≥`nb'`kl'"
+ 18.         local part = "`part'" + cond(`nk' > 1, ", ", "") + "`kl' (`pv', `nmc' of 5)"
+ 19.     }
+ 20.     if `nk' > 0 local sytxt = "`sytxt'" + cond("`sytxt'" != "", "; ", "") + "`w`o'' `part'"
+ 21.     local nsyc = `nsyc' + `nk'
+ 22. }
+
+. if "`sytxt'" == "" local sytxt "No single year's interval excludes 0 in the single regression."
+
+. else local sytxt "Single years clear in the one regression (table; in how many of the 5 methods that year is clear): `
+> sytxt'. Negative years are before the start: a warning, not a result. Of `ndots' years about `=round(0.05*`ndots')' wo
+> uld be clear by chance, so read the averages."
+
+. local sy_short "Single years (not drawn; table notes): `nsyc' of `ndots' clear in the one regression (`nsyb' of them b
+> efore the start), about `=round(0.05*`ndots')' expected by chance."
+
+. * (e) start years each method leaves out (Sun-Abraham: no row the year before)
+. local g1 : word 1 of `gapyr'
+
+. local sa_main = subinstr("`sa_yrs1'", " ", " and ", .)
+
+. local satxt ""
+
+. local extra5 : list sa_yrs5 - sa_yrs1
+
+. local extra5 = subinstr(strtrim("`extra5'"), " ", " and ", .)
+
+. if "`g1'" != "" {
+.     local satxt "Callaway–Sant'Anna, Sun–Abraham and de Chaisemartin–D'Haultfœuille leave out firms that started in `=
+> `g1'+1' (no `gapyr' file)"
+.     if "`extra5'" != "" local satxt "`satxt' and, in (5), in `extra5' (the year before is not used there)"
+.     local satxt "`satxt'."
+. }
+
+. * the years dCDH's check covers in (5), in words ("-2 and -3", or "-2 to -4")
+. local dyr5 = cond(`dpl5' == 1, "-2", cond(`dpl5' == 2, "-2 and -3", "-2 to `=-1-`dpl5''"))
+
+. if `dpl5' < -`wlo' - 1 local satxt "`satxt' De Chaisemartin–D'Haultfœuille's check in (5) covers years `dyr5' only (gr
+> ay line)."
+
+. * (f) the firm-years behind each margin (gray line under each name)
+. local n5r = string(`nrow5', "%9.0fc")
+
+. local rowtxt "Each block uses its own firm-years (gray line under its name); all use firm-years with energy, CO2 and v
+> alue added"
+
+. local rowtxt "`rowtxt' above 0 (`=string(`n_zero', "%9.0fc")' of these firms' firm-years record no energy)."
+
+. quietly summarize starters if outcome == 1 & method == "twfe" & row_type == "avg"
+
+. local nst = string(r(mean), "%9.0fc")
+
+. quietly summarize comp_firms if outcome == 1 & method == "twfe" & row_type == "avg"
+
+. local ncf = string(r(mean), "%9.0fc")
+
+. display "   `headtxt'"
+   One regression (as in R6-01, R6-03, R6-04): value added +19%, energy used +9%, CO2 per GJ -1.3%, bought electricity's
+>  share -1.3 points and firms making own electricity +8.1 points; clearly different from 0: value added and firms makin
+> g own electricity.
+
+. display "   `rngtxt'"
+   Across the five methods: value added +14% to +22% (clear in all 5); energy used +3% to +17% (clear only in Borusyak–J
+> aravel–Spiess (before the start p = 0.050)); CO2 per GJ -2.3% to -0.3% (never clear); bought electricity's share -2.2 
+> to -0.8 points (never clear); firms making own electricity +5.9 to +8.1 points (clear in all 5).
+
+. display "   `bftxt'"
+   Before the start, the method's own check (p below 0.05 = starters already differed) fails for value added (Callaway–S
+> ant'Anna); energy used (one regression, Callaway–Sant'Anna) and CO2 per GJ (Callaway–Sant'Anna).
+
+. display "   `bf2txt'"
+   Over all years before the start (Callaway–Sant'Anna, gray line) it fails for value added, energy used, CO2 per GJ and
+>  bought electricity's share; with only starters seen not exporting the year before (table) for energy used, CO2 per GJ
+> , bought electricity's share and firms making own electricity.
+
+. display "   `sytxt'"
+   Single years clear in the one regression (table; in how many of the 5 methods that year is clear): value added 0 (+15
+> %, 5 of 5), +1 (+17%, 5 of 5), +2 (+18%, 4 of 5), +3 (+21%, 2 of 5), +5 (+27%, 2 of 5); energy used ≤ -6 (-26%, 1 of 5
+> ), -5 (-31%, 2 of 5), 0 (+21%, 5 of 5); CO2 per GJ -4 (-5%, 1 of 5), -2 (-4%, 2 of 5), +3 (-5%, 1 of 5); bought electr
+> icity's share +2 (-4.2 points, 4 of 5), +3 (-4.7 points, 1 of 5); firms making own electricity -5 (+8.9 points, 2 of 5
+> ), +1 (+9.0 points, 5 of 5), +2 (+7.1 points, 1 of 5), +3 (+10.2 points, 3 of 5), +4 (+12.1 points, 3 of 5), +5 (+9.4 
+> points, 1 of 5), ≥ +6 (+9.9 points, 2 of 5). Negative years are before the start: a warning, not a result. Of 60 years
+>  about 3 would be clear by chance, so read the averages.
+
+. display "   `satxt'"
+   Callaway–Sant'Anna, Sun–Abraham and de Chaisemartin–D'Haultfœuille leave out firms that started in 2017 (no 2016 file
+> ) and, in (5), in 2015 (the year before is not used there). De Chaisemartin–D'Haultfœuille's check in (5) covers years
+>  -2 and -3 only (gray line).
+
+. display "   `rowtxt'"
+   Each block uses its own firm-years (gray line under its name); all use firm-years with energy, CO2 and value added ab
+> ove 0 (345 of these firms' firm-years record no energy).
+
+. * Per margin: the gray line under its name.
+. forvalues o = 1/`nmeas' {
+  2.     quietly summarize rows if outcome == `o' & method == "twfe" & row_type == "avg"
+  3.     local rw = string(r(mean), "%9.0fc")
+  4.     local fk = `fk`o'_1'
+  5.     local fkl = cond(`fk' > 0, "+", "") + string(`fk')
+  6.     local gl`o' "`rw' firm-years in the one regression (= `src`o''); fewest starters in a single year: `fw`o'_1' (y
+> ear `fkl')"
+  7. }
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 7/8: dot-and-whisker chart: one block per margin, one row per method"
+Step 7/8: dot-and-whisker chart: one block per margin, one row per method
+
+. *---------------------------------------------------------------------------
+. * Notes as one text, wrapped by printed width (R6-01's rule; widths in em).
+. local mtxt "Rows 2 to 5 are the previous paper's four methods, named after their authors; they differ only in how they
+>  combine firms"
+
+. local mtxt "`mtxt' that start in different years (the one regression can mix them)."
+
+. local mtxt_t "`mtxt' Callaway–Sant'Anna, Sun–Abraham and de Chaisemartin–D'Haultfœuille compare each start year only w
+> ith never-exporters;"
+
+. local mtxt_t "`mtxt_t' Borusyak–Jaravel–Spiess also uses later starters' years before their start."
+
+. local nsta = string(`nst_any', "%9.0fc")
+
+. local tail "Starters: first seen exporting after a year seen not exporting (`nsta' in (1), as in R6-01; the Starters c
+> olumn counts those with"
+
+. local tail "`tail' a row from the start year on; still starters if they stop); never-exporters:"
+
+. local tail "`tail' never seen exporting (`ncf'). Dot = change since the year before the start, averaged over years 0 t
+> o +`whi'; bar = 95%"
+
+. local tail "`tail' interval (crossing 0 = not clear). (5) uses only firm-years with own electricity recorded, without 
+> `badtxt' (recorded"
+
+. local tail "`tail' for too few firms, as R6-04). Value added = output minus materials, energy and services bought (cur
+> rent prices);"
+
+. local tail "`tail' GJ = gigajoules; CO2 = energy x standard rates, not measured. Shows timing, not cause; firm links a
+> re fictional:"
+
+. local tail "`tail' this tests the method, not a finding."
+
+. * The chart: the answer across methods first, then how to read the rows, the
+. * checks, and the definitions. The points table's notes add the single-regression
+. * sentence, the exact-starter check and every clear single year.
+. local txt   "Notes: `rngtxt' `mtxt' `satxt' `bftxt' `bf2short' `sy_short' `tail'"
+
+. local txt_t "Notes: `headtxt' `rngtxt' `mtxt_t' `satxt' `bftxt' `bf2txt' `sytxt' `rowtxt' `tail'"
+
+. local maxw 53.5                                         // widest note line that fits the 9-inch PDF
+
+. local nl 0
+
+. local line ""
+
+. local lw 0
+
+. foreach w of local txt {
+  2.     local n  = ustrlen(`"`w'"')
+  3.     local na = `n' - ustrlen(ustrregexra(`"`w'"', "[ijltfr.,;:'()\-]", ""))
+  4.     local wi = `n' - ustrlen(ustrregexra(`"`w'"', "[A-Zmw]", ""))
+  5.     local pc = `n' - ustrlen(ustrregexra(`"`w'"', "%", ""))
+  6.     local dg = `n' - ustrlen(ustrregexra(`"`w'"', "[0-9+=]", ""))
+  7.     local ww = 0.29*`na' + 0.7*`wi' + 0.83*`pc' + 0.52*`dg' + 0.47*(`n' - `na' - `wi' - `pc' - `dg')
+  8.     local try = `lw' + 0.25*(`"`line'"' != "") + `ww'
+  9.     if `try' > `maxw' & `"`line'"' != "" {
+ 10.         local ++nl
+ 11.         local L`nl' `"`line'"'
+ 12.         local W`nl' = `lw'
+ 13.         local line `"`w'"'
+ 14.         local lw = `ww'
+ 15.     }
+ 16.     else {
+ 17.         local line = strtrim(`"`line' `w'"')
+ 18.         local lw = `try'
+ 19.     }
+ 20. }
+
+. local ++nl
+
+. local L`nl' `"`line'"'
+
+. local W`nl' = `lw'
+
+. local notes ""
+
+. forvalues j = 1/`nl' {
+  2.     display "   note line `j': " udstrlen(`"`L`j''"') " characters, width " %4.1f `W`j'' " of `maxw' em"
+  3.     local notes `"`notes' "`L`j''""'
+  4. }
+   note line 1: 113 characters, width 46.7 of 53.5 em
+   note line 2: 130 characters, width 53.3 of 53.5 em
+   note line 3: 135 characters, width 52.3 of 53.5 em
+   note line 4: 136 characters, width 53.1 of 53.5 em
+   note line 5: 125 characters, width 52.4 of 53.5 em
+   note line 6: 131 characters, width 51.6 of 53.5 em
+   note line 7: 118 characters, width 45.9 of 53.5 em
+   note line 8: 107 characters, width 47.1 of 53.5 em
+   note line 9: 135 characters, width 53.2 of 53.5 em
+   note line 10: 137 characters, width 53.1 of 53.5 em
+   note line 11: 137 characters, width 52.5 of 53.5 em
+   note line 12: 131 characters, width 52.3 of 53.5 em
+   note line 13: 134 characters, width 52.7 of 53.5 em
+   note line 14: 130 characters, width 53.2 of 53.5 em
+   note line 15: 120 characters, width 46.8 of 53.5 em
+
+. * The before-start column and Callaway-Sant'Anna's all-years line, per margin.
+. foreach o of numlist 1/`nmeas' {
+  2.     forvalues m = 1/5 {
+  3.         quietly summarize p if outcome == `o' & method_order == `m' & row_type == "before_check"
+  4.         local bp`o'_`m' = cond(r(N) > 0, r(mean), .)
+  5.     }
+  6.     quietly summarize p if outcome == `o' & method == "cs" & row_type == "before_all"
+  7.     local bpall`o' = cond(r(N) > 0, r(mean), .)
+  8. }
+
+. keep if row_type == "avg" & method_order <= 5 & outcome <= `nmeas'
+(579 observations deleted)
+
+. gen byte pnl = cond(unit_label == "% change", 1, 2)
+
+. * Vertical layout (y units): block header at yh, its gray line 0.6 below, the five
+. * method rows (a little more room under row 2 for its gray second line), then the
+. * block's axis labels. A little more room between the % blocks and the points blocks.
+. gen double yh = 48 - 8.1 * (outcome - 1) - 0.8 * (pnl == 2)
+
+. gen double ypos = yh - 1.55 - 1.0 * (method_order - 1) - 0.55 * (method_order >= 3)
+
+. gen double ysub = ypos - 0.55                           // gray second line under a row
+
+. * x-axis per unit: a round step (1, 2 or 5 times a power of 10); 0 always inside;
+. * at most 5 steps (R2-10's rule, one fewer: the axis is narrow). The points blocks are drawn in the % blocks'
+. * horizontal units, with their own labels (R6-03's way), so the columns line up.
+. forvalues q = 1/2 {
+  2.     quietly summarize shown_lo if ok & pnl == `q'
+  3.     local xmin = min(r(min), 0)
+  4.     quietly summarize shown_hi if ok & pnl == `q'
+  5.     local xmax = max(r(max), 0)
+  6.     local rng = `xmax' - `xmin'
+  7.     local step = 10^floor(log10(`rng'))
+  8.     if `rng'/`step' < 2       local step = `step'/5
+  9.     else if `rng'/`step' < 5  local step = `step'/2
+ 10.     local xbot = `step' * floor(`xmin'/`step')
+ 11.     local xtop = `step' * ceil(`xmax'/`step')
+ 12.     while (`xtop' - `xbot')/`step' > 5 {
+ 13.         local mant = round(`step' / 10^floor(log10(`step')))    // 1, 2 or 5
+ 14.         local step = cond(`mant' == 2, 2.5, 2) * `step'         // 1 -> 2 -> 5 -> 10 ...
+ 15.         local xbot = `step' * floor(`xmin'/`step')
+ 16.         local xtop = `step' * ceil(`xmax'/`step')
+ 17.     }
+ 18.     local xbot`q' = `xbot'
+ 19.     local xtop`q' = `xtop'
+ 20.     local step`q' = `step'
+ 21.     local xfmt`q' = cond(`step' >= 1, "%9.0f", "%9.1f")
+ 22. }
+
+. local span = `xtop1' - `xbot1'
+
+. local k2 = `span' / (`xtop2' - `xbot2')                 // points units -> % units
+
+. foreach v in shown shown_lo shown_hi {
+  2.     gen double px_`v' = cond(pnl == 1, `v', `xbot1' + (`v' - `xbot2') * `k2')
+  3. }
+
+. local x0_2 = `xbot1' + (0 - `xbot2') * `k2'             // the zero line of the points blocks
+
+. * Left to right (x-axis units): row names, the dots, then two columns: starters,
+. * and the before-start check (placed clear of the value labels).
+. local xn  = `xbot1' - 1.15 * `span'
+
+. quietly summarize px_shown_hi if ok
+
+. local xc1 = max(`xtop1' + 0.27 * `span', r(max) + 0.40 * `span')
+
+. local xc2 = `xc1' + 0.07 * `span'
+
+. local xr  = `xc1' + 0.55 * `span'
+
+. * Gridlines, zero lines and axis labels, drawn inside each block.
+. local grid ""
+
+. local zero ""
+
+. local tx ""
+
+. forvalues o = 1/`nmeas' {
+  2.     quietly summarize yh if outcome == `o', meanonly
+  3.     local yt = r(mean) - 1.3
+  4.     local yb = r(mean) - 6.55
+  5.     local yl = r(mean) - 7.0
+  6.     local q = cond(`u`o'' == 1, 1, 2)
+  7.     local nt = round((`xtop`q'' - `xbot`q'') / `step`q'')
+  8.     forvalues j = 0/`nt' {
+  9.         local v  = `xbot`q'' + `j' * `step`q''
+ 10.         local xv = cond(`q' == 1, `v', `xbot1' + (`v' - `xbot2') * `k2')
+ 11.         if abs(`v') > 1e-9 local grid `grid' `yt' `xv' `yb' `xv'
+ 12.         local lab = cond(`v' > 1e-9, "+", "") + strtrim(string(`v', "`xfmt`q''")) + cond(`q' == 1 & abs(`v') > 1e-9
+> , "%", "")
+ 13.         local tx `tx' text(`yl' `xv' "`lab'", size(vsmall) placement(c) color(gs6))
+ 14.     }
+ 15.     local x0 = cond(`q' == 1, 0, `x0_2')
+ 16.     local zero `zero' `yt' `x0' `yb' `x0'
+ 17. }
+
+. * Columns: starters behind each average; before-start check (p below 0.05 =
+. * starters were already changing differently: "differs").
+. gen str12 c1 = string(starters, "%9.0fc") if ok
+
+. gen str40 c2 = ""
+(25 missing values generated)
+
+. gen str40 c2b = ""
+(25 missing values generated)
+
+. forvalues o = 1/`nmeas' {
+  2.     forvalues m = 1/5 {
+  3.         local q = `bp`o'_`m''
+  4.         if missing(`q') continue
+  5.         local qs = cond(`q' < 0.001, "<`nb'0.001", string(`q', "%5.3f"))
+  6.         if `q' < 0.05 local qs "`qs', differs"
+  7.         replace c2 = "`qs'" if outcome == `o' & method_order == `m' & ok
+  8.     }
+  9.     if !missing(`bpall`o'') {
+ 10.         local qs = cond(`bpall`o'' < 0.001, "<`nb'0.001", string(`bpall`o'', "%5.3f"))
+ 11.         if `bpall`o'' < 0.05 local qs "`qs', differs"
+ 12.         replace c2b = "all years: `qs'" if outcome == `o' & method == "cs" & ok
+ 13.     }
+ 14.     * de Chaisemartin-D'Haultfoeuille's check on fewer years (own electricity): said beside its p
+.     if `dpl`o'' < -`wlo' - 1 {
+ 15.         local dy = cond(`dpl`o'' == 1, "-2", cond(`dpl`o'' == 2, "-2 and -3", "-2 to `=-1-`dpl`o'''"))
+ 16.         replace c2b = "years `dy' only" if outcome == `o' & method == "dcdh" & ok
+ 17.     }
+ 18. }
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+
+. gen str90 nolbl = status if !ok
+(25 missing values generated)
+
+. gen double xc1 = `xc1'
+
+. gen double xc2 = `xc2'
+
+. gen double xnm = `xn'
+
+. gen double xnr = cond(pnl == 1, `xbot1', `xbot1')
+
+. * Each average is written just right of its interval (or of the zero line when the
+. * interval ends left of it), with the margin's decimals.
+. gen double px_lbl = max(px_shown_hi, cond(pnl == 1, 0, `x0_2'))
+
+. gen str12 lbl = ""
+(25 missing values generated)
+
+. forvalues o = 1/`nmeas' {
+  2.     replace lbl = cond(round(shown, 10^(-`dec`o'')) > 0, "+", "") + string(round(shown, 10^(-`dec`o'')), "%9.`dec`o
+> ''f") ///
+>         + cond(`u`o'' == 1, "%", "") if outcome == `o' & ok
+  3. }
+(5 real changes made)
+(5 real changes made)
+(5 real changes made)
+(5 real changes made)
+(5 real changes made)
+
+. * Row names and block headers (left-aligned text).
+. gen str60 nm = ""
+(25 missing values generated)
+
+. forvalues m = 1/5 {
+  2.     replace nm = cond(`m' == 1, "One regression (R6-01's model)", "`mname`m''") if method_order == `m'
+  3. }
+(5 real changes made)
+(5 real changes made)
+(5 real changes made)
+(5 real changes made)
+(5 real changes made)
+
+. gen str120 ph = ""
+(25 missing values generated)
+
+. gen str160 ps = ""
+(25 missing values generated)
+
+. forvalues o = 1/`nmeas' {
+  2.     replace ph = "`n`o'', " + cond(`u`o'' == 1, "% change", "change in percentage points") if outcome == `o' & meth
+> od_order == 1
+  3.     replace ps = "`gl`o''" if outcome == `o' & method_order == 1
+  4. }
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+
+. gen double yph = yh
+
+. gen double yps = yh - 0.75
+
+. local yhd = 49.2                                        // column headers
+
+. twoway (pci `grid', lcolor(gs14) lwidth(vthin)) ///
+>     (pci `zero', lcolor(gs8) lwidth(thin)) ///
+>     (rspike px_shown_hi px_shown_lo ypos if ok, horizontal lcolor(black) lwidth(thin)) ///
+>     (scatter ypos px_shown if ok, msymbol(O) msize(small) mcolor(black)) ///
+>     (scatter ypos px_lbl if ok, msymbol(none) mlabel(lbl) mlabposition(3) mlabgap(0.8) mlabsize(vsmall) mlabcolor(blac
+> k)) ///
+>     (scatter ypos xnm, msymbol(none) mlabel(nm) mlabposition(3) mlabgap(0) mlabsize(vsmall) mlabcolor(black)) ///
+>     (scatter ypos xc1 if ok, msymbol(none) mlabel(c1) mlabposition(9) mlabgap(0) mlabsize(vsmall) mlabcolor(black)) //
+> /
+>     (scatter ypos xc2 if ok, msymbol(none) mlabel(c2) mlabposition(3) mlabgap(0) mlabsize(vsmall) mlabcolor(black)) //
+> /
+>     (scatter ysub xc2 if c2b != "", msymbol(none) mlabel(c2b) mlabposition(3) mlabgap(0) mlabsize(vsmall) mlabcolor(gs
+> 6)) ///
+>     (scatter ypos xnr if !ok, msymbol(none) mlabel(nolbl) mlabposition(3) mlabsize(vsmall) mlabcolor(gs6)) ///
+>     (scatter yph xnm if ph != "", msymbol(none) mlabel(ph) mlabposition(3) mlabgap(0) mlabsize(small) mlabcolor(black)
+> ) ///
+>     (scatter yps xnm if ps != "", msymbol(none) mlabel(ps) mlabposition(3) mlabgap(0) mlabsize(vsmall) mlabcolor(gs6))
+> , ///
+>     text(`yhd' `xn' "Change and method", size(vsmall) placement(e)) ///
+>     text(`yhd' `xc1' "Starters", size(vsmall) placement(w)) ///
+>     text(`yhd' `xc2' "Before the start, p", size(vsmall) placement(e)) ///
+>     `tx' ///
+>     yscale(range(7.2 49.6) off) ylabel(none) ytitle("") ///
+>     xscale(range(`xn' `xr') off) xlabel(, nogrid) xtitle("") ///
+>     legend(order(4 "Average of years 0 to +`whi' (each year counts equally)" 3 "95% interval" 2 "0 = no difference") /
+> //
+>         cols(3) position(6) region(lstyle(none)) size(vsmall) symxsize(5) keygap(1) colgap(4) rowgap(0.3)) ///
+>     title("Figure `exhibit'. `ftitle'", size(medium) position(11) justification(left) span) ///
+>     subtitle("Starters minus never-exporters, average of years 0 to +`whi' after the start, by method", size(small) po
+> sition(11) justification(left) span) ///
+>     note(`notes' "`srcnote'" "`devnote'", size(vsmall) span linegap(0.6)) ///
+>     graphregion(color(white) lcolor(white) margin(r+3)) plotregion(style(none) margin(zero)) ///
+>     xsize(9) ysize(15) scale(`=7.5/10')
+
+. 
+. graph export "figures/`fname'.png", width(2700) replace
+file
+    /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r6-exporter-decarbonisation-margins/fi
+    > gures/06_margins_support_methods.png saved as PNG format
+
+. graph export "figures/`fname'.pdf", replace
+file
+    /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r6-exporter-decarbonisation-margins/fi
+    > gures/06_margins_support_methods.pdf saved as PDF format
+
+. 
+. * ==== COMPANION TABLE (pattern for all exhibits) =============================
+. * Owner rule, 28 Sep 2026: every chart gets a table of every plotted point, and
+. * every chart of regression coefficients also gets a regression table, written
+. * by the same do-file (spec: TABLE_BRIEF.md). This step runs AFTER the graph
+. * export, so the chart and the CSV stay byte-identical.
+. *
+. * How to use it in another exhibit file:
+. *   PART 1 (the writer, program ctable_pdf) is copied UNCHANGED.
+. *   PART 2 is the only exhibit-specific part: put the numbers in memory (the
+. *   tempfile saved right after the CSV export, or the CSV itself), build one
+. *   STRING variable per table column, one row per plotted point in chart order
+. *   (years not drawn included, with the reason in a status column), then call
+. *   ctable_pdf. Format numbers with string(x, "%9.1f") etc. so the table shows
+. *   exactly the rounding of the chart labels.
+. *
+. * ctable_pdf strvars using "tables/NN_name_table.pdf",
+. *     title("Table R1-02. ...: every plotted point")    first line, bold
+. *     header("Col 1" "Col 2" ...)       one text per column; "|" = line break
+. *     [right(numlist)]                  columns right-aligned (numbers)
+. *     [norepeat(numlist)]               columns whose repeated text is shown
+. *                                       only on the first row of a run
+. *     [rules(numlist)]                  thin gray line under these data rows
+. *     [notes("line 1" "line 2" ...)]    footer paragraphs (Notes, Source, dev line)
+. *     [subtitle(text)] [fontsize(#)] [perpage(#)] [landscape|portrait]
+. * Landscape is chosen automatically when there are more than 6 columns. Long
+. * tables continue on a new page with the header repeated ("(continued)"); a page
+. * never breaks inside a block whose first column is empty (e.g. an SE row).
+. * --- PART 1: the writer (identical in every file; do not edit) ---------------
+. capture program drop ctable_pdf
+
+. program define ctable_pdf
+  1.     version 17
+  2.     syntax varlist(string) using/, TItle(string) HEADer(string asis) ///
+>         [RIGHT(numlist integer >0) NOREPeat(numlist integer >0) RULES(numlist integer >0) ///
+>          NOTEs(string asis) SUBtitle(string) FONTsize(real 9.5) PERpage(integer 0) ///
+>          LANDscape PORTrait]
+  3.     local nc : word count `varlist'
+  4.     local nh : word count `header'
+  5.     if `nh' != `nc' {
+  6.         display as error "ctable_pdf: `nc' columns but `nh' header texts"
+  7.         exit 198
+  8.     }
+  9.     local orient = cond(`nc' > 6, "landscape", "")
+ 10.     if "`landscape'" != "" local orient "landscape"
+ 11.     if "`portrait'"  != "" local orient ""
+ 12.     * rows per page: a conservative guess for 9-10 pt text (wrapped cells take more)
+.     if `perpage' == 0 local perpage = cond("`orient'" == "landscape", 24, 40)
+ 13.     preserve
+ 14.     quietly {
+ 15.         keep `varlist'
+ 16.         rename (`varlist') (__c#), addnumber      // __c1 __c2 ... in the order given
+ 17.         forvalues j = 1/`nc' {
+ 18.             replace __c`j' = strtrim(__c`j')
+ 19.         }
+ 20.         local N = _N
+ 21.         gen long row = _n
+ 22.         * page chunks: fill up to perpage rows; prefer to end a page at a rule,
+.         * never start a page on a row whose first column is empty
+.         gen int chunk = .
+ 23.         local start 1
+ 24.         local k 0
+ 25.         while `start' <= `N' {
+ 26.             local ++k
+ 27.             local end = min(`start' + `perpage' - 1, `N')
+ 28.             if `end' < `N' {
+ 29.                 local best 0
+ 30.                 foreach r of local rules {
+ 31.                     if `r' >= `start' + floor(`perpage' / 2) & `r' <= `end' & `r' > `best' local best `r'
+ 32.                 }
+ 33.                 if `best' > 0 local end `best'
+ 34.                 else {
+ 35.                     while `end' > `start' & __c1[`end' + 1] == "" {
+ 36.                         local --end
+ 37.                     }
+ 38.                 }
+ 39.             }
+ 40.             replace chunk = `k' in `start'/`end'
+ 41.             local start = `end' + 1
+ 42.         }
+ 43.         local nk `k'
+ 44.         * blank repeated labels inside each page; a column is blanked only while the
+.         * norepeat columns to its left are unchanged too (a new panel shows its series)
+.         gen byte same = _n > 1 & chunk == chunk[_n - 1]
+ 45.         foreach j of local norepeat {
+ 46.             gen strL o`j' = __c`j'
+ 47.             replace same = same & o`j' == o`j'[_n - 1]
+ 48.             replace __c`j' = "" if same
+ 49.             drop o`j'
+ 50.         }
+ 51.         drop same
+ 52.         * column widths (% of the page), from the longest text in each column;
+.         * long text columns are capped so they wrap instead of squeezing numbers
+.         matrix W = J(1, `nc', 0)
+ 53.         local tot 0
+ 54.         forvalues j = 1/`nc' {
+ 55.             gen long L`j' = udstrlen(__c`j')
+ 56.             summarize L`j', meanonly
+ 57.             local w = max(r(max), 3)
+ 58.             local h : word `j' of `header'
+ 59.             local h = subinstr(`"`h'"', "|", " ", .)
+ 60.             foreach hw of local h {
+ 61.                 local w = max(`w', udstrlen(`"`hw'"'))
+ 62.             }
+ 63.             local w = min(`w', 34) + 2          // + 2 = room for the cell margins
+ 64.             matrix W[1, `j'] = `w'
+ 65.             local tot = `tot' + `w'
+ 66.             drop L`j'
+ 67.         }
+ 68.         local used 0
+ 69.         forvalues j = 1/`nc' {
+ 70.             if `j' < `nc' {
+ 71.                 matrix W[1, `j'] = max(floor(100 * W[1, `j'] / `tot'), 3)
+ 72.                 local used = `used' + W[1, `j']
+ 73.             }
+ 74.             else matrix W[1, `j'] = 100 - `used'
+ 75.         }
+ 76.     }
+ 77.     putpdf clear
+ 78.     putpdf begin, pagesize(A4) `orient' font("Times New Roman", `fontsize') ///
+>         margin(left, 0.8in) margin(right, 0.8in) margin(top, 0.5in) margin(bottom, 0.5in)
+ 79.     forvalues k = 1/`nk' {
+ 80.         if `k' > 1 putpdf pagebreak
+ 81.         putpdf paragraph, spacing(after, 4pt)
+ 82.         local tt = cond(`k' == 1, `"`title'"', `"`title' (continued)"')
+ 83.         putpdf text (`"`tt'"'), bold font("Times New Roman", `=`fontsize' + 1.5')
+ 84.         if `k' == 1 & `"`subtitle'"' != "" {
+ 85.             putpdf paragraph, spacing(after, 4pt)
+ 86.             putpdf text (`"`subtitle'"')
+ 87.         }
+ 88.         quietly count if chunk == `k'
+ 89.         local nr = r(N) + 1
+ 90.         quietly putpdf table T`k' = data(__c1-__c`nc') if chunk == `k', varnames border(all, nil) width(W)
+ 91.         forvalues j = 1/`nc' {
+ 92.             * header text; "|" starts a new line inside the cell
+.             local rest : word `j' of `header'
+ 93.             local opt ""
+ 94.             while `"`rest'"' != "" {
+ 95.                 gettoken part rest : rest, parse("|")
+ 96.                 if `"`part'"' == "|" {
+ 97.                     putpdf table T`k'(1, `j') = (""), linebreak append
+ 98.                     continue
+ 99.                 }
+100.                 putpdf table T`k'(1, `j') = (`"`part'"'), valign(bottom) `opt'
+101.                 local opt "append"
+102.             }
+103.             local al = cond(`: list j in right', "right", "left")
+104.             putpdf table T`k'(., `j'), halign(`al') margin(top, 0pt) margin(bottom, 0pt)
+105.         }
+106.         putpdf table T`k'(1, .), border(top, single, black) border(bottom, single, black)
+107.         putpdf table T`k'(`nr', .), border(bottom, single, black)
+108.         foreach r of local rules {
+109.             quietly summarize row if chunk == `k', meanonly
+110.             if `r' >= r(min) & `r' < r(max) {
+111.                 putpdf table T`k'(`=`r' - r(min) + 2', .), border(bottom, single, "A6A6A6")
+112.             }
+113.         }
+114.     }
+115.     local first 1
+116.     foreach n of local notes {
+117.         putpdf paragraph, spacing(before, `=cond(`first', 6, 1)'pt)
+118.         putpdf text (`"`n'"'), font("Times New Roman", `=`fontsize' - 0.5')
+119.         local first 0
+120.     }
+121.     putpdf save `"`using'"', replace
+122.     restore
+123. end
+
+. * --- end of PART 1 ------------------------------------------------------------
+. * --- PART 2: the rows of this exhibit (the only part that changes per file) ---
+. * Source: the table saved right after the CSV export (full precision, same
+. * estimation run as the chart).
+. * (1) Points table: the chart's rows top to bottom (each margin, then its five
+. * methods), then the table-only margin (not drawn). A method that did not run
+. * keeps its row.
+. local dec6 1                                            // table-only margin: one decimal
+
+. local suf6 "%"
+
+. use `full', clear
+
+. * the before-start p of every method and margin, before keeping the dot rows
+. forvalues o = 1/`nall' {
+  2.     forvalues m = 1/5 {
+  3.         quietly summarize p if outcome == `o' & method_order == `m' & row_type == "before_check"
+  4.         local q`o'_`m' = cond(r(N) > 0, r(mean), .)
+  5.         quietly summarize p if outcome == `o' & method_order == `m' & row_type == "before_all"
+  6.         local qa`o'_`m' = cond(r(N) > 0, r(mean), .)
+  7.     }
+  8. }
+
+. keep if row_type == "avg" & method_order <= 5
+(574 observations deleted)
+
+. sort outcome method_order
+
+. local npts = _N
+
+. gen byte ok = status == "ok" & !missing(b)
+
+. gen str60 t_blk = outcome_label
+
+. gen str40 t_m = ""
+(30 missing values generated)
+
+. forvalues m = 1/5 {
+  2.     replace t_m = cond(`m' == 1, "One regression (R6-01's model)", "`mname`m''") if method_order == `m'
+  3. }
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+
+. * the average as the chart label (its decimals; "%" for the log margins) and its
+. * interval with the same decimals
+. gen str16 t_v  = ""
+(30 missing values generated)
+
+. gen str16 t_lo = ""
+(30 missing values generated)
+
+. gen str16 t_hi = ""
+(30 missing values generated)
+
+. forvalues o = 1/`nall' {
+  2.     local d = `dec`o''
+  3.     foreach c in v lo hi {
+  4.         local s = cond("`c'" == "v", "shown", "shown_`c'")
+  5.         replace t_`c' = cond(round(`s', 10^(-`d')) > 0, "+", "") + string(round(`s', 10^(-`d')), "%9.`d'f") if outc
+> ome == `o' & ok
+  6.     }
+  7.     if `u`o'' == 1 replace t_v = t_v + "%" if outcome == `o' & ok
+  8. }
+(5 real changes made)
+(5 real changes made)
+(5 real changes made)
+(5 real changes made)
+(5 real changes made)
+(5 real changes made)
+(5 real changes made)
+(5 real changes made)
+(5 real changes made)
+(5 real changes made)
+(5 real changes made)
+(5 real changes made)
+(5 real changes made)
+(5 real changes made)
+(5 real changes made)
+(5 real changes made)
+(5 real changes made)
+(5 real changes made)
+(5 real changes made)
+(5 real changes made)
+(5 real changes made)
+(5 real changes made)
+
+. gen str12 t_u  = cond(unit_label == "% change", "%", "points")
+
+. gen str12 t_st = string(starters, "%12.0fc") if ok & !missing(starters)
+
+. gen str12 t_cf = string(comp_firms, "%12.0fc") if ok & !missing(comp_firms)
+(6 missing values generated)
+
+. replace t_cf = "—" if ok & missing(comp_firms)                // the package does not report it (as in the regression 
+> table)
+(6 real changes made)
+
+. gen str12 t_r  = string(rows, "%12.0fc") if ok & !missing(rows)
+
+. * the chart's "Before the start, p" column as printed there (Callaway-Sant'Anna's
+. * gray second line, all years before the start: in the table notes)
+. gen str60 t_p = ""
+(30 missing values generated)
+
+. local csall ""
+
+. forvalues o = 1/`nall' {
+  2.     forvalues m = 1/5 {
+  3.         local q = `q`o'_`m''
+  4.         local qa = `qa`o'_`m''
+  5.         if missing(`q') continue
+  6.         local qs = cond(`q' < 0.001, "< 0.001", string(`q', "%5.3f"))
+  7.         if `q' < 0.05 local qs "`qs', differs"
+  8.         if !missing(`qa') {
+  9.             local qas = cond(`qa' < 0.001, "< 0.001", string(`qa', "%5.3f"))
+ 10.             if `qa' < 0.05 local qas "`qas', differs"
+ 11.             local ol = cond(`o' <= `nmeas', "(`o')", "value added per tonne of CO2")
+ 12.             local csall = "`csall'" + cond("`csall'" == "", "", "; ") + "`ol' `qas'"
+ 13.         }
+ 14.         replace t_p = "`qs'" if outcome == `o' & method_order == `m' & ok
+ 15.     }
+ 16. }
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+
+. gen str60 t_status = ""
+(30 missing values generated)
+
+. replace t_status = "drawn" if ok & outcome <= `nmeas'
+(25 real changes made)
+
+. replace t_status = "table only" if ok & outcome > `nmeas'
+(5 real changes made)
+
+. replace t_status = "not drawn: " + status if !ok
+(0 real changes made)
+
+. quietly count if ok & outcome <= `nmeas'
+
+. local ndrawn = r(N)
+
+. quietly count if t_status == "drawn"
+
+. assert r(N) == `ndrawn'
+
+. assert t_v != "" if ok
+
+. assert _N == `npts'
+
+. local rl ""
+
+. forvalues o = 1/`=`nall' - 1' {
+  2.     quietly count if outcome <= `o'
+  3.     local rl `rl' `r(N)'
+  4. }
+
+. local txt_t = itrim(`"`txt_t'"')                       // the chart notes + the single years, exact starters
+
+. local tnote "Table: every point of Figure `exhibit', top to bottom, then the table-only row (value added per tonne of 
+> CO2 = (1) − (2) − (3)"
+
+. local tnote "`tnote' in logs, exactly, in every method; not drawn)."
+
+. local tnote "`tnote' Change = the dot as labelled: % change = 100 × (exp(b) − 1) for the log changes, percentage point
+> s for (4) and (5)"
+
+. local tnote "`tnote' (interval in the same unit); b = the"
+
+. local tnote "`tnote' regression table's first row; rounded as the chart labels. Starters, never-exporters and firm-yea
+> rs = the method's"
+
+. local tnote "`tnote' estimation sample (de Chaisemartin–D'Haultfœuille: rows behind year 0). Callaway–Sant'Anna's gray
+>  second line on"
+
+. local tnote "`tnote' the chart (its check over all years before the start): `csall'. Full precision: tables/`fname'.cs
+> v."
+
+. order t_blk t_m t_v t_lo t_hi t_st t_cf t_r t_p t_status   // table column order (ctable_pdf needs it)
+
+. ctable_pdf t_blk t_m t_v t_lo t_hi t_st t_cf t_r t_p t_status using "tables/`fname'_table.pdf", ///
+>     title("Table `exhibit'. `ftitle': every plotted point") ///
+>     subtitle("Starters minus never-exporters, average of years 0 to +`whi' after the start, by method") ///
+>     header("Chart block" "Method (chart row)" "Change" "95%|interval|low" "95%|interval|high" "Starters" "Never-|expor
+> ters" "Firm-years" "Before the|start, p" "Status") ///
+>     right(3 4 5 6 7 8) norepeat(1) rules(`rl') fontsize(8.5) perpage(20) landscape /// two pages: (1)-(4), then (5), t
+> he table-only margin and the notes
+>     notes("`txt_t'" "`tnote'" "`srcnote'" "`devnote'")
+successfully created "/Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r6-exporter-decarbonis
+> ation-margins/tables/06_margins_support_methods_table.pdf"
+
+. display "table -> tables/`fname'_table.pdf"
+table -> tables/06_margins_support_methods_table.pdf
+
+. 
+. * (2) Regression table (AER style): one page per margin; columns = the chart's
+. * five method rows, then two table-only versions of the single regression.
+. * Rows: the average after the start (the dot), the method's own overall number,
+. * the before-start checks, the year-by-year path where the method gives one,
+. * then the sample and model rows. Coefficient on the first line, (standard
+. * error) on the second, from the full-precision numbers (never rounded twice).
+. use `full', clear
+
+. * check: the coefficients are those in the CSV just written (4 decimals there)
+. preserve
+
+. import delimited using "tables/`fname'.csv", clear varnames(1)
+(encoding automatically selected: ISO-8859-1)
+(39 vars, 604 obs)
+
+. keep outcome method row_type event_time b
+
+. rename b b_csv
+
+. tempfile csvb
+
+. save `csvb'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_27942.00000t saved as .dta format
+
+. restore
+
+. merge 1:1 outcome method row_type event_time using `csvb', assert(match) nogenerate
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                               604  
+    -----------------------------------------
+
+. assert abs(b - b_csv) <= 0.00005 + 1e-9 if !missing(b)
+
+. assert missing(b_csv) if missing(b)
+
+. drop b_csv
+
+. rename method_order col
+
+. tempname P
+
+. tempfile R
+
+. postfile `P' str70 t_lab str24(t1 t2 t3 t4 t5 t6 t7) using `R'
+
+. capture program drop r606_cell
+
+. program define r606_cell, rclass
+  1.     args o c cond dec
+  2.     quietly count if outcome == `o' & col == `c' & `cond' & !missing(b)
+  3.     if r(N) == 0 {
+  4.         return local b "—"
+  5.         return local s ""
+  6.         exit
+  7.     }
+  8.     quietly summarize b if outcome == `o' & col == `c' & `cond', meanonly
+  9.     return local b = string(r(mean), "%9.`dec'f")
+ 10.     quietly summarize se if outcome == `o' & col == `c' & `cond', meanonly
+ 11.     return local s = cond(missing(r(mean)), "", "(" + string(r(mean), "%9.`dec'f") + ")")
+ 12. end
+
+. * short panel titles (the table's first column is kept narrow so seven columns fit)
+. local tn1 "(1) Value added"
+
+. local tn2 "(2) Energy used, GJ"
+
+. local tn3 "(3) CO2 per GJ of energy"
+
+. local tn4 "(4) Bought electricity share"
+
+. local tn5 "(5) Makes own electricity"
+
+. local tn6 "(6) Value added per tonne CO2"
+
+. local nr 0
+
+. local rl ""
+
+. local nb = uchar(160)
+
+. forvalues o = 1/`nall' {
+  2.     * 3 decimals for log points, 2 for percentage points
+.     local dd = cond(`u`o'' == 1, 3, 2)
+  3.     local ul = cond(`u`o'' == 1, "log points", "percentage points")
+  4.     post `P' ("`tn`o''") ("") ("") ("") ("") ("") ("") ("")
+  5.     local ++nr
+  6.     * the average after the start: b, (se), then as drawn and its 95% interval
+.     forvalues c = 1/7 {
+  7.         r606_cell `o' `c' `"row_type == "avg""' `dd'
+  8.         local b`c' "`r(b)'"
+  9.         local s`c' "`r(s)'"
+ 10.         quietly count if outcome == `o' & col == `c' & row_type == "avg" & status != "ok"
+ 11.         if r(N) > 0 local b`c' "not run"
+ 12.         quietly summarize shown if outcome == `o' & col == `c' & row_type == "avg", meanonly
+ 13.         local v`c' = cond(r(N) == 0, "—", cond(r(mean) > 0, "+", "") + string(r(mean), "%9.1f"))
+ 14.         quietly summarize shown_lo if outcome == `o' & col == `c' & row_type == "avg", meanonly
+ 15.         local l`c' = r(mean)
+ 16.         quietly summarize shown_hi if outcome == `o' & col == `c' & row_type == "avg", meanonly
+ 17.         local i`c' = cond(missing(`l`c''), "—", string(`l`c'', "%9.1f") + " to " + string(r(mean), "%9.1f"))
+ 18.     }
+ 19.     post `P' ("Average, years 0 to +`whi'") ("`b1'") ("`b2'") ("`b3'") ("`b4'") ("`b5'") ("`b6'") ("`b7'")
+ 20.     post `P' ("")                                  ("`s1'") ("`s2'") ("`s3'") ("`s4'") ("`s5'") ("`s6'") ("`s7'")
+ 21.     local wl = cond(`u`o'' == 1, "  as % change", "  as drawn (points)")
+ 22.     post `P' ("`wl'")                              ("`v1'") ("`v2'") ("`v3'") ("`v4'") ("`v5'") ("`v6'") ("`v7'")
+ 23.     post `P' ("  95% interval")                    ("`i1'") ("`i2'") ("`i3'") ("`i4'") ("`i5'") ("`i6'") ("`i7'")
+ 24.     forvalues c = 1/7 {
+ 25.         r606_cell `o' `c' `"row_type == "own_overall""' `dd'
+ 26.         local b`c' "`r(b)'"
+ 27.         local s`c' "`r(s)'"
+ 28.     }
+ 29.     post `P' ("Own overall number")                ("`b1'") ("`b2'") ("`b3'") ("`b4'") ("`b5'") ("`b6'") ("`b7'")
+ 30.     post `P' ("")                                  ("`s1'") ("`s2'") ("`s3'") ("`s4'") ("`s5'") ("`s6'") ("`s7'")
+ 31.     foreach rt in before_check before_all {
+ 32.         forvalues c = 1/7 {
+ 33.             quietly summarize p if outcome == `o' & col == `c' & row_type == "`rt'", meanonly
+ 34.             local b`c' = cond(r(N) == 0, "—", cond(r(mean) < 0.001, "<`nb'0.001", string(r(mean), "%5.3f")))
+ 35.         }
+ 36.         local lab = cond("`rt'" == "before_check", "Before-start test, p", "  all years before, p")
+ 37.         post `P' ("`lab'") ("`b1'") ("`b2'") ("`b3'") ("`b4'") ("`b5'") ("`b6'") ("`b7'")
+ 38.     }
+ 39.     local nr = `nr' + 8
+ 40.     * year by year (not for the table-only margin: CSV; it is (1) - (2) - (3) there too)
+.     local klo = cond(`o' <= `nmeas', `wlo' - 1, 1)
+ 41.     local khi = cond(`o' <= `nmeas', `whi' + 1, 0)
+ 42.     forvalues k = `klo'/`khi' {
+ 43.         local lab = cond(`k' > 0, "+", "") + string(`k')
+ 44.         if `k' < `wlo' local lab "≤ `lab' (grouped)"
+ 45.         if `k' > `whi' local lab "≥ `lab' (grouped)"
+ 46.         forvalues c = 1/7 {
+ 47.             r606_cell `o' `c' `"row_type == "event" & event_time == `k'"' `dd'
+ 48.             local b`c' "`r(b)'"
+ 49.             local s`c' "`r(s)'"
+ 50.             if `k' == -1 & inlist(`c', 1, 3, 6, 7) local b`c' "0`nb'(reference)"
+ 51.         }
+ 52.         post `P' ("Year `lab'") ("`b1'") ("`b2'") ("`b3'") ("`b4'") ("`b5'") ("`b6'") ("`b7'")
+ 53.         local ++nr
+ 54.         * standard errors under every estimate (at -1 too: Callaway-Sant'Anna and
+.         * Borusyak-Jaravel-Spiess estimate year -1; the others set it to 0)
+.         if "`s1'`s2'`s3'`s4'`s5'`s6'`s7'" != "" {
+ 55.             post `P' ("") ("`s1'") ("`s2'") ("`s3'") ("`s4'") ("`s5'") ("`s6'") ("`s7'")
+ 56.             local ++nr
+ 57.         }
+ 58.     }
+ 59.     * sample rows
+.     forvalues c = 1/7 {
+ 60.         foreach v in starters comp_firms rows {
+ 61.             quietly summarize `v' if outcome == `o' & col == `c' & row_type == "avg", meanonly
+ 62.             local `v'`c' = cond(r(N) == 0, "—", string(r(mean), "%12.0fc"))
+ 63.         }
+ 64.         quietly summarize fewest_starters if outcome == `o' & col == `c' & row_type == "avg", meanonly
+ 65.         local fw`c' = cond(r(N) == 0, "—", string(r(mean), "%12.0fc"))
+ 66.         quietly summarize fewest_at if outcome == `o' & col == `c' & row_type == "avg", meanonly
+ 67.         if r(N) > 0 local fw`c' = "`fw`c'' (" + cond(r(mean) > 0, "+", "") + string(r(mean)) + ")"
+ 68.         quietly summarize left_one_row if outcome == `o' & col == `c' & row_type == "avg", meanonly
+ 69.         local lo`c' = cond(r(N) == 0, "—", string(r(mean), "%12.0fc"))
+ 70.         quietly levelsof ci_basis if outcome == `o' & col == `c' & row_type == "avg", local(cb) clean
+ 71.         local ci`c' = cond("`cb'" == "t", "t", cond("`cb'" == "normal", "Normal", "—"))
+ 72.     }
+ 73.     quietly summarize margin_rows if outcome == `o', meanonly
+ 74.     local mr = string(r(mean), "%12.0fc")
+ 75.     quietly levelsof sa_left_years if outcome == `o' & col == 3 & row_type == "avg", local(say) clean
+ 76.     quietly summarize sa_left_starters if outcome == `o' & col == 3 & row_type == "avg", meanonly
+ 77.     local sa3 = cond(r(N) == 0, "—", cond("`say'" == "", "none", subinstr("`say'", " ", ", ", .) + " (" + string(r(
+> mean), "%9.0fc") + ")"))
+ 78.     post `P' ("Starters")                         ("`starters1'") ("`starters2'") ("`starters3'") ("`starters4'") (
+> "`starters5'") ("`starters6'") ("`starters7'")
+ 79.     post `P' ("Never-exporters")                  ("`comp_firms1'") ("`comp_firms2'") ("`comp_firms3'") ("`comp_fir
+> ms4'") ("`comp_firms5'") ("`comp_firms6'") ("`comp_firms7'")
+ 80.     post `P' ("Observations (firm-years)")        ("`rows1'") ("`rows2'") ("`rows3'") ("`rows4'") ("`rows5'") ("`ro
+> ws6'") ("`rows7'")
+ 81.     post `P' ("Fewest starters in a year") ("`fw1'") ("—") ("—") ("—") ("—") ("`fw6'") ("`fw7'")
+ 82.     post `P' ("Block's firm-years") ("`mr'") ("") ("") ("") ("") ("") ("")
+ 83.     post `P' ("  left out: no energy") ("`=string(`n_zero', "%12.0fc")'") ("") ("") ("") ("") ("") ("")
+ 84.     local nr = `nr' + 6
+ 85.     if `o' == 5 {
+ 86.         post `P' ("  left out: not recorded") ("`=string(`n_notrec', "%12.0fc")'") ("") ("") ("") ("") ("") ("")
+ 87.         post `P' ("  left out: `badtxt'") ("`=string(`n_thin', "%12.0fc")'") ("") ("") ("") ("") ("") ("")
+ 88.         local nr = `nr' + 2
+ 89.     }
+ 90.     post `P' ("One-row firms' firm-years") ("`lo1'") ("—") ("—") ("—") ("—") ("`lo6'") ("`lo7'")
+ 91.     post `P' ("Start years left out") ("—") ("—") ("`sa3'") ("—") ("—") ("—") ("—")
+ 92.     post `P' ("Firm fixed effects")               ("Yes") ("Yes") ("Yes") ("Yes") ("Yes") ("Yes") ("Yes")
+ 93.     post `P' ("Year fixed effects")               ("Yes") ("Yes") ("Yes") ("Yes") ("Yes") ("Yes") ("Yes")
+ 94.     post `P' ("Industry × year effects")          ("No") ("No") ("No") ("No") ("No") ("No") ("No")
+ 95.     post `P' ("Province × year effects")          ("No") ("No") ("No") ("No") ("No") ("No") ("No")
+ 96.     post `P' ("Weights")                          ("None") ("None") ("None") ("None") ("None") ("None") ("None")
+ 97.     post `P' ("Standard errors clustered by")     ("Firm") ("Firm") ("Firm") ("Firm") ("Firm") ("Firm") ("Firm")
+ 98.     local nr = `nr' + 8
+ 99.     local rl `rl' `nr'
+100. }
+
+. postclose `P'
+
+. use `R', clear
+
+. local dpn ""
+
+. if `dpl5' < -`wlo' - 1 local dpn " In block (5), column 5's placebos cover years `dyr5' only (year `=-2-`dpl5'' has no
+>  starter with the rows it needs)."
+
+. local rnote "Notes: One page per block: the chart's blocks (1)-(5), then (6), value added per tonne of CO2 = (1) − (2)
+>  − (3), which"
+
+. local rnote "`rnote' holds exactly in every column (its year-by-year paths: CSV). Columns 1-5 = the chart's rows: the 
+> measure on markers of years"
+
+. local rnote "`rnote' since the export start (`wlo' to +`whi', ends grouped) with firm and year effects, starters (firs
+> t year seen exporting after a year"
+
+. local rnote "`rnote' seen not exporting) against firms never seen exporting; columns 1, 4, 6, 7 also compare with late
+> r starters' years before"
+
+. local rnote "`rnote' their start. Column 6 = column 1 without doubtful energy records (importers of unknown export sta
+> tus in the years their"
+
+. local rnote "`rnote' energy records jump or drop); column 7 = column 1 with only starters seen not exporting the year 
+> just before. Every column"
+
+. local rnote "`rnote' starts from the block's firm-years (rows left out before: listed). Year-by-year paths use each pa
+> ckage's own reference:"
+
+. local rnote "`rnote' columns 1, 3, 6, 7 vs the year before the start (-1 set to 0); column 2: years before the start =
+>  change from the year"
+
+. local rnote "`rnote' before, from 0 on vs the year before the start; column 4: years before = vs the firm's earlier ye
+> ars, from 0 on = vs its"
+
+. local rnote "`rnote' predicted path; column 5: Placebo_1.. and Effect_1.., renamed to years -2.. and 0.., vs the year 
+> before the start.`dpn'"
+
+. local rnote "`rnote' Before-start test: each method's own joint test. Callaway–Sant'Anna and de Chaisemartin–D'Haultfœ
+> uille leave out"
+
+. local rnote "`rnote' start years with no row the year before by construction; Sun–Abraham's are left out before the ca
+> ll (row above)."
+
+. local rnote "`rnote' 95% intervals: t in columns 1, 3, 6, 7; normal in 2, 4, 5, as each package reports. Log points to
+>  3 decimals,"
+
+. local rnote "`rnote' percentage points to 2; standard errors in parentheses; — = the method does not give this number.
+>  No stars."
+
+. order t_lab t1 t2 t3 t4 t5 t6 t7
+
+. ctable_pdf t_lab t1 t2 t3 t4 t5 t6 t7 using "tables/`fname'_regression.pdf", ///
+>     title("Table `exhibit', regression. `ftitle': estimates behind the chart") ///
+>     subtitle("Coefficient (standard error): log points in (1)-(3) and (6), percentage points in (4) and (5). Columns (
+> 1)-(5) = the chart's rows.") ///
+>     header("Estimate" "(1)|One|regression" "(2)|Callaway–|Sant'Anna" "(3)|Sun–|Abraham" "(4)|Borusyak–|Jaravel–|Spiess
+> " "(5)|de Chaise-|martin–|D'Haultfœuille" "(6)|(1) without|doubtful|records" "(7)|(1), only|exact|starters") ///
+>     right(2 3 4 5 6 7 8) rules(`rl') fontsize(8) perpage(56) portrait /// one page per margin
+>     notes("`rnote'" "`srcnote'" "`devnote'")
+successfully created "/Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r6-exporter-decarbonis
+> ation-margins/tables/06_margins_support_methods_regression.pdf"
+
+. display "table -> tables/`fname'_regression.pdf"
+table -> tables/06_margins_support_methods_regression.pdf
+
+. * --- end of PART 2 ------------------------------------------------------------
+. 
+. timer off 1
+
+. quietly timer list 1
+
+. local elapsed = strtrim(string(r(t1), "%9.1f"))
+
+. display "FINISHED: figure -> figures/`fname'.png (elapsed `elapsed' s)"
+FINISHED: figure -> figures/06_margins_support_methods.png (elapsed 307.8 s)
+
+. quietly log close          // keeps FINISHED as the last output line of the log
