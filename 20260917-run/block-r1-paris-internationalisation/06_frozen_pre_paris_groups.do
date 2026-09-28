@@ -16,6 +16,7 @@
          (fdi_10_flag), the definition used in every R1-R3 exhibit.
   Output : figures/06_frozen_pre_paris_groups.png (+ .pdf)
            tables/06_frozen_pre_paris_groups.csv
+           tables/06_frozen_pre_paris_groups_table.pdf (every plotted point)
   Runtime: about 2 minutes (999 random redraws of firms for each grouping, main and stricter groups).
   Development data - obscured values, fictional firm panel. Not BPS findings.
 ==========================================================================*/
@@ -62,7 +63,7 @@ capture graph set window fontface "Times New Roman"   // GUI Stata; console Stat
 local devnote "Development data — obscured values, fictional firm panel. Not BPS findings."
 local srcnote "Source: SI/IBS annual files 2010–2022 (masked), analysis_ready_data.dta."
 
-display "Step 1/7: load the three group flags, energy, CO2 and value added"
+display "Step 1/8: load the three group flags, energy, CO2 and value added"
 * total_gj_s1 = energy in GJ (nine fuels + bought electricity); co2_total_s1 = CO2 in tonnes
 * value_added_nominal = value added, current prices (masked money unit)
 use firm_id year export_flag import_flag fdi_10_flag total_gj_s1 co2_total_s1 value_added_nominal ///
@@ -72,7 +73,7 @@ assert year != 2016
 assert inlist(export_flag, 0, 1, .) & inlist(import_flag, 0, 1, .) & inlist(fdi_10_flag, 0, 1, .)
 local base_in = subinstr("`base_yrs'", " ", ",", .)
 
-display "Step 2/7: freeze each firm's status from its 2013-14 records"
+display "Step 2/8: freeze each firm's status from its 2013-14 records"
 * A firm's frozen status uses ONLY its 2013 and 2014 records:
 *   in the group  = flagged (1) in at least half of the 2013-14 years whose answer is known
 *                   (so one of two years is enough; a firm seen in one year keeps that year's answer);
@@ -115,7 +116,7 @@ foreach g in export_flag import_flag fdi_10_flag {
 }
 postclose `hc'
 
-display "Step 3/7: outcomes per firm and year"
+display "Step 3/8: outcomes per firm and year"
 * One sample for all outcomes: energy, CO2 and value added above zero (as R1-02 to R1-04).
 gen byte cs = total_gj_s1 > 0 & co2_total_s1 > 0 & value_added_nominal > 0 ///
             & !missing(total_gj_s1, co2_total_s1, value_added_nominal)
@@ -174,7 +175,7 @@ program define r106diff
     }
 end
 
-display "Step 4/7: yearly medians, indices and differences per grouping, with `reps' redraws"
+display "Step 4/8: yearly medians, indices and differences per grouping, with `reps' redraws"
 local groupings "export_flag import_flag fdi_10_flag"
 local gi 0
 foreach g of local groupings {
@@ -234,7 +235,7 @@ foreach g of local groupings {
     }
 }
 
-display "Step 5/7: 95% ranges of the differences (middle 95% of the redrawn values)"
+display "Step 5/8: 95% ranges of the differences (middle 95% of the redrawn values)"
 foreach pf in bs ss {
     use ``pf'1', clear
     append using ``pf'2' ``pf'3'
@@ -267,7 +268,7 @@ merge 1:1 grouping year using `dd_ss', nogenerate keep(master match)   // a year
 tempfile dd
 save `dd'
 
-display "Step 6/7: table -> CSV (numbers written before drawing)"
+display "Step 6/8: table -> CSV (numbers written before drawing)"
 use `pt1', clear
 append using `pt2' `pt3'
 merge 1:1 grouping year using `dd', nogenerate assert(match)
@@ -354,11 +355,13 @@ format firms_* obs_* n_g* sn_g1 wn_* known_now_* %9.0f
 format med_* base_* %14.4f
 format ix_* diff_* sdiff_* rel_pct wix_* wdiff_pts share_* %8.2f
 export delimited grouping-note using "tables/06_frozen_pre_paris_groups.csv", datafmt replace
+tempfile ctsrc                     // same numbers, full precision, for the companion table (Step 8)
+quietly save `ctsrc'
 list grouping outcome_id year obs_g1 obs_g0 ix_g1 ix_g0 diff_pts diff_lo95 diff_hi95 sdiff_pts sn_g1 wdiff_pts ///
     if outcome_id < 3 & annual_file, noobs sepby(grouping outcome_id) abbreviate(24)
 display "   CHECK ON REAL DATA: skip_yrs (`skip_yrs') and flag_yrs (`flag_yrs') were chosen on the development files (see the far above / far below list in Step 3); confirm those years still look wrong before publishing"
 
-display "Step 7/7: draw: one row per grouping (exporters, importers, foreign-owned), energy left, CO2 right, one shared scale"
+display "Step 7/8: draw: one row per grouping (exporters, importers, foreign-owned), energy left, CO2 right, one shared scale"
 * numbers for the notes, read from the table (never typed)
 local attr ""
 foreach g in export_flag import_flag fdi_10_flag {
@@ -491,6 +494,255 @@ twoway (bar band year, barwidth(0.8) color(gs14) lwidth(none) base(0)) ///
 
 graph export "figures/06_frozen_pre_paris_groups.png", width(2400) replace
 graph export "figures/06_frozen_pre_paris_groups.pdf", replace
+
+*---------------------------------------------------------------------------
+display "Step 8/8: companion table: every plotted point"
+*---------------------------------------------------------------------------
+* ==== COMPANION TABLE (pattern for all exhibits) =============================
+* Owner rule, 28 Sep 2026: every chart gets a table of every plotted point, and
+* every chart of regression coefficients also gets a regression table, written
+* by the same do-file (spec: TABLE_BRIEF.md). This step runs AFTER the graph
+* export, so the chart and the CSV stay byte-identical.
+*
+* How to use it in another exhibit file:
+*   PART 1 (the writer, program ctable_pdf) is copied UNCHANGED.
+*   PART 2 is the only exhibit-specific part: put the numbers in memory (the
+*   tempfile saved right after the CSV export, or the CSV itself), build one
+*   STRING variable per table column, one row per plotted point in chart order
+*   (years not drawn included, with the reason in a status column), then call
+*   ctable_pdf. Format numbers with string(x, "%9.1f") etc. so the table shows
+*   exactly the rounding of the chart labels.
+*
+* ctable_pdf strvars using "tables/NN_name_table.pdf",
+*     title("Table R1-02. ...: every plotted point")    first line, bold
+*     header("Col 1" "Col 2" ...)       one text per column; "|" = line break
+*     [right(numlist)]                  columns right-aligned (numbers)
+*     [norepeat(numlist)]               columns whose repeated text is shown
+*                                       only on the first row of a run
+*     [rules(numlist)]                  thin gray line under these data rows
+*     [notes("line 1" "line 2" ...)]    footer paragraphs (Notes, Source, dev line)
+*     [subtitle(text)] [fontsize(#)] [perpage(#)] [landscape|portrait]
+* Landscape is chosen automatically when there are more than 6 columns. Long
+* tables continue on a new page with the header repeated ("(continued)"); a page
+* never breaks inside a block whose first column is empty (e.g. an SE row).
+* --- PART 1: the writer (identical in every file; do not edit) ---------------
+capture program drop ctable_pdf
+program define ctable_pdf
+    version 17
+    syntax varlist(string) using/, TItle(string) HEADer(string asis) ///
+        [RIGHT(numlist integer >0) NOREPeat(numlist integer >0) RULES(numlist integer >0) ///
+         NOTEs(string asis) SUBtitle(string) FONTsize(real 9.5) PERpage(integer 0) ///
+         LANDscape PORTrait]
+    local nc : word count `varlist'
+    local nh : word count `header'
+    if `nh' != `nc' {
+        display as error "ctable_pdf: `nc' columns but `nh' header texts"
+        exit 198
+    }
+    local orient = cond(`nc' > 6, "landscape", "")
+    if "`landscape'" != "" local orient "landscape"
+    if "`portrait'"  != "" local orient ""
+    * rows per page: a conservative guess for 9-10 pt text (wrapped cells take more)
+    if `perpage' == 0 local perpage = cond("`orient'" == "landscape", 24, 40)
+    preserve
+    quietly {
+        keep `varlist'
+        rename (`varlist') (__c#), addnumber      // __c1 __c2 ... in the order given
+        forvalues j = 1/`nc' {
+            replace __c`j' = strtrim(__c`j')
+        }
+        local N = _N
+        gen long row = _n
+        * page chunks: fill up to perpage rows; prefer to end a page at a rule,
+        * never start a page on a row whose first column is empty
+        gen int chunk = .
+        local start 1
+        local k 0
+        while `start' <= `N' {
+            local ++k
+            local end = min(`start' + `perpage' - 1, `N')
+            if `end' < `N' {
+                local best 0
+                foreach r of local rules {
+                    if `r' >= `start' + floor(`perpage' / 2) & `r' <= `end' & `r' > `best' local best `r'
+                }
+                if `best' > 0 local end `best'
+                else {
+                    while `end' > `start' & __c1[`end' + 1] == "" {
+                        local --end
+                    }
+                }
+            }
+            replace chunk = `k' in `start'/`end'
+            local start = `end' + 1
+        }
+        local nk `k'
+        * blank repeated labels inside each page; a column is blanked only while the
+        * norepeat columns to its left are unchanged too (a new panel shows its series)
+        gen byte same = _n > 1 & chunk == chunk[_n - 1]
+        foreach j of local norepeat {
+            gen strL o`j' = __c`j'
+            replace same = same & o`j' == o`j'[_n - 1]
+            replace __c`j' = "" if same
+            drop o`j'
+        }
+        drop same
+        * column widths (% of the page), from the longest text in each column;
+        * long text columns are capped so they wrap instead of squeezing numbers
+        matrix W = J(1, `nc', 0)
+        local tot 0
+        forvalues j = 1/`nc' {
+            gen long L`j' = udstrlen(__c`j')
+            summarize L`j', meanonly
+            local w = max(r(max), 3)
+            local h : word `j' of `header'
+            local h = subinstr(`"`h'"', "|", " ", .)
+            foreach hw of local h {
+                local w = max(`w', udstrlen(`"`hw'"'))
+            }
+            local w = min(`w', 34) + 2          // + 2 = room for the cell margins
+            matrix W[1, `j'] = `w'
+            local tot = `tot' + `w'
+            drop L`j'
+        }
+        local used 0
+        forvalues j = 1/`nc' {
+            if `j' < `nc' {
+                matrix W[1, `j'] = max(floor(100 * W[1, `j'] / `tot'), 3)
+                local used = `used' + W[1, `j']
+            }
+            else matrix W[1, `j'] = 100 - `used'
+        }
+    }
+    putpdf clear
+    putpdf begin, pagesize(A4) `orient' font("Times New Roman", `fontsize') ///
+        margin(left, 0.8in) margin(right, 0.8in) margin(top, 0.5in) margin(bottom, 0.5in)
+    forvalues k = 1/`nk' {
+        if `k' > 1 putpdf pagebreak
+        putpdf paragraph, spacing(after, 4pt)
+        local tt = cond(`k' == 1, `"`title'"', `"`title' (continued)"')
+        putpdf text (`"`tt'"'), bold font("Times New Roman", `=`fontsize' + 1.5')
+        if `k' == 1 & `"`subtitle'"' != "" {
+            putpdf paragraph, spacing(after, 4pt)
+            putpdf text (`"`subtitle'"')
+        }
+        quietly count if chunk == `k'
+        local nr = r(N) + 1
+        quietly putpdf table T`k' = data(__c1-__c`nc') if chunk == `k', varnames border(all, nil) width(W)
+        forvalues j = 1/`nc' {
+            * header text; "|" starts a new line inside the cell
+            local rest : word `j' of `header'
+            local opt ""
+            while `"`rest'"' != "" {
+                gettoken part rest : rest, parse("|")
+                if `"`part'"' == "|" {
+                    putpdf table T`k'(1, `j') = (""), linebreak append
+                    continue
+                }
+                putpdf table T`k'(1, `j') = (`"`part'"'), valign(bottom) `opt'
+                local opt "append"
+            }
+            local al = cond(`: list j in right', "right", "left")
+            putpdf table T`k'(., `j'), halign(`al') margin(top, 0pt) margin(bottom, 0pt)
+        }
+        putpdf table T`k'(1, .), border(top, single, black) border(bottom, single, black)
+        putpdf table T`k'(`nr', .), border(bottom, single, black)
+        foreach r of local rules {
+            quietly summarize row if chunk == `k', meanonly
+            if `r' >= r(min) & `r' < r(max) {
+                putpdf table T`k'(`=`r' - r(min) + 2', .), border(bottom, single, "A6A6A6")
+            }
+        }
+    }
+    local first 1
+    foreach n of local notes {
+        putpdf paragraph, spacing(before, `=cond(`first', 6, 1)'pt)
+        putpdf text (`"`n'"'), font("Times New Roman", `=`fontsize' - 0.5')
+        local first 0
+    }
+    putpdf save `"`using'"', replace
+    restore
+end
+* --- end of PART 1 ------------------------------------------------------------
+
+* --- PART 2: the rows of this exhibit (the only part that changes per file) ---
+* Source: the table saved right after the CSV export (full precision, same run
+* as the chart). One row per point, in chart order: panels (a)-(f) (exporters,
+* importers, foreign-owned; energy left, CO2 right); within a panel the group's
+* line, then the other firms' line, every year of the axis (years not drawn
+* included, with the reason), then the `post_yr' difference printed top right.
+use `ctsrc', clear
+keep if outcome_id < 3
+gen byte panel = 2 * (gi - 1) + outcome_id
+sort panel year
+by panel: gen byte ny_p = _N
+quietly summarize ny_p
+assert r(min) == r(max)
+local ny = r(max)                      // axis years per panel, 2016 included
+expand 2
+bysort panel year: gen byte series = _n                       // 1 = group, 2 = other firms
+expand 2 if series == 2 & year == `post_yr', generate(dcopy)
+replace series = 3 if dcopy                                     // 3 = the printed difference
+drop dcopy
+sort panel series year
+local npp = 2 * `ny' + 1
+assert _N == 6 * `npp'
+gen str45 t_panel = ""
+replace t_panel = "(a) Exporters: energy per value added"     if panel == 1
+replace t_panel = "(b) Exporters: CO2 per value added"        if panel == 2
+replace t_panel = "(c) Importers: energy per value added"     if panel == 3
+replace t_panel = "(d) Importers: CO2 per value added"        if panel == 4
+replace t_panel = "(e) Foreign-owned: energy per value added" if panel == 5
+replace t_panel = "(f) Foreign-owned: CO2 per value added"    if panel == 6
+gen str60 t_series = cond(series == 1, grp1_label, cond(series == 2, grp0_label, "`post_yr' difference, group minus other (points)"))
+gen str8 t_year = string(year)
+* index lines: whole numbers as the chart labels; the difference exactly as printed
+gen double v = cond(series == 1, ix_g1, cond(series == 2, ix_g0, diff_pts))
+gen str12 t_v = string(v, "%9.0f") if !missing(v) & series < 3
+replace t_v = cond(diff_pts >= 0.5, "+", "") + string(round(diff_pts), "%9.0f") if series == 3 & !missing(diff_pts)
+gen str12 t_lo = string(round(diff_lo95), "%9.0f") if series == 3 & !missing(diff_lo95)
+gen str12 t_hi = cond(diff_hi95 >= 0.5, "+", "") + string(round(diff_hi95), "%9.0f") if series == 3 & !missing(diff_hi95)
+* firms with the outcome that year: the group's, the other firms'; for the difference both
+gen double nf = cond(series == 1, n_g1, cond(series == 2, n_g0, n_g1 + n_g0))
+gen str12 t_n = string(nf, "%12.0fc") if !missing(nf)
+* status: how (and whether) the point is drawn
+gen str90 t_status = ""
+replace t_status = "drawn" if plot_status == "solid"
+replace t_status = cond(series == 1, "hollow gray", "light gray") + ": records in doubt (see notes)" if plot_status == "light gray: energy records in doubt"
+replace t_status = "not drawn: energy records jump" if plot_status == "not drawn: energy records jump"
+replace t_status = "not drawn: no annual file" if year == 2016
+replace t_status = "not drawn: under `min_n' firms in a group" if missing(v) & inlist(plot_status, "solid", "light gray: energy records in doubt")
+replace t_status = cond(clear == 1, "printed top right, black: range excludes 0", "printed top right, gray: range includes 0") if series == 3
+replace t_status = "not printed: under `min_n' firms in a group" if series == 3 & missing(clear)
+* two no-break spaces keep the status text off the numbers to its left
+replace t_status = uchar(160) + uchar(160) + t_status if t_status != ""
+* checks: every drawn point is one row with a number; the drawn count equals the chart's marks
+quietly count if inlist(plot_status, "solid", "light gray: energy records in doubt") & !missing(v) & series < 3
+local nmarks = r(N)
+quietly count if series == 3 & !missing(clear)
+local nmarks = `nmarks' + r(N)
+quietly count if !strpos(t_status, "not drawn") & !strpos(t_status, "not printed")
+assert r(N) == `nmarks'
+assert t_v != "" if !strpos(t_status, "not drawn") & !strpos(t_status, "not printed")
+assert t_lo != "" & t_hi != "" if series == 3 & !missing(clear)
+local ntext_t = itrim(`"`ntext'"')
+local tnote "Table: every point of Figure R1-06 in chart order, with the years not drawn and why (their numbers are shown). Lines: the median firm as"
+local tnote "`tnote' % of the group's own `base_txt' level, whole numbers as the chart labels; Firms = firms with the outcome that year."
+local tnote "`tnote' Difference: as printed in each panel, with its 95% range from `reps' redraws of whole firms; Firms counts both"
+local tnote "`tnote' groups. Stricter groups and energy used: tables/06_frozen_pre_paris_groups.csv (full precision)."
+local r ""
+forvalues p = 1/5 {
+    local r "`r' `=(`p' - 1) * `npp' + `ny'' `=(`p' - 1) * `npp' + 2 * `ny'' `=`p' * `npp''"
+}
+local r "`r' `=5 * `npp' + `ny'' `=5 * `npp' + 2 * `ny''"
+ctable_pdf t_panel t_series t_year t_v t_lo t_hi t_n t_status using "tables/06_frozen_pre_paris_groups_table.pdf", ///
+    title("Table R1-06. Energy and CO2 per unit of value added, groups fixed before Paris: every plotted point") ///
+    header("Panel" "Series" "Year" "Plotted|value" "95%|low" "95%|high" "Firms" "Status") ///
+    right(3 4 5 6 7) norepeat(1 2) fontsize(8) rules(`r') perpage(`npp') subtitle("`tnote'") ///
+    notes("`ntext_t'" "`srcnote'" "`devnote'")
+display "table -> tables/06_frozen_pre_paris_groups_table.pdf"
+* --- end of PART 2 ------------------------------------------------------------
+
 timer off 1
 quietly timer list 1
 local elapsed = strtrim(string(r(t1), "%9.1f"))

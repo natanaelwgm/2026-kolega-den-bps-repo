@@ -3,7 +3,7 @@
        log:  /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r1-paris-internationalisation/l
 > ogs/08_matched_gaps_by_year.log
   log type:  text
- opened on:  25 Sep 2026, 07:29:39
+ opened on:  28 Sep 2026, 18:16:58
 
 . timer clear 1
 
@@ -25,8 +25,8 @@
 . local srcnote "Source: SI/IBS annual files 2010–2022 (masked), analysis_ready_data.dta."
 
 . 
-. display "Step 1/7: load the group flags, energy, CO2, value added, workers, industry and province"
-Step 1/7: load the group flags, energy, CO2, value added, workers, industry and province
+. display "Step 1/8: load the group flags, energy, CO2, value added, workers, industry and province"
+Step 1/8: load the group flags, energy, CO2, value added, workers, industry and province
 
 . * total_gj_s1 = energy in GJ (nine fuels + bought electricity); co2_total_s1 = CO2 in tonnes
 . * value_added_nominal = value added, current prices (masked money unit); workers = persons employed
@@ -41,8 +41,8 @@ Step 1/7: load the group flags, energy, CO2, value added, workers, industry and 
 . assert inlist(export_flag, 0, 1, .) & inlist(import_flag, 0, 1, .) & inlist(fdi_10_flag, 0, 1, .)
 
 . 
-. display "Step 2/7: common sample, size bands and the two outcomes"
-Step 2/7: common sample, size bands and the two outcomes
+. display "Step 2/8: common sample, size bands and the two outcomes"
+Step 2/8: common sample, size bands and the two outcomes
 
 . * One sample for both ratios (as in R1-02 to R1-04): energy, CO2 and value added above zero.
 . * A zero is dropped, not read as "no energy" (the energy fields cover only some fuels).
@@ -63,7 +63,7 @@ Step 2/7: common sample, size bands and the two outcomes
 . tempfile yearcounts
 
 . save `yearcounts'
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_27469.000002 saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_32660.000002 saved as .dta format
 
 . restore
 
@@ -109,7 +109,7 @@ file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_27469.000002 saved as .
 . tempfile base
 
 . save `base'
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_27469.000003 saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_32660.000003 saved as .dta format
 
 . 
 . * ---- the matched gap, in plain Stata (the redraws repeat it in Mata, further below) ----
@@ -208,8 +208,8 @@ file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_27469.000003 saved as .
 ------------------------------------------------------------------------------------------------------------------------
 
 . 
-. display "Step 3/7: matched and unmatched gaps for every year, with counts and checks"
-Step 3/7: matched and unmatched gaps for every year, with counts and checks
+. display "Step 3/8: matched and unmatched gaps for every year, with counts and checks"
+Step 3/8: matched and unmatched gaps for every year, with counts and checks
 
 . tempfile pts draws d_export_flag d_import_flag d_fdi_10_flag
 
@@ -218,7 +218,7 @@ Step 3/7: matched and unmatched gaps for every year, with counts and checks
 . postfile `hp' str12 grouping byte outcome_id str10 design int year double gap ///
 >     long(n_grp_known n_other_known n_grp_matched n_other_matched n_cells_matched) ///
 >     double(n_other_effective wk_grp_all wk_other_all wk_grp_matched wk_other_matched) using `pts', replace
-(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_27469.000004 not found)
+(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_32660.000004 not found)
 
 . foreach g in export_flag import_flag fdi_10_flag {
   2.     use `base', clear
@@ -283,20 +283,20 @@ Step 3/7: matched and unmatched gaps for every year, with counts and checks
  55. }
 (G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
 (15,111 observations deleted)
-(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_27469.000006 not found)
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_27469.000006 saved as .dta format
+(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_32660.000006 not found)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_32660.000006 saved as .dta format
    export_flag done
 (G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
 (0 observations deleted)
 (15,111 missing values generated)
-(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_27469.000007 not found)
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_27469.000007 saved as .dta format
+(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_32660.000007 not found)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_32660.000007 saved as .dta format
    import_flag done
 (G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
 (311 observations deleted)
 (14,800 missing values generated)
-(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_27469.000008 not found)
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_27469.000008 saved as .dta format
+(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_32660.000008 not found)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_32660.000008 saved as .dta format
    fdi_10_flag done
 
 . postclose `hp'
@@ -306,11 +306,11 @@ file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_27469.000008 saved as .
 . append using `d_import_flag' `d_fdi_10_flag'
 
 . save `draws'
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_27469.000005 saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_32660.000005 saved as .dta format
 
 . 
-. display "Step 4/7: 95% ranges and the before/after-Paris change from the redraws"
-Step 4/7: 95% ranges and the before/after-Paris change from the redraws
+. display "Step 4/8: 95% ranges and the before/after-Paris change from the redraws"
+Step 4/8: 95% ranges and the before/after-Paris change from the redraws
 
 . use `draws', clear
 
@@ -352,7 +352,7 @@ xij variables:
 . tempfile p0
 
 . save `p0'
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_27469.00001l saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_32660.00001l saved as .dta format
 
 . restore
 
@@ -386,7 +386,7 @@ file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_27469.00001l saved as .
 . tempfile dr
 
 . save `dr'
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_27469.00001m saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_32660.00001m saved as .dta format
 
 . * (a) the yearly ranges: 2.5th and 97.5th percentiles of the redraws (percentile method)
 . drop if rep == 0
@@ -425,7 +425,7 @@ xij variables:
 . tempfile ranges
 
 . save `ranges'
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_27469.00001n saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_32660.00001n saved as .dta format
 
 . * (b) before vs after Paris, per redraw: gap = 100 x exp(average log gap over the years of each window)
 . use `dr', clear
@@ -468,7 +468,7 @@ file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_27469.00001n saved as .
 . postfile `hb' str12 grouping byte outcome_id str8 window str60 before_yrs str60 after_yrs ///
 >     double(before_pct after_pct change_pts change_lo95 change_hi95 before_pct_unm after_pct_unm ///
 >     change_pts_unm change_lo95_unm change_hi95_unm) using `ba', replace
-(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_27469.00001o not found)
+(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_32660.00001o not found)
 
 . foreach g in export_flag import_flag fdi_10_flag {
   2.     foreach win in main all {
@@ -499,8 +499,8 @@ file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_27469.00001n saved as .
 . postclose `hb'
 
 . 
-. display "Step 5/7: table -> CSV (numbers written before drawing)"
-Step 5/7: table -> CSV (numbers written before drawing)
+. display "Step 5/8: table -> CSV (numbers written before drawing)"
+Step 5/8: table -> CSV (numbers written before drawing)
 
 . use `pts', clear
 
@@ -604,7 +604,7 @@ Duplicates in terms of all variables
 . tempfile y16
 
 . save `y16'
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_27469.000024 saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_32660.000024 saved as .dta format
 
 . restore
 
@@ -746,6 +746,10 @@ variable note was str100 now str130
 
 . export delimited grouping-note using "tables/08_matched_gaps_by_year.csv", datafmt replace
 file tables/08_matched_gaps_by_year.csv saved
+
+. tempfile ctsrc                     // same numbers, full precision, for the companion table(s) (Step 8)
+
+. quietly save `ctsrc'
 
 . list grouping outcome_id year n_grp_matched gap_pct gap_lo95 gap_hi95 gap_unm_pct if row_type == "year" & annual_file,
 >  ///
@@ -938,8 +942,8 @@ file tables/08_matched_gaps_by_year.csv saved
 > 4); confirm they still look wrong before publishing
 
 . 
-. display "Step 6/7: numbers for the notes, read from the table (never typed)"
-Step 6/7: numbers for the notes, read from the table (never typed)
+. display "Step 6/8: numbers for the notes, read from the table (never typed)"
+Step 6/8: numbers for the notes, read from the table (never typed)
 
 . * share of each group's firms that find similar firms, over the years drawn
 . quietly summarize pct_grp_matched if row_type == "year" & outcome_id == 1 & inlist(plot_status, "solid", "light gray: 
@@ -1046,8 +1050,8 @@ Step 6/7: numbers for the notes, read from the table (never typed)
 > nd industry: this shows differences, not their cause."
 
 . 
-. display "Step 7/7: draw: one row per grouping, energy left, CO2 right, one shared scale"
-Step 7/7: draw: one row per grouping, energy left, CO2 right, one shared scale
+. display "Step 7/8: draw: one row per grouping, energy left, CO2 right, one shared scale"
+Step 7/8: draw: one row per grouping, energy left, CO2 right, one shared scale
 
 . * the before/after text for each panel (matched, main window)
 . preserve
@@ -1069,7 +1073,7 @@ Step 7/7: draw: one row per grouping, energy left, CO2 right, one shared scale
 . tempfile txt
 
 . save `txt'
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_27469.000026 saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_32660.000027 saved as .dta format
 
 . restore
 
@@ -1286,6 +1290,414 @@ file
     /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r1-paris-internationalisation/figures/
     > 08_matched_gaps_by_year.pdf saved as PDF format
 
+. 
+. *---------------------------------------------------------------------------
+. display "Step 8/8: companion table: every plotted point"
+Step 8/8: companion table: every plotted point
+
+. *---------------------------------------------------------------------------
+. * ==== COMPANION TABLE (pattern for all exhibits) =============================
+. * Owner rule, 28 Sep 2026: every chart gets a table of every plotted point, and
+. * every chart of regression coefficients also gets a regression table, written
+. * by the same do-file (spec: TABLE_BRIEF.md). This step runs AFTER the graph
+. * export, so the chart and the CSV stay byte-identical.
+. *
+. * How to use it in another exhibit file:
+. *   PART 1 (the writer, program ctable_pdf) is copied UNCHANGED.
+. *   PART 2 is the only exhibit-specific part: put the numbers in memory (the
+. *   tempfile saved right after the CSV export, or the CSV itself), build one
+. *   STRING variable per table column, one row per plotted point in chart order
+. *   (years not drawn included, with the reason in a status column), then call
+. *   ctable_pdf. Format numbers with string(x, "%9.1f") etc. so the table shows
+. *   exactly the rounding of the chart labels.
+. *
+. * ctable_pdf strvars using "tables/NN_name_table.pdf",
+. *     title("Table R1-02. ...: every plotted point")    first line, bold
+. *     header("Col 1" "Col 2" ...)       one text per column; "|" = line break
+. *     [right(numlist)]                  columns right-aligned (numbers)
+. *     [norepeat(numlist)]               columns whose repeated text is shown
+. *                                       only on the first row of a run
+. *     [rules(numlist)]                  thin gray line under these data rows
+. *     [notes("line 1" "line 2" ...)]    footer paragraphs (Notes, Source, dev line)
+. *     [subtitle(text)] [fontsize(#)] [perpage(#)] [landscape|portrait]
+. * Landscape is chosen automatically when there are more than 6 columns. Long
+. * tables continue on a new page with the header repeated ("(continued)"); a page
+. * never breaks inside a block whose first column is empty (e.g. an SE row).
+. * --- PART 1: the writer (identical in every file; do not edit) ---------------
+. capture program drop ctable_pdf
+
+. program define ctable_pdf
+  1.     version 17
+  2.     syntax varlist(string) using/, TItle(string) HEADer(string asis) ///
+>         [RIGHT(numlist integer >0) NOREPeat(numlist integer >0) RULES(numlist integer >0) ///
+>          NOTEs(string asis) SUBtitle(string) FONTsize(real 9.5) PERpage(integer 0) ///
+>          LANDscape PORTrait]
+  3.     local nc : word count `varlist'
+  4.     local nh : word count `header'
+  5.     if `nh' != `nc' {
+  6.         display as error "ctable_pdf: `nc' columns but `nh' header texts"
+  7.         exit 198
+  8.     }
+  9.     local orient = cond(`nc' > 6, "landscape", "")
+ 10.     if "`landscape'" != "" local orient "landscape"
+ 11.     if "`portrait'"  != "" local orient ""
+ 12.     * rows per page: a conservative guess for 9-10 pt text (wrapped cells take more)
+.     if `perpage' == 0 local perpage = cond("`orient'" == "landscape", 24, 40)
+ 13.     preserve
+ 14.     quietly {
+ 15.         keep `varlist'
+ 16.         rename (`varlist') (__c#), addnumber      // __c1 __c2 ... in the order given
+ 17.         forvalues j = 1/`nc' {
+ 18.             replace __c`j' = strtrim(__c`j')
+ 19.         }
+ 20.         local N = _N
+ 21.         gen long row = _n
+ 22.         * page chunks: fill up to perpage rows; prefer to end a page at a rule,
+.         * never start a page on a row whose first column is empty
+.         gen int chunk = .
+ 23.         local start 1
+ 24.         local k 0
+ 25.         while `start' <= `N' {
+ 26.             local ++k
+ 27.             local end = min(`start' + `perpage' - 1, `N')
+ 28.             if `end' < `N' {
+ 29.                 local best 0
+ 30.                 foreach r of local rules {
+ 31.                     if `r' >= `start' + floor(`perpage' / 2) & `r' <= `end' & `r' > `best' local best `r'
+ 32.                 }
+ 33.                 if `best' > 0 local end `best'
+ 34.                 else {
+ 35.                     while `end' > `start' & __c1[`end' + 1] == "" {
+ 36.                         local --end
+ 37.                     }
+ 38.                 }
+ 39.             }
+ 40.             replace chunk = `k' in `start'/`end'
+ 41.             local start = `end' + 1
+ 42.         }
+ 43.         local nk `k'
+ 44.         * blank repeated labels inside each page; a column is blanked only while the
+.         * norepeat columns to its left are unchanged too (a new panel shows its series)
+.         gen byte same = _n > 1 & chunk == chunk[_n - 1]
+ 45.         foreach j of local norepeat {
+ 46.             gen strL o`j' = __c`j'
+ 47.             replace same = same & o`j' == o`j'[_n - 1]
+ 48.             replace __c`j' = "" if same
+ 49.             drop o`j'
+ 50.         }
+ 51.         drop same
+ 52.         * column widths (% of the page), from the longest text in each column;
+.         * long text columns are capped so they wrap instead of squeezing numbers
+.         matrix W = J(1, `nc', 0)
+ 53.         local tot 0
+ 54.         forvalues j = 1/`nc' {
+ 55.             gen long L`j' = udstrlen(__c`j')
+ 56.             summarize L`j', meanonly
+ 57.             local w = max(r(max), 3)
+ 58.             local h : word `j' of `header'
+ 59.             local h = subinstr(`"`h'"', "|", " ", .)
+ 60.             foreach hw of local h {
+ 61.                 local w = max(`w', udstrlen(`"`hw'"'))
+ 62.             }
+ 63.             local w = min(`w', 34) + 2          // + 2 = room for the cell margins
+ 64.             matrix W[1, `j'] = `w'
+ 65.             local tot = `tot' + `w'
+ 66.             drop L`j'
+ 67.         }
+ 68.         local used 0
+ 69.         forvalues j = 1/`nc' {
+ 70.             if `j' < `nc' {
+ 71.                 matrix W[1, `j'] = max(floor(100 * W[1, `j'] / `tot'), 3)
+ 72.                 local used = `used' + W[1, `j']
+ 73.             }
+ 74.             else matrix W[1, `j'] = 100 - `used'
+ 75.         }
+ 76.     }
+ 77.     putpdf clear
+ 78.     putpdf begin, pagesize(A4) `orient' font("Times New Roman", `fontsize') ///
+>         margin(left, 0.8in) margin(right, 0.8in) margin(top, 0.5in) margin(bottom, 0.5in)
+ 79.     forvalues k = 1/`nk' {
+ 80.         if `k' > 1 putpdf pagebreak
+ 81.         putpdf paragraph, spacing(after, 4pt)
+ 82.         local tt = cond(`k' == 1, `"`title'"', `"`title' (continued)"')
+ 83.         putpdf text (`"`tt'"'), bold font("Times New Roman", `=`fontsize' + 1.5')
+ 84.         if `k' == 1 & `"`subtitle'"' != "" {
+ 85.             putpdf paragraph, spacing(after, 4pt)
+ 86.             putpdf text (`"`subtitle'"')
+ 87.         }
+ 88.         quietly count if chunk == `k'
+ 89.         local nr = r(N) + 1
+ 90.         quietly putpdf table T`k' = data(__c1-__c`nc') if chunk == `k', varnames border(all, nil) width(W)
+ 91.         forvalues j = 1/`nc' {
+ 92.             * header text; "|" starts a new line inside the cell
+.             local rest : word `j' of `header'
+ 93.             local opt ""
+ 94.             while `"`rest'"' != "" {
+ 95.                 gettoken part rest : rest, parse("|")
+ 96.                 if `"`part'"' == "|" {
+ 97.                     putpdf table T`k'(1, `j') = (""), linebreak append
+ 98.                     continue
+ 99.                 }
+100.                 putpdf table T`k'(1, `j') = (`"`part'"'), valign(bottom) `opt'
+101.                 local opt "append"
+102.             }
+103.             local al = cond(`: list j in right', "right", "left")
+104.             putpdf table T`k'(., `j'), halign(`al') margin(top, 0pt) margin(bottom, 0pt)
+105.         }
+106.         putpdf table T`k'(1, .), border(top, single, black) border(bottom, single, black)
+107.         putpdf table T`k'(`nr', .), border(bottom, single, black)
+108.         foreach r of local rules {
+109.             quietly summarize row if chunk == `k', meanonly
+110.             if `r' >= r(min) & `r' < r(max) {
+111.                 putpdf table T`k'(`=`r' - r(min) + 2', .), border(bottom, single, "A6A6A6")
+112.             }
+113.         }
+114.     }
+115.     local first 1
+116.     foreach n of local notes {
+117.         putpdf paragraph, spacing(before, `=cond(`first', 6, 1)'pt)
+118.         putpdf text (`"`n'"'), font("Times New Roman", `=`fontsize' - 0.5')
+119.         local first 0
+120.     }
+121.     putpdf save `"`using'"', replace
+122.     restore
+123. end
+
+. * --- end of PART 1 ------------------------------------------------------------
+. 
+. * --- PART 2: the rows of this exhibit (the only part that changes per file) ---
+. * Source: the table saved right after the CSV export in Step 5 (full precision,
+. * same run as the chart). One row per point, in chart order: panels (a) to (f),
+. * in each the matched diamonds, then the not-matched circles, every year of the
+. * axis (years not drawn included, with the reason), then the three numbers of
+. * the panel's top-right text (before, after, change).
+. use `ctsrc', clear
+
+. keep if outcome_id <= 2
+(0 observations deleted)
+
+. gen byte pl = 2 * (gi - 1) + outcome_id
+
+. preserve
+
+. keep if row_type == "before_after" & window == "main"
+(84 observations deleted)
+
+. assert _N == 6
+
+. expand 3
+(12 observations created)
+
+. bysort pl: gen byte k = _n                          // 1 = before, 2 = after, 3 = change
+
+. gen byte s = 3
+
+. tempfile ctba
+
+. save `ctba'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_32660.000029 saved as .dta format
+
+. restore
+
+. keep if row_type == "year"
+(12 observations deleted)
+
+. local ncsv = _N                                     // CSV year rows of the drawn outcomes
+
+. quietly count if inlist(plot_status, "solid", "light gray: records in doubt")
+
+. local ndrawn = r(N)
+
+. expand 2
+(78 observations created)
+
+. bysort pl year: gen byte s = _n                     // 1 = matched (diamond), 2 = not matched (circle)
+
+. gen byte k = 0
+
+. append using `ctba'
+
+. sort pl s year k
+
+. * panel titles as on the chart
+. gen str60 t_panel = ""
+(174 missing values generated)
+
+. local pn1 "(a) Exporters: energy per value added"
+
+. local pn2 "(b) Exporters: CO2 per value added"
+
+. local pn3 "(c) Importers: energy per value added"
+
+. local pn4 "(d) Importers: CO2 per value added"
+
+. local pn5 "(e) Foreign-owned: energy per value added"
+
+. local pn6 "(f) Foreign-owned: CO2 per value added"
+
+. forvalues p = 1/6 {
+  2.     replace t_panel = "`pn`p''" if pl == `p'
+  3. }
+(29 real changes made)
+(29 real changes made)
+(29 real changes made)
+(29 real changes made)
+(29 real changes made)
+(29 real changes made)
+
+. gen str60 t_series = cond(s == 1, "Matched with similar firms", cond(s == 2, "Not matched: all other firms", "Top-righ
+> t text (matched)"))
+
+. gen str40 t_pos = string(year) if s < 3
+(18 missing values generated)
+
+. replace t_pos = "Before: `before_txt' average" if k == 1
+(6 real changes made)
+
+. replace t_pos = "After: `after_yr'"             if k == 2
+(6 real changes made)
+
+. replace t_pos = "Change, points"                if k == 3
+(6 real changes made)
+
+. * the plotted number, rounded as the chart labels (whole numbers)
+. gen double v  = cond(s == 1, gap_pct,  cond(s == 2, gap_unm_pct,  cond(k == 1, before_pct, cond(k == 2, after_pct, cha
+> nge_pts))))
+(16 missing values generated)
+
+. gen double lo = cond(s == 1, gap_lo95, cond(s == 2, gap_unm_lo95, cond(k == 3, change_lo95, .)))
+(28 missing values generated)
+
+. gen double hi = cond(s == 1, gap_hi95, cond(s == 2, gap_unm_hi95, cond(k == 3, change_hi95, .)))
+(28 missing values generated)
+
+. gen str12 t_v  = string(v,  "%9.0f") if !missing(v)
+(16 missing values generated)
+
+. gen str12 t_lo = string(lo, "%9.0f") if !missing(lo)
+(28 missing values generated)
+
+. gen str12 t_hi = string(hi, "%9.0f") if !missing(hi)
+(28 missing values generated)
+
+. * the change is written with a sign on the chart ("change +1 (-29 to +48)")
+. replace t_v  = cond(round(v)  > 0, "+", "") + string(round(v),  "%9.0f") if k == 3
+(3 real changes made)
+
+. replace t_lo = cond(round(lo) > 0, "+", "") + string(round(lo), "%9.0f") if k == 3
+(0 real changes made)
+
+. replace t_hi = cond(round(hi) > 0, "+", "") + string(round(hi), "%9.0f") if k == 3
+(6 real changes made)
+
+. * firms behind the point: matched = the firms matched; not matched = every firm with known status
+. gen double n1 = cond(s == 1, n_grp_matched,   cond(s == 2, n_grp_known,   .))
+(30 missing values generated)
+
+. gen double n0 = cond(s == 1, n_other_matched, cond(s == 2, n_other_known, .))
+(30 missing values generated)
+
+. gen str12 t_n1 = string(n1, "%12.0fc") if !missing(n1) & annual_file == 1
+(30 missing values generated)
+
+. gen str12 t_n0 = string(n0, "%12.0fc") if !missing(n0) & annual_file == 1
+(30 missing values generated)
+
+. * status: how (and whether) the point is drawn
+. gen str90 t_status = ""
+(174 missing values generated)
+
+. replace t_status = "drawn: black diamond + 95% line" if s == 1 & plot_status == "solid"
+(50 real changes made)
+
+. replace t_status = "light gray diamond: in doubt"    if s == 1 & plot_status == "light gray: records in doubt"
+(16 real changes made)
+
+. replace t_status = "drawn: gray circle"              if s == 2 & plot_status == "solid"
+(50 real changes made)
+
+. replace t_status = "light gray circle: in doubt"     if s == 2 & plot_status == "light gray: records in doubt"
+(16 real changes made)
+
+. replace t_status = "not drawn: energy records jump"  if s < 3 & plot_status == "not drawn" & grouping == "import_flag"
+(4 real changes made)
+
+. replace t_status = "not drawn: foreign flag spikes"  if s < 3 & plot_status == "not drawn" & grouping == "fdi_10_flag"
+(4 real changes made)
+
+. replace t_status = "not drawn: no known " + lower(grp0_label) if s < 3 & plot_status == "no comparison" & n_other_know
+> n == 0
+(4 real changes made)
+
+. replace t_status = "not drawn: < `min_n' matched firms" if s < 3 & plot_status == "no comparison" & n_other_known > 0
+(0 real changes made)
+
+. replace t_status = "not drawn: no annual file" if s < 3 & plot_status == "no annual file"
+(12 real changes made)
+
+. replace t_status = cond(change_clear == 1, "text, black: change clear", "text, gray: change not clear") if s == 3
+(18 real changes made)
+
+. * two no-break spaces keep the status text off the numbers to its left
+. replace t_status = uchar(160) + uchar(160) + t_status if t_status != ""
+(174 real changes made)
+
+. * checks: every drawn point is one row with a number; two rows per CSV year row, three per text
+. assert t_status != ""
+
+. quietly count if s < 3 & !strpos(t_status, "not drawn")
+
+. assert r(N) == 2 * `ndrawn'
+
+. assert t_v != "" if !strpos(t_status, "not drawn")
+
+. assert _N == 2 * `ncsv' + 18
+
+. local ntext_t = itrim(`"`ntext'"')
+
+. local tnote "Table: every point of Figure R1-08 in chart order, with the years not drawn and why (their numbers are sh
+> own when they"
+
+. local tnote "`tnote' exist), and the three numbers of each panel's top-right text. Group as % of the firms compared (1
+> 00 = same), whole"
+
+. local tnote "`tnote' numbers as the chart labels; 95% range from `reps' redraws of whole firms. Firms: matched diamond
+>  = firms matched;"
+
+. local tnote "`tnote' circle = all firms with known status (its 95% range is not drawn). Not drawn: importers `skip_imp
+> ort_flag'"
+
+. local tnote "`tnote' (energy records jump: `skip_why_import_flag') and foreign-owned `skip_fdi_10_flag' (foreign flag 
+> spikes:"
+
+. local tnote "`tnote' `skip_why_fdi_10_flag')."
+
+. local tnote "`tnote' In doubt = many firms' energy records jump or drop. Full precision: tables/08_matched_gaps_by_yea
+> r.csv."
+
+. local rl ""
+
+. forvalues p = 0/5 {
+  2.     local b = 29 * `p'
+  3.     local rl "`rl' `=`b' + 13' `=`b' + 26'"
+  4.     if `p' < 5 local rl "`rl' `=`b' + 29'"
+  5. }
+
+. ctable_pdf t_panel t_series t_pos t_v t_lo t_hi t_n1 t_n0 t_status using "tables/08_matched_gaps_by_year_table.pdf", /
+> //
+>     title("Table R1-08. Energy and CO2 per unit of value added, each group vs similar firms: every plotted point") ///
+>     header("Panel" "Series" "Year|or text" "Plotted|value" "95%|low" "95%|high" "Group|firms" "Other|firms" "Status") 
+> ///
+>     right(3 4 5 6 7 8) norepeat(1 2) fontsize(9) rules(`rl') perpage(26) ///
+>     notes("`ntext_t'" "`tnote'" "`srcnote'" "`devnote'")
+successfully created "/Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r1-paris-international
+> isation/tables/08_matched_gaps_by_year_table.pdf"
+
+. display "table -> tables/08_matched_gaps_by_year_table.pdf"
+table -> tables/08_matched_gaps_by_year_table.pdf
+
+. * --- end of PART 2 ------------------------------------------------------------
+. 
 . timer off 1
 
 . quietly timer list 1
@@ -1293,6 +1705,6 @@ file
 . local elapsed = strtrim(string(r(t1), "%9.1f"))
 
 . display "FINISHED: figure -> figures/08_matched_gaps_by_year.png (elapsed `elapsed' s)"
-FINISHED: figure -> figures/08_matched_gaps_by_year.png (elapsed 19.7 s)
+FINISHED: figure -> figures/08_matched_gaps_by_year.png (elapsed 25.1 s)
 
 . quietly log close          // keeps FINISHED as the last output line of the log

@@ -15,6 +15,7 @@
          (fdi_10_flag), the definition used in every R1-R3 exhibit.
   Output : figures/05_before_after_paris.png (+ .pdf)
            tables/05_before_after_paris.csv   (every outcome x grouping)
+           tables/05_before_after_paris_table.pdf (every plotted point)
   Runtime: about 3 minutes (999 random redraws for each of 4 groupings).
   Development data - obscured values, fictional firm panel. Not BPS findings.
 ==========================================================================*/
@@ -66,7 +67,7 @@ capture graph set window fontface "Times New Roman"   // GUI Stata; console Stat
 local devnote "Development data — obscured values, fictional firm panel. Not BPS findings."
 local srcnote "Source: SI/IBS annual files 2010–2022 (masked), analysis_ready_data.dta."
 
-display "Step 1/7: load energy, CO2, electricity, value added, workers and the three group flags"
+display "Step 1/8: load energy, CO2, electricity, value added, workers and the three group flags"
 * gj_fuel_s1      = energy from nine fuels burned at the plant (GJ)      = scope 1
 * gj_electricity  = energy from bought electricity (GJ = kWh x 0.0036)  = scope 2
 * total_gj_s1     = the two together; co2_* = the matching CO2 in tonnes (energy x standard factors)
@@ -81,7 +82,7 @@ assert inlist(export_flag, 0, 1, .) & inlist(import_flag, 0, 1, .) & inlist(fdi_
 assert abs(total_gj_s1 - gj_fuel_s1 - gj_electricity) <= 1e-6 * total_gj_s1
 assert abs(co2_total_s1 - co2_scope1_s1 - co2_scope2_s1) <= 1e-6 * co2_total_s1
 
-display "Step 2/7: one value per firm and year for every outcome"
+display "Step 2/8: one value per firm and year for every outcome"
 * "Absent is not zero": the energy fields cover a fixed list of fuels, so a zero may mean
 * "not recorded". Each outcome uses only firms whose quantities in it are above zero:
 *   scope-1 rows: fuel energy and fuel CO2 > 0;  scope-2 rows: bought electricity > 0;
@@ -180,7 +181,7 @@ program define r105stat
     }
 end
 
-display "Step 3/7: yearly group values and counts, every year (for the table)"
+display "Step 3/8: yearly group values and counts, every year (for the table)"
 local groupings "all export_flag import_flag fdi_10_flag"
 local i 0
 foreach g of local groupings {
@@ -211,7 +212,7 @@ drop og_used
 tempfile yearly
 save `yearly'
 
-display "Step 4/7: before/after changes, the check window, and `reps' random redraws per grouping"
+display "Step 4/8: before/after changes, the check window, and `reps' random redraws per grouping"
 local pre_in  = subinstr("`pre_yrs'", " ", ",", .)
 local post_in = subinstr("`post_yrs'", " ", ",", .)
 tempname h
@@ -260,7 +261,7 @@ forvalues j = 2/4 {
 tempfile allpts
 save `allpts'
 
-display "Step 5/7: 95% ranges from the redraws (middle 95% of the redrawn changes)"
+display "Step 5/8: 95% ranges from the redraws (middle 95% of the redrawn changes)"
 use `allpts', clear
 keep if rep >= 1
 foreach v in pct1 pct0 rel {
@@ -305,7 +306,7 @@ rename k outcome_id
 tempfile usedyrs
 save `usedyrs'
 
-display "Step 6/7: table -> CSV (numbers written before drawing)"
+display "Step 6/8: table -> CSV (numbers written before drawing)"
 use `allpts', clear
 keep if rep == 0
 drop rep chk_years
@@ -404,10 +405,12 @@ assert rel_lo95 <= rel_pct + 1e-9 & rel_pct <= rel_hi95 + 1e-9 if !missing(rel_p
 assert abs(rel_pct) < 1e-9 if outcome_id == 14 & panel > 1
 assert reldif(1 + rel_pct/100, (1 + pct_g1/100) / (1 + pct_g0/100)) < 1e-9 if !missing(rel_pct)
 export delimited grouping-note using "tables/05_before_after_paris.csv", datafmt replace
+tempfile ctsrc                     // same numbers, full precision, for the companion table (Step 8)
+quietly save `ctsrc'
 list grouping outcome_id before_g1 after_g1 pct_g1 pct_g1_lo95 pct_g1_hi95 if panel == 1 & in_figure, noobs sep(0) abbreviate(24)
 list grouping outcome_id pct_g1 pct_g0 rel_pct rel_lo95 rel_hi95 clear n_2018_g1 n_2018_g0 if panel > 1 & in_figure, noobs sepby(grouping) abbreviate(24)
 
-display "Step 7/7: dot plot: one row per outcome, four panels on one shared scale"
+display "Step 7/8: dot plot: one row per outcome, four panels on one shared scale"
 * words for the notes and axis, built from the windows above (never typed)
 local pre_txt = subinstr("`pre_yrs'", " ", " and ", .)
 local post_txt = subinstr("`post_yrs'", " ", ", ", .)
@@ -511,6 +514,259 @@ twoway (rspike pct_g0 pct_g1 y if panel > 1 & clear == 1, horizontal lcolor(blac
 
 graph export "figures/05_before_after_paris.png", width(2400) replace
 graph export "figures/05_before_after_paris.pdf", replace
+
+*---------------------------------------------------------------------------
+display "Step 8/8: companion table: every plotted point"
+*---------------------------------------------------------------------------
+* ==== COMPANION TABLE (pattern for all exhibits) =============================
+* Owner rule, 28 Sep 2026: every chart gets a table of every plotted point, and
+* every chart of regression coefficients also gets a regression table, written
+* by the same do-file (spec: TABLE_BRIEF.md). This step runs AFTER the graph
+* export, so the chart and the CSV stay byte-identical.
+*
+* How to use it in another exhibit file:
+*   PART 1 (the writer, program ctable_pdf) is copied UNCHANGED.
+*   PART 2 is the only exhibit-specific part: put the numbers in memory (the
+*   tempfile saved right after the CSV export, or the CSV itself), build one
+*   STRING variable per table column, one row per plotted point in chart order
+*   (years not drawn included, with the reason in a status column), then call
+*   ctable_pdf. Format numbers with string(x, "%9.1f") etc. so the table shows
+*   exactly the rounding of the chart labels.
+*
+* ctable_pdf strvars using "tables/NN_name_table.pdf",
+*     title("Table R1-02. ...: every plotted point")    first line, bold
+*     header("Col 1" "Col 2" ...)       one text per column; "|" = line break
+*     [right(numlist)]                  columns right-aligned (numbers)
+*     [norepeat(numlist)]               columns whose repeated text is shown
+*                                       only on the first row of a run
+*     [rules(numlist)]                  thin gray line under these data rows
+*     [notes("line 1" "line 2" ...)]    footer paragraphs (Notes, Source, dev line)
+*     [subtitle(text)] [fontsize(#)] [perpage(#)] [landscape|portrait]
+* Landscape is chosen automatically when there are more than 6 columns. Long
+* tables continue on a new page with the header repeated ("(continued)"); a page
+* never breaks inside a block whose first column is empty (e.g. an SE row).
+* --- PART 1: the writer (identical in every file; do not edit) ---------------
+capture program drop ctable_pdf
+program define ctable_pdf
+    version 17
+    syntax varlist(string) using/, TItle(string) HEADer(string asis) ///
+        [RIGHT(numlist integer >0) NOREPeat(numlist integer >0) RULES(numlist integer >0) ///
+         NOTEs(string asis) SUBtitle(string) FONTsize(real 9.5) PERpage(integer 0) ///
+         LANDscape PORTrait]
+    local nc : word count `varlist'
+    local nh : word count `header'
+    if `nh' != `nc' {
+        display as error "ctable_pdf: `nc' columns but `nh' header texts"
+        exit 198
+    }
+    local orient = cond(`nc' > 6, "landscape", "")
+    if "`landscape'" != "" local orient "landscape"
+    if "`portrait'"  != "" local orient ""
+    * rows per page: a conservative guess for 9-10 pt text (wrapped cells take more)
+    if `perpage' == 0 local perpage = cond("`orient'" == "landscape", 24, 40)
+    preserve
+    quietly {
+        keep `varlist'
+        rename (`varlist') (__c#), addnumber      // __c1 __c2 ... in the order given
+        forvalues j = 1/`nc' {
+            replace __c`j' = strtrim(__c`j')
+        }
+        local N = _N
+        gen long row = _n
+        * page chunks: fill up to perpage rows; prefer to end a page at a rule,
+        * never start a page on a row whose first column is empty
+        gen int chunk = .
+        local start 1
+        local k 0
+        while `start' <= `N' {
+            local ++k
+            local end = min(`start' + `perpage' - 1, `N')
+            if `end' < `N' {
+                local best 0
+                foreach r of local rules {
+                    if `r' >= `start' + floor(`perpage' / 2) & `r' <= `end' & `r' > `best' local best `r'
+                }
+                if `best' > 0 local end `best'
+                else {
+                    while `end' > `start' & __c1[`end' + 1] == "" {
+                        local --end
+                    }
+                }
+            }
+            replace chunk = `k' in `start'/`end'
+            local start = `end' + 1
+        }
+        local nk `k'
+        * blank repeated labels inside each page; a column is blanked only while the
+        * norepeat columns to its left are unchanged too (a new panel shows its series)
+        gen byte same = _n > 1 & chunk == chunk[_n - 1]
+        foreach j of local norepeat {
+            gen strL o`j' = __c`j'
+            replace same = same & o`j' == o`j'[_n - 1]
+            replace __c`j' = "" if same
+            drop o`j'
+        }
+        drop same
+        * column widths (% of the page), from the longest text in each column;
+        * long text columns are capped so they wrap instead of squeezing numbers
+        matrix W = J(1, `nc', 0)
+        local tot 0
+        forvalues j = 1/`nc' {
+            gen long L`j' = udstrlen(__c`j')
+            summarize L`j', meanonly
+            local w = max(r(max), 3)
+            local h : word `j' of `header'
+            local h = subinstr(`"`h'"', "|", " ", .)
+            foreach hw of local h {
+                local w = max(`w', udstrlen(`"`hw'"'))
+            }
+            local w = min(`w', 34) + 2          // + 2 = room for the cell margins
+            matrix W[1, `j'] = `w'
+            local tot = `tot' + `w'
+            drop L`j'
+        }
+        local used 0
+        forvalues j = 1/`nc' {
+            if `j' < `nc' {
+                matrix W[1, `j'] = max(floor(100 * W[1, `j'] / `tot'), 3)
+                local used = `used' + W[1, `j']
+            }
+            else matrix W[1, `j'] = 100 - `used'
+        }
+    }
+    putpdf clear
+    putpdf begin, pagesize(A4) `orient' font("Times New Roman", `fontsize') ///
+        margin(left, 0.8in) margin(right, 0.8in) margin(top, 0.5in) margin(bottom, 0.5in)
+    forvalues k = 1/`nk' {
+        if `k' > 1 putpdf pagebreak
+        putpdf paragraph, spacing(after, 4pt)
+        local tt = cond(`k' == 1, `"`title'"', `"`title' (continued)"')
+        putpdf text (`"`tt'"'), bold font("Times New Roman", `=`fontsize' + 1.5')
+        if `k' == 1 & `"`subtitle'"' != "" {
+            putpdf paragraph, spacing(after, 4pt)
+            putpdf text (`"`subtitle'"')
+        }
+        quietly count if chunk == `k'
+        local nr = r(N) + 1
+        quietly putpdf table T`k' = data(__c1-__c`nc') if chunk == `k', varnames border(all, nil) width(W)
+        forvalues j = 1/`nc' {
+            * header text; "|" starts a new line inside the cell
+            local rest : word `j' of `header'
+            local opt ""
+            while `"`rest'"' != "" {
+                gettoken part rest : rest, parse("|")
+                if `"`part'"' == "|" {
+                    putpdf table T`k'(1, `j') = (""), linebreak append
+                    continue
+                }
+                putpdf table T`k'(1, `j') = (`"`part'"'), valign(bottom) `opt'
+                local opt "append"
+            }
+            local al = cond(`: list j in right', "right", "left")
+            putpdf table T`k'(., `j'), halign(`al') margin(top, 0pt) margin(bottom, 0pt)
+        }
+        putpdf table T`k'(1, .), border(top, single, black) border(bottom, single, black)
+        putpdf table T`k'(`nr', .), border(bottom, single, black)
+        foreach r of local rules {
+            quietly summarize row if chunk == `k', meanonly
+            if `r' >= r(min) & `r' < r(max) {
+                putpdf table T`k'(`=`r' - r(min) + 2', .), border(bottom, single, "A6A6A6")
+            }
+        }
+    }
+    local first 1
+    foreach n of local notes {
+        putpdf paragraph, spacing(before, `=cond(`first', 6, 1)'pt)
+        putpdf text (`"`n'"'), font("Times New Roman", `=`fontsize' - 0.5')
+        local first 0
+    }
+    putpdf save `"`using'"', replace
+    restore
+end
+* --- end of PART 1 ------------------------------------------------------------
+
+* --- PART 2: the rows of this exhibit (the only part that changes per file) ---
+* Source: the table saved right after the CSV export (full precision, same run
+* as the chart). One row per plotted point, in chart order: panel (a) all firms,
+* then (b) exporters, (c) importers, (d) foreign-owned; within a panel the 20
+* chart rows top to bottom. (a): one row per chart row (the dot, its 95% range
+* and the number printed at the right, which is the dot rounded). (b)-(d): three
+* rows per chart row: the group's dot, the other firms' square, and the gap
+* printed at the right (with its 95% range; it sets the link's colour).
+use `ctsrc', clear
+keep if in_figure
+gen byte s = cond(outcome_id <= 18, ceil(outcome_id / 3), 7)
+gen byte j = cond(outcome_id <= 18, outcome_id - 3 * (s - 1), outcome_id - 18)
+sort panel s j
+local nrow = 20
+assert _N == 4 * `nrow'
+* marks on the chart: every dot; in (b)-(d) also every square and every printed gap
+quietly count if !missing(pct_g1)
+local nmarks = r(N)
+quietly count if !missing(pct_g0) & panel > 1
+local nmarks = `nmarks' + r(N)
+quietly count if !missing(rel_pct) & panel > 1
+local nmarks = `nmarks' + r(N)
+gen byte chartrow = _n
+expand cond(panel == 1, 1, 3)
+bysort chartrow: gen byte series = cond(panel == 1, 0, _n)     // 0 = (a) dot; 1 = group dot, 2 = other firms, 3 = gap
+sort chartrow series
+local ntab = `nrow' + 3 * 3 * `nrow'
+assert _N == `ntab'
+gen str20 t_panel = word("(a)_All_firms (b)_Exporters (c)_Importers (d)_Foreign-owned", panel)
+replace t_panel = subinstr(t_panel, "_", " ", .)
+gen str90 t_out = section + ": " + row_label
+gen str20 t_series = cond(series == 0, "All firms", cond(series == 1, word("- Exporters Importers Foreign-owned", panel), ///
+                     cond(series == 2, "Other firms", "Gap, as printed")))
+* the number printed at the right: whole %, exactly as the chart; its range the same way
+gen double labv = cond(panel == 1, pct_g1, rel_pct)
+gen double lo = cond(panel == 1, pct_g1_lo95, rel_lo95)
+gen double hi = cond(panel == 1, pct_g1_hi95, rel_hi95)
+gen str12 t_v = ""
+replace t_v = cond(round(labv) == 0, "0", cond(labv > 0, "+", "") + string(round(labv), "%9.0f")) if inlist(series, 0, 3) & !missing(labv)
+* unlabelled marks (the dot and the square in (b)-(d)): one decimal
+replace t_v = cond(pct_g1 > 0, "+", "") + string(pct_g1, "%9.1f") if series == 1 & !missing(pct_g1)
+replace t_v = cond(pct_g0 > 0, "+", "") + string(pct_g0, "%9.1f") if series == 2 & !missing(pct_g0)
+gen str12 t_lo = cond(round(lo) > 0, "+", "") + string(round(lo), "%9.0f") if inlist(series, 0, 3) & !missing(lo)
+gen str12 t_hi = cond(round(hi) > 0, "+", "") + string(round(hi), "%9.0f") if inlist(series, 0, 3) & !missing(hi)
+* firms behind the point: each before year and the after year (gap: both groups)
+gen str40 t_n = ""
+local fyrs "`pre_yrs' `post_yrs'"
+foreach y of local fyrs {
+    gen double nn = cond(inlist(series, 0, 1), n_`y'_g1, cond(series == 2, n_`y'_g0, n_`y'_g1 + n_`y'_g0))
+    replace t_n = t_n + cond(t_n == "", "", " · ") + string(nn, "%12.0fc") if !missing(nn)
+    drop nn
+}
+local fyrs_h = subinstr("`fyrs'", " ", " · ", .)
+* status: drawn or not; for the number, black = its 95% range excludes 0
+gen str90 t_status = "drawn"
+replace t_status = cond(clear == 1, "black: range excludes 0", "gray: range includes 0") if inlist(series, 0, 3)
+replace t_status = t_status + "; 0 by construction" if outcome_id == 14 & series == 3
+replace t_status = t_status + "; before = " + years_before_used + " only" if years_before_used != "`pre_yrs'" & inlist(outcome_id, 17, 18)
+replace t_status = "not drawn: under `min_n' firms in a group-year" if t_v == ""
+* checks: one row per mark ((a): the dot and its printed number share a row);
+* the drawn rows equal the marks counted before the rows were split
+quietly count if !strpos(t_status, "not drawn")
+assert r(N) == `nmarks'
+assert t_lo != "" & t_hi != "" if inlist(series, 0, 3) & !strpos(t_status, "not drawn")
+local ntext_t = itrim(`"`ntext'"')
+local tnote "Table: every mark of Figure R1-05, panel by panel, top to bottom. (a): the dot with its 95% range and the number printed"
+local tnote "`tnote' at the right (whole %, as printed). (b)–(d): the group's dot and the other firms' square (one decimal), then the gap printed at the"
+local tnote "`tnote' right with its 95% range (whole %); black/gray = colour of that number and of the link. Ranges from `reps' redraws of each"
+local tnote "`tnote' year's firms. Firms = firms with the outcome in `fyrs_h' (gap: both groups). Full precision: tables/05_before_after_paris.csv."
+local r "`nrow'"
+forvalues p = 2/3 {
+    local r "`r' `=`nrow' + 3 * `nrow' * (`p' - 1)'"
+}
+ctable_pdf t_panel t_out t_series t_v t_lo t_hi t_n t_status using "tables/05_before_after_paris_table.pdf", ///
+    title("Table R1-05. Energy, CO2 and electricity before vs after the Paris Agreement: every plotted point") ///
+    subtitle("% change from before (average of `pre_txt') to after (`post_txt')") ///
+    header("Panel" "Outcome" "Series" "Plotted|value, %" "95% range|low" "95% range|high" "Firms|`fyrs_h'" "Status") ///
+    right(4 5 6 7) norepeat(1 2) fontsize(9) rules(`r') perpage(27) ///
+    notes("`ntext_t'" "`tnote'" "`srcnote'" "`devnote'")
+display "table -> tables/05_before_after_paris_table.pdf"
+* --- end of PART 2 ------------------------------------------------------------
+
 timer off 1
 quietly timer list 1
 local elapsed = strtrim(string(r(t1), "%9.1f"))

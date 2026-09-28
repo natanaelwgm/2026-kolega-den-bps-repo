@@ -23,6 +23,9 @@
            tables/10_reweighted_frozen_groups_balance.csv  (the 2013-14 gaps before
                   and after weighting, also among the firms recorded in 2018, and what
                   the weighted other firms are worth)
+           tables/10_reweighted_frozen_groups_table.pdf (every plotted point, top and bottom)
+           tables/10_reweighted_frozen_groups_regression.pdf (the drawn rows, not reweighted
+                  and reweighted)
   Needs  : Stata add-ons reghdfe and ftools from SSC (reghdfe 6 also needs
            require), installed once (ssc install reghdfe, ssc install ftools,
            ssc install require); the file never installs anything and stops
@@ -93,7 +96,7 @@ capture graph set window fontface "Times New Roman"   // GUI Stata; console Stat
 local devnote "Development data — obscured values, fictional firm panel. Not BPS findings."
 local srcnote "Source: SI/IBS annual files 2010–2022 (masked), analysis_ready_data.dta."
 
-display "Step 1/9: load the group flags, energy, CO2, electricity, value added, workers, industry and province"
+display "Step 1/10: load the group flags, energy, CO2, electricity, value added, workers, industry and province"
 * gj_fuel_s1      = energy from nine fuels burned at the plant (GJ)      = scope 1
 * gj_electricity  = energy from bought electricity (GJ = kWh x 0.0036)  = scope 2
 * total_gj_s1     = the two together; co2_* = the matching CO2 in tonnes (energy x standard factors)
@@ -117,7 +120,7 @@ gen byte island = cond(inlist(substr(province_code, 1, 1), "1", "2"), 1, cond(su
     if province_code != ""
 local base_in = subinstr("`base_yrs'", " ", ",", .)
 
-display "Step 2/9: freeze each firm's status from its 2013-14 records (R1-06's rule, same code)"
+display "Step 2/10: freeze each firm's status from its 2013-14 records (R1-06's rule, same code)"
 * A firm's frozen status uses ONLY its 2013 and 2014 records:
 *   in the group  = flagged (1) in at least half of the 2013-14 years whose answer is known
 *                   (so one of two years is enough; a firm seen in one year keeps that year's answer);
@@ -134,7 +137,7 @@ foreach g in export_flag import_flag fdi_10_flag {
     gen byte fzs_`g' = cond(k_`g' == 0, ., cond(s_`g' == k_`g', 1, cond(s_`g' == 0, 0, .)))
 }
 
-display "Step 3/9: the balancing measures: each firm's own 2013-14 averages (before Paris only)"
+display "Step 3/10: the balancing measures: each firm's own 2013-14 averages (before Paris only)"
 * Only 2013-14 records with value added, energy, CO2 and workers above zero are used (cv = 1).
 * A frozen firm with no such record cannot be reweighted and is left out of this exhibit (counted).
 * Logs, so that a few very large firms do not dominate the averages.
@@ -165,7 +168,7 @@ tempfile firmdata
 save `firmdata'
 restore
 
-display "Step 4/9: outcomes per firm and year (R1-09's rows, same code: logs, so a difference reads as %)"
+display "Step 4/10: outcomes per firm and year (R1-09's rows, same code: logs, so a difference reads as %)"
 * "Absent is not zero": each outcome uses only firms whose quantities in it are above zero
 * (R1-05's rule): scope-1 rows: fuel energy and fuel CO2 > 0; scope-2 rows: bought electricity > 0;
 * total rows: total energy and total CO2 > 0. Value added > 0 in all.
@@ -279,7 +282,7 @@ real colvector r110eb(real matrix C, real rowvector m, real scalar tol, real sca
 }
 end
 
-display "Step 5/9: weights: other firms made to match each group's 2013-14 averages, and the balance check"
+display "Step 5/10: weights: other firms made to match each group's 2013-14 averages, and the balance check"
 * Three sets of weights per grouping:
 *   m  = main: match the group's averages of the seven measures, industry shares and island shares;
 *   sd = check: also match the spreads of the five measures m1-m5 (their squared distance from
@@ -477,7 +480,7 @@ program define r110min, rclass
     return scalar e0 = `e0'
 end
 
-display "Step 6/9: regressions: every outcome x group x version, with and without weights (firm-clustered 95% intervals)"
+display "Step 6/10: regressions: every outcome x group x version, with and without weights (firm-clustered 95% intervals)"
 * Model (R1-09's main): outcome = firm's own average + one average per industry and year + one per
 * province and year + the group's extra change in each period, against 2013-14:
 *   b_period = (group's change from 2013-14 to that period) - (other firms' change), in log points.
@@ -590,7 +593,7 @@ foreach g in export_flag import_flag fdi_10_flag {
 }
 postclose `P'
 
-display "Step 7/9: tables -> CSV (numbers written before drawing)"
+display "Step 7/10: tables -> CSV (numbers written before drawing)"
 * (0) share of each group's firms still so recorded in 2018 (links are fictional; for the notes)
 tempname hs
 tempfile still
@@ -820,7 +823,7 @@ list grouping outcome_id version diff diff_lo diff_hi clear if inlist(version, "
 tempfile regtab
 save `regtab'
 
-display "Step 8/9: numbers for the notes, read from the tables (never typed)"
+display "Step 8/10: numbers for the notes, read from the tables (never typed)"
 local base_n : word count `base_yrs'
 local b1 : word 1 of `base_yrs'
 local bl : word `base_n' of `base_yrs'
@@ -852,7 +855,7 @@ display "   clear after (of `nall_eb'): not reweighted `nclr_unw', reweighted `n
 display "   clear before Paris: not reweighted `npre_unw', reweighted `npre_eb'"
 display "   reweighted only among firms also recorded in `post_yr': clear after `nclr_eb_s18' of `nall_eb_s18'"
 
-display "Step 9/9: figure: top = 2013-14 gaps before/after weighting; bottom = the main rows, with and without weights"
+display "Step 9/10: figure: top = 2013-14 gaps before/after weighting; bottom = the main rows, with and without weights"
 * --- top section: balance rows (main weights) ---
 use `baltab', clear
 keep if inlist(weights, "m", "m18") & inlist(measure, "m1", "m2", "m3", "m4", "m5", "m6", "industry_max", "island_max")
@@ -1075,6 +1078,456 @@ foreach out in png pdf {
     if "`out'" == "png" graph export "figures/10_reweighted_frozen_groups.png", width(2400) replace
     else graph export "figures/10_reweighted_frozen_groups.pdf", replace
 }
+
+*---------------------------------------------------------------------------
+display "Step 10/10: companion tables: every plotted point, and the regression table"
+*---------------------------------------------------------------------------
+* ==== COMPANION TABLE (pattern for all exhibits) =============================
+* Owner rule, 28 Sep 2026: every chart gets a table of every plotted point, and
+* every chart of regression coefficients also gets a regression table, written
+* by the same do-file (spec: TABLE_BRIEF.md). This step runs AFTER the graph
+* export, so the chart and the CSV stay byte-identical.
+*
+* How to use it in another exhibit file:
+*   PART 1 (the writer, program ctable_pdf) is copied UNCHANGED.
+*   PART 2 is the only exhibit-specific part: put the numbers in memory (the
+*   tempfile saved right after the CSV export, or the CSV itself), build one
+*   STRING variable per table column, one row per plotted point in chart order
+*   (years not drawn included, with the reason in a status column), then call
+*   ctable_pdf. Format numbers with string(x, "%9.1f") etc. so the table shows
+*   exactly the rounding of the chart labels.
+*
+* ctable_pdf strvars using "tables/NN_name_table.pdf",
+*     title("Table R1-02. ...: every plotted point")    first line, bold
+*     header("Col 1" "Col 2" ...)       one text per column; "|" = line break
+*     [right(numlist)]                  columns right-aligned (numbers)
+*     [norepeat(numlist)]               columns whose repeated text is shown
+*                                       only on the first row of a run
+*     [rules(numlist)]                  thin gray line under these data rows
+*     [notes("line 1" "line 2" ...)]    footer paragraphs (Notes, Source, dev line)
+*     [subtitle(text)] [fontsize(#)] [perpage(#)] [landscape|portrait]
+* Landscape is chosen automatically when there are more than 6 columns. Long
+* tables continue on a new page with the header repeated ("(continued)"); a page
+* never breaks inside a block whose first column is empty (e.g. an SE row).
+* --- PART 1: the writer (identical in every file; do not edit) ---------------
+capture program drop ctable_pdf
+program define ctable_pdf
+    version 17
+    syntax varlist(string) using/, TItle(string) HEADer(string asis) ///
+        [RIGHT(numlist integer >0) NOREPeat(numlist integer >0) RULES(numlist integer >0) ///
+         NOTEs(string asis) SUBtitle(string) FONTsize(real 9.5) PERpage(integer 0) ///
+         LANDscape PORTrait]
+    local nc : word count `varlist'
+    local nh : word count `header'
+    if `nh' != `nc' {
+        display as error "ctable_pdf: `nc' columns but `nh' header texts"
+        exit 198
+    }
+    local orient = cond(`nc' > 6, "landscape", "")
+    if "`landscape'" != "" local orient "landscape"
+    if "`portrait'"  != "" local orient ""
+    * rows per page: a conservative guess for 9-10 pt text (wrapped cells take more)
+    if `perpage' == 0 local perpage = cond("`orient'" == "landscape", 24, 40)
+    preserve
+    quietly {
+        keep `varlist'
+        rename (`varlist') (__c#), addnumber      // __c1 __c2 ... in the order given
+        forvalues j = 1/`nc' {
+            replace __c`j' = strtrim(__c`j')
+        }
+        local N = _N
+        gen long row = _n
+        * page chunks: fill up to perpage rows; prefer to end a page at a rule,
+        * never start a page on a row whose first column is empty
+        gen int chunk = .
+        local start 1
+        local k 0
+        while `start' <= `N' {
+            local ++k
+            local end = min(`start' + `perpage' - 1, `N')
+            if `end' < `N' {
+                local best 0
+                foreach r of local rules {
+                    if `r' >= `start' + floor(`perpage' / 2) & `r' <= `end' & `r' > `best' local best `r'
+                }
+                if `best' > 0 local end `best'
+                else {
+                    while `end' > `start' & __c1[`end' + 1] == "" {
+                        local --end
+                    }
+                }
+            }
+            replace chunk = `k' in `start'/`end'
+            local start = `end' + 1
+        }
+        local nk `k'
+        * blank repeated labels inside each page; a column is blanked only while the
+        * norepeat columns to its left are unchanged too (a new panel shows its series)
+        gen byte same = _n > 1 & chunk == chunk[_n - 1]
+        foreach j of local norepeat {
+            gen strL o`j' = __c`j'
+            replace same = same & o`j' == o`j'[_n - 1]
+            replace __c`j' = "" if same
+            drop o`j'
+        }
+        drop same
+        * column widths (% of the page), from the longest text in each column;
+        * long text columns are capped so they wrap instead of squeezing numbers
+        matrix W = J(1, `nc', 0)
+        local tot 0
+        forvalues j = 1/`nc' {
+            gen long L`j' = udstrlen(__c`j')
+            summarize L`j', meanonly
+            local w = max(r(max), 3)
+            local h : word `j' of `header'
+            local h = subinstr(`"`h'"', "|", " ", .)
+            foreach hw of local h {
+                local w = max(`w', udstrlen(`"`hw'"'))
+            }
+            local w = min(`w', 34) + 2          // + 2 = room for the cell margins
+            matrix W[1, `j'] = `w'
+            local tot = `tot' + `w'
+            drop L`j'
+        }
+        local used 0
+        forvalues j = 1/`nc' {
+            if `j' < `nc' {
+                matrix W[1, `j'] = max(floor(100 * W[1, `j'] / `tot'), 3)
+                local used = `used' + W[1, `j']
+            }
+            else matrix W[1, `j'] = 100 - `used'
+        }
+    }
+    putpdf clear
+    putpdf begin, pagesize(A4) `orient' font("Times New Roman", `fontsize') ///
+        margin(left, 0.8in) margin(right, 0.8in) margin(top, 0.5in) margin(bottom, 0.5in)
+    forvalues k = 1/`nk' {
+        if `k' > 1 putpdf pagebreak
+        putpdf paragraph, spacing(after, 4pt)
+        local tt = cond(`k' == 1, `"`title'"', `"`title' (continued)"')
+        putpdf text (`"`tt'"'), bold font("Times New Roman", `=`fontsize' + 1.5')
+        if `k' == 1 & `"`subtitle'"' != "" {
+            putpdf paragraph, spacing(after, 4pt)
+            putpdf text (`"`subtitle'"')
+        }
+        quietly count if chunk == `k'
+        local nr = r(N) + 1
+        quietly putpdf table T`k' = data(__c1-__c`nc') if chunk == `k', varnames border(all, nil) width(W)
+        forvalues j = 1/`nc' {
+            * header text; "|" starts a new line inside the cell
+            local rest : word `j' of `header'
+            local opt ""
+            while `"`rest'"' != "" {
+                gettoken part rest : rest, parse("|")
+                if `"`part'"' == "|" {
+                    putpdf table T`k'(1, `j') = (""), linebreak append
+                    continue
+                }
+                putpdf table T`k'(1, `j') = (`"`part'"'), valign(bottom) `opt'
+                local opt "append"
+            }
+            local al = cond(`: list j in right', "right", "left")
+            putpdf table T`k'(., `j'), halign(`al') margin(top, 0pt) margin(bottom, 0pt)
+        }
+        putpdf table T`k'(1, .), border(top, single, black) border(bottom, single, black)
+        putpdf table T`k'(`nr', .), border(bottom, single, black)
+        foreach r of local rules {
+            quietly summarize row if chunk == `k', meanonly
+            if `r' >= r(min) & `r' < r(max) {
+                putpdf table T`k'(`=`r' - r(min) + 2', .), border(bottom, single, "A6A6A6")
+            }
+        }
+    }
+    local first 1
+    foreach n of local notes {
+        putpdf paragraph, spacing(before, `=cond(`first', 6, 1)'pt)
+        putpdf text (`"`n'"'), font("Times New Roman", `=`fontsize' - 0.5')
+        local first 0
+    }
+    putpdf save `"`using'"', replace
+    restore
+end
+* --- end of PART 1 ------------------------------------------------------------
+
+* --- PART 2: the rows of this exhibit (the only part that changes per file) ---
+* Source: the two tables saved right after the CSV exports in Step 7 (balance
+* table and regression table: full precision, same run as the chart).
+* The chart's symbols are named in words here (the table font has no such symbols).
+local ntext_t : subinstr local ntext "~" " ", all
+local ntext_t = usubinstr(`"`ntext_t'"', "◇", "diamond", .)
+local ntext_t = usubinstr(`"`ntext_t'"', "●", "black dot", .)
+local ntext_t = usubinstr(`"`ntext_t'"', "○", "hollow circle", .)
+local ntext_t = usubinstr(`"`ntext_t'"', "△", "triangle", .)
+local ntext_t = itrim(`"`ntext_t'"')
+local rpos "3 6 9 12 16 17 18 19 20"            // the outcome rows drawn at the bottom (Step 9)
+
+* (1) Points table: one row per marker (and per printed count), panels (a) to (c), top to
+* bottom as on the chart: top = 2013-14 gaps (black dot = reweighted, hollow circle = as they
+* are, diamond = reweighted, firms also recorded in 2018); the three counts; bottom = the
+* result rows (black dot = reweighted 2018, triangle = reweighted 2010-12 check, hollow
+* circle = not reweighted 2018).
+* (1a) top section, from the balance table
+use `baltab', clear
+keep if inlist(weights, "m", "m18") & inlist(measure, "m1", "m2", "m3", "m4", "m5", "m6", "industry_max", "island_max")
+local nbal = _N
+gen byte r = cond(measure == "industry_max", 7, cond(measure == "island_max", 8, real(substr(measure, 2, 1))))
+expand 2 if weights == "m"
+bysort gi weights r: gen byte mk = _n            // m: 1 = after weighting, 2 = before; m18: 1 -> 3
+replace mk = 3 if weights == "m18"
+assert _N == 3 * `nbal' / 2
+gen double v = cond(mk == 2, std_before, std_after)
+gen str60 t_row = ""
+replace t_row = "Workers"                         if r == 1
+replace t_row = "Value added"                     if r == 2
+replace t_row = "Energy (GJ) per unit of VA"      if r == 3
+replace t_row = "CO2 (tonnes) per unit of VA"     if r == 4
+replace t_row = "Bought electricity, % of energy" if r == 5
+replace t_row = "Makes own electricity"           if r == 6
+replace t_row = "Industry (largest gap)"          if r == 7
+replace t_row = "Island (largest gap)"            if r == 8
+gen str40 t_mk = cond(mk == 1, "Reweighted", cond(mk == 2, "Not reweighted", "Reweighted, `post_yr' firms"))
+gen str12 t_v = cond(round(v, 0.01) > 0, "+", "") + string(v, "%9.2f") if !missing(v)
+replace t_v = "0.00" if t_v == "-0.00"
+gen str24 t_n = string(firms_g1, "%12.0fc") + uchar(160) + "/" + uchar(160) + string(firms_g0, "%12.0fc")
+gen str80 t_status = cond(mk == 1, "black dot", cond(mk == 2, "hollow circle", "gray diamond"))
+replace t_status = "not drawn: no value" if missing(v)
+gen str40 t_sec = "Gap in `base_txt', before Paris"
+gen byte blk = 1
+keep gi blk r mk t_*
+tempfile ct1
+save `ct1'
+* (1b) the three counts printed at the right of the top section (main weights)
+use `baltab', clear
+keep if weights == "m" & measure == "m1"
+assert _N == 3
+expand 3
+bysort gi: gen byte r = _n
+gen str60 t_row = cond(r == 1, "Firms in the group", cond(r == 2, "Other firms", "Other firms, worth after weighting"))
+gen double v = cond(r == 1, firms_g1, cond(r == 2, firms_g0, worth_g0))
+gen str12 t_v = string(v, "%12.0fc")
+gen str40 t_mk = "Number"
+gen str80 t_status = "printed at the right"
+gen str40 t_sec = "Counts printed at the right"
+gen byte mk = 1
+gen byte blk = 2
+keep gi blk r mk t_*
+tempfile ct2
+save `ct2'
+* (1c) bottom section, from the regression table
+use `regtab', clear
+keep if in_figure
+local nfig = _N
+gen byte mk = cond(version == "eb" & term == "post", 1, cond(version == "eb", 2, 3))
+gen byte r = 0
+forvalues i = 1/9 {
+    replace r = `i' if outcome_id == `: word `i' of `rpos''
+}
+assert r > 0
+gen str60 t_row = ""
+replace t_row = "Energy (GJ) per unit of VA"   if outcome_id == 3
+replace t_row = "CO2 (tonnes) per unit of VA"  if outcome_id == 6
+replace t_row = "Energy used (GJ)"             if outcome_id == 9
+replace t_row = "CO2 emitted (tonnes)"         if outcome_id == 12
+replace t_row = "Bought, % of energy used"     if outcome_id == 16
+replace t_row = "Firms making their own, %"    if outcome_id == 17
+replace t_row = "Own, % of electricity used"   if outcome_id == 18
+replace t_row = "Value added (current prices)" if outcome_id == 19
+replace t_row = "Workers"                      if outcome_id == 20
+gen str40 t_sec = cond(r <= 2, "Energy and CO2 per unit of VA", cond(r <= 4, "Energy used and CO2 emitted", ///
+    cond(r <= 7, "Electricity (difference in points)", "For comparison")))
+gen str40 t_mk = cond(mk == 1, "Reweighted: `post_yr'", cond(mk == 2, "Reweighted: `pre_txt'", "Not reweighted: `post_yr'"))
+gen str12 t_v  = cond(round(diff, 0.1) > 0, "+", "") + string(diff, "%9.1f") if !missing(diff)
+gen str12 t_lo = cond(round(diff_lo, 0.1) > 0, "+", "") + string(diff_lo, "%9.1f") if !missing(diff_lo)
+gen str12 t_hi = cond(round(diff_hi, 0.1) > 0, "+", "") + string(diff_hi, "%9.1f") if !missing(diff_hi)
+replace t_v = "0.0" if t_v == "-0.0"
+gen str24 t_n = string(firms, "%12.0fc") if !missing(firms)
+gen str12 lab = cond(round(diff) == 0, "0", cond(diff > 0, "+", "") + string(round(diff), "%9.0f")) if mk == 1 & !missing(diff)
+gen str80 t_status = ""
+replace t_status = "black dot, " + cond(clear == 1, "", "gray ") + "label " + lab if mk == 1 & shown
+replace t_status = "gray triangle" if mk == 2 & shown
+replace t_status = "hollow circle" if mk == 3 & shown
+replace t_status = "not drawn: too few firms" if !shown
+gen byte blk = 3
+keep gi blk r mk t_*
+append using `ct1' `ct2'
+gen str30 t_panel = cond(gi == 1, "(a) Exporters", cond(gi == 2, "(b) Importers", "(c) Foreign-owned (10%+)"))
+foreach v in t_lo t_hi {
+    replace `v' = "" if missing(`v')
+}
+* two no-break spaces keep the status text off the numbers to its left
+replace t_status = uchar(160) + uchar(160) + t_status
+sort gi blk r mk
+* checks: every figure row of the regression CSV, every top marker and every count is one row
+assert _N == `nfig' + 3 * `nbal' / 2 + 9
+assert t_v != "" if !strpos(t_status, "not drawn")
+quietly count if blk == 3
+assert r(N) == `nfig'
+* a heading row before each section of each panel, as on the chart's axis (not a point: no status)
+replace t_row = uchar(160) + uchar(160) + uchar(160) + t_row      // indent under the section heading
+gen long ord = 10 * _n
+preserve
+bysort gi t_sec (ord): keep if _n == 1
+replace ord = ord - 5
+replace t_row = t_sec
+foreach v in t_mk t_v t_lo t_hi t_n t_status {
+    replace `v' = ""
+}
+tempfile hd
+save `hd'
+restore
+append using `hd'
+sort ord
+quietly count if t_status != ""
+assert r(N) == `nfig' + 3 * `nbal' / 2 + 9
+order t_panel t_row t_mk t_v t_lo t_hi t_n t_status     // the writer takes the columns in this order
+* thin rules at the end of each section and panel
+gen long rr = _n
+gen byte endsec = t_sec != t_sec[_n + 1] | gi != gi[_n + 1]
+quietly levelsof rr if endsec & _n < _N, local(rl)
+local tnote "Table: every marker of Figure R1-10 and the counts printed on it, panel by panel, top to bottom. Top rows: 2013–14 average,"
+local tnote "`tnote' group minus other firms, in spreads between firms (the chart draws 100 × this on its axis, labelled −1, 0, +1); Firms ="
+local tnote "`tnote' group / other firms in that balancing sample. Bottom rows: difference = 100 × (exp(b) − 1) % for log outcomes, b in"
+local tnote "`tnote' points for electricity; b and its standard error are in the regression table; Firms = clusters in the regression."
+local tnote "`tnote' Marker: Reweighted, `post_yr' firms = main weights, gap among the firms also recorded in `post_yr'; bottom markers are changes"
+local tnote "`tnote' from `base_txt'. Worth = what the weighted other firms count as (firms counted equally). Status: the symbol drawn, and"
+local tnote "`tnote' the black dot's label as printed (gray: the 95% interval includes 0)."
+local tnote "`tnote' Full precision: tables/10_reweighted_frozen_groups.csv and tables/10_reweighted_frozen_groups_balance.csv."
+ctable_pdf t_panel t_row t_mk t_v t_lo t_hi t_n t_status using "tables/10_reweighted_frozen_groups_table.pdf", ///
+    title("Table R1-10. Energy and CO2: groups fixed before Paris vs reweighted other firms: every plotted point") ///
+    header("Panel" "Row" "Marker" "Plotted|value" "95%|low" "95%|high" "Firms" "Status") ///
+    right(4 5 6 7) norepeat(1 2) fontsize(9) rules(`rl') perpage(25) ///
+    notes("`ntext_t'" "`tnote'" "`srcnote'" "`devnote'")
+display "table -> tables/10_reweighted_frozen_groups_table.pdf"
+
+
+* (2) Regression table (AER style): the drawn rows, for each group; columns (1)-(2) not
+* reweighted, (3)-(4) reweighted; coefficient on the first line, (standard error) on the
+* second. show_pct = 1 adds a third line, [% difference]; off here (the drawn %s are in the
+* points table).
+local show_pct 0
+use `regtab', clear
+keep if inlist(version, "unw", "eb") & inlist(term, "pre", "post")
+gen byte r = 0
+forvalues i = 1/9 {
+    replace r = `i' if outcome_id == `: word `i' of `rpos''
+}
+keep if r > 0
+* check: the coefficients are those in the CSV just written (4 decimals there)
+preserve
+import delimited using "tables/10_reweighted_frozen_groups.csv", clear varnames(1) stringcols(1 4 10)
+keep if inlist(version, "unw", "eb") & inlist(term, "pre", "post")
+keep grouping version outcome_id term b se
+rename (b se) (b_csv se_csv)
+tempfile csvb
+save `csvb'
+restore
+merge 1:1 grouping version outcome_id term using `csvb', keep(master match) assert(match using) nogenerate
+assert abs(b - b_csv) <= 0.00005 + 1e-9 if !missing(b)
+assert abs(se - se_csv) <= 0.00005 + 1e-9 if !missing(se)
+drop b_csv se_csv
+bysort grouping version outcome_id (term): assert rows[1] == rows[2] & firms[1] == firms[2]
+local sec1 "Energy and CO2 per unit of VA"
+local sec2 "Energy used and CO2 emitted"
+local sec3 "Electricity (difference in points)"
+local sec4 "For comparison"
+tempname P
+tempfile R
+postfile `P' str120 t_lab str24(t1 t2 t3 t4 t5 t6 t7 t8) using `R'
+local nterm 0
+local grl ""
+local frz ""
+local ind = uchar(160) + uchar(160) + uchar(160)     // indent: kept by the writer (not an ASCII space)
+forvalues g = 1/3 {
+    foreach c in firms_g1 firms_g0 worth_g0 {
+        quietly summarize `c' if gi == `g' & version == "eb", meanonly
+        local `c' = string(r(mean), "%12.0fc")
+    }
+    local gl = word("A B C", `g')
+    local gn = cond(`g' == 1, "Exporters", cond(`g' == 2, "Importers", "Foreign-owned (10%+)"))
+    post `P' ("Panel `gl'. `gn'") ("") ("") ("") ("") ("") ("") ("") ("")
+    local frz "`frz'`gn' `firms_g1' (other firms `firms_g0', worth `worth_g0' after weighting), "
+    local ++nterm
+    forvalues s = 1/4 {
+        post `P' ("`sec`s''") ("") ("") ("") ("") ("") ("") ("") ("")
+        local ++nterm
+        local r1 = cond(`s' == 1, 1, cond(`s' == 2, 3, cond(`s' == 3, 5, 8)))
+        local r2 = cond(`s' == 1, 2, cond(`s' == 2, 4, cond(`s' == 3, 7, 9)))
+        forvalues rr = `r1'/`r2' {
+            local k : word `rr' of `rpos'
+            local rlab = cond(`k' == 3, "Energy (GJ) per unit of VA", cond(`k' == 6, "CO2 (tonnes) per unit of VA", ///
+                cond(`k' == 9, "Energy used (GJ)", cond(`k' == 12, "CO2 emitted (tonnes)", cond(`k' == 16, "Bought, % of energy used", ///
+                cond(`k' == 17, "Firms making their own, %", cond(`k' == 18, "Own, % of electricity used", ///
+                cond(`k' == 19, "Value added (current prices)", "Workers"))))))))
+            local j 0
+            foreach v in unw eb {
+                foreach t in pre post {
+                    local ++j
+                    quietly summarize b if gi == `g' & outcome_id == `k' & version == "`v'" & term == "`t'", meanonly
+                    local bb = r(mean)
+                    quietly summarize se if gi == `g' & outcome_id == `k' & version == "`v'" & term == "`t'", meanonly
+                    local ss = r(mean)
+                    quietly summarize diff if gi == `g' & outcome_id == `k' & version == "`v'" & term == "`t'", meanonly
+                    local dd = r(mean)
+                    quietly summarize shown if gi == `g' & outcome_id == `k' & version == "`v'" & term == "`t'", meanonly
+                    local sh = r(mean)
+                    if missing(`ss') | !`sh' {
+                        local c`j' "—"
+                        local e`j' ""
+                        local p`j' ""
+                    }
+                    else {
+                        local c`j' = string(`bb', "%9.3f")
+                        local e`j' = "(" + string(`ss', "%9.3f") + ")"
+                        local p`j' = "[" + cond(`dd' > 0, "+", "") + string(`dd', "%9.1f") + cond(inlist(`k', 16, 17, 18), "]", "%]")
+                    }
+                }
+                quietly summarize rows if gi == `g' & outcome_id == `k' & version == "`v'", meanonly
+                local o_`v' = cond(missing(r(mean)), "—", string(r(mean), "%12.0fc"))
+                quietly summarize firms if gi == `g' & outcome_id == `k' & version == "`v'", meanonly
+                local f_`v' = cond(missing(r(mean)), "—", string(r(mean), "%12.0fc"))
+            }
+            post `P' ("`ind'`rlab'") ("`c1'") ("`c2'") ("`o_unw'") ("`f_unw'") ("`c3'") ("`c4'") ("`o_eb'") ("`f_eb'")
+            post `P' ("")            ("`e1'") ("`e2'") ("")        ("")        ("`e3'") ("`e4'") ("")       ("")
+            if `show_pct' post `P' ("") ("`p1'") ("`p2'") ("") ("") ("`p3'") ("`p4'") ("") ("")
+            local nterm = `nterm' + 2 + `show_pct'
+        }
+    }
+    local grl "`grl' `nterm'"
+}
+* whole-model rows: the fixed effects read from the absorb() list used in Step 6 (both versions)
+local fef = cond(strpos(" `fe2' ", " firm_id "),   "Yes", "No")
+local fei = cond(strpos(" `fe2' ", " ind#year "),  "Yes", "No")
+local fep = cond(strpos(" `fe2' ", " prov#year "), "Yes", "No")
+post `P' ("Firm fixed effects")              ("`fef'") ("`fef'") ("") ("") ("`fef'") ("`fef'") ("") ("")
+post `P' ("Industry × year fixed effects")   ("`fei'") ("`fei'") ("") ("") ("`fei'") ("`fei'") ("") ("")
+post `P' ("Province × year fixed effects")   ("`fep'") ("`fep'") ("") ("") ("`fep'") ("`fep'") ("") ("")
+post `P' ("Entropy-balancing weights")       ("No") ("No") ("") ("") ("Yes") ("Yes") ("") ("")
+post `P' ("Standard errors clustered by")    ("Firm") ("Firm") ("") ("") ("Firm") ("Firm") ("") ("")
+post `P' ("Compared with (reference years)") ("`base_txt'") ("`base_txt'") ("") ("") ("`base_txt'") ("`base_txt'") ("") ("")
+postclose `P'
+use `R', clear
+local grl = strtrim("`grl'")
+local rsub "Coefficient b: the group's change from `base_txt' minus that of the other firms in the same industry and province, log"
+local rsub "`rsub' points (electricity rows: percentage points); standard errors in parentheses. (1)–(2): not reweighted; (3)–(4): reweighted."
+local rnote "Notes: Each outcome, group and column pair is one regression of the outcome on the frozen group marker × one marker per"
+local rnote "`rnote' period (years `pre_yrs' / `trans_yr' / `jump_yrs' / `post_yr' / `doubt_yrs'; `base_txt' = reference, set to 0), with firm,"
+local rnote "`rnote' industry × year and province × year fixed effects, on the firms that can be reweighted. (3)–(4): each other firm"
+local rnote "`rnote' weighted so that the weighted other firms match the group's `base_txt' averages (entropy balancing; weights treated"
+local rnote "`rnote' as known). Drawn in Figure R1-10: (4) black dot, (3) triangle, (2) hollow circle. The other periods, versions and"
+local rnote "`rnote' outcomes are in tables/10_reweighted_frozen_groups.csv. Obs. = firm-years; Firms = clusters; they differ by outcome"
+local rnote "`rnote' because each outcome uses only firms with its quantities above zero. Own-electricity rows leave out `og_skip'"
+local frz = substr("`frz'", 1, length("`frz'") - 2)
+local rnote "`rnote' (under `og_min'% recorded). Groups (firms): `frz'. % difference = 100 × (exp(b) − 1). No stars."
+ctable_pdf t_lab t1 t2 t3 t4 t5 t6 t7 t8 using "tables/10_reweighted_frozen_groups_regression.pdf", ///
+    title("Table R1-10, regression. Energy and CO2: groups fixed before Paris, not reweighted vs reweighted") ///
+    subtitle("`rsub'") ///
+    header("Outcome" "(1)|`pre_txt'|× group" "(2)|`post_yr'|× group" "Obs.|(1)–(2)" "Firms|(1)–(2)" ///
+           "(3)|`pre_txt'|× group" "(4)|`post_yr'|× group" "Obs.|(3)–(4)" "Firms|(3)–(4)") ///
+    right(2 3 4 5 6 7 8 9) rules(`grl') fontsize(9) perpage(50) portrait ///
+    notes("`rnote'" "`srcnote'" "`devnote'")
+display "table -> tables/10_reweighted_frozen_groups_regression.pdf"
+* --- end of PART 2 ------------------------------------------------------------
+
 timer off 1
 quietly timer list 1
 local elapsed = strtrim(string(r(t1), "%9.1f"))

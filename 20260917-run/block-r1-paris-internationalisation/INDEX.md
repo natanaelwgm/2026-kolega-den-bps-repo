@@ -5,6 +5,22 @@ Development data — obscured values, fictional firm panel. Not BPS findings.
 Run all: open `00_run.do`, check the two paths at the top, press Do. Each file below also runs on its own.
 Item-by-item coverage of Deasy's row and the review record: [TRACKER.md](TRACKER.md).
 
+<!-- tables-start -->
+Tables that go with the charts: every chart has a table PDF with each plotted point and its number (`_table.pdf`); charts built from regressions also have the full regression table (`_regression.pdf`).
+
+- 01: `tables/01_group_shares_support_table.pdf`
+- 02: `tables/02_exporters_energy_co2_per_va_table.pdf`
+- 03: `tables/03_importers_energy_co2_per_va_table.pdf`
+- 04: `tables/04_foreign_owned_energy_co2_per_va_table.pdf`
+- 05: `tables/05_before_after_paris_table.pdf`
+- 06: `tables/06_frozen_pre_paris_groups_table.pdf`
+- 07: `tables/07_electricity_own_generation_table.pdf`
+- 08: `tables/08_matched_gaps_by_year_table.pdf`
+- 09: `tables/09_frozen_groups_regression_regression.pdf`, `tables/09_frozen_groups_regression_table.pdf`
+- 10: `tables/10_reweighted_frozen_groups_regression.pdf`, `tables/10_reweighted_frozen_groups_table.pdf`
+<!-- tables-end -->
+
+
 **Stata add-ons R1-09 and R1-10 need** (install once; no file installs anything): `ssc install reghdfe`, `ssc install ftools`, `ssc install require`.
 
 | File | What it shows | Deasy's words it answers | Status |
