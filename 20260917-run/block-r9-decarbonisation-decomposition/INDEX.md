@@ -14,6 +14,7 @@ Tables that go with the charts: every chart has a table PDF with each plotted po
 - 04: `tables/04_by_sector_periods.pdf`, `tables/04_by_sector_table.pdf`, `tables/04_by_sector_two_level.pdf`
 - 05: `tables/05_by_trade_ownership_group_levels.pdf`, `tables/05_by_trade_ownership_group_periods.pdf`, `tables/05_by_trade_ownership_group_table.pdf`
 - 06: `tables/06_reconciliation_toy_tests_table.pdf`
+- 07: `tables/07_sensitivity_doubtful_records_table.pdf`, `tables/07_sensitivity_doubtful_records_versions.pdf`
 <!-- tables-end -->
 
 
@@ -25,6 +26,7 @@ Tables that go with the charts: every chart has a table PDF with each plotted po
 | `04_by_sector.do` → `figures/04_by_sector.png/.pdf`, `tables/04_by_sector.csv`, `tables/04_by_sector_table.pdf`, `tables/04_by_sector_periods.pdf`, `tables/04_by_sector_two_level.pdf` | R9-02's FHK split of each period's change in CO2 per unit of value added, added up by 2-digit sector, for the three periods (before, across and after Paris): each sector's staying firms' own change (within), reallocation among them (between + cross), firms appearing and disappearing, and total; sectors in code order, not ranked. Table R9-04: every plotted point; Table R9-04b: every period and sector, all five parts; Table R9-04c: the same change split with sectors as the units (inside sectors vs value added moving between sectors), next to the firm split | "Who decarbonised Indonesian manufacturing: firms becoming cleaner or production reallocating toward cleaner firms?"; "Accounting decomposition, bukan causal regression. FHK decomposition … Within + reallocation + entry + exit." | done, reviewed |
 | `05_by_trade_ownership_group.do` → `figures/05_by_trade_ownership_group.png/.pdf`, `tables/05_by_trade_ownership_group.csv`, `tables/05_by_trade_ownership_group_table.pdf`, `tables/05_by_trade_ownership_group_periods.pdf`, `tables/05_by_trade_ownership_group_levels.pdf` | R9-02's FHK split of each period's change in CO2 per unit of value added, added up by export status (exporters / non-exporters / no answer), import status and foreign ownership (10% or more), for the three periods (before, across and after Paris); staying firms whose answer changed have their own row. Each group: staying firms' own change (within), reallocation among them (between + cross), firms appearing and disappearing, total. Not a comparison of which kind of firm got cleaner (stated under the title). Table R9-05: every plotted point; Table R9-05b: every period by group, all five parts; Table R9-05c: each group's firms, answer changes, share of value added and own level | "Who decarbonised Indonesian manufacturing: firms becoming cleaner or production reallocating toward cleaner firms?"; "Accounting decomposition, bukan causal regression. FHK decomposition … Within + reallocation + entry + exit." | done, reviewed |
 | `06_reconciliation_toy_tests.do` → `figures/06_reconciliation_toy_tests.png`, `tables/06_reconciliation_toy_tests_cases.csv`, `tables/06_reconciliation_toy_tests_data.csv`, `tables/06_reconciliation_toy_tests_table.pdf` | Table: do the two bookkeeping methods (FHK and Melitz–Polanec) split a change correctly? (a) six made-up examples with hand-worked answers; (b) on the data, the parts add up to the actual change in every period, measure, sample and group | "Accounting decomposition … FHK decomposition + Melitz–Polanec dynamic decomposition. Within + reallocation + entry + exit." | done, reviewed |
+| `07_sensitivity_doubtful_records.do` → `figures/07_sensitivity_doubtful_records.png/.pdf`, `tables/07_sensitivity_doubtful_records.csv`, `tables/07_sensitivity_doubtful_records_table.pdf`, `tables/07_sensitivity_doubtful_records_versions.pdf` | R9-02's FHK split of each period's change in CO2 per unit of value added, redone with one choice changed at a time. Choices: other cut-offs for extreme energy records (none, 1,000×, 300×, 50×); without importers of unknown export status (every year, or only in their doubtful 2019–22 years); without records under 1/100 of their sector's median; zero-energy firms kept; or per unit of output. A line under the title says in which periods the direction holds. Table R9-07: every plotted point; Table R9-07b: all 12 versions (30× and 1/5 in tables only), three periods and the whole span, CO2 and energy | "Who decarbonised Indonesian manufacturing: firms becoming cleaner or production reallocating toward cleaner firms?"; "Accounting decomposition, bukan causal regression. FHK decomposition … Within + reallocation + entry + exit." (does the answer hold under other record choices?); planning-note check "CO2/output with output weights; energy versions" | done, reviewed |
 
 ## Details kept out of the figures
 
@@ -177,3 +179,41 @@ Tables that go with the charts: every chart has a table PDF with each plotted po
   - CO2 = energy × standard factors.
   - Energy covers only some fuels.
   - Bookkeeping, not cause.
+
+**07 — Does the split depend on how the records are cleaned?**
+- **What it shows.** Each row is R9-02's split (CO2 per unit of value added, all firms together, % of the period's
+  start level) with one choice changed. The parts add up to the total in all 92 runs (gap ≤ 1e-9, asserted). Main
+  version (100× cut-off) = Figure R9-02: +39 / −45 / −19% (2010–15 / 2015–18 / 2018–22).
+- **2010–15 and 2015–18: the direction holds.** Every drawn version moves the total the same way as the main
+  version. Sizes vary: 2010–15 +24% (50×) to +118% (per output), as filed +669% (one 2015 record); 2015–18 −21%
+  (1,000×) to −84% (as filed).
+- **2018–22: not settled.** Across the cut-offs the total runs from −22% to +37%, and two single records decide it:
+  - A 2022 record in sector 23 (cement, glass, ceramics) at 111× its sector's median energy per unit of value added.
+    It holds 38% of 2022 CO2 and sets the 2022 level at 29 instead of 17.
+  - A 2018 record at 407× holds 34% of 2018 CO2 (level 34 instead of 21).
+  - Cut-offs that keep the first and drop the second (reviewer check: 150× to 400×) give +35% to +37%. Dropping both
+    (100×, 50×) gives −19% and −22%. Keeping both (500× and up, as filed) gives −13% and −14%.
+  - The cut-off has no natural break, so whether CO2 per unit of value added fell or rose after Paris is not settled
+    on this file.
+- **Doubtful importers.** Importers of unknown export status hold 10–24% of value added before 2017 and 49–68% from
+  2017. Their 2019–22 energy records are in doubt.
+  - Set aside in every year: −18% in 2018–22, the same direction as the main version.
+  - Set aside only in 2019–22 (as R2/R7 do): +12%. But then 2018 counts them and 2022 does not. Their level is about
+    half that of other firms in both years (2018: 13 against 29), so the +12% comes from counting different firms, not
+    from their records.
+- **Other versions (2010–15 / 2015–18 / 2018–22).**
+  - Without records under 1/100 of the median: +32 / −45 / −17%.
+  - Zero-energy firms kept (514 firm-years at 0): +28 / −39 / −19%.
+  - Per unit of output, output weights: +118 / −50 / −25%.
+  - Tables only: 30× gives +26 / −39 / −21%. 1/5 of the median would set aside 23–58% of a year's value added: that
+    is a different set of firms, not a check. It gives −8 / −50 / +3%.
+- **Staying firms' two parts.** Within and reallocation pull in opposite directions in 29 of the 30 drawn rows. In
+  2018–22 staying firms' own change is positive in every version. Read the two together (Figure R9-02 says why).
+- **Checks.** An independent reviewer script matches the CSV to 2 decimals (main, 300×, 1,000×, both importer
+  versions, three periods). Energy (GJ) versions are in Table R9-07b.
+- **Limits.**
+  - Firm links are fictional, so entry + exit (gray) means nothing here; the total is the real change.
+  - Value added is nominal.
+  - CO2 = energy × standard factors.
+  - Bookkeeping, not cause.
+  - The page shows how far the split moves, not which choice is right.
