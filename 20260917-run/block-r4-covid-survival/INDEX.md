@@ -5,11 +5,22 @@ Development data — obscured values, fictional firm panel. Not BPS findings.
 Run all: open `00_run.do`, check the two paths at the top, press Do. Each file below also runs on its own.
 Item-by-item coverage of Bu Deasy's row and the review record: [TRACKER.md](TRACKER.md).
 
+<!-- tables-start -->
+Tables that go with the charts: every chart has a table PDF with each plotted point and its number (`_table.pdf`); charts built from regressions also have the full regression table (`_regression.pdf`).
+
+- 01: `tables/01_cohort_states_flow_table.pdf`
+- 02: `tables/02_states_normal_vs_covid_table.pdf`
+- 03: `tables/03_composition_before_after_table.pdf`
+- 04: `tables/04_leaving_hazard_regression.pdf`, `tables/04_leaving_hazard_table.pdf`
+<!-- tables-end -->
+
+
 | File | What it shows | Bu Deasy's words it answers | Status |
 |---|---|---|---|
 | `01_cohort_states_flow.do` → `figures/01_cohort_states_flow.png`, `tables/01_cohort_states_flow.csv`, `tables/01_cohort_states_flow_table.pdf` | The 3,007 firms of the 2019 file, looked up in the 2020, 2021 and 2022 files: how many stayed in all three (split by whether workers grew, stayed within 10% or shrank), came back after a gap, or left; plus the firms that first appear in 2020–22. Counts that add up to the 2019 firms. | "Impact covid: Survival analysis??", "Which firms survived"; "multinomial outcomes: exit, temporary disappearance, survive-shrink, survive-grow"; "Melihat firms yg bertahan, mati dan hidup selama shock covid" | done (read on the real files) |
 | `02_states_normal_vs_covid.do` → `figures/02_states_normal_vs_covid.png`, `tables/02_states_normal_vs_covid.csv`, `tables/02_states_normal_vs_covid_table.pdf` | For the firms of every annual file 2012–2019, the share still in all of the next three files, back after a gap, gone later, or gone at once; the 2019 firms (followed through 2020–22) against earlier files, for all firms and for firms also in one of the two files before. | "Impact covid: Survival analysis??", "Which firms survived"; "Melihat firms yg bertahan, mati dan hidup selama shock covid" | done (read on the real files) |
 | `03_composition_before_after.do` → `figures/03_composition_before_after.png`, `tables/03_composition_before_after.csv`, `tables/03_composition_before_after_pairs.csv`, `tables/03_composition_before_after_table.pdf` | Change in the share of firms and of workers by size, importer, foreign-owned and sector between the 2019 and 2022 files, against the 2012→2015 change and the range over normal years; panel (c) splits each change in the share of firms into firms that left, firms that came in, and change within firms in both files. | "Did COVID change the composition of Indonesian manufacturing?"; "Melihat firms yg bertahan, mati dan hidup selama shock covid" | done, reviewed (panels a–b read on these files; panel c only on the real files) |
+| `04_leaving_hazard.do` → `figures/04_leaving_hazard.png`, `tables/04_leaving_hazard.csv`, `tables/04_leaving_hazard_table.pdf`, `tables/04_leaving_hazard_regression.pdf` | For the firms of the 2019 file (followed 2020–22) and of the 2012 file (followed 2013–15), how much more or less likely a firm with each trait known by the starting file was to be missing from the next file: size, value added per worker, exporter, importer, foreign-owned, new to the files. One logit per starting file (pooled), dots in percentage points with 95% intervals; odds ratios, model checks and calibration in the tables. | "Survival analysis??", "Which firms survived"; strategy "Survival/hazard model menggunakan pre-COVID characteristics" | done, reviewed (read on the real files) |
 
 ## Details kept out of the figures
 
@@ -57,3 +68,13 @@ Item-by-item coverage of Bu Deasy's row and the review record: [TRACKER.md](TRAC
 - No sampling intervals: these are whole annual files, not samples; the gray range is the yardstick for normal movement.
 - Exporters are not shown: the 2022 file records no non-exporters (row kept in the CSV and table).
 - Firm links are fictional in the development data, so who stays, leaves or comes back (panel c) means nothing here; read these results on the real BPS files. Left the files is not proof of closure.
+
+**04 — chance of leaving the files, by traits known before COVID: 2019 firms against 2012 firms.**
+- Each firm of the starting file is followed until the first later file it is missing from (one row per firm and later file while it is still in the files). Traits come only from the starting file and the two files before it. Model: a logit with later-file, sector and province dummies, every term specific to its starting file, standard errors clustered by firm; dots = average change in the chance of leaving at a file when the trait is switched on, in percentage points.
+- Dev data: 2019 firms 3,007 (7,118 rows, 1,329 leave); 2012 firms 2,359 (5,659 rows, 1,013 leave). Leaving at each next file: 2020 26.9%, 2021 13.1%, 2022 12.2% against 2013 24.3%, 2014 15.1%, 2015 11.2%.
+- Dots, 2019 / 2012 (points): fewer than 20 workers 2.4 / 3.0; 100 or more 2.1 / 3.5; value added per worker above its sector's median 1.4 / 2.7; exporter 0.6 / 0.1; no export answer −1.7 / 0.5; importer −0.6 / −0.3; foreign-owned 10%+ 0.8 / 3.6; not in the two files before 14.5 / 13.5.
+- No trait differs clearly between the 2019 and the 2012 firms (all traits together p = 0.56). Firms not in the two files before leave far more in both, partly because of how the fictional links were drawn.
+- Productivity is split yes/no at the sector median so every row reads "with against without". The regression table (page 2) also gives a check with value added per worker measured continuously, per standard deviation above its sector's median: 2019 +2.11 points (SE 0.53), 2012 +1.46 (SE 0.54). The continuous measure is clear in both years; the yes/no split is coarser (clear only for 2012).
+- Checks: 0 rows dropped for perfect prediction; 30.2 / 24.7 leaving events per coefficient; area under the ROC curve 0.766 / 0.788; Hosmer–Lemeshow p 0.083 / 0.030 (largest gap 2.9 / 3.3 points). One pooled model so the difference can use the 946 firms in both files; its point estimates equal two separate logits.
+- Importers are not like for like: 21% of the 2012 firms, 53% of the 2019 firms (the recorded share jumps in 2017).
+- Association, not the effect of COVID. Leaving is not proof of closure. Firm links are fictional in the development data, so who stays, leaves or comes back means nothing here; read these results on the real BPS files.
