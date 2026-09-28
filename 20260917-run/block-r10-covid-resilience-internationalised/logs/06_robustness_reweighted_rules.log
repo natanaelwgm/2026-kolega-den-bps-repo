@@ -1,0 +1,4062 @@
+------------------------------------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r10-covid-resilience-internatio
+> nalised/logs/06_robustness_reweighted_rules.log
+  log type:  text
+ opened on:  28 Sep 2026, 19:00:00
+
+. timer clear 1
+
+. timer on 1
+
+. display _newline "=== [R10-06] STARTING: the printed numbers of R10-02 to R10-05 under other choices ==="
+
+=== [R10-06] STARTING: the printed numbers of R10-02 to R10-05 under other choices ===
+
+. 
+. * reghdfe (with ftools) runs regressions that take out many sets of averages at once
+. foreach p in reghdfe ftools {
+  2.     capture which `p'
+  3.     if _rc {
+  4.         display as error "R10-06 needs the Stata add-on `p'. Install it once: ssc install `p'  - then run this file
+>  again."
+  5.         log close
+  6.         exit 199
+  7.     }
+  8. }
+
+. 
+. * ---- chart style (identical block in every file) ----
+. set scheme s1mono
+
+. capture graph set window fontface "Times New Roman"   // GUI Stata; console Stata keeps its default font
+
+. * Note: this changes your Stata graph font permanently; undo with: graph set window fontface default
+. local devnote "Development data — obscured values, fictional firm panel. Not BPS findings."
+
+. local srcnote "Source: SI/IBS annual files 2010–2022 (masked), analysis_ready_data.dta."
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 1/10: load identity, industry, province, status flags, the outcomes and the export answers"
+Step 1/10: load identity, industry, province, status flags, the outcomes and the export answers
+
+. *---------------------------------------------------------------------------
+. * export_flag        = any export activity (1 yes, 0 no, missing = unknown)
+. * export_direct_flag = direct exports (1 yes, 0 no); asked in the files where the export
+. *                      question covers direct exports only (2022 in this file)
+. * import_flag        = imports reported above zero (never missing)
+. * fdi_10_flag        = 10% or more of capital held abroad (missing = unknown)
+. * gross_output_nominal = output value, current prices (masked money unit); the file has
+. *                no price index filled in (gross_output_real is empty)
+. * value_added_nominal  = output value minus materials, energy and services bought
+. * workers      = persons employed
+. * industry2_reported, province_code = never change within a firm
+. quietly describe using "$DATA", varlist
+
+. local allvars `r(varlist)'
+
+. local want firm_id year export_flag export_direct_flag import_flag fdi_10_flag workers ///
+>     gross_output_nominal gross_output_real value_added_nominal industry2_reported province_code
+
+. local have : list want & allvars          // gross_output_real: used by the cohort block when filled
+
+. use `have' using "$DATA", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. isid firm_id year
+
+. capture confirm numeric variable export_direct_flag
+
+. if _rc gen byte export_direct_flag = .    // a file without the direct-export question
+
+. foreach v in export_flag export_direct_flag import_flag fdi_10_flag {
+  2.     assert inlist(`v', 0, 1, .)
+  3. }
+
+. assert !missing(industry2_reported, province_code)
+
+. * Files that ask about direct exports only (as R10-05): no firm answers "no" to export_flag,
+. * while export_direct_flag has answers. There the direct-export answer is used; those files
+. * are kept out of the export numbers (the question changed).
+. quietly levelsof year, local(allfiles)
+
+. local dir_yrs ""
+
+. foreach y of local allfiles {
+  2.     quietly count if year == `y' & export_flag == 0
+  3.     local n_no = r(N)
+  4.     quietly count if year == `y' & !missing(export_direct_flag)
+  5.     if `n_no' == 0 & r(N) > 0 local dir_yrs "`dir_yrs' `y'"
+  6. }
+
+. local dir_yrs = strtrim("`dir_yrs'")
+
+. gen byte dir_only = 0
+
+. foreach y of local dir_yrs {
+  2.     quietly replace dir_only = 1 if year == `y'
+  3.     assert `y' >= `covid_first'               // groups use earlier files only
+  4. }
+
+. * exporting: 100 = exports, 0 = does not, missing = unknown answer (never counted as "no")
+. gen double ex = 100 * export_flag if !dir_only
+(15,665 missing values generated)
+
+. replace ex = 100 * export_direct_flag if dir_only
+(2,332 real changes made)
+
+. display "   files asking about direct exports only: `dir_yrs'"
+   files asking about direct exports only: 2022
+
+. tempfile firmyear0
+
+. save `firmyear0'                          // the firm-year rows; the cohort block keeps one row per firm
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_01698.000001 saved as .dta format
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 2/10: the two start files (read from the data)"
+Step 2/10: the two start files (read from the data)
+
+. *---------------------------------------------------------------------------
+. * COVID start file = the last annual file before 2020, followed in the next files.
+. * Normal-years start file (as R10-02 and R10-05): the latest file with two files before it
+. * whose next three files are the next three calendar years, all before 2020 (no missing
+. * year, no COVID year). Same code, same rules: it shows what the method gives without COVID.
+. local nfiles : word count `allfiles'
+
+. local covid_start ""
+
+. local bench_start ""
+
+. forvalues i = 1/`nfiles' {
+  2.     local c : word `i' of `allfiles'
+  3.     if `c' < `covid_first' local covid_start `c'
+  4.     if `i' >= 3 & `i' + 3 <= `nfiles' {
+  5.         local n1 : word `=`i' + 1' of `allfiles'
+  6.         local n3 : word `=`i' + 3' of `allfiles'
+  7.         if `n1' == `c' + 1 & `n3' == `c' + 3 & `n3' < `covid_first' local bench_start `c'
+  8.     }
+  9. }
+
+. assert "`covid_start'" != "" & "`bench_start'" != ""
+
+. display "   COVID start file `covid_start'; normal-years start file `bench_start'"
+   COVID start file 2019; normal-years start file 2012
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 3/10: for each start file, its firms and their groups under every rule (blocks copied unchanged)"
+Step 3/10: for each start file, its firms and their groups under every rule (blocks copied unchanged)
+
+. *---------------------------------------------------------------------------
+. * The two blocks below are copied unchanged from R10-01 (the first from R4-01), with the
+. * lines between them. After them, keep the firm-year rows of every firm of the start file
+. * (also the firms new to it: one version adds them).
+. tempfile panel
+
+. local first 1
+
+. foreach cohort_year in `covid_start' `bench_start' {
+  2. use `firmyear0', clear
+  3. capture label drop grp          // the group block defines this label; the loop runs it twice
+  4. *===========================================================================
+. * COVID COHORT AND STATES (copy exactly into later R4 and R10 files)
+. *   Version 2 - written and reviewed in R4-01 (28 Sep 2026). Do not edit a copy;
+. *   change R4-01 and re-copy. Set -local cohort_year- before the block; R4-02
+. *   runs it once per starting file (2012 ... 2019).
+. *   In : firm-year rows in memory (one row per firm and year): firm_id year
+. *        workers gross_output_nominal (gross_output_real is used instead when
+. *        present and filled for 95%+ of the cohort-file and last-file rows).
+. *        The block collapses to one row per firm: every other variable in memory
+. *        is dropped. Build traits in a tempfile first and merge them back by
+. *        firm_id after the block.
+. *   Out: one row per firm in the cohort file or in one of the next three files.
+. *        in_cohort = 1 for the firms of the cohort file (the cohort); the others
+. *        are newcomers (new_in_file = the later file they first appear in).
+. *        Locals: f1 f2 f3 = the next three files, p1 p2 = the two files before,
+. *        outbasis = output variable used, band_pct = neutral band in percent
+. *        (10 = within 10% either way), band_lo band_hi = its limits as ratios.
+. *   The years come from the data, so the block runs unchanged on the real files.
+. *===========================================================================
+. isid firm_id year
+  5. * -- the annual files in the data, and the files around the cohort file --
+. quietly levelsof year, local(c_files)
+  6. local c_pos : list posof "`cohort_year'" in c_files
+  7. local c_nf : word count `c_files'
+  8. if `c_pos' == 0 | `c_pos' + 3 > `c_nf' {
+  9.     display as error "cohort file `cohort_year' must be a file year with three later files"
+ 10.     exit 198
+ 11. }
+ 12. local f1 : word `=`c_pos' + 1' of `c_files'
+ 13. local f2 : word `=`c_pos' + 2' of `c_files'
+ 14. local f3 : word `=`c_pos' + 3' of `c_files'
+ 15. local p1 ""
+ 16. local p2 ""
+ 17. if `c_pos' > 1 local p1 : word `=`c_pos' - 1' of `c_files'
+ 18. if `c_pos' > 2 local p2 : word `=`c_pos' - 2' of `c_files'
+ 19. * -- output: constant prices when the file has them, else current prices --
+. local outbasis "gross_output_nominal"
+ 20. capture confirm numeric variable gross_output_real
+ 21. if !_rc {
+ 22.     quietly count if inlist(year, `cohort_year', `f3')
+ 23.     local c_nrows = r(N)
+ 24.     quietly count if inlist(year, `cohort_year', `f3') & !missing(gross_output_real)
+ 25.     if r(N) >= 0.95 * `c_nrows' & `c_nrows' > 0 local outbasis "gross_output_real"
+ 26. }
+ 27. * -- neutral band: a stayer is "about the same" if its last-file level is
+. *    within band_pct percent of its cohort-file level, up or down (10: 0.90 to 1.10 times);
+. *    the limits match the words on the chart ("down more than 10%") exactly --
+. if "`band_pct'" == "" local band_pct 10
+ 28. local band_lo = 1 - `band_pct'/100
+ 29. local band_hi = 1 + `band_pct'/100
+ 30. * -- which files each firm is in (1 = in the file, 0 = not) --
+. gen byte c_base    = (year == `cohort_year')
+ 31. gen byte c_f1      = (year == `f1')
+ 32. gen byte c_f2      = (year == `f2')
+ 33. gen byte c_f3      = (year == `f3')
+ 34. gen byte c_earlier = (year <  `cohort_year')                    // any file before the cohort file
+ 35. gen byte c_p1      = cond("`p1'" == "", ., (year == real("`p1'")))
+ 36. gen byte c_p2      = cond("`p2'" == "", ., (year == real("`p2'")))
+ 37. gen double c_wk0   = workers     if year == `cohort_year'
+ 38. gen double c_wk3   = workers     if year == `f3'
+ 39. gen double c_out0  = `outbasis'  if year == `cohort_year'
+ 40. gen double c_out3  = `outbasis'  if year == `f3'
+ 41. keep if year <= `f3'
+ 42. collapse (max) seen_base = c_base seen_f1 = c_f1 seen_f2 = c_f2 seen_f3 = c_f3 ///
+>     seen_earlier = c_earlier seen_p1 = c_p1 seen_p2 = c_p2 ///
+>     workers_base = c_wk0 workers_f3 = c_wk3 output_base = c_out0 output_f3 = c_out3, by(firm_id)
+ 43. keep if seen_base | seen_f1 | seen_f2 | seen_f3                  // firms of the cohort file or a later one
+ 44. gen int  cohort_year = `cohort_year'
+ 45. gen byte in_cohort   = (seen_base == 1)
+ 46. * -- new_to_file = 1: in the cohort file but in neither of the two files before
+. *    (it may still be in an older file); 0 = "incumbent" (R10 uses 0 as incumbent) --
+. gen byte new_to_file = .
+ 47. if "`p1'" != "" replace new_to_file = (seen_p1 == 0 & (seen_p2 == 0 | missing(seen_p2))) if in_cohort
+ 48. * -- presence in the next three files, e.g. "110" = in f1 and f2, not in f3 --
+. gen str3 pattern = string(seen_f1) + string(seen_f2) + string(seen_f3) if in_cohort
+ 49. * -- state by the last file (f3) --
+. *    1 stayed           = in all three later files
+. *    2 absent then back = missed f1 and/or f2, in f3 again ("temporary disappearance")
+. *    3 left the files   = not in f3 (the file has no closure record: not proof of closure)
+. gen byte state_file = cond(pattern == "111", 1, cond(seen_f3 == 1, 2, 3)) if in_cohort
+ 50. *    left_when: 1 = gone from f1 on ("000"), 2 = in f1 or f2, gone by f3
+. gen byte left_when = cond(pattern == "000", 1, 2) if state_file == 3
+ 51. * -- stayers: change from the cohort file to f3; 0 in f3 counts as shrank;
+. *    no positive cohort-file level (or no f3 level) = not classified (missing) --
+. gen double ratio_wk  = workers_f3 / workers_base if state_file == 1 & workers_base > 0 & !missing(workers_base, worker
+> s_f3)
+ 52. gen double ratio_out = output_f3  / output_base  if state_file == 1 & output_base  > 0 & !missing(output_base,  out
+> put_f3)
+ 53. foreach m in wk out {
+ 54.     gen byte size_`m' = cond(ratio_`m' < `band_lo', 1, cond(ratio_`m' > `band_hi', 3, 2)) if !missing(ratio_`m')
+ 55.     *   outcome5: 1 left the files, 2 absent then back, 3 shrank, 4 about the same, 5 grew
+.     gen byte outcome5_`m' = cond(state_file == 3, 1, cond(state_file == 2, 2, 2 + size_`m')) if in_cohort
+ 56.     replace  outcome5_`m' = . if state_file == 1 & missing(size_`m')
+ 57. }
+ 58. * -- newcomers: the later file a firm not in the cohort file first appears in --
+. gen int new_in_file = cond(seen_f1, `f1', cond(seen_f2, `f2', `f3')) if !in_cohort
+ 59. gen str80 outcome_basis = "`outbasis'"
+ 60. label define c_state 1 "stayed" 2 "absent then back" 3 "left the files", replace
+ 61. label define c_left  1 "gone from the first later file" 2 "gone later", replace
+ 62. label define c_size  1 "shrank" 2 "about the same" 3 "grew", replace
+ 63. label define c_out5  1 "left the files" 2 "absent then back" 3 "stayed, shrank" 4 "stayed, about the same" 5 "staye
+> d, grew", replace
+ 64. label values state_file c_state
+ 65. label values left_when c_left
+ 66. label values size_wk size_out c_size
+ 67. label values outcome5_wk outcome5_out c_out5
+ 68. * -- structural checks (hold on any data) --
+. isid firm_id
+ 69. assert !missing(state_file, pattern) if in_cohort
+ 70. assert missing(state_file) & !missing(new_in_file) if !in_cohort
+ 71. assert (state_file == 1) == (pattern == "111") if in_cohort
+ 72. assert !missing(outcome5_wk) if in_cohort & state_file != 1
+ 73. order firm_id cohort_year in_cohort new_to_file seen_* pattern state_file left_when ///
+>     workers_base workers_f3 ratio_wk size_wk outcome5_wk output_base output_f3 ratio_out size_out ///
+>     outcome5_out new_in_file outcome_basis
+ 74. display "   cohort file `cohort_year'; later files `f1' `f2' `f3'; earlier files `p2' `p1'; output: `outbasis'; ban
+> d +/-`band_pct'%"
+ 75. *===========================================================================
+. * END OF COVID COHORT AND STATES
+. *===========================================================================
+. 
+. * back to firm-year rows: attach the cohort markers to every record of each firm
+. keep firm_id in_cohort new_to_file pattern state_file left_when
+ 76. tempfile cohort
+ 77. save `cohort'
+ 78. use `firmyear0', clear
+ 79. merge m:1 firm_id using `cohort', keep(master match) nogenerate
+ 80. replace in_cohort = 0 if missing(in_cohort)       // firms seen only before the cohort file
+ 81. 
+. *===========================================================================
+. * R10 FROZEN PRE-COVID GROUPS (copy exactly into later R10 files)
+. *===========================================================================
+. * Needs: firm-year data with firm_id year export_flag import_flag fdi_10_flag,
+. * in_cohort and new_to_file, and the locals cohort_year p1 p2 from the cohort block
+. * (p1 = the file just before the cohort file, p2 = the one before that).
+. * Each firm is put in each group ONCE, from its own records in the files
+. * `p2', `p1' and `cohort_year' (the last file before COVID and the two before it).
+. * Answers from later files NEVER change a group.
+. *   main rule   : in the group (1) if it answered "yes" in at least half of its
+. *                 known answers in those files; other firms (0) = "yes" in fewer
+. *                 than half (most never said "yes"; e.g. yes in 1 of 3 = other);
+. *                 no known answer = left out (missing), never counted as "no".
+. *   stricter    : 1 only if "yes" in EVERY known answer; 0 only if never "yes";
+. *                 firms with both answers ("mixed") are left out (missing).
+. *   early files : main rule on the files `p2' and `p1' only (Bu Deasy's literal "pre-2019").
+. *   base file   : the answer in the `cohort_year' file only.
+. * Variable names: grp_<rule>_<x>, x = exp (export_flag), imp (import_flag),
+. * fdi (fdi_10_flag); rule = main, strict, early, base. Also k_<x> (known
+. * answers) and s_<x> (of which "yes") in the three files.
+. * Main sample of R10 = cohort firms that are not new to the file (new_to_file == 0):
+. * a firm first seen in `cohort_year' has only one year of answers and no earlier years.
+. if "`p1'" == "" | "`p2'" == "" {
+ 82.     display as error "the groups need two files before the cohort file `cohort_year'"
+ 83.     exit 198
+ 84. }
+ 85. local grp_rule_min 0.5
+ 86. gen byte in_pre   = inlist(year, `p2', `p1', `cohort_year')
+ 87. gen byte in_early = inlist(year, `p2', `p1')
+ 88. foreach x in exp imp fdi {
+ 89.     if "`x'" == "exp" local v export_flag
+ 90.     if "`x'" == "imp" local v import_flag
+ 91.     if "`x'" == "fdi" local v fdi_10_flag
+ 92.     bysort firm_id: egen byte k_`x' = total(in_pre & !missing(`v'))
+ 93.     bysort firm_id: egen byte s_`x' = total(in_pre & `v' == 1)
+ 94.     gen byte grp_main_`x'   = s_`x' / k_`x' >= `grp_rule_min' if k_`x' > 0
+ 95.     gen byte grp_strict_`x' = cond(k_`x' == 0, ., cond(s_`x' == k_`x', 1, cond(s_`x' == 0, 0, .)))
+ 96.     bysort firm_id: egen byte ke = total(in_early & !missing(`v'))
+ 97.     bysort firm_id: egen byte se = total(in_early & `v' == 1)
+ 98.     gen byte grp_early_`x'  = se / ke >= `grp_rule_min' if ke > 0
+ 99.     bysort firm_id: egen byte grp_base_`x' = max(cond(year == `cohort_year', `v', .))
+100.     drop ke se
+101.     * groups exist only for firms in the cohort; they are constant within a firm
+.     foreach r in main strict early base {
+102.         replace grp_`r'_`x' = . if !in_cohort
+103.         bysort firm_id: assert grp_`r'_`x' == grp_`r'_`x'[1]
+104.     }
+105.     replace k_`x' = . if !in_cohort
+106.     replace s_`x' = . if !in_cohort
+107. }
+108. drop in_pre in_early
+109. label define grp 1 "in the group" 0 "other firms"
+110. label values grp_* grp
+111. *===========================================================================
+. * END R10 FROZEN PRE-COVID GROUPS
+. *===========================================================================
+. * ---- keep every firm of the start file (incumbents and firms new to it), its files ----
+. local s = cond(`cohort_year' == `covid_start', 1, 2)      // 1 = COVID years, 2 = normal years
+112. local lo `p2'
+113. local lb_`s' ""
+114. if `s' == 1 {
+115.     * look-back version (table only): up to lb_n more files before p2
+.     local before ""
+116.     foreach c of local allfiles {
+117.         if `c' < `p2' local before "`before' `c'"
+118.     }
+119.     local nb : word count `before'
+120.     forvalues i = `=max(1, `nb' - `lb_n' + 1)'/`nb' {
+121.         local lb_`s' "`lb_`s'' `: word `i' of `before''"
+122.     }
+123.     local lb_`s' = strtrim("`lb_`s''")
+124.     if "`lb_`s''" != "" local lo : word 1 of `lb_`s''
+125. }
+126. keep if in_cohort & inrange(year, `lo', `f3')
+127. gen byte section = `s'
+128. gen byte stayer  = (state_file == 1)        // in every later file
+129. gen double outv  = `outbasis'               // output as chosen by the cohort block
+130. local ob_`s' "`outbasis'"
+131. keep firm_id year section new_to_file stayer state_file left_when pattern grp_main_* grp_strict_* ///
+>     grp_early_* grp_base_* ex dir_only workers outv value_added_nominal industry2_reported province_code
+132. foreach q in p2 p1 f1 f2 f3 {
+133.     local `q'_`s' ``q''
+134. }
+135. local start_`s' `cohort_year'
+136. if !`first' append using `panel'
+137. save `panel', replace
+138. local first 0
+139. }
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(30,042 missing values generated)
+(29,872 missing values generated)
+(30,042 missing values generated)
+(29,872 missing values generated)
+(0 observations deleted)
+(5,118 observations deleted)
+(5,345 missing values generated)
+(3,007 real changes made)
+(2,338 missing values generated)
+(2,338 missing values generated)
+(4,016 missing values generated)
+(3,667 missing values generated)
+(3,667 missing values generated)
+(3,667 missing values generated)
+(2,338 missing values generated)
+(0 real changes made)
+(3,667 missing values generated)
+(2,338 missing values generated)
+(0 real changes made)
+(3,007 missing values generated)
+   cohort file 2019; later files 2020 2021 2022; earlier files 2017 2018; output: gross_output_nominal; band +/-10%
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_01698.000003 saved as .dta format
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                        10,306
+        from master                    10,306  
+        from using                          0  
+
+    Matched                            22,743  
+    -----------------------------------------
+(10,306 real changes made)
+(16,954 missing values generated)
+(18,684 missing values generated)
+(19,682 missing values generated)
+(23,283 missing values generated)
+(2,389 real changes made, 2,389 to missing)
+(2,293 real changes made, 2,293 to missing)
+(2,389 real changes made, 2,389 to missing)
+(0 real changes made)
+(13,708 real changes made, 13,708 to missing)
+(13,708 real changes made, 13,708 to missing)
+(9,520 missing values generated)
+(17,241 missing values generated)
+(11,026 missing values generated)
+(13,708 missing values generated)
+(4,188 real changes made, 4,188 to missing)
+(3,700 real changes made, 3,700 to missing)
+(4,188 real changes made, 4,188 to missing)
+(0 real changes made)
+(13,708 real changes made, 13,708 to missing)
+(13,708 real changes made, 13,708 to missing)
+(9,520 missing values generated)
+(12,702 missing values generated)
+(11,026 missing values generated)
+(13,708 missing values generated)
+(4,188 real changes made, 4,188 to missing)
+(3,976 real changes made, 3,976 to missing)
+(4,188 real changes made, 4,188 to missing)
+(0 real changes made)
+(13,708 real changes made, 13,708 to missing)
+(13,708 real changes made, 13,708 to missing)
+(16,308 observations deleted)
+(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_01698.000002 not found)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_01698.000002 saved as .dta format
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(30,690 missing values generated)
+(30,417 missing values generated)
+(30,690 missing values generated)
+(30,417 missing values generated)
+(18,566 observations deleted)
+(1,092 observations deleted)
+(4,347 missing values generated)
+(2,359 real changes made)
+(1,988 missing values generated)
+(1,988 missing values generated)
+(3,334 missing values generated)
+(3,001 missing values generated)
+(3,001 missing values generated)
+(3,001 missing values generated)
+(1,988 missing values generated)
+(0 real changes made)
+(3,001 missing values generated)
+(1,988 missing values generated)
+(0 real changes made)
+(2,359 missing values generated)
+   cohort file 2012; later files 2013 2014 2015; earlier files 2010 2011; output: gross_output_nominal; band +/-10%
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_01698.000004 saved as .dta format
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                        11,363
+        from master                    11,363  
+        from using                          0  
+
+    Matched                            21,686  
+    -----------------------------------------
+(11,363 real changes made)
+(17,891 missing values generated)
+(19,716 missing values generated)
+(19,958 missing values generated)
+(23,012 missing values generated)
+(1,007 real changes made, 1,007 to missing)
+(949 real changes made, 949 to missing)
+(1,007 real changes made, 1,007 to missing)
+(0 real changes made)
+(17,170 real changes made, 17,170 to missing)
+(17,170 real changes made, 17,170 to missing)
+(15,836 missing values generated)
+(20,351 missing values generated)
+(17,453 missing values generated)
+(17,170 missing values generated)
+(1,334 real changes made, 1,334 to missing)
+(1,234 real changes made, 1,234 to missing)
+(1,334 real changes made, 1,334 to missing)
+(0 real changes made)
+(17,170 real changes made, 17,170 to missing)
+(17,170 real changes made, 17,170 to missing)
+(15,836 missing values generated)
+(17,594 missing values generated)
+(17,453 missing values generated)
+(17,170 missing values generated)
+(1,334 real changes made, 1,334 to missing)
+(1,256 real changes made, 1,256 to missing)
+(1,334 real changes made, 1,334 to missing)
+(0 real changes made)
+(17,170 real changes made, 17,170 to missing)
+(17,170 real changes made, 17,170 to missing)
+(22,707 observations deleted)
+(label grp already defined)
+(label c_state already defined)
+(label c_left already defined)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_01698.000002 saved as .dta format
+
+. * the files of each section: two before the start file, the start file, three after
+. forvalues s = 1/2 {
+  2.     local win_`s' "`p2_`s'' `p1_`s'' `start_`s'' `f1_`s'' `f2_`s'' `f3_`s''"
+  3.     local pre_`s' "`p2_`s'' `p1_`s''"
+  4. }
+
+. * exporting (as R10-05): COVID years use the later files before the first direct-only file;
+. * normal years the same number of later files after their start file
+. local post_1 ""
+
+. local stop 0
+
+. foreach q in f1 f2 f3 {
+  2.     local yy ``q'_1'
+  3.     local isdir : list yy in dir_yrs
+  4.     if `isdir' local stop 1
+  5.     if !`stop' local post_1 "`post_1' `yy'"
+  6. }
+
+. local post_1 = strtrim("`post_1'")
+
+. local npost_ex : word count `post_1'
+
+. assert `npost_ex' >= 1
+
+. local post_2 ""
+
+. forvalues k = 1/`npost_ex' {
+  2.     local post_2 "`post_2' `f`k'_2'"
+  3. }
+
+. local post_2 = strtrim("`post_2'")
+
+. forvalues s = 1/2 {
+  2.     local mw_`s' "`pre_`s'' `start_`s'' `post_`s''"      // the files of the export models
+  3. }
+
+. foreach y of local win_2 {
+  2.     local isdir : list y in dir_yrs
+  3.     assert !`isdir'                                        // the normal years keep one question
+  4. }
+
+. assert `f3_2' < `p2_1'                                     // the two windows do not overlap
+
+. local out_prices = cond("`ob_1'" == "gross_output_real", "constant prices", "current prices")
+
+. use `panel', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. egen int ind  = group(industry2_reported)
+
+. egen int prov = group(province_code)
+
+. * island group from the province code's first digit (BPS numbering, as R1-10): 1-2 = Sumatra
+. * (21 = Riau Islands), 3 = Java, 5-9 = the other islands (a firm with no province code gets
+. * no island and is left out of the reweighting, counted)
+. gen byte island = cond(inlist(substr(province_code, 1, 1), "1", "2"), 1, cond(substr(province_code, 1, 1) == "3", 2, 3
+> )) ///
+>     if province_code != ""
+
+. display "   COVID years: files `win_1' (look-back files: `lb_1'); exports use `mw_1'"
+   COVID years: files 2017 2018 2019 2020 2021 2022 (look-back files: 2013 2014 2015); exports use 2017 2018 2019 2020 2
+> 021
+
+. display "   normal years: files `win_2'; exports use `mw_2'"
+   normal years: files 2010 2011 2012 2013 2014 2015; exports use 2010 2011 2012 2013 2014
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 4/10: the outcomes (as in R10-02 to R10-05)"
+Step 4/10: the outcomes (as in R10-02 to R10-05)
+
+. *---------------------------------------------------------------------------
+. * 1 still in the files (R10-02): one row per firm, below
+. * 2 output, 3 workers, 4 value added per worker: logs, so a difference reads as a % difference
+. *   (zero or missing = not used; as R10-03)
+. * 5 exporting: 100 or 0, unknown answer = missing (as R10-05)
+. gen double y2 = ln(outv) if outv > 0 & !missing(outv)
+
+. gen double y3 = ln(workers) if workers > 0 & !missing(workers)
+(3 missing values generated)
+
+. gen double y4 = ln(value_added_nominal / workers) ///
+>     if value_added_nominal > 0 & workers > 0 & !missing(value_added_nominal, workers)
+(3 missing values generated)
+
+. gen double y5 = ex
+(11,389 missing values generated)
+
+. compress
+  variable ind was int now byte
+  variable prov was int now byte
+  variable ex was double now byte
+  variable y5 was double now byte
+  (433,328 bytes saved)
+
+. save `panel', replace
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_01698.000002 saved as .dta format
+
+. forvalues s = 1/2 {
+  2.     egen byte ft = tag(firm_id) if section == `s' & new_to_file == 0
+  3.     quietly count if ft == 1
+  4.     local n_inc_`s' = r(N)
+  5.     quietly count if ft == 1 & stayer
+  6.     local n_stay_`s' = r(N)
+  7.     drop ft
+  8.     egen byte ft = tag(firm_id) if section == `s' & new_to_file == 1
+  9.     quietly count if ft == 1
+ 10.     local n_new_`s' = r(N)
+ 11.     drop ft
+ 12. }
+
+. display "   `start_1' file: `n_inc_1' firms also in `p2_1' or `p1_1' (`n_stay_1' in every file `f1_1'-`f3_1'), `n_new_
+> 1' new"
+   2019 file: 2266 firms also in 2017 or 2018 (1484 in every file 2020-2022), 741 new
+
+. display "   `start_2' file: `n_inc_2' firms also in `p2_2' or `p1_2' (`n_stay_2' in every file `f1_2'-`f3_2'), `n_new_
+> 2' new"
+   2012 file: 1796 firms also in 2010 or 2011 (1213 in every file 2013-2015), 563 new
+
+. 
+. * (1) still in the files, one row per firm of each start file (R10-02's code): still in k files
+. * later = in that file or a later one (a firm that misses a file and comes back was still there)
+. keep if (section == 1 & year == `start_1') | (section == 2 & year == `start_2')
+(21,717 observations deleted)
+
+. isid section firm_id
+
+. forvalues k = 1/3 {
+  2.     gen byte infile_`k' = substr(pattern, `k', 1) == "1"
+  3. }
+
+. gen byte still_1 = infile_1 | infile_2 | infile_3
+
+. gen byte still_2 = infile_2 | infile_3
+
+. gen byte still_3 = infile_3
+
+. assert (still_1 == 0) == (left_when == 1)
+
+. assert (still_3 == 0) == (state_file == 3)
+
+. keep section firm_id new_to_file stayer ind prov island grp_* still_*
+
+. tempfile firms
+
+. save `firms'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_01698.000005 saved as .dta format
+
+. 
+. * (2) R10-04's what-if (its code): firms of the COVID start file also in p2 or p1, one row for
+. * every file p2 to f3; a firm not in a later file and in none after it counts as CLOSED from
+. * that file on (output and workers 0). Other added rows (absent, then back) are dropped.
+. * Outcome: change from the firm's own start-file level on the midpoint scale, in %:
+. *   200 x (level - start level) / (level + start level), -200 = fell to 0.
+. use `panel', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if section == 1 & new_to_file == 0 & inrange(year, `p2_1', `f3_1')
+(15,549 observations deleted)
+
+. keep firm_id year workers outv ind prov stayer state_file grp_main_exp grp_main_imp grp_main_fdi
+
+. fillin firm_id year
+
+. foreach v in ind prov stayer state_file grp_main_exp grp_main_imp grp_main_fdi {
+  2.     bysort firm_id (_fillin year): replace `v' = `v'[1]     // firm traits never change: copy them
+  3. }
+(2,062 real changes made)
+(2,062 real changes made)
+(2,062 real changes made)
+(2,062 real changes made)
+(1,484 real changes made)
+(2,062 real changes made)
+(2,062 real changes made)
+
+. bysort firm_id: egen int last_seen = max(cond(_fillin == 0, year, .))
+
+. gen byte closed = _fillin & year > `start_1' & year > last_seen
+
+. drop if _fillin & !closed
+(288 observations deleted)
+
+. assert closed == 0 if stayer
+
+. bysort firm_id: egen byte cl_last = max(closed & year == `f3_1')
+
+. assert cl_last == (state_file == 3)
+
+. drop cl_last _fillin
+
+. local outname2 "outv"
+
+. local outname3 "workers"
+
+. forvalues k = 2/3 {
+  2.     bysort firm_id: egen double base`k' = max(cond(year == `start_1', `outname`k'', .))
+  3.     gen double lev`k' = cond(closed, 0, `outname`k'')
+  4.     gen double y`k' = 200 * (lev`k' - base`k') / (lev`k' + base`k') ///
+>         if base`k' > 0 & !missing(base`k') & (closed | (lev`k' > 0 & !missing(lev`k')))
+  5.     assert y`k' == -200 if closed & !missing(y`k')
+  6.     assert y`k' == 0 if year == `start_1' & !missing(y`k')
+  7. }
+(2 missing values generated)
+
+. egen byte ft = tag(firm_id)
+
+. quietly count if ft & state_file == 3
+
+. local n_left = r(N)
+
+. drop ft
+
+. tempfile cldata
+
+. save `cldata'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_01698.000006 saved as .dta format
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 5/10: weights: other firms made to match each group before COVID (entropy balancing)"
+Step 5/10: weights: other firms made to match each group before COVID (entropy balancing)
+
+. *---------------------------------------------------------------------------
+. * Balancing measures, from each firm's own records in the files p2 to the start file (before
+. * COVID only), records with output, value added and workers above zero; logs, so a few very
+. * large firms do not dominate: m1 workers, m2 output, m3 value added per worker. Also the
+. * firm's other two groups (0/100: 100 = known to be in that group; an unknown export answer
+. * is not a target of its own - with it, importers could not be balanced), industry and island.
+. * Two sets per grouping: all firms of the COVID start file also in p2 or p1
+. * (for "still in the files" and exporting) and the firms in every later file (for output,
+. * workers and value added per worker, whose main sample they are).
+. use `panel', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if section == 1 & new_to_file == 0
+(11,848 observations deleted)
+
+. gen byte cv = inrange(year, `p2_1', `start_1') & outv > 0 & value_added_nominal > 0 & workers > 0 ///
+>     & !missing(outv, value_added_nominal, workers)
+
+. bysort firm_id: egen double m1 = mean(cond(cv, ln(workers), .))
+
+. bysort firm_id: egen double m2 = mean(cond(cv, ln(outv), .))
+
+. bysort firm_id: egen double m3 = mean(cond(cv, ln(value_added_nominal / workers), .))
+
+. egen byte firm1 = tag(firm_id)
+
+. keep if firm1
+(12,969 observations deleted)
+
+. keep firm_id ind island m1 m2 m3 stayer grp_main_exp grp_main_imp grp_main_fdi
+
+. tempfile firmdata
+
+. save `firmdata'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_01698.000007 saved as .dta format
+
+. 
+. * ---- Entropy balancing, written out (Hainmueller 2012) -----------------------------------
+. mata:
+------------------------------------------------- mata (type end to exit) ----------------------------------------------
+: // C = the other firms' balancing measures (one row per firm); m = the group's averages (targets).
+: // Returns one weight per other firm (adding up to 1). The weights are as close to equal weights
+: // as possible (smallest "entropy" distance) while the weighted averages C'w equal m exactly.
+: // They take the form w = exp(Z*lam) / sum(exp(Z*lam)) with Z = (C - m) / spread, one lam per
+: // measure; lam is found by Newton steps that minimise ln(sum(exp(Z*lam))) (the "dual" problem),
+: // whose slope is exactly the remaining weighted gap. Done when every gap is below tol spreads.
+: real colvector r110eb(real matrix C, real rowvector m, real scalar tol, real scalar maxit)
+> {
+>     real matrix Z, H
+>     real colvector lam, e, w, step
+>     real rowvector s, g
+>     real scalar it, L, Lnew, a, top
+>     s   = sqrt(diagonal(variance(C)))'       // each measure's spread among the other firms
+>     Z   = (C :- m) :/ s                       // distance from the group's average, in spreads
+>     lam = J(cols(Z), 1, 0)                    // start from equal weights
+>     for (it = 0; it <= maxit; it++) {
+>         e   = Z * lam
+>         top = max(e)                          // (taking out the largest avoids overflow in exp)
+>         w   = exp(e :- top)
+>         L   = ln(sum(w)) + top                // the dual: what the Newton steps make smaller
+>         w   = w / sum(w)
+>         g   = w' * Z                          // remaining weighted gap per measure (= the slope)
+>         if (max(abs(g)) < tol) break
+>         H   = (Z :* w)' * Z - g' * g          // curvature = weighted spread of Z
+>         step = -cholsolve(H, g')
+>         if (hasmissing(step)) step = -pinv(H) * g'
+>         a = 1                                 // halve the step until the dual falls enough
+>         while (a > 1e-12) {
+>             e    = Z * (lam + a * step)
+>             top  = max(e)
+>             Lnew = ln(sum(exp(e :- top))) + top
+>             if (Lnew <= L + 1e-4 * a * (g * step)) break
+>             a = a / 2
+>         }
+>         if (a <= 1e-12) break                 // no further progress possible (rounding): stop here
+>         lam = lam + a * step
+>     }
+>     st_numscalar("r110_iter", it)
+>     st_numscalar("r110_gap", max(abs(g)))
+>     return(w)
+> }
+
+: end
+------------------------------------------------------------------------------------------------------------------------
+
+. 
+. tempname hb
+
+. tempfile balance
+
+. postfile `hb' str8 grouping str4 sample str12 measure double(mean_g mean_o mean_ow sd_pool std_before std_after) ///
+>     long(firms_g1 firms_g0 drop_g1 drop_g0 drop_nomeas iter) double(worth_g0 wmax_ratio gap_max) byte balanced ///
+>     using `balance', replace
+(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_01698.000008 not found)
+
+. foreach x in exp imp fdi {
+  2.     foreach ws in all stay {
+  3.         use `firmdata', clear
+  4.         keep if !missing(grp_main_`x')
+  5.         if "`ws'" == "stay" keep if stayer
+  6.         quietly count if missing(m1, m2, m3) | missing(ind, island)
+  7.         local dnm = r(N)                            // no usable record before COVID (or no
+  8.         drop if missing(m1, m2, m3) | missing(ind, island)  // industry or province code)
+  9.         gen byte t  = grp_main_`x'
+ 10.         gen byte t0 = 1 - t
+ 11.         * an industry or island with firms of only one kind cannot be balanced: its firms are left out
+.         bysort ind: egen long n1i = total(t)
+ 12.         bysort ind: egen long n0i = total(t0)
+ 13.         bysort island: egen long n1r = total(t)
+ 14.         bysort island: egen long n0r = total(t0)
+ 15.         gen byte off = n1i == 0 | n0i == 0 | n1r == 0 | n0r == 0
+ 16.         quietly count if off & t == 1
+ 17.         local d1 = r(N)
+ 18.         quietly count if off & t == 0
+ 19.         local d0 = r(N)
+ 20.         drop if off
+ 21.         quietly count if t == 1
+ 22.         local n1 = r(N)
+ 23.         quietly count if t == 0
+ 24.         local n0 = r(N)
+ 25.         * the other two groups: share of firms known to be in each (0/100: 100 = in that group;
+.         * a firm whose answer is unknown is simply not known to be in it)
+.         local stv ""
+ 26.         foreach z in exp imp fdi {
+ 27.             if "`z'" == "`x'" continue
+ 28.             gen double st_`z' = 100 * (grp_main_`z' == 1)
+ 29.             local stv "`stv' st_`z'"
+ 30.         }
+ 31.         * industry and island shares as 0/100 columns; one category of each is left out (shares add to 100)
+.         quietly tab ind, gen(I_)
+ 32.         quietly tab island, gen(R_)
+ 33.         foreach v of varlist I_* R_* {
+ 34.             quietly replace `v' = 100 * `v'
+ 35.         }
+ 36.         drop I_1 R_1
+ 37.         local X "m1 m2 m3 `stv' I_* R_*"
+ 38.         unab X : `X'
+ 39.         * a measure that is the same for every other firm cannot be moved by weights: left out of the
+.         * targets here; the balance check below still tests it
+.         local XX ""
+ 40.         foreach v of local X {
+ 41.             quietly summarize `v' if t == 0
+ 42.             if r(sd) > 0 local XX "`XX' `v'"
+ 43.         }
+ 44.         mata: r110w = r110eb(st_data(., "`XX'", "t0"), mean(st_data(., "`XX'", "t")), `eb_tol', `eb_maxit')
+ 45.         gen double w = 1 if t == 1
+ 46.         mata: st_store(., "w", "t0", r110w * `n1')
+ 47.         local it  = scalar(r110_iter)
+ 48.         local gap = scalar(r110_gap)
+ 49.         * what the weighted other firms are worth: as many equally weighted firms as (sum w)^2 / sum w^2
+.         gen double w2 = w^2
+ 50.         quietly summarize w if t == 0
+ 51.         local sw = r(sum)
+ 52.         local wmr = r(max) / r(mean)                // largest weight / average weight
+ 53.         quietly summarize w2 if t == 0
+ 54.         local worth = `sw'^2 / r(sum)
+ 55.         * balance check on every target: weighted gap in spreads
+.         local bal = `gap' < `eb_tol'
+ 56.         foreach v of local X {
+ 57.             quietly summarize `v' if t == 1
+ 58.             local mg = r(mean)
+ 59.             local vg = r(Var)
+ 60.             quietly summarize `v' if t == 0
+ 61.             local vo = r(Var)
+ 62.             quietly summarize `v' [aw = w] if t == 0
+ 63.             if abs(`mg' - r(mean)) > 1e-5 * sqrt((`vg' + `vo') / 2) local bal 0
+ 64.         }
+ 65.         display "   `x' (`ws'): `n1' in group, `n0' others, worth " %6.1f `worth' ///
+>             "; steps `it'; balanced: " cond(`bal', "yes", "NO")
+ 66.         if !`bal' {
+ 67.             display as error "   balance NOT reached for `x' (`ws'): its reweighted rows are left empty"
+ 68.             replace w = .
+ 69.         }
+ 70.         * the balance table: every measure, each industry and island, before and after weighting
+.         quietly levelsof ind, local(inds)
+ 71.         foreach l of local inds {
+ 72.             gen double ind_`l' = 100 * (ind == `l')
+ 73.         }
+ 74.         quietly levelsof island, local(isls)
+ 75.         foreach l of local isls {
+ 76.             gen double isl_`l' = 100 * (island == `l')
+ 77.         }
+ 78.         foreach v of varlist m1 m2 m3 `stv' ind_* isl_* {
+ 79.             quietly summarize `v' if t == 1
+ 80.             local mg = r(mean)
+ 81.             local vg = r(Var)
+ 82.             quietly summarize `v' if t == 0
+ 83.             local mo = r(mean)
+ 84.             local vo = r(Var)
+ 85.             local sdp = sqrt((`vg' + `vo') / 2)
+ 86.             local mow = .
+ 87.             if `bal' {
+ 88.                 quietly summarize `v' [aw = w] if t == 0
+ 89.                 local mow = r(mean)
+ 90.             }
+ 91.             local sb = cond(`sdp' > 0, (`mg' - `mo') / `sdp', .)
+ 92.             local sa = cond(`sdp' > 0, (`mg' - `mow') / `sdp', .)
+ 93.             post `hb' ("`x'") ("`ws'") ("`v'") (`mg') (`mo') (`mow') (`sdp') (`sb') (`sa') ///
+>                 (`n1') (`n0') (`d1') (`d0') (`dnm') (`it') (`worth') (`wmr') (`gap') (`bal')
+ 94.         }
+ 95.         keep firm_id w
+ 96.         tempfile w_`x'_`ws'
+ 97.         save `w_`x'_`ws''
+ 98.     }
+ 99. }
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(662 observations deleted)
+(0 observations deleted)
+(55 observations deleted)
+(1,147 missing values generated)
+   exp (all): 402 in group, 1147 others, worth  151.2; steps 6; balanced: yes
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_01698.000009 saved as .dta format
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(662 observations deleted)
+(555 observations deleted)
+(0 observations deleted)
+(47 observations deleted)
+(759 missing values generated)
+   exp (stay): 243 in group, 759 others, worth  114.7; steps 8; balanced: yes
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_01698.00000a saved as .dta format
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(0 observations deleted)
+(0 observations deleted)
+(0 observations deleted)
+(937 missing values generated)
+   imp (all): 1329 in group, 937 others, worth   73.2; steps 6; balanced: yes
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_01698.00000b saved as .dta format
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(0 observations deleted)
+(782 observations deleted)
+(0 observations deleted)
+(20 observations deleted)
+(634 missing values generated)
+   imp (stay): 830 in group, 634 others, worth   29.1; steps 8; balanced: yes
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_01698.00000c saved as .dta format
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(0 observations deleted)
+(0 observations deleted)
+(145 observations deleted)
+(1,994 missing values generated)
+   fdi (all): 127 in group, 1994 others, worth  385.2; steps 6; balanced: yes
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_01698.00000d saved as .dta format
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(0 observations deleted)
+(782 observations deleted)
+(0 observations deleted)
+(74 observations deleted)
+(1,347 missing values generated)
+   fdi (stay): 63 in group, 1347 others, worth  257.5; steps 7; balanced: yes
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_01698.00000e saved as .dta format
+
+. postclose `hb'
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 6/10: regressions: every outcome x group x version (as R10-02 to R10-05)"
+Step 6/10: regressions: every outcome x group x version (as R10-02 to R10-05)
+
+. *---------------------------------------------------------------------------
+. * r106_es: the yearly model and the pooled term of R10-03, R10-04 and R10-05, on the rows in
+. * memory (X = 1 group, 0 other firms). Outcome = firm's own average + one average per industry
+. * and file + one per province and file (or the given averages) + the group's extra change in
+. * each file against the reference (start) file:
+. *   b_file = (group's change since the start file) - (other firms' change).
+. * Posted: one row per file, the average of the markers after the start file ("vs 2019") and
+. * the pooled term (Bu Deasy's "x Post2020": group x every later file, against the start file
+. * and the files before it together; its own regression on the same rows, "vs 2017-19").
+. capture program drop r106_es
+
+. program define r106_es
+  1.     args P oid x v y ref wl ab wt
+  2.     local terms ""
+  3.     local pre_terms ""
+  4.     local lc ""
+  5.     local np 0
+  6.     foreach yy of local wl {
+  7.         if `yy' != `ref' {
+  8.             gen double t`yy' = X * (year == `yy')
+  9.             local terms "`terms' t`yy'"
+ 10.             if `yy' < `ref' local pre_terms "`pre_terms' t`yy'"
+ 11.             else {
+ 12.                 local lc "`lc' + t`yy'"
+ 13.                 local ++np
+ 14.             }
+ 15.         }
+ 16.     }
+ 17.     gen double tpost = X * (year > `ref')
+ 18.     local wexp ""
+ 19.     if "`wt'" != "" local wexp "[pw = `wt']"
+ 20.     * --- year by year ---
+.     quietly reghdfe `y' `terms' `wexp', absorb(`ab') vce(cluster firm_id)
+ 21.     gen byte es = e(sample)
+ 22.     local N  = e(N)
+ 23.     local G  = e(N_clust)
+ 24.     local df = e(df_r)
+ 25.     local S  = e(num_singletons)
+ 26.     if "`S'" == "" local S 0
+ 27.     * before-start check: all markers before the start file are 0 together
+.     capture test `pre_terms'
+ 28.     local bp = cond(_rc, ., r(p))
+ 29.     * average of the markers after the start file
+.     quietly lincom (`=substr("`lc'", 4, .)') / `np'
+ 30.     local ab_ = r(estimate)
+ 31.     local as_ = r(se)
+ 32.     * firms behind each marker: group (X = 1) and other firms (X = 0)
+.     quietly count if es & year == `ref' & X == 1
+ 33.     local r1 = r(N)
+ 34.     quietly count if es & year == `ref' & X == 0
+ 35.     local r0 = r(N)
+ 36.     egen byte ft = tag(firm_id) if es
+ 37.     quietly count if ft == 1 & X == 1
+ 38.     local fg1 = r(N)
+ 39.     quietly count if ft == 1 & X == 0
+ 40.     local fg0 = r(N)
+ 41.     * what the weighted other firms of the start file are worth (as many firms counted equally)
+.     local wo .
+ 42.     if "`wt'" != "" {
+ 43.         gen double w2_ = `wt'^2
+ 44.         quietly summarize `wt' if es & year == `ref' & X == 0
+ 45.         local sw = r(sum)
+ 46.         quietly summarize w2_ if es & year == `ref' & X == 0
+ 47.         local wo = `sw'^2 / r(sum)
+ 48.     }
+ 49.     foreach yy of local wl {
+ 50.         if `yy' == `ref' continue
+ 51.         quietly count if es & year == `yy' & X == 1
+ 52.         local n1 = r(N)
+ 53.         quietly count if es & year == `yy' & X == 0
+ 54.         local n0 = r(N)
+ 55.         * a file with no rows for this outcome is dropped by reghdfe: left empty
+.         capture local sechk = _se[t`yy']
+ 56.         if _rc local sechk = .
+ 57.         if `sechk' == 0 | missing(`sechk') {
+ 58.             post `P' (`oid') ("`x'") ("`v'") ("`yy'") (`yy') (`ref') (.) (.) (`df') (`N') (`G') (`S') ///
+>                 (`n1') (`n0') (`r1') (`r0') (`fg1') (`fg0') (`bp') (`wo')
+ 59.         }
+ 60.         else {
+ 61.             post `P' (`oid') ("`x'") ("`v'") ("`yy'") (`yy') (`ref') (_b[t`yy']) (_se[t`yy']) (`df') (`N') (`G') //
+> /
+>                 (`S') (`n1') (`n0') (`r1') (`r0') (`fg1') (`fg0') (`bp') (`wo')
+ 62.         }
+ 63.     }
+ 64.     post `P' (`oid') ("`x'") ("`v'") ("avgpost") (.) (`ref') (`ab_') (`as_') (`df') (`N') (`G') (`S') ///
+>         (.) (.) (`r1') (`r0') (`fg1') (`fg0') (`bp') (`wo')
+ 65.     * --- pooled term (Bu Deasy's "x Post2020"), same rows ---
+.     quietly reghdfe `y' tpost if es `wexp', absorb(`ab') vce(cluster firm_id)
+ 66.     assert e(N) == `N'
+ 67.     * singletons: those the yearly model dropped (the pooled model runs on its rows, so it drops none)
+.     post `P' (`oid') ("`x'") ("`v'") ("pooled") (.) (`ref') (_b[tpost]) (_se[tpost]) (e(df_r)) (e(N)) ///
+>         (e(N_clust)) (`S') (.) (.) (`r1') (`r0') (`fg1') (`fg0') (`bp') (`wo')
+ 68.     drop `terms' tpost es ft
+ 69.     capture drop w2_
+ 70. end
+
+. 
+. * r106_surv: R10-02's gap in "still in the files" (0 or 100) on the firms in memory, one row per
+. * firm, expanded to one row per firm and later file; each file gets its own average for every
+. * industry and province (or only its own average: version fy). Year by year and the average of
+. * the three later files ("vs 2019": every firm is in the start file, so the gap there is 0).
+. capture program drop r106_surv
+
+. program define r106_surv
+  1.     args P x v ref wl fe wt
+  2.     quietly count if X == 1
+  3.     local ng = r(N)
+  4.     quietly count if X == 0
+  5.     local no = r(N)
+  6.     local wexp ""
+  7.     local wo .
+  8.     if "`wt'" != "" {
+  9.         local wexp "[pw = `wt']"
+ 10.         gen double w2_ = `wt'^2
+ 11.         quietly summarize `wt' if X == 0
+ 12.         local sw = r(sum)
+ 13.         quietly summarize w2_ if X == 0
+ 14.         local wo = `sw'^2 / r(sum)
+ 15.         drop w2_
+ 16.     }
+ 17.     expand 3
+ 18.     bysort firm_id: gen byte step = _n
+ 19.     gen double still = 100 * cond(step == 1, still_1, cond(step == 2, still_2, still_3))
+ 20.     forvalues k = 1/3 {
+ 21.         gen byte g_`k' = X * (step == `k')
+ 22.     }
+ 23.     local ctrl "i.step#i.ind i.step#i.prov"
+ 24.     if "`fe'" == "fy" local ctrl "i.step"
+ 25.     * year by year
+.     quietly regress still g_1 g_2 g_3 `ctrl' `wexp', vce(cluster firm_id)
+ 26.     local nobs = e(N)
+ 27.     local ncl  = e(N_clust)
+ 28.     local dfr  = e(df_r)
+ 29.     forvalues k = 1/3 {
+ 30.         local yy : word `k' of `wl'
+ 31.         quietly count if e(sample) & step == `k' & X == 1
+ 32.         local n1 = r(N)
+ 33.         quietly count if e(sample) & step == `k' & X == 0
+ 34.         local n0 = r(N)
+ 35.         post `P' (1) ("`x'") ("`v'") ("`yy'") (`yy') (`ref') (_b[g_`k']) (_se[g_`k']) (`dfr') (`nobs') (`ncl') ///
+>             (0) (`n1') (`n0') (`ng') (`no') (`ng') (`no') (.) (`wo')
+ 36.     }
+ 37.     * average of the three later files (R10-02's printed gap)
+.     quietly regress still X `ctrl' `wexp', vce(cluster firm_id)
+ 38.     post `P' (1) ("`x'") ("`v'") ("avgpost") (.) (`ref') (_b[X]) (_se[X]) (e(df_r)) (e(N)) (e(N_clust)) ///
+>         (0) (.) (.) (`ng') (`no') (`ng') (`no') (.) (`wo')
+ 39. end
+
+. 
+. * Versions (each changes ONE thing against the main rows; the main rows are R10-02/03/05's):
+. *   main   the exhibit's own numbers        fy     firm + year averages only (no industry or
+. *   eb     other firms reweighted                  province averages; R10-02: file averages only)
+. *   strict group = yes in every known answer, other firms = never yes (mixed left out)
+. *   early  group from the two files before the start file only (Bu Deasy's literal "pre-2019")
+. *   base   group from the start file's answer only
+. *   newc   firms new in the start file added (their group comes from that file alone)
+. *   allf   output, workers, value added per worker: every firm in whatever files it is in
+. *   closed output, workers: R10-04's what-if, firms that left counted as closed (midpoint scale)
+. *   stay   exporting: only firms in every later file
+. *   bench  normal years: the same, for the firms of the normal-years start file
+. *   look   the files before COVID extended by up to lb_n earlier files (table only)
+. tempname P
+
+. tempfile res
+
+. postfile `P' byte oid str8 grouping str8 version str8 term int year int ref_year double(b se df_r) ///
+>     long(rows firms singletons n_g1 n_g0 ref_g1 ref_g0 firms_g1 firms_g0) double(before_p worth_g0) ///
+>     using `res', replace
+(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_01698.00000f not found)
+
+. foreach x in exp imp fdi {
+  2.     display "   group `x'"
+  3.     * ---- output, workers, value added per worker (2-4) and exporting (5) ----
+.     foreach v in main fy eb strict early base newc allf stay bench look {
+  4.         foreach oid in 2 3 4 5 {
+  5.             if "`v'" == "allf" & `oid' == 5 continue        // exporting: all firms is its main sample
+  6.             if "`v'" == "stay" & `oid' <= 4 continue        // output etc.: stayers are the main sample
+  7.             if "`v'" == "look" & "`lb_1'" == "" continue    // no earlier files in the data
+  8.             local s = cond("`v'" == "bench", 2, 1)
+  9.             local G "grp_main_`x'"
+ 10.             if inlist("`v'", "strict", "early", "base") local G "grp_`v'_`x'"
+ 11.             * the files of the model
+.             if `oid' <= 4 local wl "`win_`s''"
+ 12.             else local wl "`mw_`s''"
+ 13.             if "`v'" == "look" local wl "`lb_1' `wl'"
+ 14.             use `panel', clear
+ 15.             keep if section == `s'
+ 16.             if "`v'" != "newc" keep if new_to_file == 0
+ 17.             keep if !missing(`G', y`oid')
+ 18.             gen byte inw = 0
+ 19.             foreach yy of local wl {
+ 20.                 quietly replace inw = 1 if year == `yy'
+ 21.             }
+ 22.             keep if inw
+ 23.             if (`oid' <= 4 & "`v'" != "allf") | (`oid' == 5 & "`v'" == "stay") keep if stayer
+ 24.             gen double X = `G'
+ 25.             local wt ""
+ 26.             if "`v'" == "eb" {
+ 27.                 local ws = cond(`oid' <= 4, "stay", "all")
+ 28.                 merge m:1 firm_id using `w_`x'_`ws'', keep(master match) nogenerate
+ 29.                 keep if !missing(w)
+ 30.                 local wt "w"
+ 31.             }
+ 32.             quietly count
+ 33.             if r(N) == 0 continue                          // balance not reached: left empty
+ 34.             local ab "firm_id ind#year prov#year"
+ 35.             if "`v'" == "fy" local ab "firm_id year"
+ 36.             r106_es `P' `oid' `x' `v' y`oid' `start_`s'' "`wl'" "`ab'" "`wt'"
+ 37.         }
+ 38.     }
+ 39.     * ---- R10-04's what-if: output (2) and workers (3), leavers counted as closed ----
+.     foreach oid in 2 3 {
+ 40.         use `cldata', clear
+ 41.         keep if !missing(grp_main_`x')
+ 42.         gen double X = grp_main_`x'
+ 43.         r106_es `P' `oid' `x' closed y`oid' `start_1' "`win_1'" "firm_id ind#year prov#year" ""
+ 44.     }
+ 45.     * ---- still in the files (1) ----
+.     foreach v in main fy eb strict early base newc bench {
+ 46.         local s = cond("`v'" == "bench", 2, 1)
+ 47.         local G "grp_main_`x'"
+ 48.         if inlist("`v'", "strict", "early", "base") local G "grp_`v'_`x'"
+ 49.         use `firms', clear
+ 50.         keep if section == `s'
+ 51.         if "`v'" != "newc" keep if new_to_file == 0
+ 52.         keep if !missing(`G')
+ 53.         gen double X = `G'
+ 54.         local wt ""
+ 55.         if "`v'" == "eb" {
+ 56.             merge m:1 firm_id using `w_`x'_all', keep(master match) nogenerate
+ 57.             keep if !missing(w)
+ 58.             local wt "w"
+ 59.         }
+ 60.         quietly count
+ 61.         if r(N) == 0 continue
+ 62.         r106_surv `P' `x' `v' `start_`s'' "`f1_`s'' `f2_`s'' `f3_`s''" "`v'" "`wt'"
+ 63.     }
+ 64. }
+   group exp
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(4,381 observations deleted)
+(2,714 observations deleted)
+(1,943 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(4,383 observations deleted)
+(2,714 observations deleted)
+(1,943 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(4,383 observations deleted)
+(2,714 observations deleted)
+(1,943 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(8,010 observations deleted)
+(2,621 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(4,381 observations deleted)
+(2,714 observations deleted)
+(1,943 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(4,383 observations deleted)
+(2,714 observations deleted)
+(1,943 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(4,383 observations deleted)
+(2,714 observations deleted)
+(1,943 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(8,010 observations deleted)
+(2,621 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(4,381 observations deleted)
+(2,714 observations deleted)
+(1,943 observations deleted)
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                           277
+        from master                       277  
+        from using                          0  
+
+    Matched                             5,920  
+    -----------------------------------------
+(277 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(4,383 observations deleted)
+(2,714 observations deleted)
+(1,943 observations deleted)
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                           277
+        from master                       277  
+        from using                          0  
+
+    Matched                             5,918  
+    -----------------------------------------
+(277 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(4,383 observations deleted)
+(2,714 observations deleted)
+(1,943 observations deleted)
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                           277
+        from master                       277  
+        from using                          0  
+
+    Matched                             5,918  
+    -----------------------------------------
+(277 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(8,010 observations deleted)
+(2,621 observations deleted)
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                           176
+        from master                       176  
+        from using                          0  
+
+    Matched                             4,428  
+    -----------------------------------------
+(176 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(5,781 observations deleted)
+(2,374 observations deleted)
+(1,684 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(5,783 observations deleted)
+(2,374 observations deleted)
+(1,684 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(5,783 observations deleted)
+(2,374 observations deleted)
+(1,684 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(9,087 observations deleted)
+(2,281 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(5,962 observations deleted)
+(2,323 observations deleted)
+(1,645 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(5,964 observations deleted)
+(2,323 observations deleted)
+(1,645 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(5,964 observations deleted)
+(2,323 observations deleted)
+(1,645 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(8,783 observations deleted)
+(2,299 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(7,735 observations deleted)
+(1,901 observations deleted)
+(1,318 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(7,737 observations deleted)
+(1,901 observations deleted)
+(1,318 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(7,737 observations deleted)
+(1,901 observations deleted)
+(1,318 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(9,582 observations deleted)
+(1,959 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(5,003 observations deleted)
+(2,714 observations deleted)
+(2,383 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(5,006 observations deleted)
+(2,714 observations deleted)
+(2,383 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(5,006 observations deleted)
+(2,714 observations deleted)
+(2,383 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(8,727 observations deleted)
+(2,709 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(4,381 observations deleted)
+(2,714 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(4,383 observations deleted)
+(2,714 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(4,383 observations deleted)
+(2,714 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(8,010 observations deleted)
+(2,621 observations deleted)
+(1,267 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(16,741 observations deleted)
+(1,140 observations deleted)
+(789 observations deleted)
+(0 observations deleted)
+(1,816 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(16,741 observations deleted)
+(1,140 observations deleted)
+(789 observations deleted)
+(0 observations deleted)
+(1,816 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(16,741 observations deleted)
+(1,140 observations deleted)
+(789 observations deleted)
+(0 observations deleted)
+(1,816 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(16,741 observations deleted)
+(1,140 observations deleted)
+(3,391 observations deleted)
+(625 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(4,381 observations deleted)
+(0 observations deleted)
+(2,680 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(4,383 observations deleted)
+(0 observations deleted)
+(2,680 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(4,383 observations deleted)
+(0 observations deleted)
+(2,680 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(8,010 observations deleted)
+(817 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(3,892 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(3,892 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(2,359 observations deleted)
+(741 observations deleted)
+(662 observations deleted)
+(3,208 observations created)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(2,359 observations deleted)
+(741 observations deleted)
+(662 observations deleted)
+(3,208 observations created)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(2,359 observations deleted)
+(741 observations deleted)
+(662 observations deleted)
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                            55
+        from master                        55  
+        from using                          0  
+
+    Matched                             1,549  
+    -----------------------------------------
+(55 observations deleted)
+(3,098 observations created)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(2,359 observations deleted)
+(741 observations deleted)
+(869 observations deleted)
+(2,794 observations created)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(2,359 observations deleted)
+(741 observations deleted)
+(902 observations deleted)
+(2,728 observations created)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(2,359 observations deleted)
+(741 observations deleted)
+(1,159 observations deleted)
+(2,214 observations created)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(2,359 observations deleted)
+(960 observations deleted)
+(4,094 observations created)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(3,007 observations deleted)
+(563 observations deleted)
+(166 observations deleted)
+(3,260 observations created)
+   group imp
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(0 observations deleted)
+(3,701 observations deleted)
+(2,764 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(2 observations deleted)
+(3,701 observations deleted)
+(2,764 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(2 observations deleted)
+(3,701 observations deleted)
+(2,764 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(7,133 observations deleted)
+(3,227 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(0 observations deleted)
+(3,701 observations deleted)
+(2,764 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(2 observations deleted)
+(3,701 observations deleted)
+(2,764 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(2 observations deleted)
+(3,701 observations deleted)
+(2,764 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(7,133 observations deleted)
+(3,227 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(0 observations deleted)
+(3,701 observations deleted)
+(2,764 observations deleted)
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                           119
+        from master                       119  
+        from using                          0  
+
+    Matched                             8,651  
+    -----------------------------------------
+(119 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(2 observations deleted)
+(3,701 observations deleted)
+(2,764 observations deleted)
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                           119
+        from master                       119  
+        from using                          0  
+
+    Matched                             8,649  
+    -----------------------------------------
+(119 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(2 observations deleted)
+(3,701 observations deleted)
+(2,764 observations deleted)
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                           119
+        from master                       119  
+        from using                          0  
+
+    Matched                             8,649  
+    -----------------------------------------
+(119 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(7,133 observations deleted)
+(3,227 observations deleted)
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                             4,875  
+    -----------------------------------------
+(0 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(6,088 observations deleted)
+(2,141 observations deleted)
+(1,601 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(6,090 observations deleted)
+(2,141 observations deleted)
+(1,601 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(6,090 observations deleted)
+(2,141 observations deleted)
+(1,601 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(10,499 observations deleted)
+(1,890 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(0 observations deleted)
+(3,701 observations deleted)
+(2,764 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(2 observations deleted)
+(3,701 observations deleted)
+(2,764 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(2 observations deleted)
+(3,701 observations deleted)
+(2,764 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(7,133 observations deleted)
+(3,227 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(0 observations deleted)
+(3,701 observations deleted)
+(2,764 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(2 observations deleted)
+(3,701 observations deleted)
+(2,764 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(2 observations deleted)
+(3,701 observations deleted)
+(2,764 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(7,133 observations deleted)
+(3,227 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(0 observations deleted)
+(3,701 observations deleted)
+(3,494 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(3 observations deleted)
+(3,701 observations deleted)
+(3,494 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(3 observations deleted)
+(3,701 observations deleted)
+(3,494 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(7,720 observations deleted)
+(3,362 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(0 observations deleted)
+(3,701 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(2 observations deleted)
+(3,701 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(2 observations deleted)
+(3,701 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(7,133 observations deleted)
+(3,227 observations deleted)
+(1,331 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(16,741 observations deleted)
+(1,140 observations deleted)
+(0 observations deleted)
+(0 observations deleted)
+(2,051 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(16,741 observations deleted)
+(1,140 observations deleted)
+(0 observations deleted)
+(0 observations deleted)
+(2,051 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(16,741 observations deleted)
+(1,140 observations deleted)
+(0 observations deleted)
+(0 observations deleted)
+(2,051 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(16,741 observations deleted)
+(1,140 observations deleted)
+(3,254 observations deleted)
+(653 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(0 observations deleted)
+(0 observations deleted)
+(3,764 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(2 observations deleted)
+(0 observations deleted)
+(3,764 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(2 observations deleted)
+(0 observations deleted)
+(3,764 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(7,133 observations deleted)
+(1,013 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(0 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(0 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(2,359 observations deleted)
+(741 observations deleted)
+(0 observations deleted)
+(4,532 observations created)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(2,359 observations deleted)
+(741 observations deleted)
+(0 observations deleted)
+(4,532 observations created)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(2,359 observations deleted)
+(741 observations deleted)
+(0 observations deleted)
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                             2,266  
+    -----------------------------------------
+(0 observations deleted)
+(4,532 observations created)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(2,359 observations deleted)
+(741 observations deleted)
+(895 observations deleted)
+(2,742 observations created)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(2,359 observations deleted)
+(741 observations deleted)
+(0 observations deleted)
+(4,532 observations created)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(2,359 observations deleted)
+(741 observations deleted)
+(0 observations deleted)
+(4,532 observations created)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(2,359 observations deleted)
+(0 observations deleted)
+(6,014 observations created)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(3,007 observations deleted)
+(563 observations deleted)
+(0 observations deleted)
+(3,592 observations created)
+   group fdi
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(0 observations deleted)
+(3,701 observations deleted)
+(2,764 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(2 observations deleted)
+(3,701 observations deleted)
+(2,764 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(2 observations deleted)
+(3,701 observations deleted)
+(2,764 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(7,133 observations deleted)
+(3,227 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(0 observations deleted)
+(3,701 observations deleted)
+(2,764 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(2 observations deleted)
+(3,701 observations deleted)
+(2,764 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(2 observations deleted)
+(3,701 observations deleted)
+(2,764 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(7,133 observations deleted)
+(3,227 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(0 observations deleted)
+(3,701 observations deleted)
+(2,764 observations deleted)
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                           442
+        from master                       442  
+        from using                          0  
+
+    Matched                             8,328  
+    -----------------------------------------
+(442 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(2 observations deleted)
+(3,701 observations deleted)
+(2,764 observations deleted)
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                           442
+        from master                       442  
+        from using                          0  
+
+    Matched                             8,326  
+    -----------------------------------------
+(442 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(2 observations deleted)
+(3,701 observations deleted)
+(2,764 observations deleted)
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                           442
+        from master                       442  
+        from using                          0  
+
+    Matched                             8,326  
+    -----------------------------------------
+(442 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(7,133 observations deleted)
+(3,227 observations deleted)
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                           366
+        from master                       366  
+        from using                          0  
+
+    Matched                             4,509  
+    -----------------------------------------
+(366 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(2,607 observations deleted)
+(3,118 observations deleted)
+(2,216 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(2,609 observations deleted)
+(3,118 observations deleted)
+(2,216 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(2,609 observations deleted)
+(3,118 observations deleted)
+(2,216 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(8,269 observations deleted)
+(2,802 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(0 observations deleted)
+(3,701 observations deleted)
+(2,764 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(2 observations deleted)
+(3,701 observations deleted)
+(2,764 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(2 observations deleted)
+(3,701 observations deleted)
+(2,764 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(7,133 observations deleted)
+(3,227 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(0 observations deleted)
+(3,701 observations deleted)
+(2,764 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(2 observations deleted)
+(3,701 observations deleted)
+(2,764 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(2 observations deleted)
+(3,701 observations deleted)
+(2,764 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(7,133 observations deleted)
+(3,227 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(0 observations deleted)
+(3,701 observations deleted)
+(3,494 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(3 observations deleted)
+(3,701 observations deleted)
+(3,494 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(3 observations deleted)
+(3,701 observations deleted)
+(3,494 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(7,720 observations deleted)
+(3,362 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(0 observations deleted)
+(3,701 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(2 observations deleted)
+(3,701 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(2 observations deleted)
+(3,701 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(7,133 observations deleted)
+(3,227 observations deleted)
+(1,331 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(16,741 observations deleted)
+(1,140 observations deleted)
+(0 observations deleted)
+(0 observations deleted)
+(2,051 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(16,741 observations deleted)
+(1,140 observations deleted)
+(0 observations deleted)
+(0 observations deleted)
+(2,051 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(16,741 observations deleted)
+(1,140 observations deleted)
+(0 observations deleted)
+(0 observations deleted)
+(2,051 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(16,741 observations deleted)
+(1,140 observations deleted)
+(3,254 observations deleted)
+(653 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(0 observations deleted)
+(0 observations deleted)
+(3,764 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(2 observations deleted)
+(0 observations deleted)
+(3,764 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(2 observations deleted)
+(0 observations deleted)
+(3,764 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(10,342 observations deleted)
+(1,506 observations deleted)
+(7,133 observations deleted)
+(1,013 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(0 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(0 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(2,359 observations deleted)
+(741 observations deleted)
+(0 observations deleted)
+(4,532 observations created)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(2,359 observations deleted)
+(741 observations deleted)
+(0 observations deleted)
+(4,532 observations created)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(2,359 observations deleted)
+(741 observations deleted)
+(0 observations deleted)
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                           145
+        from master                       145  
+        from using                          0  
+
+    Matched                             2,121  
+    -----------------------------------------
+(145 observations deleted)
+(4,242 observations created)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(2,359 observations deleted)
+(741 observations deleted)
+(402 observations deleted)
+(3,728 observations created)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(2,359 observations deleted)
+(741 observations deleted)
+(0 observations deleted)
+(4,532 observations created)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(2,359 observations deleted)
+(741 observations deleted)
+(0 observations deleted)
+(4,532 observations created)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(2,359 observations deleted)
+(0 observations deleted)
+(6,014 observations created)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(3,007 observations deleted)
+(563 observations deleted)
+(0 observations deleted)
+(3,592 observations created)
+
+. postclose `P'
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 7/10: tables -> CSV (numbers written before drawing), and the check against R10-02 to R10-05"
+Step 7/10: tables -> CSV (numbers written before drawing), and the check against R10-02 to R10-05
+
+. *---------------------------------------------------------------------------
+. use `res', clear
+
+. gen byte yearly = !missing(year)
+
+. gen byte reference = 0
+
+. * a version is drawn only if the group and the other firms each have min_n firms in its start file
+. * (reweighted: and the weighted other firms there are worth min_worth firms counted equally)
+. gen byte shown = !missing(b) & ref_g1 >= `min_n' & ref_g0 >= `min_n' & (missing(worth_g0) | worth_g0 >= `min_worth')
+
+. gen double tcrit = invttail(df_r, 0.025)
+
+. gen double lo = b - tcrit * se if shown
+(58 missing values generated)
+
+. gen double hi = b + tcrit * se if shown
+(58 missing values generated)
+
+. gen double p  = 2 * ttail(df_r, abs(b / se)) if shown & se > 0 & !missing(se)
+(58 missing values generated)
+
+. * the number on the chart: log outcomes as % difference = 100 x (exp(b) - 1); the others
+. * (still in the files, exporting, R10-04's midpoint scale) are already in % points
+. gen byte logscale = inrange(oid, 2, 4) & version != "closed"
+
+. gen double val    = cond(logscale, 100 * (exp(b) - 1), b)   if shown
+(58 missing values generated)
+
+. gen double val_lo = cond(logscale, 100 * (exp(lo) - 1), lo) if shown
+(58 missing values generated)
+
+. gen double val_hi = cond(logscale, 100 * (exp(hi) - 1), hi) if shown
+(58 missing values generated)
+
+. gen byte clear = lo > 0 | hi < 0 if !missing(lo)
+(58 missing values generated)
+
+. * "already apart before the start file": a marker before the start file with 30+ firms on each
+. * side is clearly away from 0 (then the number against the three files before includes that
+. * earlier change and does not measure COVID)
+. gen byte pre_clear = yearly & year < ref_year & clear == 1 & n_g1 >= `min_n' & n_g0 >= `min_n'
+
+. bysort oid grouping version: egen byte apart = max(pre_clear)
+
+. drop pre_clear
+
+. * labels
+. gen byte gi = cond(grouping == "exp", 1, cond(grouping == "imp", 2, 3))
+
+. gen str30 grouping_label = cond(gi == 1, "Exporters", cond(gi == 2, "Importers", "Foreign-owned (10%+)"))
+
+. gen str60 outcome_label = ""
+(984 missing values generated)
+
+. replace outcome_label = "Still in the survey files (% points)"                       if oid == 1
+(96 real changes made)
+
+. replace outcome_label = "Output (log, `out_prices'; % difference)"                   if oid == 2
+(240 real changes made)
+
+. replace outcome_label = "Workers (log; % difference)"                                 if oid == 3
+(240 real changes made)
+
+. replace outcome_label = "Value added per worker (log, `out_prices'; % difference)"   if oid == 4
+(219 real changes made)
+
+. replace outcome_label = "Exporting (% points)"                                        if oid == 5
+(189 real changes made)
+
+. replace outcome_label = "Output: change since `start_1', midpoint % points"          if oid == 2 & version == "closed"
+(21 real changes made)
+
+. replace outcome_label = "Workers: change since `start_1', midpoint % points"         if oid == 3 & version == "closed"
+(21 real changes made)
+
+. local f3r = "`f1_1'–" + substr("`f3_1'", 3, 2)
+
+. gen str100 version_label = ""
+(984 missing values generated)
+
+. replace version_label = "Main: as printed in R10-0" + cond(oid == 1, "2", cond(oid == 5, "5", "3")) if version == "mai
+> n"
+(93 real changes made)
+
+. replace version_label = "Firm + year averages only (no industry or province averages)"      if version == "fy"
+(93 real changes made)
+
+. replace version_label = "File averages only (no industry or province averages)"             if version == "fy" & oid =
+> = 1
+(12 real changes made)
+
+. replace version_label = "Other firms reweighted to match the group before COVID"            if version == "eb"
+(93 real changes made)
+
+. replace version_label = "Stricter rule: yes in every known answer vs never yes"            if version == "strict"
+(93 real changes made)
+
+. replace version_label = "Group from the `p2_1' and `p1_1' answers only"                      if version == "early"
+(93 real changes made)
+
+. replace version_label = "Group from the `start_1' answer only"                               if version == "base"
+(93 real changes made)
+
+. replace version_label = "Firms new in the `start_1' file added"                              if version == "newc"
+(93 real changes made)
+
+. replace version_label = "All firms in that year's file (R10-03's hollow circles)"           if version == "allf"
+(63 real changes made)
+
+. replace version_label = "What-if: leavers counted as closed (R10-04; midpoint scale)"      if version == "closed"
+(42 real changes made)
+
+. replace version_label = "Only firms in every file `f3r'"                                     if version == "stay"
+(18 real changes made)
+
+. replace version_label = "Normal years: `start_2' firms, same method"                         if version == "bench"
+(93 real changes made)
+
+. replace version_label = "Longer look-back: files `lb_1' added before COVID (table only)"   if version == "look"
+(117 real changes made)
+
+. gen str90 period = ""
+(984 missing values generated)
+
+. replace period = "file " + term if yearly
+(708 real changes made)
+
+. replace period = "average of the markers after the start file (" + string(ref_year) + "), against it" if term == "avgp
+> ost"
+(150 real changes made)
+
+. replace period = "pooled: group x every later file, against the start file and the files before it" if term == "pooled
+> "
+(126 real changes made)
+
+. gen byte vorder = 0
+
+. local vo 0
+
+. foreach v in main fy eb strict early base newc allf closed stay bench look {
+  2.     local ++vo
+  3.     replace vorder = `vo' if version == "`v'"
+  4. }
+(93 real changes made)
+(93 real changes made)
+(93 real changes made)
+(93 real changes made)
+(93 real changes made)
+(93 real changes made)
+(93 real changes made)
+(63 real changes made)
+(42 real changes made)
+(18 real changes made)
+(93 real changes made)
+(117 real changes made)
+
+. * what the figure draws: every version but the look-back, the two printed numbers
+. * (still in the files: only the average after the start file; see Notes)
+. gen str50 on_chart = "table only"
+
+. replace on_chart = "solid dot (vs the start file)" if term == "avgpost" & version != "look" & shown
+(129 real changes made)
+
+. replace on_chart = "hollow diamond (vs the three files before)" if term == "pooled" & version != "look" & shown
+(106 real changes made)
+
+. replace on_chart = "not drawn: too few firms" if inlist(term, "avgpost", "pooled") & version != "look" ///
+>     & !shown & !missing(b)
+(17 real changes made)
+
+. gen byte in_figure = inlist(on_chart, "solid dot (vs the start file)", "hollow diamond (vs the three files before)")
+
+. gen str120 note = ""
+(984 missing values generated)
+
+. replace note = "Fewer than `min_n' firms of a group or of the other firms in the start file: left empty" if !shown & !
+> missing(b)
+(58 real changes made)
+
+. replace note = "Reweighted other firms worth fewer than `min_worth' firms in the start file: left empty" ///
+>     if !shown & !missing(b) & ref_g1 >= `min_n' & ref_g0 >= `min_n' & worth_g0 < `min_worth'
+(21 real changes made)
+
+. replace note = "Its own regression on the rows of the yearly model; singletons = the yearly model's" if term == "poole
+> d" & shown
+(118 real changes made)
+
+. replace note = "WHAT-IF (assumption, not a finding): leavers counted as closed" if version == "closed" & note == ""
+(36 real changes made)
+
+. replace note = "Already apart before the start file: the pooled number includes that earlier change" ///
+>     if term == "pooled" & apart == 1 & shown
+(51 real changes made)
+
+. * structural checks
+. assert lo <= b + 1e-9 & b <= hi + 1e-9 if !missing(lo)
+
+. assert n_g1 <= firms_g1 & n_g0 <= firms_g0 if !missing(n_g1)
+
+. assert apart == 0 if oid == 1                            // no file before the start file: nothing to test
+
+. gen int torder = cond(yearly, year, cond(term == "avgpost", 9001, 9002))
+
+. sort gi oid vorder torder
+
+. order oid outcome_label grouping grouping_label version version_label term period year ref_year shown ///
+>     in_figure on_chart b se df_r p lo hi val val_lo val_hi clear apart n_g1 n_g0 ref_g1 ref_g0 firms_g1 ///
+>     firms_g0 rows firms singletons before_p worth_g0 note
+
+. format b se lo hi %9.4f
+
+. format val val_lo val_hi %8.2f
+
+. format p before_p %6.4f
+
+. format worth_g0 %9.1f
+
+. format df_r rows firms singletons n_g* ref_g* firms_g* %9.0f
+
+. export delimited oid-note using "tables/`fname'.csv", datafmt replace
+file tables/06_robustness_reweighted_rules.csv saved
+
+. list oid grouping version term val val_lo val_hi clear apart ref_g1 ref_g0 if inlist(term, "avgpost", "pooled"), ///
+>     noobs sepby(grouping oid) abbreviate(24)
+
+  +-------------------------------------------------------------------------------------------------+
+  | oid   grouping   version      term      val   val_lo   val_hi   clear   apart   ref_g1   ref_g0 |
+  |-------------------------------------------------------------------------------------------------|
+  |   1        exp      main   avgpost     0.00    -4.82     4.82       0       0      402     1202 |
+  |   1        exp        fy   avgpost    -5.22    -9.82    -0.63       1       0      402     1202 |
+  |   1        exp        eb   avgpost    -0.33    -7.42     6.76       0       0      402     1147 |
+  |   1        exp    strict   avgpost     0.24    -5.60     6.08       0       0      254     1143 |
+  |   1        exp     early   avgpost     1.07    -4.08     6.22       0       0      346     1018 |
+  |   1        exp      base   avgpost    -3.72   -10.40     2.95       0       0      227      880 |
+  |   1        exp      newc   avgpost    -0.08    -4.52     4.36       0       0      499     1548 |
+  |   1        exp     bench   avgpost    -4.20    -9.26     0.85       0       0      332     1298 |
+  |-------------------------------------------------------------------------------------------------|
+  |   2        exp      main   avgpost     4.41    -8.35    18.96       0       1      243      801 |
+  |   2        exp      main    pooled    17.29     3.14    33.39       1       1      243      801 |
+  |   2        exp        fy   avgpost     2.66    -8.87    15.65       0       1      243      806 |
+  |   2        exp        fy    pooled    14.34     1.55    28.74       1       1      243      806 |
+  |   2        exp        eb   avgpost     1.21   -14.07    19.21       0       1      243      755 |
+  |   2        exp        eb    pooled    15.25    -1.75    35.21       0       1      243      755 |
+  |   2        exp    strict   avgpost     2.48   -13.19    20.97       0       1      149      761 |
+  |   2        exp    strict    pooled    16.95    -0.93    38.07       0       1      149      761 |
+  |   2        exp     early   avgpost     5.27    -9.18    22.02       0       0      214      678 |
+  |   2        exp     early    pooled    12.00    -2.83    29.09       0       0      214      678 |
+  |   2        exp      base   avgpost     0.55   -16.52    21.11       0       1      128      588 |
+  |   2        exp      base    pooled    17.29    -2.50    41.11       0       1      128      588 |
+  |   2        exp      newc   avgpost     1.83   -10.12    15.37       0       1      261      895 |
+  |   2        exp      newc    pooled    15.12     1.67    30.35       1       1      261      895 |
+  |   2        exp      allf   avgpost     4.63    -7.50    18.35       0       1      401     1198 |
+  |   2        exp      allf    pooled    17.00     3.77    31.90       1       1      401     1198 |
+  |   2        exp    closed   avgpost     3.72    -7.20    14.63       0       1      401     1198 |
+  |   2        exp    closed    pooled    12.31     1.04    23.58       1       1      401     1198 |
+  |   2        exp     bench   avgpost   -13.24   -24.82     0.11       0       1      190      918 |
+  |   2        exp     bench    pooled   -23.47   -33.54   -11.88       1       1      190      918 |
+  |   2        exp      look   avgpost     4.41    -8.37    18.98       0       1      243      801 |
+  |   2        exp      look    pooled    23.10     6.49    42.31       1       1      243      801 |
+  |-------------------------------------------------------------------------------------------------|
+  |   3        exp      main   avgpost     8.45    -1.04    18.84       0       0      243      801 |
+  |   3        exp      main    pooled     2.06    -6.77    11.74       0       0      243      801 |
+  |   3        exp        fy   avgpost    12.75     3.47    22.87       1       1      243      806 |
+  |   3        exp        fy    pooled     5.55    -2.92    14.76       0       1      243      806 |
+  |   3        exp        eb   avgpost    18.24     3.79    34.70       1       0      243      755 |
+  |   3        exp        eb    pooled    14.05    -0.76    31.07       0       0      243      755 |
+  |   3        exp    strict   avgpost     6.33    -5.38    19.49       0       0      149      761 |
+  |   3        exp    strict    pooled     3.42    -8.07    16.35       0       0      149      761 |
+  |   3        exp     early   avgpost     7.97    -1.89    18.82       0       1      214      678 |
+  |   3        exp     early    pooled    -2.28   -11.18     7.50       0       1      214      678 |
+  |   3        exp      base   avgpost     9.42    -1.85    21.99       0       0      128      588 |
+  |   3        exp      base    pooled     8.75    -3.14    22.10       0       0      128      588 |
+  |   3        exp      newc   avgpost     9.74     0.54    19.77       1       1      261      895 |
+  |   3        exp      newc    pooled     3.00    -5.62    12.40       0       1      261      895 |
+  |   3        exp      allf   avgpost     7.94    -1.01    17.70       0       1      401     1198 |
+  |   3        exp      allf    pooled     2.47    -5.58    11.21       0       1      401     1198 |
+  |   3        exp    closed   avgpost     7.52    -3.00    18.04       0       1      401     1198 |
+  |   3        exp    closed    pooled     2.88    -7.52    13.28       0       1      401     1198 |
+  |   3        exp     bench   avgpost   -11.40   -21.98     0.62       0       0      190      918 |
+  |   3        exp     bench    pooled   -11.69   -21.21    -1.02       1       0      190      918 |
+  |   3        exp      look   avgpost     8.44    -1.06    18.84       0       0      243      801 |
+  |   3        exp      look    pooled     8.06    -1.77    18.88       0       0      243      801 |
+  |-------------------------------------------------------------------------------------------------|
+  |   4        exp      main   avgpost    -4.83   -18.38    10.97       0       1      243      801 |
+  |   4        exp      main    pooled    11.98    -2.30    28.35       0       1      243      801 |
+  |   4        exp        fy   avgpost    -6.56   -19.20     8.05       0       1      243      806 |
+  |   4        exp        fy    pooled     7.88    -5.16    22.70       0       1      243      806 |
+  |   4        exp        eb   avgpost    -8.06   -23.53    10.53       0       0      243      755 |
+  |   4        exp        eb    pooled     3.52   -11.66    21.32       0       0      243      755 |
+  |   4        exp    strict   avgpost    -8.84   -25.04    10.88       0       1      149      761 |
+  |   4        exp    strict    pooled     7.09   -10.35    27.93       0       1      149      761 |
+  |   4        exp     early   avgpost    -6.02   -20.47    11.04       0       1      214      678 |
+  |   4        exp     early    pooled     8.06    -7.12    25.72       0       1      214      678 |
+  |   4        exp      base   avgpost   -17.38   -34.06     3.52       0       1      128      588 |
+  |   4        exp      base    pooled     1.99   -16.41    24.45       0       1      128      588 |
+  |   4        exp      newc   avgpost    -8.31   -20.95     6.35       0       1      261      895 |
+  |   4        exp      newc    pooled     8.95    -4.60    24.43       0       1      261      895 |
+  |   4        exp      allf   avgpost    -2.98   -15.88    11.90       0       1      401     1198 |
+  |   4        exp      allf    pooled    12.55    -0.95    27.89       0       1      401     1198 |
+  |   4        exp     bench   avgpost     5.26   -10.08    23.22       0       1      190      918 |
+  |   4        exp     bench    pooled    -8.31   -20.22     5.39       0       1      190      918 |
+  |   4        exp      look   avgpost    -4.85   -18.41    10.98       0       1      243      801 |
+  |   4        exp      look    pooled    13.30    -0.87    29.51       0       1      243      801 |
+  |-------------------------------------------------------------------------------------------------|
+  |   5        exp      main   avgpost   -41.52   -51.45   -31.58       1       0      232      764 |
+  |   5        exp      main    pooled   -41.99   -49.30   -34.68       1       0      232      764 |
+  |   5        exp        fy   avgpost   -37.11   -45.46   -28.75       1       0      234      771 |
+  |   5        exp        fy    pooled   -38.36   -44.64   -32.08       1       0      234      771 |
+  |   5        exp        eb   avgpost   -60.62   -74.70   -46.54       1       0      232      725 |
+  |   5        exp        eb    pooled   -59.75   -70.17   -49.32       1       0      232      725 |
+  |   5        exp    strict   avgpost   -59.95   -70.23   -49.68       1       0      109      702 |
+  |   5        exp    strict    pooled   -63.06   -72.67   -53.45       1       0      109      702 |
+  |   5        exp     early   avgpost    -7.79   -17.18     1.60       0       1      215      645 |
+  |   5        exp     early    pooled   -39.30   -46.15   -32.45       1       1      215      645 |
+  |   5        exp      base   avgpost   -67.65   -76.59   -58.70       1       1      187      808 |
+  |   5        exp      base    pooled   -36.09   -44.97   -27.22       1       1      187      808 |
+  |   5        exp      newc   avgpost   -45.58   -54.43   -36.73       1       0      260      904 |
+  |   5        exp      newc    pooled   -44.75   -51.55   -37.95       1       0      260      904 |
+  |   5        exp      stay   avgpost   -38.43   -50.82   -26.05       1       0      140      534 |
+  |   5        exp      stay    pooled   -41.76   -50.23   -33.29       1       0      140      534 |
+  |   5        exp     bench   avgpost   -35.62   -46.28   -24.97       1       1      185      883 |
+  |   5        exp     bench    pooled   -44.89   -51.60   -38.18       1       1      185      883 |
+  |   5        exp      look   avgpost   -41.65   -51.25   -32.05       1       1      247      792 |
+  |   5        exp      look    pooled   -27.39   -34.65   -20.12       1       1      247      792 |
+  |-------------------------------------------------------------------------------------------------|
+  |   1        imp      main   avgpost     0.01    -3.90     3.92       0       0     1329      937 |
+  |   1        imp        fy   avgpost    -1.85    -5.14     1.44       0       0     1329      937 |
+  |   1        imp        eb   avgpost    18.38    10.05    26.71       1       0     1329      937 |
+  |   1        imp    strict   avgpost     0.14    -5.68     5.95       0       0      811      560 |
+  |   1        imp     early   avgpost    -2.68    -6.44     1.08       0       0     1524      742 |
+  |   1        imp      base   avgpost     2.37    -1.38     6.12       0       0     1273      993 |
+  |   1        imp      newc   avgpost     2.10    -1.30     5.49       0       0     1652     1355 |
+  |   1        imp     bench   avgpost    -3.19    -8.15     1.78       0       0      305     1491 |
+  |-------------------------------------------------------------------------------------------------|
+  |   2        imp      main   avgpost   -12.31   -21.56    -1.97       1       0      847      634 |
+  |   2        imp      main    pooled    -9.69   -19.06     0.76       0       0      847      634 |
+  |   2        imp        fy   avgpost   -14.17   -21.10    -6.64       1       1      848      636 |
+  |   2        imp        fy    pooled    -6.62   -14.18     1.61       0       1      848      636 |
+  |   2        imp        eb   avgpost        .        .        .       .       0      830      632 |
+  |   2        imp        eb    pooled        .        .        .       .       0      830      632 |
+  |   2        imp    strict   avgpost   -22.28   -34.35    -7.99       1       1      526      384 |
+  |   2        imp    strict    pooled   -10.51   -24.16     5.59       0       1      526      384 |
+  |   2        imp     early   avgpost    -8.41   -17.56     1.75       0       1      979      502 |
+  |   2        imp     early    pooled   -12.77   -21.43    -3.16       1       1      979      502 |
+  |   2        imp      base   avgpost   -15.52   -24.26    -5.78       1       1      819      662 |
+  |   2        imp      base    pooled     3.26    -7.43    15.18       0       1      819      662 |
+  |   2        imp      newc   avgpost   -13.10   -21.52    -3.79       1       0      935      740 |
+  |   2        imp      newc    pooled   -10.38   -19.09    -0.74       1       0      935      740 |
+  |   2        imp      allf   avgpost   -16.10   -24.49    -6.77       1       1     1328      933 |
+  |   2        imp      allf    pooled    -8.63   -17.40     1.08       0       1     1328      933 |
+  |   2        imp    closed   avgpost    -7.99   -17.09     1.10       0       1     1328      933 |
+  |   2        imp    closed    pooled    -2.48   -11.93     6.96       0       1     1328      933 |
+  |   2        imp     bench   avgpost    -7.65   -21.15     8.15       0       0      175     1033 |
+  |   2        imp     bench    pooled   -11.08   -24.09     4.16       0       0      175     1033 |
+  |   2        imp      look   avgpost   -12.31   -21.57    -1.96       1       1      847      634 |
+  |   2        imp      look    pooled    -1.21   -12.02    10.93       0       1      847      634 |
+  |-------------------------------------------------------------------------------------------------|
+  |   3        imp      main   avgpost     9.27     2.08    16.96       1       0      847      634 |
+  |   3        imp      main    pooled    10.69     3.46    18.43       1       0      847      634 |
+  |   3        imp        fy   avgpost     5.55     0.09    11.31       1       1      848      636 |
+  |   3        imp        fy    pooled    12.04     6.37    18.00       1       1      848      636 |
+  |   3        imp        eb   avgpost        .        .        .       .       0      830      632 |
+  |   3        imp        eb    pooled        .        .        .       .       0      830      632 |
+  |   3        imp    strict   avgpost    24.01    11.54    37.86       1       0      526      384 |
+  |   3        imp    strict    pooled    26.84    14.21    40.87       1       0      526      384 |
+  |   3        imp     early   avgpost     5.85    -0.63    12.75       0       0      979      502 |
+  |   3        imp     early    pooled     9.99     3.33    17.08       1       0      979      502 |
+  |   3        imp      base   avgpost    12.11     4.94    19.77       1       0      819      662 |
+  |   3        imp      base    pooled     8.43     1.68    15.63       1       0      819      662 |
+  |   3        imp      newc   avgpost     9.62     2.89    16.80       1       0      935      740 |
+  |   3        imp      newc    pooled    10.77     3.96    18.02       1       0      935      740 |
+  |   3        imp      allf   avgpost     9.39     2.62    16.61       1       0     1328      933 |
+  |   3        imp      allf    pooled    11.12     4.59    18.07       1       0     1328      933 |
+  |   3        imp    closed   avgpost     5.88    -2.37    14.13       0       0     1328      933 |
+  |   3        imp    closed    pooled     7.45    -0.99    15.88       0       0     1328      933 |
+  |   3        imp     bench   avgpost    -7.63   -17.77     3.77       0       0      175     1033 |
+  |   3        imp     bench    pooled    -9.71   -19.15     0.83       0       0      175     1033 |
+  |   3        imp      look   avgpost     9.25     2.06    16.96       1       0      847      634 |
+  |   3        imp      look    pooled    11.63     3.99    19.84       1       0      847      634 |
+  |-------------------------------------------------------------------------------------------------|
+  |   4        imp      main   avgpost   -28.90   -37.67   -18.90       1       0      847      634 |
+  |   4        imp      main    pooled   -31.30   -39.00   -22.63       1       0      847      634 |
+  |   4        imp        fy   avgpost   -25.44   -32.42   -17.74       1       0      848      636 |
+  |   4        imp        fy    pooled   -25.66   -32.13   -18.59       1       0      848      636 |
+  |   4        imp        eb   avgpost        .        .        .       .       0      830      632 |
+  |   4        imp        eb    pooled        .        .        .       .       0      830      632 |
+  |   4        imp    strict   avgpost   -44.40   -54.37   -32.24       1       0      526      384 |
+  |   4        imp    strict    pooled   -40.07   -50.40   -27.59       1       0      526      384 |
+  |   4        imp     early   avgpost   -19.62   -29.12    -8.84       1       1      979      502 |
+  |   4        imp     early    pooled   -32.53   -39.77   -24.42       1       1      979      502 |
+  |   4        imp      base   avgpost   -33.18   -41.02   -24.31       1       1      819      662 |
+  |   4        imp      base    pooled   -11.09   -21.03     0.10       0       1      819      662 |
+  |   4        imp      newc   avgpost   -27.86   -36.18   -18.44       1       0      935      740 |
+  |   4        imp      newc    pooled   -30.53   -37.91   -22.28       1       0      935      740 |
+  |   4        imp      allf   avgpost   -32.11   -39.68   -23.59       1       0     1328      933 |
+  |   4        imp      allf    pooled   -29.95   -37.10   -21.97       1       0     1328      933 |
+  |   4        imp     bench   avgpost     6.58    -9.70    25.80       0       0      175     1033 |
+  |   4        imp     bench    pooled    -0.64   -14.74    15.78       0       0      175     1033 |
+  |   4        imp      look   avgpost   -28.92   -37.69   -18.91       1       1      847      634 |
+  |   4        imp      look    pooled   -22.08   -30.73   -12.35       1       1      847      634 |
+  |-------------------------------------------------------------------------------------------------|
+  |   5        imp      main   avgpost    -4.56   -11.78     2.65       0       0      254      743 |
+  |   5        imp      main    pooled    -2.98    -8.96     3.01       0       0      254      743 |
+  |   5        imp        fy   avgpost    -6.28   -12.95     0.40       0       0      255      750 |
+  |   5        imp        fy    pooled    -3.87    -9.50     1.75       0       0      255      750 |
+  |   5        imp        eb   avgpost    -0.69    -9.84     8.45       0       1      254      743 |
+  |   5        imp        eb    pooled     1.63    -7.14    10.41       0       1      254      743 |
+  |   5        imp    strict   avgpost   -15.47   -28.79    -2.15       1       0       86      505 |
+  |   5        imp    strict    pooled   -11.21   -23.01     0.59       0       0       86      505 |
+  |   5        imp     early   avgpost    -1.71    -7.02     3.59       0       0      457      540 |
+  |   5        imp     early    pooled    -1.95    -6.57     2.68       0       0      457      540 |
+  |   5        imp      base   avgpost   -12.86   -22.27    -3.45       1       1      161      836 |
+  |   5        imp      base    pooled    -1.88    -7.95     4.20       0       1      161      836 |
+  |   5        imp      newc   avgpost    -6.18   -13.11     0.76       0       0      272      892 |
+  |   5        imp      newc    pooled    -4.20   -10.00     1.61       0       0      272      892 |
+  |   5        imp      stay   avgpost    -6.26   -14.80     2.29       0       1      170      504 |
+  |   5        imp      stay    pooled    -4.56   -11.34     2.23       0       1      170      504 |
+  |   5        imp     bench   avgpost    -1.30   -11.59     8.99       0       1      131      937 |
+  |   5        imp     bench    pooled   -10.72   -18.92    -2.52       1       1      131      937 |
+  |   5        imp      look   avgpost    -6.16   -12.93     0.60       0       1      294      747 |
+  |   5        imp      look    pooled    -2.42    -7.45     2.60       0       1      294      747 |
+  |-------------------------------------------------------------------------------------------------|
+  |   1        fdi      main   avgpost    -9.40   -17.06    -1.74       1       0      127     2139 |
+  |   1        fdi        fy   avgpost   -14.62   -22.43    -6.80       1       0      127     2139 |
+  |   1        fdi        eb   avgpost    -8.55   -16.53    -0.58       1       0      127     1994 |
+  |   1        fdi    strict   avgpost        .        .        .       .       0       22     1842 |
+  |   1        fdi     early   avgpost    -0.23    -5.15     4.69       0       0      283     1983 |
+  |   1        fdi      base   avgpost    -5.12   -10.76     0.52       0       0      214     2052 |
+  |   1        fdi      newc   avgpost    -7.00   -13.21    -0.79       1       0      198     2809 |
+  |   1        fdi     bench   avgpost    -7.62   -15.58     0.34       0       0      114     1682 |
+  |-------------------------------------------------------------------------------------------------|
+  |   2        fdi      main   avgpost     7.32   -12.27    31.29       0       0       63     1418 |
+  |   2        fdi      main    pooled    12.69    -9.06    39.66       0       0       63     1418 |
+  |   2        fdi        fy   avgpost     7.13   -11.94    30.32       0       1       63     1421 |
+  |   2        fdi        fy    pooled    16.55    -4.90    42.85       0       1       63     1421 |
+  |   2        fdi        eb   avgpost    13.66    -6.40    38.02       0       0       63     1345 |
+  |   2        fdi        eb    pooled    15.49    -5.82    41.62       0       0       63     1345 |
+  |   2        fdi    strict   avgpost        .        .        .       .       0       11     1220 |
+  |   2        fdi    strict    pooled        .        .        .       .       0       11     1220 |
+  |   2        fdi     early   avgpost     9.50    -4.35    25.35       0       0      174     1307 |
+  |   2        fdi     early    pooled    13.01    -1.60    29.79       0       0      174     1307 |
+  |   2        fdi      base   avgpost   -14.34   -27.11     0.67       0       1      124     1357 |
+  |   2        fdi      base    pooled    -1.63   -15.78    14.89       0       1      124     1357 |
+  |   2        fdi      newc   avgpost     7.69    -9.46    28.10       0       0       83     1592 |
+  |   2        fdi      newc    pooled    12.19    -7.32    35.80       0       0       83     1592 |
+  |   2        fdi      allf   avgpost     1.89   -16.39    24.17       0       0      126     2135 |
+  |   2        fdi      allf    pooled     7.73   -10.65    29.89       0       0      126     2135 |
+  |   2        fdi    closed   avgpost   -13.96   -30.76     2.85       0       0      126     2135 |
+  |   2        fdi    closed    pooled    -9.43   -27.49     8.63       0       0      126     2135 |
+  |   2        fdi     bench   avgpost   -13.71   -34.48    13.65       0       1       55     1153 |
+  |   2        fdi     bench    pooled   -31.60   -47.44   -10.99       1       1       55     1153 |
+  |   2        fdi      look   avgpost     7.32   -12.29    31.32       0       0       63     1418 |
+  |   2        fdi      look    pooled    12.33   -11.50    42.58       0       0       63     1418 |
+  |-------------------------------------------------------------------------------------------------|
+  |   3        fdi      main   avgpost    -2.44   -15.83    13.07       0       0       63     1418 |
+  |   3        fdi      main    pooled     5.31   -10.34    23.68       0       0       63     1418 |
+  |   3        fdi        fy   avgpost    -2.43   -15.76    13.00       0       0       63     1421 |
+  |   3        fdi        fy    pooled     6.09    -9.10    23.84       0       0       63     1421 |
+  |   3        fdi        eb   avgpost     4.73    -8.32    19.64       0       0       63     1345 |
+  |   3        fdi        eb    pooled    13.79    -3.10    33.63       0       0       63     1345 |
+  |   3        fdi    strict   avgpost        .        .        .       .       0       11     1220 |
+  |   3        fdi    strict    pooled        .        .        .       .       0       11     1220 |
+  |   3        fdi     early   avgpost     3.20    -6.43    13.83       0       0      174     1307 |
+  |   3        fdi     early    pooled     4.86    -4.40    15.02       0       0      174     1307 |
+  |   3        fdi      base   avgpost    -2.01   -12.61     9.88       0       0      124     1357 |
+  |   3        fdi      base    pooled     2.32    -8.52    14.45       0       0      124     1357 |
+  |   3        fdi      newc   avgpost    -4.16   -16.06     9.42       0       0       83     1592 |
+  |   3        fdi      newc    pooled     3.13   -10.74    19.17       0       0       83     1592 |
+  |   3        fdi      allf   avgpost     2.64   -10.74    18.03       0       0      126     2135 |
+  |   3        fdi      allf    pooled     5.26    -8.31    20.85       0       0      126     2135 |
+  |   3        fdi    closed   avgpost   -18.33   -34.39    -2.28       1       0      126     2135 |
+  |   3        fdi    closed    pooled   -16.02   -33.08     1.05       0       0      126     2135 |
+  |   3        fdi     bench   avgpost   -11.90   -30.65    11.92       0       0       55     1153 |
+  |   3        fdi     bench    pooled   -19.74   -35.79     0.32       0       0       55     1153 |
+  |   3        fdi      look   avgpost    -2.45   -15.84    13.08       0       0       63     1418 |
+  |   3        fdi      look    pooled     5.62   -10.55    24.70       0       0       63     1418 |
+  |-------------------------------------------------------------------------------------------------|
+  |   4        fdi      main   avgpost     3.78   -17.81    31.03       0       0       63     1418 |
+  |   4        fdi      main    pooled     4.98   -15.17    29.93       0       0       63     1418 |
+  |   4        fdi        fy   avgpost     5.54   -17.14    34.43       0       0       63     1421 |
+  |   4        fdi        fy    pooled    10.24   -11.32    37.05       0       0       63     1421 |
+  |   4        fdi        eb   avgpost    -2.45   -21.86    21.78       0       0       63     1345 |
+  |   4        fdi        eb    pooled    -4.74   -23.59    18.77       0       0       63     1345 |
+  |   4        fdi    strict   avgpost        .        .        .       .       0       11     1220 |
+  |   4        fdi    strict    pooled        .        .        .       .       0       11     1220 |
+  |   4        fdi     early   avgpost    12.53    -4.18    32.14       0       0      174     1307 |
+  |   4        fdi     early    pooled    13.09    -3.29    32.23       0       0      174     1307 |
+  |   4        fdi      base   avgpost   -18.46   -33.61     0.15       0       1      124     1357 |
+  |   4        fdi      base    pooled    -8.26   -22.54     8.65       0       1      124     1357 |
+  |   4        fdi      newc   avgpost     8.00   -13.27    34.50       0       0       83     1592 |
+  |   4        fdi      newc    pooled     7.35   -12.04    31.02       0       0       83     1592 |
+  |   4        fdi      allf   avgpost    -5.63   -23.51    16.43       0       1      126     2135 |
+  |   4        fdi      allf    pooled     0.27   -17.05    21.21       0       1      126     2135 |
+  |   4        fdi     bench   avgpost    -5.79   -30.22    27.19       0       0       55     1153 |
+  |   4        fdi     bench    pooled   -17.72   -37.02     7.49       0       0       55     1153 |
+  |   4        fdi      look   avgpost     3.77   -17.83    31.06       0       0       63     1418 |
+  |   4        fdi      look    pooled     4.53   -15.99    30.06       0       0       63     1418 |
+  |-------------------------------------------------------------------------------------------------|
+  |   5        fdi      main   avgpost   -22.15   -38.65    -5.65       1       0       64      933 |
+  |   5        fdi      main    pooled   -20.98   -35.11    -6.85       1       0       64      933 |
+  |   5        fdi        fy   avgpost   -27.80   -43.36   -12.23       1       0       65      940 |
+  |   5        fdi        fy    pooled   -24.17   -37.45   -10.89       1       0       65      940 |
+  |   5        fdi        eb   avgpost    -7.92   -23.06     7.22       0       0       64      859 |
+  |   5        fdi        eb    pooled   -10.76   -23.79     2.27       0       0       64      859 |
+  |   5        fdi    strict   avgpost        .        .        .       .       0       12      831 |
+  |   5        fdi    strict    pooled        .        .        .       .       0       12      831 |
+  |   5        fdi     early   avgpost    -3.60   -15.48     8.29       0       1      110      887 |
+  |   5        fdi     early    pooled   -14.66   -24.42    -4.91       1       1      110      887 |
+  |   5        fdi      base   avgpost   -26.20   -39.99   -12.41       1       1      100      897 |
+  |   5        fdi      base    pooled   -18.00   -29.91    -6.09       1       1      100      897 |
+  |   5        fdi      newc   avgpost   -20.76   -35.35    -6.17       1       0       73     1091 |
+  |   5        fdi      newc    pooled   -19.32   -32.43    -6.20       1       0       73     1091 |
+  |   5        fdi      stay   avgpost        .        .        .       .       0       29      645 |
+  |   5        fdi      stay    pooled        .        .        .       .       0       29      645 |
+  |   5        fdi     bench   avgpost    -2.84   -22.56    16.88       0       0       46     1022 |
+  |   5        fdi     bench    pooled   -16.35   -31.96    -0.74       1       0       46     1022 |
+  |   5        fdi      look   avgpost   -20.83   -36.81    -4.86       1       0       64      977 |
+  |   5        fdi      look    pooled   -16.72   -30.62    -2.83       1       0       64      977 |
+  +-------------------------------------------------------------------------------------------------+
+
+. tempfile ctsrc
+
+. save `ctsrc'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_01698.00000g saved as .dta format
+
+. 
+. * ---- the check: the rows R10-02 to R10-05 printed or tabled must come out the same here ----
+. * (only when their CSVs are in tables/, e.g. after 00_run.do; the CSVs have 4 decimals)
+. * source file | its rows (version) -> the version here
+. local nchk 0
+
+. foreach src in 02 03 04 05 {
+  2.     if "`src'" == "02" local cf "tables/02_left_the_file_by_group_gaps.csv"
+  3.     if "`src'" == "03" local cf "tables/03_survivors_output_jobs_productivity.csv"
+  4.     if "`src'" == "04" local cf "tables/04_all_firms_output_jobs.csv"
+  5.     if "`src'" == "05" local cf "tables/05_export_participation_models.csv"
+  6.     capture confirm file "`cf'"
+  7.     if _rc {
+  8.         display "   check skipped: `cf' not found (run R10-0`=substr("`src'", 2, 1)' first to compare)"
+  9.         continue
+ 10.     }
+ 11.     preserve
+ 12.     import delimited using "`cf'", clear varnames(1) stringcols(_all)
+ 13.     destring b, replace
+ 14.     if "`src'" == "02" {
+ 15.         destring section, replace
+ 16.         keep if section <= 2 & model != "diff"
+ 17.         gen byte oid = 1
+ 18.         gen str8 version = cond(section == 1, "main", "bench")
+ 19.         gen str8 t2 = cond(model == "average", "avgpost", year)
+ 20.     }
+ 21.     else if "`src'" == "03" {
+ 22.         destring outcome_id, replace
+ 23.         keep if outcome_id <= 3 & inlist(version, "stay", "all", "fystay")
+ 24.         gen byte oid = outcome_id + 1
+ 25.         replace version = cond(version == "stay", "main", cond(version == "all", "allf", "fy"))
+ 26.         gen str8 t2 = term
+ 27.     }
+ 28.     else if "`src'" == "04" {
+ 29.         destring outcome_id, replace
+ 30.         keep if version == "closed"
+ 31.         gen byte oid = outcome_id + 1
+ 32.         gen str8 t2 = term
+ 33.     }
+ 34.     else {
+ 35.         keep if inlist(version, "covid", "normal", "stay", "fy")
+ 36.         gen byte oid = 5
+ 37.         replace version = cond(version == "covid", "main", cond(version == "normal", "bench", version))
+ 38.         gen str8 t2 = term
+ 39.     }
+ 40.     keep if !missing(b)
+ 41.     capture confirm variable reference
+ 42.     if !_rc keep if reference != "1"                 // the start file's 0 (by definition)
+ 43.     keep oid grouping version t2 b
+ 44.     rename (t2 b) (term b_src)
+ 45.     tempfile chk
+ 46.     save `chk'
+ 47.     restore
+ 48.     merge 1:1 oid grouping version term using `chk', keep(master match using)
+ 49.     assert _merge != 2                                   // every row of the source is here too
+ 50.     quietly count if _merge == 3
+ 51.     local n_`src' = r(N)
+ 52.     local nchk = `nchk' + r(N)
+ 53.     assert abs(b - b_src) <= 0.00005 + 1e-9 if _merge == 3
+ 54.     display "   R10-`src': `n_`src'' estimates compared, all equal (4 decimals)"
+ 55.     drop _merge b_src
+ 56. }
+(encoding automatically selected: ISO-8859-1)
+(20 vars, 27 obs)
+b: all characters numeric; replaced as double
+section: all characters numeric; replaced as byte
+(3 observations deleted)
+(0 observations deleted)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_01698.00000i saved as .dta format
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                           960
+        from master                       960  (_merge==1)
+        from using                          0  (_merge==2)
+
+    Matched                                24  (_merge==3)
+    -----------------------------------------
+   R10-02: 24 estimates compared, all equal (4 decimals)
+(encoding automatically selected: ISO-8859-1)
+(34 vars, 297 obs)
+b: all characters numeric; replaced as double
+(36 missing values generated)
+outcome_id: all characters numeric; replaced as byte
+(54 observations deleted)
+(243 real changes made)
+(27 observations deleted)
+(27 observations deleted)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_01698.00000k saved as .dta format
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                           795
+        from master                       795  (_merge==1)
+        from using                          0  (_merge==2)
+
+    Matched                               189  (_merge==3)
+    -----------------------------------------
+   R10-03: 189 estimates compared, all equal (4 decimals)
+(encoding automatically selected: ISO-8859-1)
+(34 vars, 216 obs)
+b: all characters numeric; replaced as double
+(24 missing values generated)
+outcome_id: all characters numeric; replaced as byte
+(162 observations deleted)
+(6 observations deleted)
+(6 observations deleted)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_01698.00000m saved as .dta format
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                           942
+        from master                       942  (_merge==1)
+        from using                          0  (_merge==2)
+
+    Matched                                42  (_merge==3)
+    -----------------------------------------
+   R10-04: 42 estimates compared, all equal (4 decimals)
+(encoding automatically selected: ISO-8859-1)
+(30 vars, 111 obs)
+b: all characters numeric; replaced as double
+(27 observations deleted)
+(42 real changes made)
+(0 observations deleted)
+(12 observations deleted)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_01698.00000o saved as .dta format
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                           912
+        from master                       912  (_merge==1)
+        from using                          0  (_merge==2)
+
+    Matched                                72  (_merge==3)
+    -----------------------------------------
+   R10-05: 72 estimates compared, all equal (4 decimals)
+
+. display "   estimates compared with R10-02 to R10-05: `nchk'"
+   estimates compared with R10-02 to R10-05: 327
+
+. 
+. * the balance table (before-COVID averages, group vs other firms, before and after weighting)
+. use `balance', clear
+
+. gen byte gi = cond(grouping == "exp", 1, cond(grouping == "imp", 2, 3))
+
+. gen str70 measure_label = ""
+(170 missing values generated)
+
+. replace measure_label = "Workers (log), average `p2_1'–" + substr("`start_1'", 3, 2) if measure == "m1"
+(6 real changes made)
+
+. replace measure_label = "Output (log), average `p2_1'–" + substr("`start_1'", 3, 2) if measure == "m2"
+(6 real changes made)
+
+. replace measure_label = "Value added per worker (log), average `p2_1'–" + substr("`start_1'", 3, 2) if measure == "m3"
+(6 real changes made)
+
+. replace measure_label = "Exporter (% of firms)"                   if measure == "st_exp"
+(4 real changes made)
+
+. replace measure_label = "Importer (% of firms)"                   if measure == "st_imp"
+(4 real changes made)
+
+. replace measure_label = "Foreign-owned, 10%+ (% of firms)"        if measure == "st_fdi"
+(4 real changes made)
+
+. replace measure_label = "Industry " + substr(measure, 5, .) + " (% of firms; code order)" if substr(measure, 1, 4) == 
+> "ind_"
+(122 real changes made)
+
+. replace measure_label = "Island: Sumatra (% of firms)"            if measure == "isl_1"
+(6 real changes made)
+
+. replace measure_label = "Island: Java (% of firms)"               if measure == "isl_2"
+(6 real changes made)
+
+. replace measure_label = "Island: other islands (% of firms)"      if measure == "isl_3"
+(6 real changes made)
+
+. gen str60 sample_label = cond(sample == "all", "All firms (still in the files, exporting)", ///
+>     "Firms in every later file (output, workers, VA per worker)")
+
+. * balance reached: every weighted gap below a millionth of a spread
+. assert abs(std_after) < 1e-4 if balanced == 1 & !missing(std_after)
+
+. sort gi sample measure
+
+. order grouping sample sample_label measure measure_label mean_g mean_o mean_ow sd_pool std_before std_after ///
+>     firms_g1 firms_g0 drop_g1 drop_g0 drop_nomeas iter worth_g0 wmax_ratio gap_max balanced
+
+. format mean_g mean_o mean_ow sd_pool std_before std_after %9.4f
+
+. format worth_g0 wmax_ratio %9.1f
+
+. export delimited grouping-balanced using "tables/`fname'_balance.csv", datafmt replace
+file tables/06_robustness_reweighted_rules_balance.csv saved
+
+. list grouping sample measure std_before std_after firms_g1 firms_g0 worth_g0 if inlist(measure, "m1", "m2", "m3"), ///
+>     noobs sepby(grouping) abbreviate(24)
+
+  +---------------------------------------------------------------------------------------+
+  | grouping   sample   measure   std_before   std_after   firms_g1   firms_g0   worth_g0 |
+  |---------------------------------------------------------------------------------------|
+  |      exp      all        m1       1.0800      0.0000        402       1147      151.2 |
+  |      exp      all        m2       0.9744     -0.0000        402       1147      151.2 |
+  |      exp      all        m3       0.5261     -0.0000        402       1147      151.2 |
+  |      exp     stay        m1       1.0810      0.0000        243        759      114.7 |
+  |      exp     stay        m2       0.9893      0.0000        243        759      114.7 |
+  |      exp     stay        m3       0.6067     -0.0000        243        759      114.7 |
+  |---------------------------------------------------------------------------------------|
+  |      imp      all        m1       0.5624     -0.0000       1329        937       73.2 |
+  |      imp      all        m2       1.0589     -0.0000       1329        937       73.2 |
+  |      imp      all        m3       1.3014     -0.0000       1329        937       73.2 |
+  |      imp     stay        m1       0.6739      0.0000        830        634       29.1 |
+  |      imp     stay        m2       1.1485      0.0000        830        634       29.1 |
+  |      imp     stay        m3       1.3975      0.0000        830        634       29.1 |
+  |---------------------------------------------------------------------------------------|
+  |      fdi      all        m1       1.0500      0.0000        127       1994      385.2 |
+  |      fdi      all        m2       1.0192      0.0000        127       1994      385.2 |
+  |      fdi      all        m3       0.4876     -0.0000        127       1994      385.2 |
+  |      fdi     stay        m1       1.0234      0.0000         63       1347      257.5 |
+  |      fdi     stay        m2       1.0417      0.0000         63       1347      257.5 |
+  |      fdi     stay        m3       0.5935     -0.0000         63       1347      257.5 |
+  +---------------------------------------------------------------------------------------+
+
+. tempfile baltab
+
+. save `baltab'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_01698.00000p saved as .dta format
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 8/10: numbers and labels for the notes and rows, read from the tables (never typed)"
+Step 8/10: numbers and labels for the notes and rows, read from the tables (never typed)
+
+. *---------------------------------------------------------------------------
+. use `ctsrc', clear
+
+. local n_inc_s  = strtrim(string(`n_inc_1', "%9.0fc"))
+
+. local n_stay_s = strtrim(string(`n_stay_1', "%9.0fc"))
+
+. local post_rng = "`f1_1'–" + substr("`f3_1'", 3, 2)              // 2020–22
+
+. local pool_rng = "`p2_1'–" + substr("`start_1'", 3, 2)           // 2017–19
+
+. local ex_last : word `npost_ex' of `post_1'
+
+. local ex_rng  = cond(`npost_ex' == 1, "`post_1'", "`f1_1'–" + substr("`ex_last'", 3, 2))   // 2020–21
+
+. local bpost_rng = "`f1_2'–" + substr("`f3_2'", 3, 2)             // 2013–15
+
+. local bpool_rng = "`p2_2'–" + substr("`start_2'", 3, 2)          // 2010–12
+
+. local early_rng = "`p2_1'–" + substr("`p1_1'", 3, 2)             // 2017–18
+
+. quietly count if in_figure & version == "closed"
+
+. local n_closed_drawn = r(N)
+
+. quietly count if in_figure & term == "pooled" & apart == 1
+
+. local n_apart = r(N)
+
+. display "   drawn: " _N " estimates in the CSV; pooled numbers flagged 'already apart': `n_apart'"
+   drawn: 984 estimates in the CSV; pooled numbers flagged 'already apart': 45
+
+. * groups whose reweighted rows are empty because the weighted other firms count as too few
+. * firms (read from the table, so the notes name them on any data)
+. local ebmiss ""
+
+. local ebn 0
+
+. foreach x in exp imp fdi {
+  2.     quietly count if version == "eb" & grouping == "`x'" & inlist(term, "avgpost", "pooled") & !shown ///
+>         & !missing(b) & ref_g1 >= `min_n' & ref_g0 >= `min_n' & worth_g0 < `min_worth'
+  3.     if r(N) > 0 {
+  4.         local ++ebn
+  5.         local gl = cond("`x'" == "exp", "exporters'", cond("`x'" == "imp", "importers'", "foreign-owned firms'"))
+  6.         local ebmiss = cond(`ebn' == 1, "`gl'", "`ebmiss' and `gl'")
+  7.     }
+  8. }
+
+. local ebtxt ""
+
+. if `ebn' > 0 {
+.     local ebcap = ustrupper(usubstr("`ebmiss'", 1, 1)) + usubstr("`ebmiss'", 2, .)
+.     local ebtxt "`ebcap' reweighted rows are empty: weighted, the other firms count as fewer than `min_worth' firms."
+. }
+
+. display "   reweighted rows left empty: `ebmiss'"
+   reweighted rows left empty: importers'
+
+. * the rows of each section (top to bottom) and their labels
+. local rows_1 "main fy eb strict early base newc bench"
+
+. local rows_2 "main fy eb strict early base newc allf closed bench"
+
+. local rows_3 "`rows_2'"
+
+. local rows_4 "main fy eb strict early base newc allf bench"
+
+. local rows_5 "main fy eb strict early base newc stay bench"
+
+. local rl_main   "Main (as printed)"
+
+. local rl_fy     "Firm + year averages only"
+
+. local rl_eb     "Other firms reweighted"
+
+. local rl_strict "Stricter rule: always vs never"
+
+. local rl_early  "Group from `early_rng' answers only"
+
+. local rl_base   "Group from `start_1' answer only"
+
+. local rl_newc   "Firms new in `start_1' added"
+
+. local rl_allf   "All firms in each file"
+
+. local rl_closed "What-if: leavers counted as closed"
+
+. local rl_stay   "Only firms in every file `post_rng'"
+
+. local rl_bench  "Normal years: `start_2' firms"
+
+. local hd_1 "Still in the survey files, % points (R10-02)"
+
+. local hd_2 "Output, % (R10-03)"
+
+. local hd_3 "Workers, % (R10-03)"
+
+. local hd_4 "Value added per worker, % (R10-03)"
+
+. local hd_5 "Exporting, % points, `ex_rng' (R10-05)"
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 9/10: dot plot: every version, three groups side by side, one shared scale"
+Step 9/10: dot plot: every version, three groups side by side, one shared scale
+
+. *---------------------------------------------------------------------------
+. keep if inlist(term, "avgpost", "pooled") & version != "look"
+(732 observations deleted)
+
+. * one row per group, section and version, also for versions with no estimate (e.g. balance
+. * not reached): they get the text "too few firms" or "not estimable"
+. preserve
+
+. clear
+
+. local nr 0
+
+. forvalues g = 1/3 {
+  2.     forvalues o = 1/5 {
+  3.         foreach v of local rows_`o' {
+  4.             local ++nr
+  5.         }
+  6.     }
+  7. }
+
+. set obs `nr'
+Number of observations (_N) was 0, now 138.
+
+. gen byte gi = .
+(138 missing values generated)
+
+. gen byte oid = .
+(138 missing values generated)
+
+. gen str8 version = ""
+(138 missing values generated)
+
+. local i 0
+
+. forvalues g = 1/3 {
+  2.     forvalues o = 1/5 {
+  3.         foreach v of local rows_`o' {
+  4.             local ++i
+  5.             quietly replace gi = `g' in `i'
+  6.             quietly replace oid = `o' in `i'
+  7.             quietly replace version = "`v'" in `i'
+  8.         }
+  9.     }
+ 10. }
+
+. tempfile frame
+
+. save `frame'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_01698.00000r saved as .dta format
+
+. restore
+
+. merge m:1 gi oid version using `frame', nogenerate
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                               252  
+    -----------------------------------------
+
+. replace term = "avgpost" if missing(term)
+(0 real changes made)
+
+. * y positions (top to bottom; the axis is reversed): a heading, then one row per version
+. local yy = 0
+
+. forvalues o = 1/5 {
+  2.     if `o' > 1 local yy = `yy' + 0.6
+  3.     local yy = `yy' + 1
+  4.     local yh_`o' = `yy'
+  5.     foreach v of local rows_`o' {
+  6.         local yy = `yy' + 1
+  7.         local yr_`o'_`v' = `yy'
+  8.     }
+  9.     local ye_`o' = `yy' + 0.5
+ 10. }
+
+. local ymax = `yy' + 0.6
+
+. gen double yrow = .
+(252 missing values generated)
+
+. forvalues o = 1/5 {
+  2.     foreach v of local rows_`o' {
+  3.         quietly replace yrow = `yr_`o'_`v'' if oid == `o' & version == "`v'"
+  4.     }
+  5. }
+
+. assert !missing(yrow)
+
+. * the y-axis labels: section headings (bold) and the row labels
+. local ylab ""
+
+. forvalues o = 1/5 {
+  2.     local ylab `"`ylab' `yh_`o'' "{bf:`hd_`o''}""'
+  3.     foreach v of local rows_`o' {
+  4.         local ylab `"`ylab' `yr_`o'_`v'' "`rl_`v''""'
+  5.     }
+  6. }
+
+. * marker sets: ● = against the start file (just above the row; still in the files: on the row),
+. * ◇ = against the three files before (just below), gray ◇ where already apart before COVID
+. gen double yd = yrow - cond(oid == 1, 0, 0.2) if term == "avgpost" & shown
+(123 missing values generated)
+
+. gen double xd = val    if term == "avgpost" & shown
+(123 missing values generated)
+
+. gen double ld = val_lo if term == "avgpost" & shown
+(123 missing values generated)
+
+. gen double hd = val_hi if term == "avgpost" & shown
+(123 missing values generated)
+
+. gen double yp = yrow + 0.2 if term == "pooled" & shown
+(146 missing values generated)
+
+. gen double xp = val    if term == "pooled" & shown & apart == 0
+(191 missing values generated)
+
+. gen double lp = val_lo if term == "pooled" & shown & apart == 0
+(191 missing values generated)
+
+. gen double hp = val_hi if term == "pooled" & shown & apart == 0
+(191 missing values generated)
+
+. gen double xq = val    if term == "pooled" & shown & apart == 1
+(207 missing values generated)
+
+. gen double lq = val_lo if term == "pooled" & shown & apart == 1
+(207 missing values generated)
+
+. gen double hq = val_hi if term == "pooled" & shown & apart == 1
+(207 missing values generated)
+
+. * rows with nothing drawn: a gray text on the row
+. gen str24 miss = ""
+(252 missing values generated)
+
+. bysort gi oid version: egen byte anyshown = max(shown)
+
+. replace miss = "too few firms" if anyshown != 1 & term == "avgpost" & !missing(b)
+(9 real changes made)
+
+. replace miss = "not estimable" if anyshown != 1 & term == "avgpost" & missing(b) & missing(miss)
+(0 real changes made)
+
+. * one shared x scale: a round step that grows with the numbers; 0 always inside
+. egen double xmn = rowmin(ld lp lq)
+(17 missing values generated)
+
+. egen double xmx = rowmax(hd hp hq)
+(17 missing values generated)
+
+. quietly summarize xmn
+
+. local xmin = min(r(min), 0)
+
+. quietly summarize xmx
+
+. local xmax = max(r(max), 0)
+
+. local rng = `xmax' - `xmin'
+
+. local step = 10^floor(log10(`rng'))
+
+. if `rng'/`step' < 2       local step = `step'/5
+
+. else if `rng'/`step' < 5  local step = `step'/2
+
+. local xlo = `step' * floor(`xmin'/`step')
+
+. local xhi = `step' * ceil(`xmax'/`step')
+
+. display "   x from `xlo' to `xhi' by `step'"
+   x from -80 to 60 by 20
+
+. * labelled every second step, always through 0; faint grid at every step
+. local xlab "0"
+
+. forvalues m = 1/20 {
+  2.     if -2 * `m' * `step' >= `xlo' local xlab "`=-2 * `m' * `step'' `xlab'"
+  3.     if  2 * `m' * `step' <= `xhi' local xlab "`xlab' `=2 * `m' * `step''"
+  4. }
+
+. gen double mx = `xlo' + 0.02 * (`xhi' - `xlo') if miss != ""
+(243 missing values generated)
+
+. gen double my = yrow if miss != ""
+(243 missing values generated)
+
+. * per panel and section: the 0 line and a dotted line at the main row's ● (for comparison)
+. local n0 = _N
+
+. set obs `=_N + 15'
+Number of observations (_N) was 252, now 267.
+
+. gen double zx = .
+(267 missing values generated)
+
+. gen double zy0 = .
+(267 missing values generated)
+
+. gen double zy1 = .
+(267 missing values generated)
+
+. gen double rx = .
+(267 missing values generated)
+
+. gen double ry0 = .
+(267 missing values generated)
+
+. gen double ry1 = .
+(267 missing values generated)
+
+. local r = `n0'
+
+. forvalues g = 1/3 {
+  2.     forvalues o = 1/5 {
+  3.         local ++r
+  4.         quietly replace gi = `g' in `r'
+  5.         quietly replace zx = 0 in `r'
+  6.         quietly replace zy0 = `yh_`o'' + 0.5 in `r'
+  7.         quietly replace zy1 = `ye_`o'' in `r'
+  8.         quietly summarize val if gi == `g' & oid == `o' & version == "main" & term == "avgpost" & shown, meanonly
+  9.         if r(N) == 1 {
+ 10.             quietly replace rx = r(mean) in `r'
+ 11.             quietly replace ry0 = `yh_`o'' + 0.5 in `r'
+ 12.             quietly replace ry1 = `ye_`o'' in `r'
+ 13.         }
+ 14.     }
+ 15. }
+
+. label define gi 1 "(a) Exporters" 2 "(b) Importers" 3 "(c) Foreign-owned"
+
+. label values gi gi
+
+. sort gi oid yrow term
+
+. * Notes: one text, wrapped here into lines of at most 102 characters (PDF text runs wider than the PNG)
+. local ntext "Notes: Each row redoes one number of R10-02, R10-03 or R10-05 with one change. Main rows: the `n_inc_s' f
+> irms of the `start_1' file also in `p2_1' or `p1_1', grouped from their `pool_rng' answers (output, workers, VA per wo
+> rker: the `n_stay_s' in every file `post_rng'). ●~=~the group's change since `start_1' minus that of similar firms (sa
+> me industry and province), `post_rng' (exporting: `ex_rng'; `f3_1' asks about direct exports only). ◇~=~the same again
+> st `pool_rng' (Bu Deasy's ×~Post2020; none for still in the files); gray~◇: already apart before COVID, so not a COVID
+>  measure. Line = 95% interval; crossing 0 = no clear difference. Reweighted: other firms weighted to look like the gro
+> up before COVID. `ebtxt' Normal years: `start_2' firms, no COVID. What-if: an assumption, not a finding. Under `min_n'
+>  firms: not shown. VA = value added = output minus materials, energy and services bought; `out_prices'. Association on
+> ly. Foreign-owned = 10%+ of capital held abroad. Firm links are fictional here: who stayed or left means nothing."
+
+. local notelines ""
+
+. local line ""
+
+. foreach w of local ntext {
+  2.     if ustrlen("`line' `w'") > 102 & "`line'" != "" {
+  3.         local notelines `"`notelines' "`line'""'
+  4.         local line "`w'"
+  5.     }
+  6.     else local line = strtrim("`line' `w'")
+  7. }
+
+. local notelines `"`notelines' "`line'""'
+
+. * "~" keeps a symbol with its words on one line; it prints as a space
+. local notelines : subinstr local notelines "~" " ", all
+
+. display `"   note lines: `notelines'"'
+   note lines:  "Notes: Each row redoes one number of R10-02, R10-03 or R10-05 with one change. Main rows: the 2,266" "f
+> irms of the 2019 file also in 2017 or 2018, grouped from their 2017–19 answers (output, workers, VA" "per worker: the 
+> 1,484 in every file 2020–22). ● = the group's change since 2019 minus that of similar" "firms (same industry and provi
+> nce), 2020–22 (exporting: 2020–21; 2022 asks about direct exports only)." "◇ = the same against 2017–19 (Bu Deasy's × 
+> Post2020; none for still in the files); gray ◇: already" "apart before COVID, so not a COVID measure. Line = 95% inter
+> val; crossing 0 = no clear difference." "Reweighted: other firms weighted to look like the group before COVID. Importe
+> rs' reweighted rows are" "empty: weighted, the other firms count as fewer than 30 firms. Normal years: 2012 firms, no 
+> COVID." "What-if: an assumption, not a finding. Under 30 firms: not shown. VA = value added = output minus" "materials
+> , energy and services bought; current prices. Association only. Foreign-owned = 10%+ of" "capital held abroad. Firm li
+> nks are fictional here: who stayed or left means nothing."
+
+. 
+. * Stata draws markers about twice as large in the PNG as in the PDF, so each file gets its own
+. * marker size (same data, same layout)
+. foreach out in png pdf {
+  2.     local msz = cond("`out'" == "png", "vsmall", "small")
+  3.     twoway (rspike zy0 zy1 zx, lcolor(gs8) lpattern(dash) lwidth(thin)) ///
+>         (rspike ry0 ry1 rx, lcolor(gs11) lpattern(shortdash) lwidth(thin)) ///
+>         (rspike lq hq yp, horizontal lcolor(gs12) lwidth(thin)) ///
+>         (rspike lp hp yp, horizontal lcolor(gs8) lwidth(thin)) ///
+>         (rspike ld hd yd, horizontal lcolor(black) lwidth(medthin)) ///
+>         (scatter yp xq, msymbol(Dh) mcolor(gs10) mlwidth(medthin) msize(`msz')) ///
+>         (scatter yp xp, msymbol(Dh) mcolor(black) mlwidth(medthin) msize(`msz')) ///
+>         (scatter yd xd, msymbol(O) mcolor(black) msize(`msz')) ///
+>         (scatter my mx, msymbol(none) mlabel(miss) mlabpos(3) mlabgap(0) mlabsize(vsmall) mlabcolor(gs8)), ///
+>         by(gi, rows(1) imargin(small) graphregion(color(white) lcolor(white) ilcolor(white) margin(r+4)) ///
+>             legend(pos(6)) ///
+>             title("Figure R10-06. Do the answers hold under other choices?" ///
+>                   "R10-02, R10-03 and R10-05 redone, one change at a time", size(small) pos(11) span) ///
+>             note(`notelines' "`srcnote'" "`devnote'", size(vsmall) span linegap(0.6))) ///
+>         subtitle(, pos(11) nobox fcolor(white) lcolor(white) size(small)) ///
+>         yscale(reverse noline range(0.4 `ymax')) ylabel(`ylab', angle(0) noticks tlength(0) nogrid labsize(vsmall)) //
+> /
+>         ytitle("") ///
+>         xscale(range(`xlo' `xhi') noline) ///
+>         xlabel(`xlab', format(%9.0f) noticks tlength(0) labsize(vsmall) grid glcolor(gs15) glwidth(vthin)) ///
+>         xmtick(`xlo'(`step')`xhi', noticks tlength(0) grid glcolor(gs15) glwidth(vthin)) ///
+>         xtitle("Group minus similar firms: change since `start_1', % (still in the files, exporting: % points)", size(
+> vsmall)) ///
+>         legend(order(8 "`post_rng' vs `start_1' (exporting: `ex_rng')" 5 "95% interval of ●" ///
+>                      7 "vs `pool_rng' together: Bu Deasy's × Post2020" 4 "95% interval of ◇" ///
+>                      6 "Gray ◇: apart before COVID, does not measure COVID" 2 "Main row's ●, for comparison" ///
+>                      1 "0 = no difference") ///
+>             cols(2) region(lcolor(none)) size(vsmall) symxsize(6) keygap(1) colgap(8) rowgap(0.3)) ///
+>         plotregion(style(none)) xsize(8) ysize(15.5)
+  4.     if "`out'" == "png" graph export "figures/`fname'.png", width(2400) replace
+  5.     else graph export "figures/`fname'.pdf", replace
+  6. }
+file
+    /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r10-covid-resilience-internationalised
+    > /figures/06_robustness_reweighted_rules.png saved as PNG format
+file
+    /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r10-covid-resilience-internationalised
+    > /figures/06_robustness_reweighted_rules.pdf saved as PDF format
+
+. display "figure -> figures/`fname'.png"
+figure -> figures/06_robustness_reweighted_rules.png
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 10/10: companion tables: every plotted point, and the regression table"
+Step 10/10: companion tables: every plotted point, and the regression table
+
+. *---------------------------------------------------------------------------
+. * ==== COMPANION TABLE (pattern for all exhibits) =============================
+. * Owner rule, 28 Sep 2026: every chart gets a table of every plotted point, and
+. * every chart of regression coefficients also gets a regression table, written
+. * by the same do-file (spec: TABLE_BRIEF.md). This step runs AFTER the graph
+. * export, so the chart and the CSV stay byte-identical.
+. *
+. * How to use it in another exhibit file:
+. *   PART 1 (the writer, program ctable_pdf) is copied UNCHANGED.
+. *   PART 2 is the only exhibit-specific part: put the numbers in memory (the
+. *   tempfile saved right after the CSV export, or the CSV itself), build one
+. *   STRING variable per table column, one row per plotted point in chart order
+. *   (years not drawn included, with the reason in a status column), then call
+. *   ctable_pdf. Format numbers with string(x, "%9.1f") etc. so the table shows
+. *   exactly the rounding of the chart labels.
+. *
+. * ctable_pdf strvars using "tables/NN_name_table.pdf",
+. *     title("Table R1-02. ...: every plotted point")    first line, bold
+. *     header("Col 1" "Col 2" ...)       one text per column; "|" = line break
+. *     [right(numlist)]                  columns right-aligned (numbers)
+. *     [norepeat(numlist)]               columns whose repeated text is shown
+. *                                       only on the first row of a run
+. *     [rules(numlist)]                  thin gray line under these data rows
+. *     [notes("line 1" "line 2" ...)]    footer paragraphs (Notes, Source, dev line)
+. *     [subtitle(text)] [fontsize(#)] [perpage(#)] [landscape|portrait]
+. * Landscape is chosen automatically when there are more than 6 columns. Long
+. * tables continue on a new page with the header repeated ("(continued)"); a page
+. * never breaks inside a block whose first column is empty (e.g. an SE row).
+. * --- PART 1: the writer (identical in every file; do not edit) ---------------
+. capture program drop ctable_pdf
+
+. program define ctable_pdf
+  1.     version 17
+  2.     syntax varlist(string) using/, TItle(string) HEADer(string asis) ///
+>         [RIGHT(numlist integer >0) NOREPeat(numlist integer >0) RULES(numlist integer >0) ///
+>          NOTEs(string asis) SUBtitle(string) FONTsize(real 9.5) PERpage(integer 0) ///
+>          LANDscape PORTrait]
+  3.     local nc : word count `varlist'
+  4.     local nh : word count `header'
+  5.     if `nh' != `nc' {
+  6.         display as error "ctable_pdf: `nc' columns but `nh' header texts"
+  7.         exit 198
+  8.     }
+  9.     local orient = cond(`nc' > 6, "landscape", "")
+ 10.     if "`landscape'" != "" local orient "landscape"
+ 11.     if "`portrait'"  != "" local orient ""
+ 12.     * rows per page: a conservative guess for 9-10 pt text (wrapped cells take more)
+.     if `perpage' == 0 local perpage = cond("`orient'" == "landscape", 24, 40)
+ 13.     preserve
+ 14.     quietly {
+ 15.         keep `varlist'
+ 16.         rename (`varlist') (__c#), addnumber      // __c1 __c2 ... in the order given
+ 17.         forvalues j = 1/`nc' {
+ 18.             replace __c`j' = strtrim(__c`j')
+ 19.         }
+ 20.         local N = _N
+ 21.         gen long row = _n
+ 22.         * page chunks: fill up to perpage rows; prefer to end a page at a rule,
+.         * never start a page on a row whose first column is empty
+.         gen int chunk = .
+ 23.         local start 1
+ 24.         local k 0
+ 25.         while `start' <= `N' {
+ 26.             local ++k
+ 27.             local end = min(`start' + `perpage' - 1, `N')
+ 28.             if `end' < `N' {
+ 29.                 local best 0
+ 30.                 foreach r of local rules {
+ 31.                     if `r' >= `start' + floor(`perpage' / 2) & `r' <= `end' & `r' > `best' local best `r'
+ 32.                 }
+ 33.                 if `best' > 0 local end `best'
+ 34.                 else {
+ 35.                     while `end' > `start' & __c1[`end' + 1] == "" {
+ 36.                         local --end
+ 37.                     }
+ 38.                 }
+ 39.             }
+ 40.             replace chunk = `k' in `start'/`end'
+ 41.             local start = `end' + 1
+ 42.         }
+ 43.         local nk `k'
+ 44.         * blank repeated labels inside each page; a column is blanked only while the
+.         * norepeat columns to its left are unchanged too (a new panel shows its series)
+.         gen byte same = _n > 1 & chunk == chunk[_n - 1]
+ 45.         foreach j of local norepeat {
+ 46.             gen strL o`j' = __c`j'
+ 47.             replace same = same & o`j' == o`j'[_n - 1]
+ 48.             replace __c`j' = "" if same
+ 49.             drop o`j'
+ 50.         }
+ 51.         drop same
+ 52.         * column widths (% of the page), from the longest text in each column;
+.         * long text columns are capped so they wrap instead of squeezing numbers
+.         matrix W = J(1, `nc', 0)
+ 53.         local tot 0
+ 54.         forvalues j = 1/`nc' {
+ 55.             gen long L`j' = udstrlen(__c`j')
+ 56.             summarize L`j', meanonly
+ 57.             local w = max(r(max), 3)
+ 58.             local h : word `j' of `header'
+ 59.             local h = subinstr(`"`h'"', "|", " ", .)
+ 60.             foreach hw of local h {
+ 61.                 local w = max(`w', udstrlen(`"`hw'"'))
+ 62.             }
+ 63.             local w = min(`w', 34) + 2          // + 2 = room for the cell margins
+ 64.             matrix W[1, `j'] = `w'
+ 65.             local tot = `tot' + `w'
+ 66.             drop L`j'
+ 67.         }
+ 68.         local used 0
+ 69.         forvalues j = 1/`nc' {
+ 70.             if `j' < `nc' {
+ 71.                 matrix W[1, `j'] = max(floor(100 * W[1, `j'] / `tot'), 3)
+ 72.                 local used = `used' + W[1, `j']
+ 73.             }
+ 74.             else matrix W[1, `j'] = 100 - `used'
+ 75.         }
+ 76.     }
+ 77.     putpdf clear
+ 78.     putpdf begin, pagesize(A4) `orient' font("Times New Roman", `fontsize') ///
+>         margin(left, 0.8in) margin(right, 0.8in) margin(top, 0.5in) margin(bottom, 0.5in)
+ 79.     forvalues k = 1/`nk' {
+ 80.         if `k' > 1 putpdf pagebreak
+ 81.         putpdf paragraph, spacing(after, 4pt)
+ 82.         local tt = cond(`k' == 1, `"`title'"', `"`title' (continued)"')
+ 83.         putpdf text (`"`tt'"'), bold font("Times New Roman", `=`fontsize' + 1.5')
+ 84.         if `k' == 1 & `"`subtitle'"' != "" {
+ 85.             putpdf paragraph, spacing(after, 4pt)
+ 86.             putpdf text (`"`subtitle'"')
+ 87.         }
+ 88.         quietly count if chunk == `k'
+ 89.         local nr = r(N) + 1
+ 90.         quietly putpdf table T`k' = data(__c1-__c`nc') if chunk == `k', varnames border(all, nil) width(W)
+ 91.         forvalues j = 1/`nc' {
+ 92.             * header text; "|" starts a new line inside the cell
+.             local rest : word `j' of `header'
+ 93.             local opt ""
+ 94.             while `"`rest'"' != "" {
+ 95.                 gettoken part rest : rest, parse("|")
+ 96.                 if `"`part'"' == "|" {
+ 97.                     putpdf table T`k'(1, `j') = (""), linebreak append
+ 98.                     continue
+ 99.                 }
+100.                 putpdf table T`k'(1, `j') = (`"`part'"'), valign(bottom) `opt'
+101.                 local opt "append"
+102.             }
+103.             local al = cond(`: list j in right', "right", "left")
+104.             putpdf table T`k'(., `j'), halign(`al') margin(top, 0pt) margin(bottom, 0pt)
+105.         }
+106.         putpdf table T`k'(1, .), border(top, single, black) border(bottom, single, black)
+107.         putpdf table T`k'(`nr', .), border(bottom, single, black)
+108.         foreach r of local rules {
+109.             quietly summarize row if chunk == `k', meanonly
+110.             if `r' >= r(min) & `r' < r(max) {
+111.                 putpdf table T`k'(`=`r' - r(min) + 2', .), border(bottom, single, "A6A6A6")
+112.             }
+113.         }
+114.     }
+115.     local first 1
+116.     foreach n of local notes {
+117.         putpdf paragraph, spacing(before, `=cond(`first', 6, 1)'pt)
+118.         putpdf text (`"`n'"'), font("Times New Roman", `=`fontsize' - 0.5')
+119.         local first 0
+120.     }
+121.     putpdf save `"`using'"', replace
+122.     restore
+123. end
+
+. * --- end of PART 1 ------------------------------------------------------------
+. * --- PART 2: the rows of this exhibit (the only part that changes per file) ---
+. * Source: the table saved right after the CSV export (full precision, same estimation run as
+. * the chart).
+. * (1) Points table: one row per point of the chart, panel by panel, section by section, row by
+. *     row: the ● (against the start file) then the ◇ (against the three files before).
+. use `ctsrc', clear
+
+. quietly count if in_figure
+
+. local n_fig = r(N)
+
+. keep if inlist(term, "avgpost", "pooled") & version != "look"
+(732 observations deleted)
+
+. gen byte srow = 0
+
+. forvalues o = 1/5 {
+  2.     local k 0
+  3.     foreach v of local rows_`o' {
+  4.         local ++k
+  5.         replace srow = `k' if oid == `o' & version == "`v'"
+  6.     }
+  7. }
+(3 real changes made)
+(3 real changes made)
+(3 real changes made)
+(3 real changes made)
+(3 real changes made)
+(3 real changes made)
+(3 real changes made)
+(3 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+
+. assert srow > 0
+
+. gen str30 t_panel = cond(gi == 1, "(a) Exporters", cond(gi == 2, "(b) Importers", "(c) Foreign-owned"))
+
+. gen str40 t_sec = ""
+(252 missing values generated)
+
+. replace t_sec = "Still in the files (pts)" if oid == 1
+(24 real changes made)
+
+. replace t_sec = "Output (%)"               if oid == 2
+(60 real changes made)
+
+. replace t_sec = "Workers (%)"              if oid == 3
+(60 real changes made)
+
+. replace t_sec = "VA per worker (%)"        if oid == 4
+(54 real changes made)
+
+. replace t_sec = "Exporting (pts)"          if oid == 5
+(54 real changes made)
+
+. gen str40 t_row = ""
+(252 missing values generated)
+
+. foreach v in main fy eb strict early base newc allf closed stay bench {
+  2.     replace t_row = "`rl_`v''" if version == "`v'"
+  3. }
+(27 real changes made)
+(27 real changes made)
+(27 real changes made)
+(27 real changes made)
+(27 real changes made)
+(27 real changes made)
+(27 real changes made)
+(18 real changes made)
+(12 real changes made)
+(6 real changes made)
+(27 real changes made)
+
+. * the comparison, as in the legend
+. local bex_last : word `npost_ex' of `post_2'
+
+. local bex_rng = cond(`npost_ex' == 1, "`post_2'", "`f1_2'–" + substr("`bex_last'", 3, 2))
+
+. gen str30 t_num = ""
+(252 missing values generated)
+
+. replace t_num = "`post_rng' vs `start_1'" if term == "avgpost"
+(138 real changes made)
+
+. replace t_num = "`ex_rng' vs `start_1'" if term == "avgpost" & oid == 5
+(27 real changes made)
+
+. replace t_num = "`bpost_rng' vs `start_2'" if term == "avgpost" & version == "bench"
+(15 real changes made)
+
+. replace t_num = "`bex_rng' vs `start_2'" if term == "avgpost" & version == "bench" & oid == 5
+(3 real changes made)
+
+. replace t_num = "vs `pool_rng', × Post2020" if term == "pooled"
+(114 real changes made)
+
+. replace t_num = "vs `bpool_rng'" if term == "pooled" & version == "bench"
+(12 real changes made)
+
+. * values: markers carry no number on the chart, so one decimal
+. gen str12 t_v  = cond(val > 0.05, "+", "") + string(val, "%9.1f") if shown
+(17 missing values generated)
+
+. gen str12 t_lo = cond(val_lo > 0.05, "+", "") + string(val_lo, "%9.1f") if shown
+(17 missing values generated)
+
+. gen str12 t_hi = cond(val_hi > 0.05, "+", "") + string(val_hi, "%9.1f") if shown
+(17 missing values generated)
+
+. gen str12 t_n1 = string(ref_g1, "%12.0fc")
+
+. gen str12 t_n0 = string(ref_g0, "%12.0fc")
+
+. gen str12 t_w = string(worth_g0, "%12.0fc") if !missing(worth_g0)
+(225 missing values generated)
+
+. gen str40 t_status = ""
+(252 missing values generated)
+
+. replace t_status = "black dot" if in_figure & term == "avgpost"
+(129 real changes made)
+
+. replace t_status = "hollow diamond" if in_figure & term == "pooled" & apart == 0
+(61 real changes made)
+
+. replace t_status = "gray diamond: apart before" if in_figure & term == "pooled" & apart == 1
+(45 real changes made)
+
+. replace t_status = "not drawn: under `min_n' firms" if !shown & !missing(b) & (ref_g1 < `min_n' | ref_g0 < `min_n')
+(11 real changes made)
+
+. replace t_status = "not drawn: reweighted others under `min_worth'" if !shown & !missing(b) & t_status == ""
+(6 real changes made)
+
+. replace t_status = "not estimable" if missing(b)
+(0 real changes made)
+
+. replace t_status = t_status + " (what-if)" if version == "closed"
+(12 real changes made)
+
+. assert t_status != ""
+
+. * check: every drawn point is in the table once
+. quietly count if in_figure
+
+. assert r(N) == `n_fig'
+
+. sort gi oid srow term
+
+. local nrows = _N
+
+. local rl ""
+
+. forvalues i = 1/`=_N - 1' {
+  2.     if oid[`i'] != oid[`i' + 1] | gi[`i'] != gi[`i' + 1] local rl "`rl' `i'"
+  3. }
+
+. local tnote "Table: every point of Figure R10-06, panel by panel, section by section. Output, workers and VA per worke
+> r: % difference"
+
+. local tnote "`tnote' = 100 × (exp(b) − 1) with b the coefficient in the regression table (what-if: midpoint % points);
+>  still in the files"
+
+. local tnote "`tnote' and exporting: % points. Full precision in tables/`fname'.csv. Firms: group and other firms in th
+> e start file of the"
+
+. local tnote "`tnote' model; worth = what the reweighted other firms are worth, as firms counted equally. Gray diamond:
+>  the group was"
+
+. local tnote "`tnote' already apart before COVID, so that number does not measure COVID. What-if rows (R10-04's midpoin
+> t scale, % points):"
+
+. local tnote "`tnote' an assumption, not a finding."
+
+. local ntab : subinstr local ntext "~" " ", all
+
+. order t_panel t_sec t_row t_num t_v t_lo t_hi t_n1 t_n0 t_w t_status
+
+. ctable_pdf t_panel t_sec t_row t_num t_v t_lo t_hi t_n1 t_n0 t_w t_status using "tables/`fname'_table.pdf", ///
+>     title("Table R10-06. The numbers of R10-02, R10-03 and R10-05 under other choices: every plotted point") ///
+>     subtitle("Group minus similar firms (same industry and province) after COVID") ///
+>     header("Panel" "Section" "Row" "Comparison" "Estimate" "Interval|from" "Interval|to" "Firms:|in group" ///
+>         "Firms:|others" "Others'|worth" "Status") ///
+>     right(5 6 7 8 9 10) norepeat(1 2) rules(`rl') perpage(34) fontsize(8) landscape ///
+>     notes("`ntab'" "`tnote'" "`srcnote'" "`devnote'")
+successfully created "/Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r10-covid-resilience-i
+> nternationalised/tables/06_robustness_reweighted_rules_table.pdf"
+
+. display "table -> tables/`fname'_table.pdf (`nrows' rows; `n_fig' drawn)"
+table -> tables/06_robustness_reweighted_rules_table.pdf (252 rows; 235 drawn)
+
+. 
+. * (2) Regression table (AER style): one column per version; per outcome and group the first
+. * later file, the average after the start file and the pooled term: coefficient, (standard
+. * error), [% difference = 100 × (exp(b) − 1)] for the log outcomes.
+. use `ctsrc', clear
+
+. * check: the coefficients are those in the CSV just written (4 decimals there)
+. preserve
+
+. import delimited using "tables/`fname'.csv", clear varnames(1) stringcols(3 5 7)
+(encoding automatically selected: ISO-8859-1)
+(36 vars, 984 obs)
+
+. keep oid grouping version term b
+
+. rename b b_csv
+
+. tempfile csvb
+
+. save `csvb'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_01698.00000t saved as .dta format
+
+. restore
+
+. merge 1:1 oid grouping version term using `csvb', assert(match) nogenerate
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                               984  
+    -----------------------------------------
+
+. assert abs(b - b_csv) <= 0.00005 + 1e-9 if !missing(b)
+
+. assert missing(b_csv) if missing(b)
+(null assertion)
+
+. drop b_csv
+
+. local cols "main fy eb strict early base newc alt closed bench look"
+
+. local nc : word count `cols'
+
+. local tv ""
+
+. forvalues c = 1/`nc' {
+  2.     local tv "`tv' t`c'"
+  3. }
+
+. tempname Q
+
+. tempfile R
+
+. postfile `Q' str60 t_lab str24(`tv') using `R', replace
+(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_01698.00000u not found)
+
+. local nterm 0
+
+. local rl ""
+
+. local plab1 "Exporters"
+
+. local plab2 "Importers"
+
+. local plab3 "Foreign-owned (10%+)"
+
+. local olab1 "still in the files"
+
+. local olab2 "output"
+
+. local olab3 "workers"
+
+. local olab4 "VA per worker"
+
+. local olab5 "exporting"
+
+. local pan 0
+
+. forvalues o = 1/5 {
+  2.     forvalues g = 1/3 {
+  3.         local ++pan
+  4.         local cells ""
+  5.         forvalues c = 1/`nc' {
+  6.             local cells `"`cells' ("")"'
+  7.         }
+  8.         post `Q' ("Panel `pan'. `plab`g'': `olab`o''") `cells'
+  9.         local ++nterm
+ 10.         foreach tm in first avgpost pooled {
+ 11.             if "`tm'" == "pooled" & `o' == 1 continue
+ 12.             local l1 ""
+ 13.             local l2 ""
+ 14.             local l3 ""
+ 15.             forvalues c = 1/`nc' {
+ 16.                 local vv : word `c' of `cols'
+ 17.                 if "`vv'" == "alt" local vv = cond(`o' == 5, "stay", "allf")
+ 18.                 local tt "`tm'"
+ 19.                 if "`tm'" == "first" local tt = cond("`vv'" == "bench", "`f1_2'", "`f1_1'")
+ 20.                 quietly count if gi == `g' & oid == `o' & version == "`vv'" & term == "`tt'"
+ 21.                 local have = r(N)
+ 22.                 quietly summarize b if gi == `g' & oid == `o' & version == "`vv'" & term == "`tt'", meanonly
+ 23.                 local bb = r(mean)
+ 24.                 quietly summarize se if gi == `g' & oid == `o' & version == "`vv'" & term == "`tt'", meanonly
+ 25.                 local ss = r(mean)
+ 26.                 quietly summarize shown if gi == `g' & oid == `o' & version == "`vv'" & term == "`tt'", meanonly
+ 27.                 local sh = r(mean)
+ 28.                 local lg = inrange(`o', 2, 4) & "`vv'" != "closed"
+ 29.                 local fm = cond(`lg', "%9.3f", "%9.2f")
+ 30.                 if `have' == 0 {
+ 31.                     local l1 `"`l1' ("")"'
+ 32.                     local l2 `"`l2' ("")"'
+ 33.                     local l3 `"`l3' ("")"'
+ 34.                 }
+ 35.                 else if missing(`bb') | `sh' != 1 {
+ 36.                     local l1 `"`l1' ("too few")"'
+ 37.                     local l2 `"`l2' ("")"'
+ 38.                     local l3 `"`l3' ("")"'
+ 39.                 }
+ 40.                 else {
+ 41.                     local l1 `"`l1' ("`=string(`bb', "`fm'")'")"'
+ 42.                     local l2 `"`l2' ("(`=string(`ss', "`fm'")')")"'
+ 43.                     if `lg' {
+ 44.                         local pv = 100 * (exp(`bb') - 1)
+ 45.                         local l3 `"`l3' ("[`=cond(`pv' > 0, "+", "")'`=string(`pv', "%9.1f")'%]")"'
+ 46.                     }
+ 47.                     else local l3 `"`l3' ("")"'
+ 48.                 }
+ 49.             }
+ 50.             if "`tm'" == "first"   local lab "Group × first later file"
+ 51.             if "`tm'" == "avgpost" local lab "Average after start file"
+ 52.             if "`tm'" == "pooled"  local lab "Pooled × Post2020"
+ 53.             post `Q' ("`lab'") `l1'
+ 54.             post `Q' ("") `l2'
+ 55.             local nterm = `nterm' + 2
+ 56.             if inrange(`o', 2, 4) {
+ 57.                 post `Q' ("") `l3'
+ 58.                 local ++nterm
+ 59.             }
+ 60.         }
+ 61.         * whole-model rows (the yearly model of each column)
+.         foreach st in before_p rows firms firms_g1 worth_g0 {
+ 62.             if "`st'" == "before_p" & `o' == 1 continue
+ 63.             local ll ""
+ 64.             local any 0
+ 65.             forvalues c = 1/`nc' {
+ 66.                 local vv : word `c' of `cols'
+ 67.                 if "`vv'" == "alt" local vv = cond(`o' == 5, "stay", "allf")
+ 68.                 quietly summarize `st' if gi == `g' & oid == `o' & version == "`vv'" & term == "avgpost", meanonly
+ 69.                 if r(N) == 0 | missing(r(mean)) local cv ""
+ 70.                 else if "`st'" == "before_p" local cv = cond(r(mean) < 0.001, "< 0.001", string(r(mean), "%5.3f"))
+ 71.                 else local cv = string(r(mean), "%12.0fc")
+ 72.                 if "`cv'" != "" local any 1
+ 73.                 local ll `"`ll' ("`cv'")"'
+ 74.             }
+ 75.             if "`st'" == "before_p" local lab "Before-start test, p"
+ 76.             if "`st'" == "rows"     local lab "Observations"
+ 77.             if "`st'" == "firms"    local lab "Firms (clusters)"
+ 78.             if "`st'" == "firms_g1" local lab "Firms in the group"
+ 79.             if "`st'" == "worth_g0" local lab "Other firms' worth"
+ 80.             if `any' {
+ 81.                 post `Q' ("`lab'") `ll'
+ 82.                 local ++nterm
+ 83.             }
+ 84.         }
+ 85.         local rl "`rl' `nterm'"
+ 86.     }
+ 87. }
+
+. * design rows, the same for every panel
+. foreach d in firm indprov yr wgt files rule clu {
+  2.     local ll ""
+  3.     forvalues c = 1/`nc' {
+  4.         local vv : word `c' of `cols'
+  5.         if "`d'" == "firm"    local cv "Yes"
+  6.         if "`d'" == "indprov" local cv = cond("`vv'" == "fy", "No", "Yes")
+  7.         if "`d'" == "yr"      local cv = cond("`vv'" == "fy", "Yes", "Yes, by ind.")
+  8.         if "`d'" == "wgt"     local cv = cond("`vv'" == "eb", "Reweighted", "None")
+  9.         if "`d'" == "files"   local cv = cond("`vv'" == "bench", "`p2_2'–" + substr("`f3_2'", 3, 2), cond("`vv'" ==
+>  "look", "`: word 1 of `lb_1''–" + substr("`f3_1'", 3, 2), "`p2_1'–" + substr("`f3_1'", 3, 2)))
+ 10.         if "`d'" == "rule"    local cv = cond("`vv'" == "strict", "Always/never", cond("`vv'" == "early", "`early_r
+> ng'", cond("`vv'" == "base", "`start_1' only", "Half or more")))
+ 11.         if "`d'" == "clu"     local cv "Firm"
+ 12.         local ll `"`ll' ("`cv'")"'
+ 13.     }
+ 14.     if "`d'" == "firm"    local lab "Firm FE (still in files: no)"
+ 15.     if "`d'" == "indprov" local lab "Ind./prov. × year FE"
+ 16.     if "`d'" == "yr"      local lab "Year FE"
+ 17.     if "`d'" == "wgt"     local lab "Weights"
+ 18.     if "`d'" == "files"   local lab "Files"
+ 19.     if "`d'" == "rule"    local lab "Group rule"
+ 20.     if "`d'" == "clu"     local lab "SE clustered by"
+ 21.     post `Q' ("`lab'") `ll'
+ 22. }
+
+. postclose `Q'
+
+. use `R', clear
+
+. local rnote "Notes: Units: still in the files and exporting, % points; output, workers, value added (VA) per worker, l
+> og points (column 9:"
+
+. local rnote "`rnote' R10-04's midpoint % points). Each cell is one regression of R10-02, R10-03 or R10-05 with one cha
+> nge (column). Output, workers, VA per worker:"
+
+. 
+. local rnote "`rnote' log outcome on the group times each file except the start file (set to 0), firm averages and the 
+> fixed effects listed; the"
+
+. local rnote "`rnote' average is the mean of the markers after the start file; the pooled term (Bu Deasy's × Post2020) 
+> is its own regression with one"
+
+. local rnote "`rnote' term, group × every later file, against the start file and the files before it together (column 1
+> 1: `lb_1' too). Still in the"
+
+. local rnote "`rnote' files: one row per firm and later file, 0 or 100, gap per file and average (R10-02; industry × fi
+> le and province × file"
+
+. local rnote "`rnote' averages; column 2: file averages only); every firm is in the start file, so there is no pooled t
+> erm. Exporting: 0 or 100,"
+
+. local rnote "`rnote' `ex_rng' (`f3_1' asks about direct exports only). Columns: (1) main, as printed in R10-02/03/05; 
+> (2) firm + year averages only;"
+
+. local rnote "`rnote' (3) other firms reweighted to match the group's `pool_rng' averages (entropy balancing, R1-10's c
+> ode; weights treated as"
+
+. local rnote "`rnote' known); (4) group = yes in every known answer vs never; (5) group from `early_rng' answers; (6) f
+> rom the `start_1' answer; (7) firms"
+
+. local rnote "`rnote' new in `start_1' added; (8) output etc.: all firms in whatever files they are in; exporting: only
+>  firms in every file `post_rng';"
+
+. local rnote "`rnote' (9) R10-04's what-if, leavers counted as closed, midpoint scale (an assumption, not a finding); (
+> 10) normal years: `start_2'"
+
+. local rnote "`rnote' firms, `bpost_rng' (exporting `bex_rng') vs `start_2', pooled vs `bpool_rng'; its first later fil
+> e is `f1_2'; (11) longer look-back (table"
+
+. local rnote "`rnote' only). Where a before-start marker is clearly away from 0 (small p), the pooled term includes tha
+> t earlier change and"
+
+. local rnote "`rnote' does not measure COVID. too few = fewer than `min_n' firms in the start file (reweighted: others 
+> worth under `min_worth')."
+
+. local rnote "`rnote' FE = fixed effects (averages taken out). Singleton firms dropped by reghdfe. Output and VA: `out_
+> prices'. No stars."
+
+. ctable_pdf t_lab `tv' using "tables/`fname'_regression.pdf", ///
+>     title("Table R10-06, regression. The numbers of R10-02, R10-03 and R10-05 under other choices: estimates behind th
+> e chart") ///
+>     subtitle("Coefficient; (standard error, clustered by firm); [% difference = 100 × (exp(b) − 1)] for log outcomes."
+> ) ///
+>     header(" " "(1)|Main" "(2)|Firm +|year" "(3)|Re-|weighted" "(4)|Stricter|rule" "(5)|`early_rng'|answers" ///
+>         "(6)|`start_1'|answer" "(7)|New in|`start_1'" "(8)|Other|sample" "(9)|What-if:|closed" "(10)|Normal|years" ///
+>         "(11)|Longer|look-back") ///
+>     right(2 3 4 5 6 7 8 9 10 11 12) rules(`rl') landscape fontsize(8) perpage(30) ///
+>     notes("`rnote'" "`srcnote'" "`devnote'")
+successfully created "/Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r10-covid-resilience-i
+> nternationalised/tables/06_robustness_reweighted_rules_regression.pdf"
+
+. display "table -> tables/`fname'_regression.pdf"
+table -> tables/06_robustness_reweighted_rules_regression.pdf
+
+. * --- end of PART 2 ------------------------------------------------------------
+. 
+. timer off 1
+
+. quietly timer list 1
+
+. local elapsed = strtrim(string(r(t1), "%9.1f"))
+
+. display "FINISHED: figure -> figures/`fname'.png (elapsed `elapsed' s)"
+FINISHED: figure -> figures/06_robustness_reweighted_rules.png (elapsed 31.8 s)
+
+. quietly log close          // keeps FINISHED as the last output line of the log
