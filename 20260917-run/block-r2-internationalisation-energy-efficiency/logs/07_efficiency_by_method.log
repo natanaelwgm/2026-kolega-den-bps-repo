@@ -3,7 +3,7 @@
        log:  /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r2-internationalisation-energy-
 > efficiency/logs/07_efficiency_by_method.log
   log type:  text
- opened on:  25 Sep 2026, 09:17:53
+ opened on:  28 Sep 2026, 17:21:43
 
 . timer clear 1
 
@@ -26,8 +26,8 @@
 
 . 
 . *---------------------------------------------------------------------------
-. display "Step 1/8: load export status, energy, CO2 and value added; check the method packages"
-Step 1/8: load export status, energy, CO2 and value added; check the method packages
+. display "Step 1/9: load export status, energy, CO2 and value added; check the method packages"
+Step 1/9: load export status, energy, CO2 and value added; check the method packages
 
 . *---------------------------------------------------------------------------
 . * export_flag         = any export activity (1 yes, 0 no, missing = unknown)
@@ -90,8 +90,8 @@ Panel variable: firm_id (unbalanced)
 
 . 
 . *---------------------------------------------------------------------------
-. display "Step 2/8: date each firm's export start under two rules (same code in every R2 file)"
-Step 2/8: date each firm's export start under two rules (same code in every R2 file)
+. display "Step 2/9: date each firm's export start under two rules (same code in every R2 file)"
+Step 2/9: date each firm's export start under two rules (same code in every R2 file)
 
 . *---------------------------------------------------------------------------
 . * Missing status is unknown, never read as "not participating".
@@ -161,8 +161,8 @@ Step 2/8: date each firm's export start under two rules (same code in every R2 f
 
 . 
 . *---------------------------------------------------------------------------
-. display "Step 3/8: set the year window (R2-02's rule) and check it against R2-02's table if present"
-Step 3/8: set the year window (R2-02's rule) and check it against R2-02's table if present
+. display "Step 3/9: set the year window (R2-02's rule) and check it against R2-02's table if present"
+Step 3/9: set the year window (R2-02's rule) and check it against R2-02's table if present
 
 . *---------------------------------------------------------------------------
 . * Years since the start = calendar year minus start year (0 = start year,
@@ -180,7 +180,7 @@ Step 3/8: set the year window (R2-02's rule) and check it against R2-02's table 
 . tempfile fy est
 
 . save `fy'
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_12580.000001 saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_34317.000001 saved as .dta format
 
 . * Which years since the start get their own point: R2-02's rule, computed here so
 . * this file also runs on its own. A year passes when `minfirms'+ starters have a
@@ -241,8 +241,8 @@ file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_12580.000001 saved as .
 
 . 
 . *---------------------------------------------------------------------------
-. display "Step 4/8: the firms compared (as R2-03) and one on/off marker per year since the start"
-Step 4/8: the firms compared (as R2-03) and one on/off marker per year since the start
+. display "Step 4/9: the firms compared (as R2-03) and one on/off marker per year since the start"
+Step 4/9: the firms compared (as R2-03) and one on/off marker per year since the start
 
 . *---------------------------------------------------------------------------
 . use `fy', clear
@@ -299,7 +299,7 @@ Step 4/8: the firms compared (as R2-03) and one on/off marker per year since the
 . tempfile smp est
 
 . save `smp'
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_12580.000003 saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_34317.000003 saved as .dta format
 
 . * Counts behind each estimate: starters with a row from the start year on,
 . * comparison firms and rows, all inside the estimation sample (variable es).
@@ -328,8 +328,8 @@ file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_12580.000003 saved as .
 
 . 
 . *---------------------------------------------------------------------------
-. display "Step 5/8: the same starters and never-exporters under each method"
-Step 5/8: the same starters and never-exporters under each method
+. display "Step 5/9: the same starters and never-exporters under each method"
+Step 5/9: the same starters and never-exporters under each method
 
 . *---------------------------------------------------------------------------
 . * All five: log value added per GJ, firm and year effects, one change per
@@ -755,48 +755,48 @@ Panel variable: firm_id (unbalanced)
 (G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
 (13,910 observations deleted)
 (0 observations deleted)
-(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_12580.000006 not found)
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_12580.000006 saved as .dta format
+(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_34317.000006 not found)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_34317.000006 saved as .dta format
 (G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
 (12,360 observations deleted)
 (0 observations deleted)
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_12580.000006 saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_34317.000006 saved as .dta format
 (G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
 (10,805 observations deleted)
 (0 observations deleted)
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_12580.000006 saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_34317.000006 saved as .dta format
 (G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
 (8,910 observations deleted)
 (2 observations deleted)
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_12580.000006 saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_34317.000006 saved as .dta format
 (G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
 (7,373 observations deleted)
 (0 observations deleted)
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_12580.000006 saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_34317.000006 saved as .dta format
 (G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
 (7,701 observations deleted)
 (0 observations deleted)
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_12580.000006 saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_34317.000006 saved as .dta format
 (G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
 (8,808 observations deleted)
 (4 observations deleted)
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_12580.000006 saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_34317.000006 saved as .dta format
 (G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
 (10,267 observations deleted)
 (0 observations deleted)
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_12580.000006 saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_34317.000006 saved as .dta format
 (G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
 (11,492 observations deleted)
 (0 observations deleted)
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_12580.000006 saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_34317.000006 saved as .dta format
 (G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
 (12,988 observations deleted)
 (4 observations deleted)
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_12580.000006 saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_34317.000006 saved as .dta format
 (G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
 (12,931 observations deleted)
 (0 observations deleted)
-file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_12580.000006 saved as .dta format
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_34317.000006 saved as .dta format
 
 . use `stack', clear
 (G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
@@ -851,12 +851,12 @@ file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_12580.000006 saved as .
 . quietly timer list 2
 
 . display "   methods done (" %5.1f r(t2) " s)"
-   methods done ( 34.0 s)
+   methods done ( 35.2 s)
 
 . 
 . *---------------------------------------------------------------------------
-. display "Step 6/8: the previous paper's stricter start rule (rule B) with Borusyak-Jaravel-Spiess"
-Step 6/8: the previous paper's stricter start rule (rule B) with Borusyak-Jaravel-Spiess
+. display "Step 6/9: the previous paper's stricter start rule (rule B) with Borusyak-Jaravel-Spiess"
+Step 6/9: the previous paper's stricter start rule (rule B) with Borusyak-Jaravel-Spiess
 
 . *---------------------------------------------------------------------------
 . * Rule B = participating in t, not in t-1 and t-2, and again in t+1 (exact
@@ -941,8 +941,8 @@ Step 6/8: the previous paper's stricter start rule (rule B) with Borusyak-Jarave
 
 . 
 . *---------------------------------------------------------------------------
-. display "Step 7/8: intervals, percentages and the CSV (numbers written before drawing)"
-Step 7/8: intervals, percentages and the CSV (numbers written before drawing)
+. display "Step 7/9: intervals, percentages and the CSV (numbers written before drawing)"
+Step 7/9: intervals, percentages and the CSV (numbers written before drawing)
 
 . *---------------------------------------------------------------------------
 . use `est', clear
@@ -1064,6 +1064,10 @@ variable method_label was str80 now str88
 . export delimited using "tables/`fname'.csv", datafmt replace
 file tables/07_efficiency_by_method.csv saved
 
+. tempfile ctsrc                     // same numbers, full precision, for the companion tables (Step 9)
+
+. quietly save `ctsrc'
+
 . list method row_type b pct pct_lo pct_hi p starters comp_firms rows status if inlist(row_type, "avg", "own_overall", "
 > before_check", "before_all", "max_move"), ///
 >     noobs sep(0) abbreviate(24) clean
@@ -1091,8 +1095,8 @@ file tables/07_efficiency_by_method.csv saved
 
 . 
 . *---------------------------------------------------------------------------
-. display "Step 8/8: dot-and-whisker chart, one row per method"
-Step 8/8: dot-and-whisker chart, one row per method
+. display "Step 8/9: dot-and-whisker chart, one row per method"
+Step 8/9: dot-and-whisker chart, one row per method
 
 . *---------------------------------------------------------------------------
 . * Numbers for the rows and notes, read from the table (never typed).
@@ -1415,6 +1419,573 @@ file
     > ncy/figures/07_efficiency_by_method.pdf saved as PDF format
 
 . 
+. *---------------------------------------------------------------------------
+. display "Step 9/9: companion tables: every plotted point, and the regression table"
+Step 9/9: companion tables: every plotted point, and the regression table
+
+. *---------------------------------------------------------------------------
+. * ==== COMPANION TABLE (pattern for all exhibits) =============================
+. * Owner rule, 28 Sep 2026: every chart gets a table of every plotted point, and
+. * every chart of regression coefficients also gets a regression table, written
+. * by the same do-file (spec: TABLE_BRIEF.md). This step runs AFTER the graph
+. * export, so the chart and the CSV stay byte-identical.
+. *
+. * How to use it in another exhibit file:
+. *   PART 1 (the writer, program ctable_pdf) is copied UNCHANGED.
+. *   PART 2 is the only exhibit-specific part: put the numbers in memory (the
+. *   tempfile saved right after the CSV export, or the CSV itself), build one
+. *   STRING variable per table column, one row per plotted point in chart order
+. *   (years not drawn included, with the reason in a status column), then call
+. *   ctable_pdf. Format numbers with string(x, "%9.1f") etc. so the table shows
+. *   exactly the rounding of the chart labels.
+. *
+. * ctable_pdf strvars using "tables/NN_name_table.pdf",
+. *     title("Table R1-02. ...: every plotted point")    first line, bold
+. *     header("Col 1" "Col 2" ...)       one text per column; "|" = line break
+. *     [right(numlist)]                  columns right-aligned (numbers)
+. *     [norepeat(numlist)]               columns whose repeated text is shown
+. *                                       only on the first row of a run
+. *     [rules(numlist)]                  thin gray line under these data rows
+. *     [notes("line 1" "line 2" ...)]    footer paragraphs (Notes, Source, dev line)
+. *     [subtitle(text)] [fontsize(#)] [perpage(#)] [landscape|portrait]
+. * Landscape is chosen automatically when there are more than 6 columns. Long
+. * tables continue on a new page with the header repeated ("(continued)"); a page
+. * never breaks inside a block whose first column is empty (e.g. an SE row).
+. * --- PART 1: the writer (identical in every file; do not edit) ---------------
+. capture program drop ctable_pdf
+
+. program define ctable_pdf
+  1.     version 17
+  2.     syntax varlist(string) using/, TItle(string) HEADer(string asis) ///
+>         [RIGHT(numlist integer >0) NOREPeat(numlist integer >0) RULES(numlist integer >0) ///
+>          NOTEs(string asis) SUBtitle(string) FONTsize(real 9.5) PERpage(integer 0) ///
+>          LANDscape PORTrait]
+  3.     local nc : word count `varlist'
+  4.     local nh : word count `header'
+  5.     if `nh' != `nc' {
+  6.         display as error "ctable_pdf: `nc' columns but `nh' header texts"
+  7.         exit 198
+  8.     }
+  9.     local orient = cond(`nc' > 6, "landscape", "")
+ 10.     if "`landscape'" != "" local orient "landscape"
+ 11.     if "`portrait'"  != "" local orient ""
+ 12.     * rows per page: a conservative guess for 9-10 pt text (wrapped cells take more)
+.     if `perpage' == 0 local perpage = cond("`orient'" == "landscape", 24, 40)
+ 13.     preserve
+ 14.     quietly {
+ 15.         keep `varlist'
+ 16.         rename (`varlist') (__c#), addnumber      // __c1 __c2 ... in the order given
+ 17.         forvalues j = 1/`nc' {
+ 18.             replace __c`j' = strtrim(__c`j')
+ 19.         }
+ 20.         local N = _N
+ 21.         gen long row = _n
+ 22.         * page chunks: fill up to perpage rows; prefer to end a page at a rule,
+.         * never start a page on a row whose first column is empty
+.         gen int chunk = .
+ 23.         local start 1
+ 24.         local k 0
+ 25.         while `start' <= `N' {
+ 26.             local ++k
+ 27.             local end = min(`start' + `perpage' - 1, `N')
+ 28.             if `end' < `N' {
+ 29.                 local best 0
+ 30.                 foreach r of local rules {
+ 31.                     if `r' >= `start' + floor(`perpage' / 2) & `r' <= `end' & `r' > `best' local best `r'
+ 32.                 }
+ 33.                 if `best' > 0 local end `best'
+ 34.                 else {
+ 35.                     while `end' > `start' & __c1[`end' + 1] == "" {
+ 36.                         local --end
+ 37.                     }
+ 38.                 }
+ 39.             }
+ 40.             replace chunk = `k' in `start'/`end'
+ 41.             local start = `end' + 1
+ 42.         }
+ 43.         local nk `k'
+ 44.         * blank repeated labels inside each page; a column is blanked only while the
+.         * norepeat columns to its left are unchanged too (a new panel shows its series)
+.         gen byte same = _n > 1 & chunk == chunk[_n - 1]
+ 45.         foreach j of local norepeat {
+ 46.             gen strL o`j' = __c`j'
+ 47.             replace same = same & o`j' == o`j'[_n - 1]
+ 48.             replace __c`j' = "" if same
+ 49.             drop o`j'
+ 50.         }
+ 51.         drop same
+ 52.         * column widths (% of the page), from the longest text in each column;
+.         * long text columns are capped so they wrap instead of squeezing numbers
+.         matrix W = J(1, `nc', 0)
+ 53.         local tot 0
+ 54.         forvalues j = 1/`nc' {
+ 55.             gen long L`j' = udstrlen(__c`j')
+ 56.             summarize L`j', meanonly
+ 57.             local w = max(r(max), 3)
+ 58.             local h : word `j' of `header'
+ 59.             local h = subinstr(`"`h'"', "|", " ", .)
+ 60.             foreach hw of local h {
+ 61.                 local w = max(`w', udstrlen(`"`hw'"'))
+ 62.             }
+ 63.             local w = min(`w', 34) + 2          // + 2 = room for the cell margins
+ 64.             matrix W[1, `j'] = `w'
+ 65.             local tot = `tot' + `w'
+ 66.             drop L`j'
+ 67.         }
+ 68.         local used 0
+ 69.         forvalues j = 1/`nc' {
+ 70.             if `j' < `nc' {
+ 71.                 matrix W[1, `j'] = max(floor(100 * W[1, `j'] / `tot'), 3)
+ 72.                 local used = `used' + W[1, `j']
+ 73.             }
+ 74.             else matrix W[1, `j'] = 100 - `used'
+ 75.         }
+ 76.     }
+ 77.     putpdf clear
+ 78.     putpdf begin, pagesize(A4) `orient' font("Times New Roman", `fontsize') ///
+>         margin(left, 0.8in) margin(right, 0.8in) margin(top, 0.5in) margin(bottom, 0.5in)
+ 79.     forvalues k = 1/`nk' {
+ 80.         if `k' > 1 putpdf pagebreak
+ 81.         putpdf paragraph, spacing(after, 4pt)
+ 82.         local tt = cond(`k' == 1, `"`title'"', `"`title' (continued)"')
+ 83.         putpdf text (`"`tt'"'), bold font("Times New Roman", `=`fontsize' + 1.5')
+ 84.         if `k' == 1 & `"`subtitle'"' != "" {
+ 85.             putpdf paragraph, spacing(after, 4pt)
+ 86.             putpdf text (`"`subtitle'"')
+ 87.         }
+ 88.         quietly count if chunk == `k'
+ 89.         local nr = r(N) + 1
+ 90.         quietly putpdf table T`k' = data(__c1-__c`nc') if chunk == `k', varnames border(all, nil) width(W)
+ 91.         forvalues j = 1/`nc' {
+ 92.             * header text; "|" starts a new line inside the cell
+.             local rest : word `j' of `header'
+ 93.             local opt ""
+ 94.             while `"`rest'"' != "" {
+ 95.                 gettoken part rest : rest, parse("|")
+ 96.                 if `"`part'"' == "|" {
+ 97.                     putpdf table T`k'(1, `j') = (""), linebreak append
+ 98.                     continue
+ 99.                 }
+100.                 putpdf table T`k'(1, `j') = (`"`part'"'), valign(bottom) `opt'
+101.                 local opt "append"
+102.             }
+103.             local al = cond(`: list j in right', "right", "left")
+104.             putpdf table T`k'(., `j'), halign(`al') margin(top, 0pt) margin(bottom, 0pt)
+105.         }
+106.         putpdf table T`k'(1, .), border(top, single, black) border(bottom, single, black)
+107.         putpdf table T`k'(`nr', .), border(bottom, single, black)
+108.         foreach r of local rules {
+109.             quietly summarize row if chunk == `k', meanonly
+110.             if `r' >= r(min) & `r' < r(max) {
+111.                 putpdf table T`k'(`=`r' - r(min) + 2', .), border(bottom, single, "A6A6A6")
+112.             }
+113.         }
+114.     }
+115.     local first 1
+116.     foreach n of local notes {
+117.         putpdf paragraph, spacing(before, `=cond(`first', 6, 1)'pt)
+118.         putpdf text (`"`n'"'), font("Times New Roman", `=`fontsize' - 0.5')
+119.         local first 0
+120.     }
+121.     putpdf save `"`using'"', replace
+122.     restore
+123. end
+
+. * --- end of PART 1 ------------------------------------------------------------
+. * --- PART 2: the rows of this exhibit (the only part that changes per file) ---
+. * Source: the table saved right after the CSV export (full precision, same
+. * estimation run as the chart).
+. * (1) Points table: the chart's rows top to bottom; per method its average
+. * (dot or diamond with bar and label), then its own overall number (hollow
+. * gray diamond) where it has one. A method that did not run keeps a row.
+. use `ctsrc', clear
+
+. keep if inlist(row_type, "avg", "own_overall")
+(64 observations deleted)
+
+. quietly count if status == "ok" & !missing(b)
+
+. local ndrawn = r(N)
+
+. local nrows = _N
+
+. gen byte ro = cond(row_type == "avg", 1, 2)
+
+. sort method_order ro
+
+. gen str60 t_m = ""
+(11 missing values generated)
+
+. replace t_m = "Figure R2-03's model (one regression)"   if method == "twfe"
+(2 real changes made)
+
+. replace t_m = "Callaway–Sant'Anna"                      if method == "cs"
+(2 real changes made)
+
+. replace t_m = "Sun–Abraham"                             if method == "sa"
+(1 real change made)
+
+. replace t_m = "Borusyak–Jaravel–Spiess"                 if method == "bjs"
+(2 real changes made)
+
+. replace t_m = "de Chaisemartin–D'Haultfœuille"          if method == "dcdh"
+(2 real changes made)
+
+. replace t_m = "Figure R2-06 (one start year at a time)" if method == "r2_06"
+(1 real change made)
+
+. replace t_m = "Previous paper's stricter start rule"    if method == "bjs_B"
+(1 real change made)
+
+. * series = the chart's legend entries, shortened (full wording in the table notes)
+. gen str70 t_ser = "Average of years 0 to +`whi'" if row_type == "avg"
+(4 missing values generated)
+
+. replace t_ser = "Other kind of average" if row_type == "avg" & inlist(method, "r2_06", "bjs_B")
+(2 real changes made)
+
+. replace t_ser = "Previous paper's summary" if row_type == "own_overall"
+(4 real changes made)
+
+. replace t_m = t_m + ": start years weighted by starters" if method == "r2_06" & row_type == "avg"
+variable t_m was str60 now str73
+(1 real change made)
+
+. replace t_m = t_m + ": Borusyak–Jaravel–Spiess, years 0 to +`whi' at once" if method == "bjs_B" & row_type == "avg"
+variable t_m was str73 now str88
+(1 real change made)
+
+. gen byte ok = status == "ok" & !missing(b)
+
+. * averages: whole % as the chart labels; hollow gray (no label on the chart): one decimal
+. gen str12 t_v  = ""
+(11 missing values generated)
+
+. gen str12 t_lo = ""
+(11 missing values generated)
+
+. gen str12 t_hi = ""
+(11 missing values generated)
+
+. foreach c in v lo hi {
+  2.     local s = cond("`c'" == "v", "pct", "pct_`c'")
+  3.     replace t_`c' = cond(round(`s') > 0, "+", "") + string(round(`s'), "%9.0f") if ok & row_type == "avg"
+  4.     replace t_`c' = cond(round(`s', 0.1) > 0, "+", "") + string(round(`s', 0.1), "%9.1f") if ok & row_type == "own_
+> overall"
+  5. }
+(7 real changes made)
+(4 real changes made)
+(7 real changes made)
+(4 real changes made)
+(7 real changes made)
+(4 real changes made)
+
+. gen str12 t_st = string(starters, "%12.0fc") if !missing(starters) & ok
+(4 missing values generated)
+
+. gen str12 t_cf = string(comp_firms, "%12.0fc") if !missing(comp_firms) & ok
+(6 missing values generated)
+
+. gen str12 t_r  = string(rows, "%12.0fc") if !missing(rows) & ok
+(2 missing values generated)
+
+. * the chart's "Before the start, p" column, as printed there
+. gen str40 t_p = ""
+(11 missing values generated)
+
+. foreach m in twfe cs sa bjs dcdh r2_06 bjs_B {
+  2.     local q = `bp_`m''
+  3.     if !missing(`q') {
+  4.         local qs = cond(`q' < 0.001, "< 0.001", string(`q', "%5.3f"))
+  5.         if `q' < 0.05 local qs "`qs', differs"
+  6.         replace t_p = "`qs'" if method == "`m'" & row_type == "avg" & ok
+  7.     }
+  8. }
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+
+. replace t_p = "in Figure R2-06" if method == "r2_06" & row_type == "avg" & ok
+(1 real change made)
+
+. local csall ""
+
+. if !missing(`bpall_cs') {
+.     local qs = cond(`bpall_cs' < 0.001, "< 0.001", string(`bpall_cs', "%5.3f"))
+.     if `bpall_cs' < 0.05 local qs "`qs', differs"
+.     local csall "Callaway–Sant'Anna's gray second line under its p: all years before the start, `qs'."
+. }
+
+. gen str90 t_status = ""
+(11 missing values generated)
+
+. replace t_status = "drawn: dot, bar, label" if ok & row_type == "avg" & method_order <= 5
+(5 real changes made)
+
+. replace t_status = "drawn: diamond, bar, label" if ok & row_type == "avg" & method_order > 5
+(2 real changes made)
+
+. replace t_status = "drawn: hollow gray diamond" if ok & row_type == "own_overall"
+(4 real changes made)
+
+. replace t_status = "not drawn: " + status if !ok
+(0 real changes made)
+
+. quietly count if strpos(t_status, "drawn:") == 1
+
+. assert r(N) == `ndrawn'
+
+. assert t_v != "" if strpos(t_status, "drawn:") == 1
+
+. assert _N == `nrows'
+
+. local txt_t = itrim(`"`txt'"')
+
+. local tnote "Table: every point of Figure `exhibit', top to bottom, with the Starters and Before-the-start columns pri
+> nted on the chart."
+
+. local tnote "`tnote' % difference = 100 × (exp(b) − 1), b = the regression table's first two rows; averages rounded as
+>  the chart labels, hollow"
+
+. local tnote "`tnote' gray (no label) to one decimal. Series: Average of years 0 to +`whi' = each year counts equally; 
+> Other kind of average ="
+
+. local tnote "`tnote' as written under the row name; Previous paper's summary = all years after the start. Never-export
+> ers and Firm-years = the method's estimation sample (de Chaisemartin–"
+
+. local tnote "`tnote' D'Haultfœuille: rows behind year 0). Full precision: tables/`fname'.csv. `csall'"
+
+. ctable_pdf t_m t_ser t_v t_lo t_hi t_st t_cf t_r t_p t_status using "tables/`fname'_table.pdf", ///
+>     title("Table `exhibit'. Energy efficiency after firms start exporting, by method: every plotted point") ///
+>     subtitle("Value added per GJ: % change after the start, starters minus never-exporters") ///
+>     header("Method (chart row)" "Series" "%|difference" "95%|interval|low" "95%|interval|high" "Starters" "Never-|expo
+> rters" "Firm-|years" "Before the|start, p" "Status") ///
+>     right(3 4 5 6 7 8) norepeat(1) fontsize(9) ///
+>     notes("`txt_t'" "`tnote'" "`srcnote'" "`devnote'")
+successfully created "/Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r2-internationalisatio
+> n-energy-efficiency/tables/07_efficiency_by_method_table.pdf"
+
+. display "table -> tables/`fname'_table.pdf"
+table -> tables/07_efficiency_by_method_table.pdf
+
+. 
+. * (2) Regression table (AER style): one column per method as on the chart
+. * (rows 1-7), coefficient on the first line, (standard error) on the second.
+. * Rows: the average after the start, the method's own overall number, the
+. * before-start checks, then the year-by-year path where the method gives one.
+. * show_pct = 1 adds a third line, [% difference], under every estimate: the
+. * table then runs longer, so it is off here (the drawn %s are in the points
+. * table; every % in the CSV).
+. local show_pct 0
+
+. use `ctsrc', clear
+
+. * check: the coefficients are those in the CSV just written (4 decimals there)
+. preserve
+
+. import delimited using "tables/`fname'.csv", clear varnames(1)
+(encoding automatically selected: ISO-8859-1)
+(22 vars, 75 obs)
+
+. keep method row_type event_time b
+
+. rename b b_csv
+
+. tempfile csvb
+
+. save `csvb'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_34317.00000a saved as .dta format
+
+. restore
+
+. merge 1:1 method row_type event_time using `csvb', assert(match) nogenerate
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                                75  
+    -----------------------------------------
+
+. assert abs(b - b_csv) <= 0.00005 + 1e-9 if !missing(b)
+
+. assert missing(b_csv) if missing(b)
+
+. drop b_csv
+
+. local ms "twfe cs sa bjs dcdh r2_06 bjs_B"
+
+. tempname P
+
+. tempfile R
+
+. postfile `P' str60 t_lab str24(t1 t2 t3 t4 t5 t6 t7) using `R'
+
+. * one estimate row (+ SE row [+ % row]) for a row type / year since the start
+. capture program drop r207_cell
+
+. program define r207_cell, rclass
+  1.     args m cond
+  2.     quietly count if method == "`m'" & `cond' & !missing(b)
+  3.     if r(N) == 0 {
+  4.         return local b "—"
+  5.         return local s ""
+  6.         return local p ""
+  7.         exit
+  8.     }
+  9.     quietly summarize b if method == "`m'" & `cond', meanonly
+ 10.     return local b = string(r(mean), "%9.3f")
+ 11.     quietly summarize se if method == "`m'" & `cond', meanonly
+ 12.     return local s = cond(missing(r(mean)), "", "(" + string(r(mean), "%9.3f") + ")")
+ 13.     quietly summarize pct if method == "`m'" & `cond', meanonly
+ 14.     return local p = cond(missing(r(mean)), "", "[" + cond(r(mean) > 0, "+", "") + string(r(mean), "%9.1f") + "%]")
+ 15. end
+
+. local nsec1 0
+
+. foreach rt in avg own_overall {
+  2.     local j 0
+  3.     foreach m of local ms {
+  4.         local ++j
+  5.         r207_cell `m' `"row_type == "`rt'""'
+  6.         local b`j' "`r(b)'"
+  7.         local s`j' "`r(s)'"
+  8.         local p`j' "`r(p)'"
+  9.         * a method that did not run: its status instead of a number
+.         quietly count if method == "`m'"  & row_type == "avg" & status != "ok"
+ 10.         if r(N) > 0 & "`rt'" == "avg" local b`j' "not run"
+ 11.     }
+ 12.     local lab = cond("`rt'" == "avg", "Average after the start (0 to +`whi')", "Method's own overall number")
+ 13.     post `P' ("`lab'") ("`b1'") ("`b2'") ("`b3'") ("`b4'") ("`b5'") ("`b6'") ("`b7'")
+ 14.     post `P' ("")      ("`s1'") ("`s2'") ("`s3'") ("`s4'") ("`s5'") ("`s6'") ("`s7'")
+ 15.     if `show_pct' post `P' ("") ("`p1'") ("`p2'") ("`p3'") ("`p4'") ("`p5'") ("`p6'") ("`p7'")
+ 16.     local nsec1 = `nsec1' + 2 + `show_pct'
+ 17. }
+
+. foreach rt in before_check before_all {
+  2.     local j 0
+  3.     foreach m of local ms {
+  4.         local ++j
+  5.         quietly summarize p if method == "`m'" & row_type == "`rt'", meanonly
+  6.         local b`j' = cond(r(N) == 0, "—", cond(r(mean) < 0.001, "< 0.001", string(r(mean), "%5.3f")))
+  7.     }
+  8.     local lab = cond("`rt'" == "before_check", "Before-start check, joint p", "Same, all years before the start")
+  9.     post `P' ("`lab'") ("`b1'") ("`b2'") ("`b3'") ("`b4'") ("`b5'") ("`b6'") ("`b7'")
+ 10.     local ++nsec1
+ 11. }
+
+. local nsec2 = `nsec1'
+
+. forvalues k = `=`wlo' - 1'/`=`whi' + 1' {
+  2.     local lab = cond(`k' > 0, "+", "") + string(`k')
+  3.     if `k' < `wlo' local lab "≤ `lab' (grouped)"
+  4.     if `k' > `whi' local lab "≥ `lab' (grouped)"
+  5.     local j 0
+  6.     foreach m of local ms {
+  7.         local ++j
+  8.         r207_cell `m' `"row_type == "event" & event_time == `k'"'
+  9.         local b`j' "`r(b)'"
+ 10.         local s`j' "`r(s)'"
+ 11.         local p`j' "`r(p)'"
+ 12.         if `k' == -1 & inlist("`m'", "twfe", "sa") local b`j' "reference"
+ 13.     }
+ 14.     local lab = "Year " + "`lab'"
+ 15.     post `P' ("`lab'") ("`b1'") ("`b2'") ("`b3'") ("`b4'") ("`b5'") ("`b6'") ("`b7'")
+ 16.     post `P' ("")      ("`s1'") ("`s2'") ("`s3'") ("`s4'") ("`s5'") ("`s6'") ("`s7'")
+ 17.     if `show_pct' post `P' ("") ("`p1'") ("`p2'") ("`p3'") ("`p4'") ("`p5'") ("`p6'") ("`p7'")
+ 18.     local nsec2 = `nsec2' + 2 + `show_pct'
+ 19.     if `k' == -1 local nbef `nsec2'                 // rule (and page break) between before and after the start
+ 20. }
+
+. local j 0
+
+. foreach m of local ms {
+  2.     local ++j
+  3.     foreach v in starters comp_firms rows {
+  4.         quietly summarize `v' if method == "`m'" & row_type == "avg", meanonly
+  5.         local `v'`j' = cond(r(N) == 0, "—", string(r(mean), "%12.0fc"))
+  6.     }
+  7.     quietly levelsof ci_basis if method == "`m'" & row_type == "avg", local(cb) clean
+  8.     local ci`j' = cond("`cb'" == "t", "t", cond("`cb'" == "normal", "Normal", "—"))
+  9. }
+
+. * (7)'s interval as the file reports it (leave-out when possible)
+. quietly levelsof note if method == "bjs_B" & row_type == "avg", local(n7) clean
+
+. local se7 = cond(strpos(`"`n7'"', "leave-out interval"), ", leave-out", "")
+
+. local ci7 "`ci7'`se7'"
+
+. local n7 = ustrregexra(`"`n7'"', "^.*; ", "")
+
+. post `P' ("Starters")                        ("`starters1'") ("`starters2'") ("`starters3'") ("`starters4'") ("`starte
+> rs5'") ("`starters6'") ("`starters7'")
+
+. post `P' ("Never-exporters")                 ("`comp_firms1'") ("`comp_firms2'") ("`comp_firms3'") ("`comp_firms4'") (
+> "`comp_firms5'") ("`comp_firms6'") ("`comp_firms7'")
+
+. post `P' ("Observations (firm-years)")       ("`rows1'") ("`rows2'") ("`rows3'") ("`rows4'") ("`rows5'") ("`rows6'") (
+> "`rows7'")
+
+. post `P' ("Firm and year effects")           ("Yes") ("Yes") ("Yes") ("Yes") ("Yes") ("Yes, per start year") ("Yes")
+
+. post `P' ("Comparison firms")                ("Never, later") ("Never") ("Never") ("Never, later") ("Never") ("Never")
+>  ("Never, later")
+
+. post `P' ("Standard errors clustered by")    ("Firm") ("Firm") ("Firm") ("Firm") ("Firm") ("Firm") ("Firm")
+
+. post `P' ("95% interval")                    ("`ci1'") ("`ci2'") ("`ci3'") ("`ci4'") ("`ci5'") ("`ci6'") ("`ci7'")
+
+. postclose `P'
+
+. use `R', clear
+
+. local rsub = "Outcome: log of value added per GJ. Log points; standard errors in parentheses" + cond(`show_pct', "; [%
+>  = 100 × (exp(b) − 1)]", "") + "; — = the method does not give this number."
+
+. local rnote "Notes: Columns = the chart's rows, top to bottom; the first row of numbers is drawn (dots, diamonds), the
+>  second as hollow gray"
+
+. local rnote "`rnote' diamonds. Every column compares starters (first year seen exporting after a year seen not exporti
+> ng; (7): the previous"
+
+. local rnote "`rnote' paper's stricter rule B) with firms never seen exporting ('Never'); (1), (4) and (7) also use lat
+> er starters' years before"
+
+. local rnote "`rnote' their start ('later'). Year-by-year paths use each package's own reference: (1), (3) vs the year 
+> before the start (-1 set"
+
+. local rnote "`rnote' to 0); (2) years before the start = change from the year before, years from 0 on vs the year befo
+> re the start; (4) years"
+
+. local rnote "`rnote' before = vs the firm's earlier years, from 0 on = vs its predicted path without the start; (5) Pl
+> acebo_1.. and Effect_1..,"
+
+. local rnote "`rnote' renamed to years -2.. and 0.., vs the year before the start. Before-start checks: each method's o
+> wn joint test. (6) is the"
+
+. local rnote "`rnote' average of Figure R2-06 (start years weighted by starters); (7) interval: `n7'. No stars."
+
+. ctable_pdf t_lab t1 t2 t3 t4 t5 t6 t7 using "tables/`fname'_regression.pdf", ///
+>     title("Table `exhibit', regression. Energy efficiency after firms start exporting, by method: estimates behind the
+>  chart") ///
+>     subtitle("`rsub'") ///
+>     header("Estimate" "(1)|Figure R2-03's|model" "(2)|Callaway–|Sant'Anna" "(3)|Sun–|Abraham" "(4)|Borusyak–|Jaravel–S
+> piess" "(5)|de Chaisemartin–|D'Haultfœuille" "(6)|Figure R2-06" "(7)|Stricter start|rule (B)") ///
+>     right(2 3 4 5 6 7 8) rules(`nsec1' `nbef' `nsec2') fontsize(9) perpage(30) ///
+>     notes("`rnote'" "`srcnote'" "`devnote'")
+successfully created "/Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r2-internationalisatio
+> n-energy-efficiency/tables/07_efficiency_by_method_regression.pdf"
+
+. display "table -> tables/`fname'_regression.pdf"
+table -> tables/07_efficiency_by_method_regression.pdf
+
+. * --- end of PART 2 ------------------------------------------------------------
+. 
+. 
+. 
 . timer off 1
 
 . quietly timer list 1
@@ -1422,6 +1993,6 @@ file
 . local elapsed = strtrim(string(r(t1), "%9.1f"))
 
 . display "FINISHED: figure -> figures/`fname'.png (elapsed `elapsed' s)"
-FINISHED: figure -> figures/07_efficiency_by_method.png (elapsed 36.9 s)
+FINISHED: figure -> figures/07_efficiency_by_method.png (elapsed 39.5 s)
 
 . quietly log close          // keeps FINISHED as the last output line of the log

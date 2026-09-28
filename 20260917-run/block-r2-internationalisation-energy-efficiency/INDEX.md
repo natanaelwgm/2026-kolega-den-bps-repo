@@ -5,6 +5,22 @@ Development data — obscured values, fictional firm panel. Not BPS findings.
 Run all: open `00_run.do`, check the two paths at the top, press Do. Each file below also runs on its own.
 Item-by-item coverage of Deasy's row and the review record: [TRACKER.md](TRACKER.md).
 
+<!-- tables-start -->
+Tables that go with the charts: every chart has a table PDF with each plotted point and its number (`_table.pdf`); charts built from regressions also have the full regression table (`_regression.pdf`).
+
+- 01: `tables/01_export_entry_cohorts_table.pdf`
+- 02: `tables/02_event_time_support_table.pdf`
+- 03: `tables/03_energy_efficiency_export_start_regression.pdf`, `tables/03_energy_efficiency_export_start_table.pdf`
+- 04: `tables/04_co2_efficiency_export_start_regression.pdf`, `tables/04_co2_efficiency_export_start_table.pdf`
+- 05: `tables/05_energy_co2_va_export_start_regression.pdf`, `tables/05_energy_co2_va_export_start_table.pdf`
+- 06: `tables/06_efficiency_by_start_year_regression.pdf`, `tables/06_efficiency_by_start_year_table.pdf`
+- 07: `tables/07_efficiency_by_method_regression.pdf`, `tables/07_efficiency_by_method_table.pdf`
+- 08: `tables/08_efficiency_import_foreign_start_regression.pdf`, `tables/08_efficiency_import_foreign_start_table.pdf`
+- 09: `tables/09_other_efficiency_measures_regression.pdf`, `tables/09_other_efficiency_measures_table.pdf`
+- 10: `tables/10_methods_import_foreign_start_regression.pdf`, `tables/10_methods_import_foreign_start_table.pdf`
+<!-- tables-end -->
+
+
 **Stata add-ons this block needs** (install once; no file installs or updates anything; on a computer without internet, copy the
 add-on folder from one that has them): `ssc install reghdfe`, `ssc install ftools`, `ssc install require` (all files from R2-03 on);
 for R2-07 and R2-10 also `ssc install csdid`, `ssc install drdid`, `ssc install eventstudyinteract`, `ssc install avar`,

@@ -8,6 +8,7 @@
   Output : figures/02_event_time_support.png (+ .pdf)
            tables/02_event_time_support.csv (also holds the year window that
            R2-03, R2-04 and R2-05 read)
+           tables/02_event_time_support_table.pdf (every plotted point)
   Development data - obscured values, fictional firm panel. Not BPS findings.
 ==========================================================================*/
 version 17
@@ -45,7 +46,7 @@ local srcnote "Source: SI/IBS annual files 2010–2022 (masked), analysis_ready_
 local minfirms 30      // a year since the start gets its own point in later charts only with 30+ firms
 
 *---------------------------------------------------------------------------
-display "Step 1/6: load export status, energy, CO2 and value added"
+display "Step 1/7: load export status, energy, CO2 and value added"
 *---------------------------------------------------------------------------
 * export_flag         = any export activity (1 yes, 0 no, missing = unknown)
 * total_gj_s1         = energy use in GJ (nine fuels + purchased electricity)
@@ -58,7 +59,7 @@ sort firm_id year
 tsset firm_id year                 // L. and F. below mean exact calendar years
 
 *---------------------------------------------------------------------------
-display "Step 2/6: date each firm's export start under two rules (same code in every R2 file)"
+display "Step 2/7: date each firm's export start under two rules (same code in every R2 file)"
 *---------------------------------------------------------------------------
 * Missing status is unknown, never read as "not participating".
 * Rule A, simple first entry (main): the first year the firm is seen
@@ -96,7 +97,7 @@ local x export_flag
     gen int keyB = cond(!missing(gB), gB, cond(n_known == 0, 9003, cond(missing(first_yes), 9001, 9004)))
 
 *---------------------------------------------------------------------------
-display "Step 3/6: years since the start; choose the years shown one by one"
+display "Step 3/7: years since the start; choose the years shown one by one"
 *---------------------------------------------------------------------------
 * Years since the start = calendar year minus start year (0 = start year,
 * -1 = the year before). Counted in calendar years, so a firm's 2016 is simply
@@ -211,7 +212,7 @@ rename year calendar_year
 save `comp'
 
 *---------------------------------------------------------------------------
-display "Step 4/6: key counts, then the CSV (numbers written before drawing)"
+display "Step 4/7: key counts, then the CSV (numbers written before drawing)"
 *---------------------------------------------------------------------------
 use `fy', clear
 egen byte ftag = tag(firm_id)
@@ -290,7 +291,7 @@ tempfile all
 save `all'
 
 *---------------------------------------------------------------------------
-display "Step 5/6: numbers quoted in the notes (read from the table, never typed)"
+display "Step 5/7: numbers quoted in the notes (read from the table, never typed)"
 *---------------------------------------------------------------------------
 foreach j in 1 3 5 6 {
     local t : display %9.0fc `s`j''
@@ -298,7 +299,7 @@ foreach j in 1 3 5 6 {
 }
 
 *---------------------------------------------------------------------------
-display "Step 6/6: panel A = firms by start year x years since start; panel B = comparison firms"
+display "Step 6/7: panel A = firms by start year x years since start; panel B = comparison firms"
 *---------------------------------------------------------------------------
 * ---- panel A: the counts drawn as a table ----
 use `all', clear
@@ -398,6 +399,262 @@ graph combine pA pB, cols(1) iscale(1) imargin(0 0 1 1) ///
 
 graph export "figures/02_event_time_support.png", width(2700) replace
 graph export "figures/02_event_time_support.pdf", replace
+
+*---------------------------------------------------------------------------
+display "Step 7/7: companion table: every plotted point"
+*---------------------------------------------------------------------------
+* ==== COMPANION TABLE (pattern for all exhibits) =============================
+* Owner rule, 28 Sep 2026: every chart gets a table of every plotted point, and
+* every chart of regression coefficients also gets a regression table, written
+* by the same do-file (spec: TABLE_BRIEF.md). This step runs AFTER the graph
+* export, so the chart and the CSV stay byte-identical.
+*
+* How to use it in another exhibit file:
+*   PART 1 (the writer, program ctable_pdf) is copied UNCHANGED.
+*   PART 2 is the only exhibit-specific part: put the numbers in memory (the
+*   tempfile saved right after the CSV export, or the CSV itself), build one
+*   STRING variable per table column, one row per plotted point in chart order
+*   (years not drawn included, with the reason in a status column), then call
+*   ctable_pdf. Format numbers with string(x, "%9.1f") etc. so the table shows
+*   exactly the rounding of the chart labels.
+*
+* ctable_pdf strvars using "tables/NN_name_table.pdf",
+*     title("Table R1-02. ...: every plotted point")    first line, bold
+*     header("Col 1" "Col 2" ...)       one text per column; "|" = line break
+*     [right(numlist)]                  columns right-aligned (numbers)
+*     [norepeat(numlist)]               columns whose repeated text is shown
+*                                       only on the first row of a run
+*     [rules(numlist)]                  thin gray line under these data rows
+*     [notes("line 1" "line 2" ...)]    footer paragraphs (Notes, Source, dev line)
+*     [subtitle(text)] [fontsize(#)] [perpage(#)] [landscape|portrait]
+* Landscape is chosen automatically when there are more than 6 columns. Long
+* tables continue on a new page with the header repeated ("(continued)"); a page
+* never breaks inside a block whose first column is empty (e.g. an SE row).
+* --- PART 1: the writer (identical in every file; do not edit) ---------------
+capture program drop ctable_pdf
+program define ctable_pdf
+    version 17
+    syntax varlist(string) using/, TItle(string) HEADer(string asis) ///
+        [RIGHT(numlist integer >0) NOREPeat(numlist integer >0) RULES(numlist integer >0) ///
+         NOTEs(string asis) SUBtitle(string) FONTsize(real 9.5) PERpage(integer 0) ///
+         LANDscape PORTrait]
+    local nc : word count `varlist'
+    local nh : word count `header'
+    if `nh' != `nc' {
+        display as error "ctable_pdf: `nc' columns but `nh' header texts"
+        exit 198
+    }
+    local orient = cond(`nc' > 6, "landscape", "")
+    if "`landscape'" != "" local orient "landscape"
+    if "`portrait'"  != "" local orient ""
+    * rows per page: a conservative guess for 9-10 pt text (wrapped cells take more)
+    if `perpage' == 0 local perpage = cond("`orient'" == "landscape", 24, 40)
+    preserve
+    quietly {
+        keep `varlist'
+        rename (`varlist') (__c#), addnumber      // __c1 __c2 ... in the order given
+        forvalues j = 1/`nc' {
+            replace __c`j' = strtrim(__c`j')
+        }
+        local N = _N
+        gen long row = _n
+        * page chunks: fill up to perpage rows; prefer to end a page at a rule,
+        * never start a page on a row whose first column is empty
+        gen int chunk = .
+        local start 1
+        local k 0
+        while `start' <= `N' {
+            local ++k
+            local end = min(`start' + `perpage' - 1, `N')
+            if `end' < `N' {
+                local best 0
+                foreach r of local rules {
+                    if `r' >= `start' + floor(`perpage' / 2) & `r' <= `end' & `r' > `best' local best `r'
+                }
+                if `best' > 0 local end `best'
+                else {
+                    while `end' > `start' & __c1[`end' + 1] == "" {
+                        local --end
+                    }
+                }
+            }
+            replace chunk = `k' in `start'/`end'
+            local start = `end' + 1
+        }
+        local nk `k'
+        * blank repeated labels inside each page; a column is blanked only while the
+        * norepeat columns to its left are unchanged too (a new panel shows its series)
+        gen byte same = _n > 1 & chunk == chunk[_n - 1]
+        foreach j of local norepeat {
+            gen strL o`j' = __c`j'
+            replace same = same & o`j' == o`j'[_n - 1]
+            replace __c`j' = "" if same
+            drop o`j'
+        }
+        drop same
+        * column widths (% of the page), from the longest text in each column;
+        * long text columns are capped so they wrap instead of squeezing numbers
+        matrix W = J(1, `nc', 0)
+        local tot 0
+        forvalues j = 1/`nc' {
+            gen long L`j' = udstrlen(__c`j')
+            summarize L`j', meanonly
+            local w = max(r(max), 3)
+            local h : word `j' of `header'
+            local h = subinstr(`"`h'"', "|", " ", .)
+            foreach hw of local h {
+                local w = max(`w', udstrlen(`"`hw'"'))
+            }
+            local w = min(`w', 34) + 2          // + 2 = room for the cell margins
+            matrix W[1, `j'] = `w'
+            local tot = `tot' + `w'
+            drop L`j'
+        }
+        local used 0
+        forvalues j = 1/`nc' {
+            if `j' < `nc' {
+                matrix W[1, `j'] = max(floor(100 * W[1, `j'] / `tot'), 3)
+                local used = `used' + W[1, `j']
+            }
+            else matrix W[1, `j'] = 100 - `used'
+        }
+    }
+    putpdf clear
+    putpdf begin, pagesize(A4) `orient' font("Times New Roman", `fontsize') ///
+        margin(left, 0.8in) margin(right, 0.8in) margin(top, 0.5in) margin(bottom, 0.5in)
+    forvalues k = 1/`nk' {
+        if `k' > 1 putpdf pagebreak
+        putpdf paragraph, spacing(after, 4pt)
+        local tt = cond(`k' == 1, `"`title'"', `"`title' (continued)"')
+        putpdf text (`"`tt'"'), bold font("Times New Roman", `=`fontsize' + 1.5')
+        if `k' == 1 & `"`subtitle'"' != "" {
+            putpdf paragraph, spacing(after, 4pt)
+            putpdf text (`"`subtitle'"')
+        }
+        quietly count if chunk == `k'
+        local nr = r(N) + 1
+        quietly putpdf table T`k' = data(__c1-__c`nc') if chunk == `k', varnames border(all, nil) width(W)
+        forvalues j = 1/`nc' {
+            * header text; "|" starts a new line inside the cell
+            local rest : word `j' of `header'
+            local opt ""
+            while `"`rest'"' != "" {
+                gettoken part rest : rest, parse("|")
+                if `"`part'"' == "|" {
+                    putpdf table T`k'(1, `j') = (""), linebreak append
+                    continue
+                }
+                putpdf table T`k'(1, `j') = (`"`part'"'), valign(bottom) `opt'
+                local opt "append"
+            }
+            local al = cond(`: list j in right', "right", "left")
+            putpdf table T`k'(., `j'), halign(`al') margin(top, 0pt) margin(bottom, 0pt)
+        }
+        putpdf table T`k'(1, .), border(top, single, black) border(bottom, single, black)
+        putpdf table T`k'(`nr', .), border(bottom, single, black)
+        foreach r of local rules {
+            quietly summarize row if chunk == `k', meanonly
+            if `r' >= r(min) & `r' < r(max) {
+                putpdf table T`k'(`=`r' - r(min) + 2', .), border(bottom, single, "A6A6A6")
+            }
+        }
+    }
+    local first 1
+    foreach n of local notes {
+        putpdf paragraph, spacing(before, `=cond(`first', 6, 1)'pt)
+        putpdf text (`"`n'"'), font("Times New Roman", `=`fontsize' - 0.5')
+        local first 0
+    }
+    putpdf save `"`using'"', replace
+    restore
+end
+* --- end of PART 1 ------------------------------------------------------------
+
+* --- PART 2: the rows of this exhibit (the only part that changes per file) ---
+* Source: `all' = the table just written to the CSV (same numbers as drawn).
+* One row per drawn number, in chart order: panel A row by row (start years top
+* to bottom, then All starters and Previous rule), left to right; then panel B,
+* series by series, left to right. Cells with no annual file are included.
+* -- panel A: the grid of counts --
+use `all', clear
+keep if (section == "cell" & rule == "A") | section == "estimate"
+gen byte ord = cond(section == "cell", 1, cond(rule == "A", 2, 3))
+sort ord cohort_year event_time
+gen str40 t_panel = "A. Starters"
+gen str60 t_row = "Started " + string(cohort_year) if ord == 1
+replace t_row = "All starters" if ord == 2
+replace t_row = "Previous rule" if ord == 3
+gen str16 t_pos = cond(event_time > 0, "+", "") + string(event_time)
+replace t_pos = "≤ `blo'"  if event_time == `blo'
+replace t_pos = "≥ +`bhi'" if event_time == `bhi'
+gen str8  t_cal = string(calendar_year) if !missing(calendar_year)
+gen str12 t_v   = string(firms, "%9.0fc") if !missing(firms)        // as the chart label
+gen str12 t_fy  = string(firm_years, "%12.0fc") if !missing(firms)
+gen str90 t_status = "drawn"
+replace t_status = "drawn: grouped end" if inlist(event_time, `blo', `bhi')
+replace t_status = subinstr(t_status, "drawn", "drawn gray", 1) if ord == 3
+replace t_status = "not drawn: no annual file" if missing(firms) & calendar_year == 2016
+assert !missing(firms) if !(calendar_year == 2016 & section == "cell")
+local nA = _N
+* thin rules under each start year's last cell and under the two summary rows
+local rl ""
+forvalues i = 1/`=_N - 1' {
+    if t_row[`i'] != t_row[`i' + 1] local rl `rl' `i'
+}
+keep t_*
+tempfile ctA
+save `ctA'
+* -- panel B: comparison firms by calendar year (three parts of each bar) --
+use `all', clear
+keep if section == "comparison"
+sort calendar_year
+local nyB = _N
+expand 3
+bysort calendar_year: gen byte series = _n       // 1 = dark part, 2 = white part, 3 = total (on top)
+sort series calendar_year
+gen str40 t_panel = "B. Comparison"
+gen str60 t_row = cond(series == 1, "Dark: not exporting", ///
+                  cond(series == 2, "White: not recorded", "All comparison firms"))
+gen str16 t_pos = ""
+gen str8  t_cal = string(calendar_year)
+gen double v = cond(series == 1, seen_not_exporting, cond(series == 2, firms - seen_not_exporting, firms))
+gen str12 t_v  = string(v, "%9.0fc") if !missing(v)
+gen str12 t_fy = ""
+gen str90 t_status = cond(series == 1, "drawn: inside the bar", cond(series == 2, "drawn: no number", ///
+                     "drawn: on top of the bar"))
+replace t_status = "not drawn: 0 (see notes)" if series == 1 & v == 0
+replace t_status = "not drawn: no annual file" if calendar_year == 2016
+assert missing(v) == (calendar_year == 2016)
+keep t_*
+local nB = _N
+append using `ctA'
+gen byte pp = cond(t_panel == "A. Starters", 1, 2)
+gen long n0 = _n
+sort pp n0                                          // panel A first, then panel B, each in its order
+drop pp n0
+assert _N == `nA' + 3 * `nyB'
+* chart's notes word for word; then how to read the table
+local ntext "Notes: Start year = first year a firm is seen exporting after a year seen not exporting. Later charts"
+local ntext "`ntext' compare each starter's energy use and CO2 with its year before the start (-1), minus the change in panel B's"
+local ntext "`ntext' firms. Between the dashed lines each column has `minfirms'+ firms with data, from starters before and after 2016;"
+local ntext "`ntext' further out only early or only late starters are seen, so those years are pooled. Previous rule (last row,"
+local ntext "`ntext' previous paper): no exports in the two years before, exports again the year after; it never reaches `minfirms'. The"
+local ntext "`ntext' 2022 file records direct exporters only, hence no dark bar. `n6' of `n5' comparison firms have 2+ years"
+local ntext "`ntext' with data (needed to see a change). Firm links are fictional: this tests the method, not a finding."
+local tnote "Table: every number of Figure R2-02 in chart order, with the cells and years not drawn and why. Panel A: firms seen"
+local tnote "`tnote' (the number in each cell) and all their rows (firm-years; in a grouped end a firm counts once but all its years"
+local tnote "`tnote' are rows); gray = the previous rule's row; no annual file = gray cell or band. Panel B: the dark and white parts of each bar and the total on top; 2022 has no dark part because that file records direct exporters only. Full precision, the firms with usable data and the"
+local tnote "`tnote' previous rule by start year: tables/02_event_time_support.csv."
+local rB1 = `nA' + `nyB'
+local rB2 = `nA' + 2 * `nyB'
+ctable_pdf t_panel t_row t_pos t_cal t_v t_fy t_status using "tables/02_event_time_support_table.pdf", ///
+    title("Table R2-02. Firms seen before and after they start exporting: every plotted point") ///
+    header("Panel" "Row / series" "Years since|the start" "Calendar|year" "Firms|(drawn)" "Firm-years" "Status") ///
+    right(3 4 5 6) norepeat(1 2) rules(`rl' `nA' `rB1' `rB2') portrait fontsize(9) perpage(46) ///
+    notes("`ntext'" "`tnote'" "`srcnote'" "`devnote'")
+display "table -> tables/02_event_time_support_table.pdf"
+* --- end of PART 2 ------------------------------------------------------------
+
 
 timer off 1
 quietly timer list 1

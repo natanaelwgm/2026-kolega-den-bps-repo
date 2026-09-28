@@ -8,6 +8,7 @@
   Output : figures/01_export_entry_cohorts.png (+ .pdf)
            tables/01_export_entry_cohorts.csv (export, import and foreign
            ownership of 10%+; both entry rules side by side)
+           tables/01_export_entry_cohorts_table.pdf (every plotted point)
   Development data - obscured values, fictional firm panel. Not BPS findings.
 ==========================================================================*/
 version 17
@@ -41,7 +42,7 @@ local devnote "Development data — obscured values, fictional firm panel. Not B
 local srcnote "Source: SI/IBS annual files 2010–2022 (masked), analysis_ready_data.dta."
 
 *---------------------------------------------------------------------------
-display "Step 1/5: load the participation flags"
+display "Step 1/6: load the participation flags"
 *---------------------------------------------------------------------------
 * export_flag  = any export activity (1 yes, 0 no, missing = unknown).
 *                In 2022 the file records only direct exporters: no firm is 0.
@@ -61,7 +62,7 @@ tempfile base rows
 save `base'
 
 *---------------------------------------------------------------------------
-display "Step 2/5: date each firm's entry under two rules (same code in every R2 file)"
+display "Step 2/6: date each firm's entry under two rules (same code in every R2 file)"
 *---------------------------------------------------------------------------
 * Missing status is unknown, never read as "not participating".
 * Rule A, simple first entry (main): the first year the firm is seen
@@ -186,7 +187,7 @@ foreach m in export import fdi10 {
 }
 
 *---------------------------------------------------------------------------
-display "Step 3/5: labels and notes -> CSV (numbers written before drawing)"
+display "Step 3/6: labels and notes -> CSV (numbers written before drawing)"
 *---------------------------------------------------------------------------
 gen int cohort_year = row_key if row_key < 8000
 gen str80 group = ""
@@ -218,7 +219,7 @@ export delimited margin-note using "tables/01_export_entry_cohorts.csv", datafmt
 list margin group simple_firms simple_entry_year_exact sustained_firms if margin == "export", noobs sep(0) abbreviate(20)
 
 *---------------------------------------------------------------------------
-display "Step 4/5: numbers quoted in the notes (read from the table, never typed)"
+display "Step 4/6: numbers quoted in the notes (read from the table, never typed)"
 *---------------------------------------------------------------------------
 foreach k in 8000 9001 9002 9003 {
     quietly summarize simple_firms if margin == "export" & row_key == `k'
@@ -233,7 +234,7 @@ local n_sust : display %9.0fc r(sum)
 local n_sust = strtrim("`n_sust'")
 
 *---------------------------------------------------------------------------
-display "Step 5/5: bar chart of export entrants by entry year (rule A)"
+display "Step 5/6: bar chart of export entrants by entry year (rule A)"
 *---------------------------------------------------------------------------
 keep if margin == "export" & row_key < 8000
 gen double total = simple_firms
@@ -278,6 +279,218 @@ twoway (rbar band_lo band_hi cohort_year, barwidth(0.9) fcolor(gs15) lcolor(gs15
 
 graph export "figures/01_export_entry_cohorts.png", width(2400) replace
 graph export "figures/01_export_entry_cohorts.pdf", replace
+
+*---------------------------------------------------------------------------
+display "Step 6/6: companion table: every plotted point"
+*---------------------------------------------------------------------------
+* ==== COMPANION TABLE (pattern for all exhibits) =============================
+* Owner rule, 28 Sep 2026: every chart gets a table of every plotted point, and
+* every chart of regression coefficients also gets a regression table, written
+* by the same do-file (spec: TABLE_BRIEF.md). This step runs AFTER the graph
+* export, so the chart and the CSV stay byte-identical.
+*
+* How to use it in another exhibit file:
+*   PART 1 (the writer, program ctable_pdf) is copied UNCHANGED.
+*   PART 2 is the only exhibit-specific part: put the numbers in memory (the
+*   tempfile saved right after the CSV export, or the CSV itself), build one
+*   STRING variable per table column, one row per plotted point in chart order
+*   (years not drawn included, with the reason in a status column), then call
+*   ctable_pdf. Format numbers with string(x, "%9.1f") etc. so the table shows
+*   exactly the rounding of the chart labels.
+*
+* ctable_pdf strvars using "tables/NN_name_table.pdf",
+*     title("Table R1-02. ...: every plotted point")    first line, bold
+*     header("Col 1" "Col 2" ...)       one text per column; "|" = line break
+*     [right(numlist)]                  columns right-aligned (numbers)
+*     [norepeat(numlist)]               columns whose repeated text is shown
+*                                       only on the first row of a run
+*     [rules(numlist)]                  thin gray line under these data rows
+*     [notes("line 1" "line 2" ...)]    footer paragraphs (Notes, Source, dev line)
+*     [subtitle(text)] [fontsize(#)] [perpage(#)] [landscape|portrait]
+* Landscape is chosen automatically when there are more than 6 columns. Long
+* tables continue on a new page with the header repeated ("(continued)"); a page
+* never breaks inside a block whose first column is empty (e.g. an SE row).
+* --- PART 1: the writer (identical in every file; do not edit) ---------------
+capture program drop ctable_pdf
+program define ctable_pdf
+    version 17
+    syntax varlist(string) using/, TItle(string) HEADer(string asis) ///
+        [RIGHT(numlist integer >0) NOREPeat(numlist integer >0) RULES(numlist integer >0) ///
+         NOTEs(string asis) SUBtitle(string) FONTsize(real 9.5) PERpage(integer 0) ///
+         LANDscape PORTrait]
+    local nc : word count `varlist'
+    local nh : word count `header'
+    if `nh' != `nc' {
+        display as error "ctable_pdf: `nc' columns but `nh' header texts"
+        exit 198
+    }
+    local orient = cond(`nc' > 6, "landscape", "")
+    if "`landscape'" != "" local orient "landscape"
+    if "`portrait'"  != "" local orient ""
+    * rows per page: a conservative guess for 9-10 pt text (wrapped cells take more)
+    if `perpage' == 0 local perpage = cond("`orient'" == "landscape", 24, 40)
+    preserve
+    quietly {
+        keep `varlist'
+        rename (`varlist') (__c#), addnumber      // __c1 __c2 ... in the order given
+        forvalues j = 1/`nc' {
+            replace __c`j' = strtrim(__c`j')
+        }
+        local N = _N
+        gen long row = _n
+        * page chunks: fill up to perpage rows; prefer to end a page at a rule,
+        * never start a page on a row whose first column is empty
+        gen int chunk = .
+        local start 1
+        local k 0
+        while `start' <= `N' {
+            local ++k
+            local end = min(`start' + `perpage' - 1, `N')
+            if `end' < `N' {
+                local best 0
+                foreach r of local rules {
+                    if `r' >= `start' + floor(`perpage' / 2) & `r' <= `end' & `r' > `best' local best `r'
+                }
+                if `best' > 0 local end `best'
+                else {
+                    while `end' > `start' & __c1[`end' + 1] == "" {
+                        local --end
+                    }
+                }
+            }
+            replace chunk = `k' in `start'/`end'
+            local start = `end' + 1
+        }
+        local nk `k'
+        * blank repeated labels inside each page; a column is blanked only while the
+        * norepeat columns to its left are unchanged too (a new panel shows its series)
+        gen byte same = _n > 1 & chunk == chunk[_n - 1]
+        foreach j of local norepeat {
+            gen strL o`j' = __c`j'
+            replace same = same & o`j' == o`j'[_n - 1]
+            replace __c`j' = "" if same
+            drop o`j'
+        }
+        drop same
+        * column widths (% of the page), from the longest text in each column;
+        * long text columns are capped so they wrap instead of squeezing numbers
+        matrix W = J(1, `nc', 0)
+        local tot 0
+        forvalues j = 1/`nc' {
+            gen long L`j' = udstrlen(__c`j')
+            summarize L`j', meanonly
+            local w = max(r(max), 3)
+            local h : word `j' of `header'
+            local h = subinstr(`"`h'"', "|", " ", .)
+            foreach hw of local h {
+                local w = max(`w', udstrlen(`"`hw'"'))
+            }
+            local w = min(`w', 34) + 2          // + 2 = room for the cell margins
+            matrix W[1, `j'] = `w'
+            local tot = `tot' + `w'
+            drop L`j'
+        }
+        local used 0
+        forvalues j = 1/`nc' {
+            if `j' < `nc' {
+                matrix W[1, `j'] = max(floor(100 * W[1, `j'] / `tot'), 3)
+                local used = `used' + W[1, `j']
+            }
+            else matrix W[1, `j'] = 100 - `used'
+        }
+    }
+    putpdf clear
+    putpdf begin, pagesize(A4) `orient' font("Times New Roman", `fontsize') ///
+        margin(left, 0.8in) margin(right, 0.8in) margin(top, 0.5in) margin(bottom, 0.5in)
+    forvalues k = 1/`nk' {
+        if `k' > 1 putpdf pagebreak
+        putpdf paragraph, spacing(after, 4pt)
+        local tt = cond(`k' == 1, `"`title'"', `"`title' (continued)"')
+        putpdf text (`"`tt'"'), bold font("Times New Roman", `=`fontsize' + 1.5')
+        if `k' == 1 & `"`subtitle'"' != "" {
+            putpdf paragraph, spacing(after, 4pt)
+            putpdf text (`"`subtitle'"')
+        }
+        quietly count if chunk == `k'
+        local nr = r(N) + 1
+        quietly putpdf table T`k' = data(__c1-__c`nc') if chunk == `k', varnames border(all, nil) width(W)
+        forvalues j = 1/`nc' {
+            * header text; "|" starts a new line inside the cell
+            local rest : word `j' of `header'
+            local opt ""
+            while `"`rest'"' != "" {
+                gettoken part rest : rest, parse("|")
+                if `"`part'"' == "|" {
+                    putpdf table T`k'(1, `j') = (""), linebreak append
+                    continue
+                }
+                putpdf table T`k'(1, `j') = (`"`part'"'), valign(bottom) `opt'
+                local opt "append"
+            }
+            local al = cond(`: list j in right', "right", "left")
+            putpdf table T`k'(., `j'), halign(`al') margin(top, 0pt) margin(bottom, 0pt)
+        }
+        putpdf table T`k'(1, .), border(top, single, black) border(bottom, single, black)
+        putpdf table T`k'(`nr', .), border(bottom, single, black)
+        foreach r of local rules {
+            quietly summarize row if chunk == `k', meanonly
+            if `r' >= r(min) & `r' < r(max) {
+                putpdf table T`k'(`=`r' - r(min) + 2', .), border(bottom, single, "A6A6A6")
+            }
+        }
+    }
+    local first 1
+    foreach n of local notes {
+        putpdf paragraph, spacing(before, `=cond(`first', 6, 1)'pt)
+        putpdf text (`"`n'"'), font("Times New Roman", `=`fontsize' - 0.5')
+        local first 0
+    }
+    putpdf save `"`using'"', replace
+    restore
+end
+* --- end of PART 1 ------------------------------------------------------------
+
+* --- PART 2: the rows of this exhibit (the only part that changes per file) ---
+* Source: the data still in memory = exactly the rows drawn (export margin, rule
+* A, one row per axis year 2010-2022), the same numbers written to the CSV.
+* One row per bar, left to right; years without a bar are included with the reason.
+sort cohort_year
+local ny = _N
+assert `ny' == 13
+gen str8  t_year  = string(cohort_year)
+gen str12 t_total = string(total, "%9.0f") if !missing(total)
+gen str12 t_exact = string(exact, "%9.0f") if !missing(total)
+gen str12 t_appr  = string(total - exact, "%9.0f") if !missing(total)
+gen str12 t_fy    = string(simple_firm_years, "%12.0fc") if !missing(total)
+gen str90 t_status = "drawn: dark part labelled, total on top"
+replace t_status = "drawn: white only (no exact entry year), total on top" if !missing(total) & exact == 0
+replace t_status = t_status + "; holds 2016 and 2017 starts (no 2016 file)" if cohort_year == 2017
+replace t_status = t_status + "; 2022 file asks only about direct exports" if cohort_year == 2022
+replace t_status = "not drawn: first file, no start can be seen" if cohort_year == 2010
+replace t_status = "not drawn: no annual file (gray band)" if cohort_year == 2016
+assert missing(total) == inlist(cohort_year, 2010, 2016)
+quietly count if !missing(total)
+local ndrawn = r(N)
+assert `ndrawn' == 11
+* the chart's notes, word for word
+local ntext "Notes: Entry year = first year a firm is seen exporting after an earlier year seen not exporting. No start can be seen in 2010, the first file."
+local ntext "`ntext' The 2017 bar also holds 2016 starts (no 2016 file), so none is exact. The 2022 file asks only about direct exports. `n_stop' of the `nA8000'"
+local ntext "`ntext' starters are later seen not exporting again. Not shown: `nA9001' firms never seen exporting (the comparison group in later R2 figures), `nA9002'"
+local ntext "`ntext' already exporting when first seen (start year unknown) and `nA9003' with no known export status. The previous paper's stricter rule (no exports"
+local ntext "`ntext' in both years before, exports again the year after) leaves `n_sust' starters. Firm links are fictional, so the 'no' and 'yes' years may belong to"
+local ntext "`ntext' different real firms: this tests the method; it is not a finding."
+local tnote "Table: every bar of Figure R2-01, left to right, with the years not drawn and why. Starters = bar height; exact = dark part"
+local tnote "`tnote' (seen not exporting the year just before); approximate = white part (last seen not exporting 2+ years before). Firm-years ="
+local tnote "`tnote' all rows of these starters in the file. Full precision and the import and foreign-ownership margins: tables/01_export_entry_cohorts.csv."
+ctable_pdf t_year t_total t_exact t_appr t_fy t_status using "tables/01_export_entry_cohorts_table.pdf", ///
+    title("Table R2-01. Firms that started exporting, by year of entry: every plotted point") ///
+    subtitle("Number of firms by the year the firm is first seen exporting (simple rule)") ///
+    header("Entry|year" "Starters|(bar)" "Entry year|exact" "Entry year|approximate" "Starters'|firm-years" "Status") ///
+    right(1 2 3 4 5) ///
+    notes("`ntext'" "`tnote'" "`srcnote'" "`devnote'")
+display "table -> tables/01_export_entry_cohorts_table.pdf"
+* --- end of PART 2 ------------------------------------------------------------
+
 
 timer off 1
 quietly timer list 1
