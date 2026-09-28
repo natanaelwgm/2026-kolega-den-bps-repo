@@ -1,0 +1,2278 @@
+------------------------------------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r6-exporter-decarbonisation-mar
+> gins/logs/05_emission_factor_checks.log
+  log type:  text
+ opened on:  28 Sep 2026, 18:19:41
+
+. timer clear 1
+
+. timer on 1
+
+. display _newline "=== [`exhibit'] STARTING: CO2 answers under three sets of emission rates ==="
+
+=== [R6-05] STARTING: CO2 answers under three sets of emission rates ===
+
+. 
+. * ---- chart style (identical block in every file) ----
+. set scheme s1mono
+
+. capture graph set window fontface "Times New Roman"   // GUI Stata; console Stata keeps its default font
+
+. * Note: this changes your Stata graph font permanently; undo with: graph set window fontface default
+. local devnote "Development data — obscured values, fictional firm panel. Not BPS findings."
+
+. local srcnote "Source: SI/IBS annual files 2010–2022 (masked), analysis_ready_data.dta."
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 1/8: load export and import status, energy, CO2 under each set of rates and value added; check the add-o
+> ns"
+Step 1/8: load export and import status, energy, CO2 under each set of rates and value added; check the add-ons
+
+. *---------------------------------------------------------------------------
+. * The regressions need reghdfe (with ftools and require). Nothing is installed here.
+. foreach p in reghdfe ftools require {
+  2.     capture which `p'
+  3.     if _rc {
+  4.         display as error "This file needs the Stata add-on `p': type  ssc install `p'  once (see INDEX.md), then ru
+> n it again."
+  5.         exit 199
+  6.     }
+  7. }
+
+. * export_flag             = any export activity (1 yes, 0 no, missing = unknown)
+. * import_flag             = imports raw materials (used for the doubtful energy records)
+. * total_gj_s1             = energy use in GJ = gj_fuel_s1 (nine fuels) + gj_electricity (bought)
+. * co2_total_s1            = CO2 tonnes, main rates = co2_scope1_s1 + co2_scope2_s1
+. * co2_variant_static_grid = CO2 tonnes, fuels at the main rates + electricity at one grid rate
+. * co2_total_s2            = CO2 tonnes, scenario 2 = co2_scope1_s2 + co2_scope2_s2
+. * co2_scope1_s1 / _s2     = CO2 from fuels burned (one rate per fuel; set 1 / set 2)
+. * co2_scope2_s1 / _s2     = CO2 from bought electricity (grid rate by year / one grid rate)
+. * grid_factor_s1 / _s2    = the two grid rates, tonnes of CO2 per kWh
+. * grid_factor_is_carried  = 1 in years whose grid rate is carried from an earlier year
+. * elec_purchased_kwh      = bought electricity, kWh (PLN and other suppliers)
+. * gj_<fuel>, co2_<fuel>_s1/_s2 = GJ and CO2 of each fuel (only for the rates in the notes)
+. * value_added_nominal     = value added, current prices (masked money unit)
+. local fv ""
+
+. foreach f of local fuels9 {
+  2.     local fv `fv' gj_`f' co2_`f'_s1 co2_`f'_s2
+  3. }
+
+. use firm_id year export_flag import_flag total_gj_s1 gj_fuel_s1 gj_electricity co2_total_s1 co2_scope1_s1 ///
+>     co2_scope2_s1 co2_variant_static_grid co2_total_s2 co2_scope1_s2 co2_scope2_s2 grid_factor_s1 ///
+>     grid_factor_s2 grid_factor_is_carried elec_purchased_kwh value_added_nominal `fv' using "$DATA", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. isid firm_id year
+
+. assert year != 2016
+
+. sort firm_id year
+
+. 
+. *###########################################################################
+. *## R6 EXPORT-START SAMPLE (copy exactly into later R6 files)
+. *## = R2's start years (rule A), comparison group, usable-row rule, doubtful
+. *##   energy records, year window (R2-02's rule) and markers, from block-r2
+. *##   files 03, 05, 08 and 09. Model: Step 5 (reghdfe, firm and year fixed
+. *##   effects, clustered by firm; average of years 0..+whi; before-start test).
+. *###########################################################################
+. display "Step 2/8: R6 export-start sample: start years, usable rows, doubtful records, year window"
+Step 2/8: R6 export-start sample: start years, usable rows, doubtful records, year window
+
+. * Years whose energy records are in doubt for importers with unknown export
+. * status (their recorded energy jumps far up, then falls to about a fifth,
+. * while value added per worker stays flat; R1-03/R1-04 reviews, R2-06).
+. * Re-checked below on any data.
+. local doubt_yrs "2017 2019 2020 2021 2022"
+
+. * Import starts dated in this year are left out (import-start version only): from
+. * this file on far more firms count as importers (likely a recording change; R2-08).
+. local imp_bad "2017"
+
+. local minfirms 30               // R2-02's rule: 30+ starters for a year of its own
+
+. * --- Start years, rule A (R2's code; R2-08's loop form, run for exporting and importing) ---
+. * Missing status is unknown, never read as "not participating".
+. * Rule A, simple first entry: the first year the firm is seen participating,
+. *   if it was seen NOT participating in some earlier year. Firms participating
+. *   when first seen cannot be dated and are left out.
+. * Comparison group: firms never seen participating.
+. * Row keys: 9001 never seen participating · 9002 already participating when first
+. * seen (excluded) · 9003 status never observed (excluded).
+. foreach m in exp imp {
+  2.     if "`m'" == "exp" local x export_flag
+  3.     if "`m'" == "imp" local x import_flag
+  4.     by firm_id: egen int first_yes = min(cond(`x' == 1, year, .))
+  5.     by firm_id: egen int first_no  = min(cond(`x' == 0, year, .))
+  6.     by firm_id: egen int n_known   = total(!missing(`x'))
+  7.     gen int keyA = .
+  8.     replace keyA = 9003 if n_known == 0                                     // status never observed
+  9.     replace keyA = 9001 if n_known > 0 & missing(first_yes)                 // never seen participating
+ 10.     replace keyA = 9002 if n_known > 0 & !missing(first_yes) & (missing(first_no) | first_no > first_yes)
+ 11.     replace keyA = first_yes if n_known > 0 & !missing(first_yes) & !missing(first_no) & first_no < first_yes
+ 12.     assert !missing(keyA)
+ 13.     gen int gA = keyA if keyA < 9000                                        // start year, rule A
+ 14.     by firm_id: egen int last_no_before = max(cond(`x' == 0 & year < gA, year, .))
+ 15.     gen byte exactA = !missing(gA) & last_no_before == gA - 1               // seen "no" the year just before
+ 16.     rename (keyA gA exactA) (key_`m' g_`m' exact_`m')
+ 17.     drop first_yes first_no n_known last_no_before
+ 18. }
+(21,821 missing values generated)
+(7,833 missing values generated)
+(33,049 missing values generated)
+(4,817 real changes made)
+(17,004 real changes made)
+(5,800 real changes made)
+(5,428 real changes made)
+(27,621 missing values generated)
+(7,833 missing values generated)
+(10,740 missing values generated)
+(4,337 missing values generated)
+(33,049 missing values generated)
+(0 real changes made)
+(10,740 real changes made)
+(9,476 real changes made)
+(12,833 real changes made)
+(20,216 missing values generated)
+(4,337 missing values generated)
+
+. * The export start is the event of this block: gA / keyA / exactA as in R2-03.
+. gen int gA     = g_exp
+(27,621 missing values generated)
+
+. gen int keyA   = key_exp
+
+. gen byte exactA = exact_exp
+
+. * Years since the start = calendar year minus start year (0 = start year,
+. * -1 = the year before). A firm's 2016 is simply missing (no file).
+. gen int kA = year - gA                                  // missing for non-starters
+(27,621 missing values generated)
+
+. * Usable row = energy, CO2 and value added all above zero, so every log exists
+. * (the same rows in R2-03, R2-04 and R2-05). A zero is left out, not read as "none".
+. gen byte usable = total_gj_s1 > 0 & co2_total_s1 > 0 & value_added_nominal > 0 ///
+>     & !missing(total_gj_s1, co2_total_s1, value_added_nominal)
+
+. * Doubtful energy records (R2-06's definition): importers whose export status is
+. * unknown, in the years listed above. Kept in the main version; left out in
+. * version "nodoubt" (drawn hollow gray) and in the import-start version.
+. local dlist = subinstr(strtrim(itrim("`doubt_yrs'")), " ", ",", .)
+
+. gen byte doubt = missing(export_flag) & import_flag == 1 & inlist(year, `dlist')
+
+. * Re-check on these data (R2-06's rule): in each listed year the doubtful rows'
+. * middle (median) energy per unit of value added should be far from the other
+. * rows' (above double or below half). If not, the year list needs a new look.
+. gen double gjva = total_gj_s1 / value_added_nominal if usable
+(514 missing values generated)
+
+. foreach yy of local doubt_yrs {
+  2.     quietly summarize gjva if doubt & year == `yy', detail
+  3.     local md = r(p50)
+  4.     local nd = r(N)
+  5.     quietly summarize gjva if !doubt & year == `yy', detail
+  6.     local ratio = `md' / r(p50)
+  7.     if `nd' == 0 display "   WARNING: no doubtful rows in `yy' - re-check doubt_yrs at the top"
+  8.     else if inrange(`ratio', 0.5, 2) display "   WARNING: in `yy' doubtful rows look normal (median ratio " %4.2f `
+> ratio' ") - re-check doubt_yrs"
+  9.     else display "   `yy': " %5.0fc `nd' " doubtful rows; their median energy per unit of value added = " %5.2f `ra
+> tio' " x the other rows'"
+ 10. }
+   2017: 1,688 doubtful rows; their median energy per unit of value added = 13.15 x the other rows'
+   2019: 1,320 doubtful rows; their median energy per unit of value added =  0.13 x the other rows'
+   2020: 1,121 doubtful rows; their median energy per unit of value added =  0.16 x the other rows'
+   2021: 1,298 doubtful rows; their median energy per unit of value added =  0.16 x the other rows'
+   2022:   972 doubtful rows; their median energy per unit of value added =  0.22 x the other rows'
+
+. drop gjva
+
+. tempfile fy smp imps est
+
+. save `fy'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_37002.000001 saved as .dta format
+
+. * Which years since the start get their own point: R2-02's rule, computed here so
+. * this file also runs on its own. A year passes when `minfirms'+ starters have a
+. * usable row in it, from starts both before and after 2016; take the widest
+. * window -K..+K in which every year passes (further out = grouped ends).
+. use `fy', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if !missing(gA) & usable
+(27,667 observations deleted)
+
+. gen byte early = gA < 2016
+
+. gen byte late  = gA > 2016
+
+. collapse (count) n = firm_id (max) early late, by(kA)
+
+. gen byte passes = n >= `minfirms' & early & late
+
+. assert passes if inlist(kA, -1, 0)
+
+. local K 0
+
+. local go 1
+
+. while `go' {
+  2.     local kk = `K' + 1
+  3.     quietly count if passes & inlist(kA, -`kk', `kk')
+  4.     if r(N) == 2 local K = `kk'
+  5.     else local go 0
+  6. }
+
+. local wlo = -`K'
+
+. local whi = `K'
+
+. * If R2-02's table is present, it must show the same window.
+. capture confirm file "$R2DIR/tables/02_event_time_support.csv"
+
+. if !_rc {
+.     import delimited using "$R2DIR/tables/02_event_time_support.csv", clear varnames(1)
+(encoding automatically selected: ISO-8859-1)
+(22 vars, 260 obs)
+.     if window_first[1] != `wlo' | window_last[1] != `whi' | min_firms[1] != `minfirms' {
+.         display as error "R2-02's table shows another year window: the R6 sample no longer matches R2's."
+.         exit 459
+.     }
+.     display "   window matches R2-02's table"
+   window matches R2-02's table
+. }
+
+. else display "   R2-02's table not found in $R2DIR: window check skipped"
+
+. local nout = `whi' + 1                                  // first grouped year on each side
+
+. display "   window (R2-02's rule, computed here): each year from `wlo' to +`whi' on its own; `nout'+ years before or a
+> fter grouped"
+   window (R2-02's rule, computed here): each year from -5 to +5 on its own; 6+ years before or after grouped
+
+. * The firms compared: the starters (rule A) and the firms never seen exporting
+. * (the comparison group, all their rows). Left out: firms already exporting when
+. * first seen (start year unknown) and firms whose export status is never recorded.
+. use `fy', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if !missing(gA) | keyA == 9001
+(10,617 observations deleted)
+
+. keep if usable
+(345 observations deleted)
+
+. gen byte never = missing(gA)
+
+. save `smp'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_37002.000002 saved as .dta format
+
+. *###########################################################################
+. *## END OF R6 EXPORT-START SAMPLE (markers and model: Step 5)
+. *###########################################################################
+. 
+. *---------------------------------------------------------------------------
+. display "Step 3/8: the three sets of emission rates, checks on them, and the rows"
+Step 3/8: the three sets of emission rates, checks on them, and the rows
+
+. *---------------------------------------------------------------------------
+. * (a) What each set of rates is, read from the file (all rows, not only the sample).
+. use `fy', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. * CO2 of each set = CO2 from fuels + CO2 from bought electricity (Step 0 list at the top)
+. forvalues r = 1/`nr' {
+  2.     assert reldif(`ct`r'', `cf`r'' + `ce`r'') < 1e-9
+  3. }
+
+. * CO2 from bought electricity = kWh x the set's grid rate; kWh x 0.0036 = GJ
+. assert reldif(co2_scope2_s1, grid_factor_s1 * elec_purchased_kwh) < 1e-9
+
+. assert reldif(co2_scope2_s2, grid_factor_s2 * elec_purchased_kwh) < 1e-9
+
+. assert reldif(gj_electricity, 0.0036 * elec_purchased_kwh) < 1e-9
+
+. * Each grid rate is one number per year, the same for every firm (so the year
+. * fixed effects remove it from log CO2 from bought electricity); the fixed rate
+. * is one number in every year.
+. foreach g in grid_factor_s1 grid_factor_s2 {
+  2.     bysort year: egen double sd_g = sd(`g')
+  3.     assert sd_g < 1e-12 | missing(sd_g)
+  4.     drop sd_g
+  5. }
+
+. quietly summarize grid_factor_s2
+
+. assert r(sd) < 1e-12
+
+. local gfix = r(mean)
+
+. * CO2 from fuels of scenario 2 = the sum of its fuels; every set is above 0 on the
+. * same rows, so the usable rows are the same under all three sets.
+. local s2v ""
+
+. foreach f of local fuels9 {
+  2.     local s2v `s2v' co2_`f'_s2
+  3. }
+
+. egen double s2sum = rowtotal(`s2v')                                // missing = fuel not asked = 0 here
+
+. assert reldif(co2_scope1_s2, s2sum) < 1e-9
+
+. drop s2sum
+
+. forvalues r = 1/`nr' {
+  2.     assert (`ct`r'' > 0) == (co2_total_s1 > 0)
+  3.     assert (`cf`r'' > 0) == (gj_fuel_s1 > 0)
+  4.     assert (`ce`r'' > 0) == (gj_electricity > 0)
+  5. }
+
+. * Grid rate by year (main set): the years with their own rate and the years that
+. * carry an earlier one; for the notes.
+. preserve
+
+. collapse (mean) g1 = grid_factor_s1 (max) carried = grid_factor_is_carried, by(year)
+
+. list year g1 carried, noobs clean
+
+    year        g1   carried  
+    2010   .000599         0  
+    2011    .00069         0  
+    2012   .000782         0  
+    2013   .000873         0  
+    2014   .000914         0  
+    2015   .000914         1  
+    2017   .000914         1  
+    2018   .000914         1  
+    2019   .000914         1  
+    2020   .000914         1  
+    2021   .000914         1  
+    2022   .000914         1  
+
+. quietly summarize year if carried == 0
+
+. local gy0 = r(min)
+
+. local gy1 = r(max)
+
+. quietly summarize year if carried == 1
+
+. local cy0 = r(min)
+
+. local cy1 = r(max)
+
+. quietly summarize g1 if year == `gy0'
+
+. local g_first = r(mean)
+
+. quietly summarize g1 if year == `gy1'
+
+. local g_last = r(mean)
+
+. assert abs(g1 - `g_last') < 1e-12 if carried == 1        // carried = the last own rate
+
+. * grid rate by year in kg per kWh, for the regression-table notes ("2010 0.60, ...")
+. local gyrtxt ""
+
+. forvalues i = 1/`=_N' {
+  2.     if carried[`i'] == 1 continue
+  3.     local gyrtxt = "`gyrtxt'" + cond("`gyrtxt'" != "", ", ", "") + string(year[`i']) + " " + string(1000 * g1[`i'],
+>  "%4.2f")
+  4. }
+
+. restore
+
+. local gtxt_first = string(`g_first', "%9.6f")
+
+. local gtxt_last  = string(`g_last', "%9.6f")
+
+. local gtxt_fix   = string(`gfix', "%9.6f")
+
+. * the same rates in kg of CO2 per kWh, for the notes (easier to read than tonnes)
+. local gkg_first = string(1000 * `g_first', "%4.2f")
+
+. local gkg_last  = string(1000 * `g_last', "%4.2f")
+
+. local gkg_fix   = string(1000 * `gfix', "%4.2f")
+
+. display "   grid rate, main set: " `gtxt_first' " t CO2 per kWh (`gy0') to " `gtxt_last' " (`gy1'); `gy1''s rate carri
+> ed to `cy0'-`cy1'"
+   grid rate, main set: .000599 t CO2 per kWh (2010) to .000914 (2014); 2014's rate carried to 2015-2022
+
+. display "   grid rate, fixed: " `gtxt_fix' " t CO2 per kWh in every year"
+   grid rate, fixed: .000867 t CO2 per kWh in every year
+
+. * Fuel rates: one rate per fuel in each set (checked); scenario 2 vs main in %.
+. local ftxt ""
+
+. local frtxt ""                                             // "diesel 0.0743 / 0.0832, ..." for the regression notes
+
+. local dlo 0                                                // smallest and largest scenario-2 change, for the chart
+
+. local dhi 0
+
+. local lastn ""
+
+. local ds_prev ""
+
+. foreach f of local fuels9 {
+  2.     quietly count if gj_`f' > 0 & !missing(gj_`f')
+  3.     if r(N) == 0 continue                                  // fuel never burned in the file
+  4.     gen double e1 = co2_`f'_s1 / gj_`f' if gj_`f' > 0 & !missing(gj_`f')
+  5.     gen double e2 = co2_`f'_s2 / gj_`f' if gj_`f' > 0 & !missing(gj_`f')
+  6.     quietly summarize e1
+  7.     assert r(sd) < 1e-9 * r(mean)
+  8.     local m1 = r(mean)
+  9.     quietly summarize e2
+ 10.     assert r(sd) < 1e-9 * r(mean)
+ 11.     local m2 = r(mean)
+ 12.     local d = round(100 * (`m2' / `m1' - 1))
+ 13.     local dlo = min(`dlo', `d')
+ 14.     local dhi = max(`dhi', `d')
+ 15.     local ds = cond(`d' > 0, "+", "") + string(`d', "%9.0f") + "%"
+ 16.     * fuels next to each other with the same change are named together ("city gas and other gas -19%")
+.     if "`ds'" == "`ds_prev'" local lastn "`lastn' and `fn_`f''"
+ 17.     else {
+ 18.         if "`lastn'" != "" local ftxt = "`ftxt'" + cond("`ftxt'" != "", ", ", "") + "`lastn' `ds_prev'"
+ 19.         local lastn "`fn_`f''"
+ 20.     }
+ 21.     local ds_prev "`ds'"
+ 22.     local frtxt = "`frtxt'" + cond("`frtxt'" != "", ", ", "") + "`fn_`f'' " + string(`m1', "%6.4f") + " / " + strin
+> g(`m2', "%6.4f")
+ 23.     display "   `fn_`f'': " %7.5f `m1' " t CO2 per GJ (main), " %7.5f `m2' " (scenario 2): `ds'"
+ 24.     drop e1 e2
+ 25. }
+(10,193 missing values generated)
+(10,193 missing values generated)
+   diesel: 0.07435 t CO2 per GJ (main), 0.08342 (scenario 2): +12%
+(11,903 missing values generated)
+(11,903 missing values generated)
+   petrol: 0.06953 t CO2 per GJ (main), 0.07461 (scenario 2): +7%
+(30,995 missing values generated)
+(30,995 missing values generated)
+   kerosene: 0.07217 t CO2 per GJ (main), 0.07570 (scenario 2): +5%
+(26,742 missing values generated)
+(26,742 missing values generated)
+   coal: 0.09527 t CO2 per GJ (main), 0.09344 (scenario 2): -2%
+(31,104 missing values generated)
+(31,104 missing values generated)
+   coal briquettes: 0.09816 t CO2 per GJ (main), 0.06933 (scenario 2): -29%
+(20,170 missing values generated)
+(20,170 missing values generated)
+   LPG: 0.06315 t CO2 per GJ (main), 0.07230 (scenario 2): +14%
+(28,382 missing values generated)
+(28,382 missing values generated)
+   city gas: 0.05615 t CO2 per GJ (main), 0.04562 (scenario 2): -19%
+(30,607 missing values generated)
+(30,607 missing values generated)
+   other gas: 0.05615 t CO2 per GJ (main), 0.04562 (scenario 2): -19%
+
+. local ftxt = "`ftxt'" + cond("`ftxt'" != "", ", ", "") + "`lastn' `ds_prev'"
+
+. 
+. * (b) The rows, on the R6 sample (usable firm-years of starters and never-exporters).
+. use `smp', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. * Firm-years used: usable (all rows except (4) and (5)); (4) needs fuels burned
+. * above 0, (5) bought electricity above 0 (the log of 0 does not exist).
+. gen byte s_use  = 1
+
+. gen byte s_fuel = gj_fuel_s1 > 0 & !missing(gj_fuel_s1)
+
+. gen byte s_elec = gj_electricity > 0 & !missing(gj_electricity)
+
+. forvalues r = 1/`nr' {
+  2.     local b = 6 * (`r' - 1)
+  3.     gen double y`=`b' + 1' = ln(value_added_nominal / `ct`r'')     // (1) value added per tonne of CO2
+  4.     gen double y`=`b' + 2' = ln(`ct`r'')                            // (2) CO2 emitted
+  5.     gen double y`=`b' + 3' = ln(`ct`r'' / total_gj_s1)              // (3) CO2 per GJ of energy
+  6.     gen double y`=`b' + 4' = ln(`cf`r'') if s_fuel                  // (4) CO2 from fuels burned
+  7.     gen double y`=`b' + 5' = ln(`ce`r'') if s_elec                  // (5) CO2 from bought electricity
+  8.     gen double y`=`b' + 6' = 100 * `ce`r'' / `ct`r''                // (6) electricity's share of CO2, %
+  9.     forvalues m = 1/6 {
+ 10.         local smp`=`b' + `m'' = cond(`m' == 4, "s_fuel", cond(`m' == 5, "s_elec", "s_use"))
+ 11.         local u`=`b' + `m'' = `u`m''
+ 12.         local ms`=`b' + `m'' = `m'                                  // measure of each outcome
+ 13.         local rr`=`b' + `m'' = `r'                                  // set of rates of each outcome
+ 14.     }
+ 15. }
+(2,168 missing values generated)
+(1,011 missing values generated)
+(2,168 missing values generated)
+(1,011 missing values generated)
+(2,168 missing values generated)
+(1,011 missing values generated)
+
+. gen double y19 = ln(value_added_nominal)                           // (7) value added
+
+. gen double y20 = ln(total_gj_s1)                                   // (8) energy used
+
+. local smp19 "s_use"
+
+. local smp20 "s_use"
+
+. local ms19 7
+
+. local ms20 8
+
+. local rr19 0
+
+. local rr20 0
+
+. local u19 1
+
+. local u20 1
+
+. quietly count
+
+. local nus = r(N)
+
+. quietly count if s_fuel
+
+. local nfu = r(N)
+
+. quietly count if s_elec
+
+. local nel = r(N)
+
+. display "   " %6.0fc `nus' " usable firm-years: " %6.0fc `nfu' " burn some fuel, " %6.0fc `nel' " buy some electricity
+> "
+   22,087 usable firm-years: 19,919 burn some fuel, 21,076 buy some electricity
+
+. display "   Bought electricity's share of CO2 (%), average over firm-years, by set of rates and year:"
+   Bought electricity's share of CO2 (%), average over firm-years, by set of rates and year:
+
+. tabstat y6 y12 y18, by(year) stat(mean) format(%6.1f) nototal
+
+Summary statistics: Mean
+Group variable: year (Calendar year: 2010-2015 and 2017-2022; 2016 unavailable)
+
+    year |        y6       y12       y18
+---------+------------------------------
+    2010 |      45.1      49.3      48.3
+    2011 |      45.9      48.6      47.6
+    2012 |      47.1      48.3      47.3
+    2013 |      50.3      50.3      49.3
+    2014 |      51.8      51.2      50.3
+    2015 |      51.8      51.2      50.2
+    2017 |      42.6      42.1      41.3
+    2018 |      60.4      59.7      58.9
+    2019 |      59.2      58.4      57.5
+    2020 |      68.0      67.4      66.6
+    2021 |      70.1      69.5      68.7
+    2022 |      68.9      68.3      67.5
+----------------------------------------
+
+. save `smp', replace
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_37002.000002 saved as .dta format
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 4/8: estimate every row under every set of rates with firm and year fixed effects (clustered by firm), f
+> ive versions"
+Step 4/8: estimate every row under every set of rates with firm and year fixed effects (clustered by firm), five version
+> s
+
+. *---------------------------------------------------------------------------
+. * R6-01's model (R2-03's): the outcome on one marker per year since the start,
+. * removing each firm's own average (firm fixed effects) and each year's average
+. * (year fixed effects, set mostly by the comparison firms). A firm with one row
+. * used cannot be compared with itself; reghdfe drops it and reports the number.
+. * Log rows: b = log difference from the firm's year before the start, net of the
+. * never-exporters' change; % = 100 x (exp(b) - 1). Share rows: b in percentage points.
+. * Versions (the chart shows "main"; all are in the CSV):
+. *   main       = the R6 sample
+. *   nodoubt    = without doubtful energy records (Step 2)
+. *   no2017     = drops the 2017 starters (no 2016 file: they may have started in 2016)
+. *   exact      = keeps only starters seen not exporting the year just before
+. *   no2017rows = without the 2017 rows (that year far more firms burn coal: a
+. *                recording change is likely, and coal's rate differs between sets)
+. local nv 5
+
+. local v1 "main"
+
+. local v2 "nodoubt"
+
+. local v3 "no2017"
+
+. local v4 "exact"
+
+. local v5 "no2017rows"
+
+. local e1 "1"
+
+. local e2 "!doubt"
+
+. local e3 "gA != 2017"                                   // comparison firms (gA missing) stay
+
+. local e4 "missing(gA) | exactA == 1"
+
+. local e5 "year != 2017"
+
+. tempname h
+
+. postfile `h' byte outcome str10 version str8 term int event_time byte(grouped reference) ///
+>     double(b se lo hi p) long(firms rows firms_early firms_late start_years) using `est'
+
+. forvalues s = 1/`nv' {
+  2.     use `smp', clear
+  3.     keep if `e`s''
+  4.     * One marker per year since the start inside the window, except -1 (the year
+.     * before the start = the reference, 0 by definition), plus one marker for each
+.     * grouped end. Comparison firms are 0 on every marker. A marker with no starter
+.     * row among a row's firm-years is left out (R2-08).
+.     gen byte ev_lo = !missing(kA) & kA < `wlo'
+  5.     local cand "ev_lo"
+  6.     forvalues k = `wlo'/`whi' {
+  7.         if `k' == -1 continue
+  8.         local nm = cond(`k' < 0, "ev_m" + string(-`k'), "ev_p" + string(`k'))
+  9.         gen byte `nm' = (kA == `k')
+ 10.         local cand `cand' `nm'
+ 11.     }
+ 12.     gen byte ev_hi = !missing(kA) & kA > `whi'
+ 13.     local cand `cand' ev_hi
+ 14.     gen byte ev_ref = (kA == -1)                        // for the counts only
+ 15.     forvalues o = 1/`nall' {
+ 16.         local terms ""
+ 17.         local pre ""
+ 18.         local pre_in ""
+ 19.         local post ""
+ 20.         foreach t of local cand {
+ 21.             quietly count if `t' & !missing(y`o')
+ 22.             if r(N) == 0 continue
+ 23.             local terms `terms' `t'
+ 24.             if "`t'" == "ev_lo" local pre `pre' `t'
+ 25.             else if substr("`t'", 4, 1) == "m" {
+ 26.                 local pre `pre' `t'
+ 27.                 local pre_in `pre_in' `t'               // years before the start, grouped end left out
+ 28.             }
+ 29.             else if "`t'" != "ev_hi" local post `post' `t'
+ 30.         }
+ 31.         local terms`o'_`s' `terms'
+ 32.         local lc = subinstr("`post'", " ", " + ", .)    // years 0..+`whi', for the average
+ 33.         local np : word count `post'
+ 34.         quietly reghdfe y`o' `terms', absorb(firm_id year) vce(cluster firm_id)
+ 35.         matrix B`o'_`s' = e(b)
+ 36.         local df = e(df_r)
+ 37.         local N`o'_`s'  = e(N)
+ 38.         local G`o'_`s'  = e(N_clust)
+ 39.         local sg`o'_`s' = e(num_singletons)
+ 40.         * rows on the same firm-years must use the same number of them
+.         if "`smp`o''" == "s_use" & `o' > 1 assert e(N) == `N1_`s''
+ 41.         if `o' > 6 & inlist(`ms`o'', 4, 5) assert e(N) == `N`ms`o''_`s''
+ 42.         capture drop es
+ 43.         gen byte es = e(sample)
+ 44.         foreach t of local terms {
+ 45.             assert _se[`t'] > 0 & !missing(_se[`t'])     // no marker silently dropped
+ 46.         }
+ 47.         * Joint test: all years before the start (with and without the grouped end) are 0.
+.         quietly test `pre'
+ 48.         local F`o'_`s'  = r(F)
+ 49.         local Fd`o'_`s' = r(df)
+ 50.         local Fp`o'_`s' = r(p)
+ 51.         quietly test `pre_in'
+ 52.         local Fq`o'_`s' = r(p)
+ 53.         * Average over the start year and the years after it inside the window.
+.         quietly lincom (`lc') / `np'
+ 54.         local a`o'_`s'  = r(estimate)
+ 55.         local as`o'_`s' = r(se)
+ 56.         local al`o'_`s' = r(estimate) - invttail(`df', 0.025) * r(se)
+ 57.         local ah`o'_`s' = r(estimate) + invttail(`df', 0.025) * r(se)
+ 58.         local ap`o'_`s' = 2 * ttail(`df', abs(r(estimate) / r(se)))
+ 59.         egen byte ftag = tag(firm_id) if es
+ 60.         quietly count if ftag == 1 & !never
+ 61.         local st`o'_`s' = r(N)
+ 62.         quietly count if ftag == 1 & never
+ 63.         local cf`o'_`s' = r(N)
+ 64.         drop ftag
+ 65.         foreach t in `cand' ev_ref {
+ 66.             if "`t'" == "ev_lo"       local k = `wlo' - 1
+ 67.             else if "`t'" == "ev_hi"  local k = `whi' + 1
+ 68.             else if "`t'" == "ev_ref" local k = -1
+ 69.             else local k = cond(substr("`t'", 4, 1) == "m", -1, 1) * real(substr("`t'", 5, .))
+ 70.             * starters behind each point (a firm counts once in a grouped end)
+.             egen byte ft = tag(firm_id) if es & `t'
+ 71.             quietly count if ft == 1
+ 72.             local nf = r(N)
+ 73.             quietly count if es & `t'
+ 74.             local nrw = r(N)
+ 75.             quietly count if ft == 1 & gA < 2016
+ 76.             local ne = r(N)
+ 77.             quietly count if ft == 1 & gA > 2016
+ 78.             local nl = r(N)
+ 79.             quietly levelsof gA if es & `t'
+ 80.             local ny : word count `r(levels)'
+ 81.             drop ft
+ 82.             local grp = inlist("`t'", "ev_lo", "ev_hi")
+ 83.             if "`t'" == "ev_ref" {
+ 84.                 post `h' (`o') ("`v`s''") ("`t'") (`k') (0) (1) (0) (.) (0) (0) (.) (`nf') (`nrw') (`ne') (`nl') (`
+> ny')
+ 85.             }
+ 86.             else if !`: list t in terms' {
+ 87.                 post `h' (`o') ("`v`s''") ("`t'") (`k') (`grp') (0) (.) (.) (.) (.) (.) (0) (0) (0) (0) (0)
+ 88.             }
+ 89.             else {
+ 90.                 local b  = _b[`t']
+ 91.                 local se = _se[`t']
+ 92.                 post `h' (`o') ("`v`s''") ("`t'") (`k') (`grp') (0) (`b') (`se') ///
+>                     (`b' - invttail(`df', 0.025) * `se') (`b' + invttail(`df', 0.025) * `se') ///
+>                     (2 * ttail(`df', abs(`b' / `se'))) (`nf') (`nrw') (`ne') (`nl') (`ny')
+ 93.             }
+ 94.         }
+ 95.     }
+ 96.     * Exact links, marker by marker and in the average, under every set of rates:
+.     *   (1) value added per tonne of CO2 = value added (19) - CO2 emitted (2)
+.     *   (3) CO2 per GJ                   = CO2 emitted (2) - energy used (20)
+.     *   (5) CO2 from bought electricity: identical under all three sets (the grid
+.     *       rate is one number a year: the year fixed effects remove it)
+.     *   (4) CO2 from fuels: identical under sets 1 and 2 (the same fuel rates)
+.     forvalues r = 1/`nr' {
+ 97.         local b = 6 * (`r' - 1)
+ 98.         assert "`terms`=`b'+1'_`s''" == "`terms19_`s''" & "`terms`=`b'+3'_`s''" == "`terms19_`s''"
+ 99.         foreach t of local terms19_`s' {
+100.             assert reldif(B`=`b'+1'_`s'[1, "`t'"], B19_`s'[1, "`t'"] - B`=`b'+2'_`s'[1, "`t'"]) < 1e-6
+101.             assert reldif(B`=`b'+3'_`s'[1, "`t'"], B`=`b'+2'_`s'[1, "`t'"] - B20_`s'[1, "`t'"]) < 1e-6
+102.         }
+103.         assert reldif(`a`=`b'+1'_`s'', `a19_`s'' - `a`=`b'+2'_`s'') < 1e-6
+104.         assert reldif(`a`=`b'+3'_`s'', `a`=`b'+2'_`s'' - `a20_`s'') < 1e-6
+105.     }
+106.     assert "`terms11_`s''" == "`terms5_`s''" & "`terms17_`s''" == "`terms5_`s''" & "`terms10_`s''" == "`terms4_`s''
+> "
+107.     foreach t of local terms5_`s' {
+108.         assert reldif(B11_`s'[1, "`t'"], B5_`s'[1, "`t'"]) < 1e-6
+109.         assert reldif(B17_`s'[1, "`t'"], B5_`s'[1, "`t'"]) < 1e-6
+110.     }
+111.     foreach t of local terms4_`s' {
+112.         assert reldif(B10_`s'[1, "`t'"], B4_`s'[1, "`t'"]) < 1e-6
+113.     }
+114.     assert reldif(`a11_`s'', `a5_`s'') < 1e-6 & reldif(`a17_`s'', `a5_`s'') < 1e-6 & reldif(`a10_`s'', `a4_`s'') < 
+> 1e-6
+115.     assert reldif(`as11_`s'', `as5_`s'') < 1e-6 & reldif(`as17_`s'', `as5_`s'') < 1e-6 & reldif(`as10_`s'', `as4_`s
+> '') < 1e-6
+116.     display "   `v`s'': " %6.0fc `N1_`s'' " rows (" `st1_`s'' " starters); value added per tonne of CO2 " ///
+>         %5.1f 100 * (exp(`a1_`s'') - 1) "% / " %5.1f 100 * (exp(`a7_`s'') - 1) "% / " %5.1f 100 * (exp(`a13_`s'') - 1)
+>  ///
+>         "%; CO2 per GJ " %5.1f 100 * (exp(`a3_`s'') - 1) "% / " %5.1f 100 * (exp(`a9_`s'') - 1) "% / " ///
+>         %5.1f 100 * (exp(`a15_`s'') - 1) "% (main / grid fixed / scenario 2); links checked"
+117. }
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(0 observations deleted)
+   main: 20,070 rows (742 starters); value added per tonne of CO2  10.2% /  11.0% /  11.3%; CO2 per GJ  -1.3% /  -2.0% /
+>   -2.2% (main / grid fixed / scenario 2); links checked
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(3,040 observations deleted)
+   nodoubt: 16,864 rows (740 starters); value added per tonne of CO2   9.6% /  10.6% /  10.9%; CO2 per GJ  -0.3% /  -1.2
+> % /  -1.5% (main / grid fixed / scenario 2); links checked
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(283 observations deleted)
+   no2017: 19,787 rows (705 starters); value added per tonne of CO2  11.6% /  12.4% /  12.8%; CO2 per GJ  -1.2% /  -2.0%
+>  /  -2.3% (main / grid fixed / scenario 2); links checked
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(1,949 observations deleted)
+   exact: 18,121 rows (511 starters); value added per tonne of CO2   8.6% /   9.5% /  10.0%; CO2 per GJ  -2.8% /  -3.6% 
+> /  -4.0% (main / grid fixed / scenario 2); links checked
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(2,138 observations deleted)
+   no2017rows: 18,016 rows (739 starters); value added per tonne of CO2  14.6% /  15.5% /  15.8%; CO2 per GJ  -0.9% /  -
+> 1.7% /  -2.0% (main / grid fixed / scenario 2); links checked
+
+. postclose `h'
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 5/8: the CSV (numbers written before drawing) and the cross-checks with R6-01, R6-02 and R6-03"
+Step 5/8: the CSV (numbers written before drawing) and the cross-checks with R6-01, R6-02 and R6-03
+
+. *---------------------------------------------------------------------------
+. use `est', clear
+
+. gen byte vorder = 0
+
+. forvalues s = 1/`nv' {
+  2.     replace vorder = `s' if version == "`v`s''"
+  3. }
+(260 real changes made)
+(260 real changes made)
+(260 real changes made)
+(260 real changes made)
+(260 real changes made)
+
+. assert vorder > 0
+
+. gen byte measure = .
+(1,300 missing values generated)
+
+. gen str10 rates = ""
+(1,300 missing values generated)
+
+. gen str45 outcome_label = ""
+(1,300 missing values generated)
+
+. gen str50 outcome_parts = ""
+(1,300 missing values generated)
+
+. gen str50 rows_used = ""
+(1,300 missing values generated)
+
+. gen str24 unit = ""
+(1,300 missing values generated)
+
+. forvalues o = 1/`nall' {
+  2.     local m = `ms`o''
+  3.     quietly replace measure = `m' if outcome == `o'
+  4.     quietly replace rates = cond(`rr`o'' == 0, "any", "`rs`rr`o'''") if outcome == `o'
+  5.     quietly replace outcome_label = "`n`m''" if outcome == `o'
+  6.     quietly replace unit = cond(`u`o'' == 1, "log points; shown as %", "percentage points") if outcome == `o'
+  7.     quietly replace rows_used = cond("`smp`o''" == "s_fuel", "`rw4'", cond("`smp`o''" == "s_elec", "`rw5'", "`rw1'"
+> )) if outcome == `o'
+  8. }
+
+. forvalues m = 1/`nmeas' {
+  2.     replace outcome_parts = "`r`m''" if measure == `m'
+  3. }
+(195 real changes made)
+(195 real changes made)
+(195 real changes made)
+(195 real changes made)
+(195 real changes made)
+(195 real changes made)
+
+. replace outcome_parts = "the same under every set of rates" if measure >= 7
+(130 real changes made)
+
+. gen str70 rates_label = ""
+(1,300 missing values generated)
+
+. replace rates_label = "Main: fuels at the main rates; grid rate by year (`gy0'-`gy1', then carried)" if rates == "main
+> "
+variable rates_label was str70 now str74
+(390 real changes made)
+
+. replace rates_label = "Grid rate fixed: fuels at the main rates; grid rate `gtxt_fix' t/kWh every year" if rates == "g
+> ridfixed"
+variable rates_label was str74 now str77
+(390 real changes made)
+
+. replace rates_label = "Scenario 2: the file's second fuel rates; grid rate `gtxt_fix' t/kWh every year" if rates == "s
+> cen2"
+(390 real changes made)
+
+. replace rates_label = "No emission rate involved" if rates == "any"
+(130 real changes made)
+
+. gen str130 version_label = ""
+(1,300 missing values generated)
+
+. replace version_label = "Main: all export starters vs never-exporters (R6-01's sample and model)"   if vorder == 1
+(260 real changes made)
+
+. replace version_label = "Without doubtful energy records (importers, export status unknown)"      if vorder == 2
+(260 real changes made)
+
+. replace version_label = "Without the 2017 starters (they may have started in 2016)"               if vorder == 3
+(260 real changes made)
+
+. replace version_label = "Only starters seen not exporting the year just before"                   if vorder == 4
+(260 real changes made)
+
+. replace version_label = "Without the 2017 rows (far more firms burn coal that year)"              if vorder == 5
+(260 real changes made)
+
+. gen int window_first = `wlo'
+
+. gen int window_last  = `whi'
+
+. gen str24 column = cond(event_time > 0, "+", "") + string(event_time)
+
+. replace column = string(`wlo' - 1) + " or earlier (grouped)" if term == "ev_lo"
+(100 real changes made)
+
+. replace column = "+" + string(`whi' + 1) + " or later (grouped)" if term == "ev_hi"
+(100 real changes made)
+
+. * Shown on the chart: logs as 100 x (exp(b) - 1) %; shares as b in percentage points.
+. gen byte islog = unit != "percentage points"
+
+. gen double shown    = cond(islog, 100 * (exp(b)  - 1), b)
+
+. gen double shown_lo = cond(islog, 100 * (exp(lo) - 1), lo)
+
+. gen double shown_hi = cond(islog, 100 * (exp(hi) - 1), hi)
+
+. foreach v in n_rows n_firms n_starters n_comparison n_one_year_dropped before_df {
+  2.     gen long `v' = .
+  3. }
+(1,300 missing values generated)
+(1,300 missing values generated)
+(1,300 missing values generated)
+(1,300 missing values generated)
+(1,300 missing values generated)
+(1,300 missing values generated)
+
+. foreach v in before_F before_p before_p_no_grouped avg_after_b avg_after_se avg_after_lo avg_after_hi avg_after_p {
+  2.     gen double `v' = .
+  3. }
+(1,300 missing values generated)
+(1,300 missing values generated)
+(1,300 missing values generated)
+(1,300 missing values generated)
+(1,300 missing values generated)
+(1,300 missing values generated)
+(1,300 missing values generated)
+(1,300 missing values generated)
+
+. forvalues o = 1/`nall' {
+  2.     forvalues s = 1/`nv' {
+  3.         local c "outcome == `o' & vorder == `s'"
+  4.         quietly {
+  5.             replace n_rows              = `N`o'_`s''  if `c'
+  6.             replace n_firms             = `G`o'_`s''  if `c'
+  7.             replace n_starters          = `st`o'_`s'' if `c'
+  8.             replace n_comparison        = `cf`o'_`s'' if `c'
+  9.             replace n_one_year_dropped  = `sg`o'_`s'' if `c'
+ 10.             replace before_F            = `F`o'_`s''  if `c'
+ 11.             replace before_df           = `Fd`o'_`s'' if `c'
+ 12.             replace before_p            = `Fp`o'_`s'' if `c'
+ 13.             replace before_p_no_grouped = `Fq`o'_`s'' if `c'
+ 14.             replace avg_after_b         = `a`o'_`s''  if `c'
+ 15.             replace avg_after_se        = `as`o'_`s'' if `c'
+ 16.             replace avg_after_lo        = `al`o'_`s'' if `c'
+ 17.             replace avg_after_hi        = `ah`o'_`s'' if `c'
+ 18.             replace avg_after_p         = `ap`o'_`s'' if `c'
+ 19.         }
+ 20.     }
+ 21. }
+
+. gen double avg_after_shown    = cond(islog, 100 * (exp(avg_after_b)  - 1), avg_after_b)
+
+. gen double avg_after_shown_lo = cond(islog, 100 * (exp(avg_after_lo) - 1), avg_after_lo)
+
+. gen double avg_after_shown_hi = cond(islog, 100 * (exp(avg_after_hi) - 1), avg_after_hi)
+
+. assert n_starters + n_comparison == n_firms
+
+. assert firms_early + firms_late == firms
+
+. * ---- Cross-checks (when the tables are in this block): stop on any mismatch ----
+. * Same sample block and model, so under the main rates:
+. *   R6-01 row (1) = (1) here, (5) = (3), (3) = value added (19), (4) = energy used (20)
+. *   R6-02 row 9 (bought electricity, every row buying it) = (5) here: CO2 from
+. *   bought electricity moves exactly with its GJ (one rate a year)
+. *   R6-03 row "(a2) Electricity's share of CO2, %" = (6) here
+. gen str45 cross_check = ""
+(1,300 missing values generated)
+
+. local xf1 "01_margins_export_start"
+
+. local xf2 "02_fuels_vs_electricity"
+
+. local xf3 "03_energy_mix_shares"
+
+. local xp1 "1:1 5:3 3:19 4:20"                            // their outcome : this file's outcome
+
+. local xp2 "9:5"
+
+. local xp3 "a2:6"
+
+. local xv1 `""main", "nodoubt", "no2017", "exact""'
+
+. local xv2 `""main", "nodoubt", "no2017", "exact", "no2017rows""'
+
+. local xv3 `""main", "nodoubt", "no2017", "exact", "no2017rows""'
+
+. forvalues x = 1/3 {
+  2.     capture confirm file "$R6DIR/tables/`xf`x''.csv"
+  3.     if _rc {
+  4.         display "   $R6DIR/tables/`xf`x''.csv not found: cross-check skipped"
+  5.         continue
+  6.     }
+  7.     local nmatch 0
+  8.     foreach pr of local xp`x' {
+  9.         gettoken theirs mine : pr, parse(":")
+ 10.         local mine = substr("`mine'", 2, .)
+ 11.         preserve
+ 12.         quietly import delimited using "$R6DIR/tables/`xf`x''.csv", clear varnames(1)
+ 13.         * R6-03's rows are found by their name (its row numbers may change under review)
+.         if "`theirs'" == "a2" quietly keep if strpos(outcome_label, "(a2) Electricity's share of CO2") == 1
+ 14.         else quietly keep if outcome == `theirs'
+ 15.         if _N == 0 {
+ 16.             restore
+ 17.             display "   `xf`x''.csv: row `theirs' not found: cross-check skipped"
+ 18.             continue
+ 19.         }
+ 20.         quietly keep if inlist(version, `xv`x'')
+ 21.         keep version event_time b avg_after_b
+ 22.         rename (b avg_after_b) (x_b x_avg)
+ 23.         tempfile xt
+ 24.         quietly save `xt'
+ 25.         restore, preserve
+ 26.         quietly keep if outcome == `mine' & inlist(version, `xv`x'')
+ 27.         quietly merge 1:1 version event_time using `xt'
+ 28.         quietly count if _merge != 3 | abs(b - x_b) > 0.00005 + 1e-9 | abs(avg_after_b - x_avg) > 0.00005 + 1e-9
+ 29.         if r(N) > 0 {
+ 30.             display as error "`xf`x''.csv row `theirs' does not match row `mine' here: the R6 sample or model diffe
+> rs between the files."
+ 31.             exit 459
+ 32.         }
+ 33.         quietly count
+ 34.         local nmatch = `nmatch' + r(N)
+ 35.         restore
+ 36.         quietly replace cross_check = "= `xf`x'' row `theirs'" if outcome == `mine' & inlist(version, `xv`x'')
+ 37.     }
+ 38.     display "   `xf`x''.csv: all `nmatch' coefficients and averages reproduced to 4 decimals"
+ 39. }
+   01_margins_export_start.csv: all 208 coefficients and averages reproduced to 4 decimals
+   02_fuels_vs_electricity.csv: all 65 coefficients and averages reproduced to 4 decimals
+   03_energy_mix_shares.csv: all 65 coefficients and averages reproduced to 4 decimals
+
+. quietly replace cross_check = cross_check + cond(cross_check != "", "; ", "") + "= main rates at every point (checked)
+> " ///
+>     if inlist(outcome, 10, 11, 17)
+
+. quietly replace cross_check = cross_check + cond(cross_check != "", "; ", "") + "= value added - CO2 emitted (checked)
+> " ///
+>     if inlist(measure, 1)
+
+. quietly replace cross_check = cross_check + cond(cross_check != "", "; ", "") + "= CO2 emitted - energy used (checked)
+> " ///
+>     if inlist(measure, 3)
+
+. gen str90 note = ""
+(1,300 missing values generated)
+
+. replace note = "Reference year: 0 by definition" if reference
+(100 real changes made)
+
+. replace note = "Grouped end: all years before `wlo'; each firm counted once" if term == "ev_lo"
+(100 real changes made)
+
+. replace note = "Grouped end: all years after +`whi'; each firm counted once" if term == "ev_hi"
+(100 real changes made)
+
+. replace note = "No starter row in this version: marker left out" if missing(b) & !reference
+(0 real changes made)
+
+. gen byte rorder = cond(rates == "any", 4, 1 * (rates == "main") + 2 * (rates == "gridfixed") + 3 * (rates == "scen2"))
+
+. sort measure rorder vorder event_time
+
+. order outcome measure outcome_label outcome_parts rates rates_label unit rows_used version version_label column ///
+>       event_time grouped reference b se lo hi p shown shown_lo shown_hi firms rows firms_early firms_late start_years 
+> ///
+>       n_rows n_firms n_starters n_comparison n_one_year_dropped before_F before_df before_p ///
+>       before_p_no_grouped avg_after_b avg_after_se avg_after_lo avg_after_hi avg_after_p ///
+>       avg_after_shown avg_after_shown_lo avg_after_shown_hi window_first window_last cross_check note
+
+. drop term vorder islog rorder
+
+. format b se lo hi avg_after_b avg_after_se avg_after_lo avg_after_hi before_F %9.4f
+
+. format shown shown_lo shown_hi avg_after_shown avg_after_shown_lo avg_after_shown_hi %9.2f
+
+. format p before_p before_p_no_grouped avg_after_p %9.3f
+
+. format firms rows firms_early firms_late start_years n_rows n_firms n_starters n_comparison n_one_year_dropped before_
+> df %9.0f
+
+. tempfile full                                         // full precision, for the companion tables (Step 8)
+
+. save `full'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_37002.00000i saved as .dta format
+
+. export delimited using "tables/`fname'.csv", datafmt replace
+file tables/05_emission_factor_checks.csv saved
+
+. set linesize 220                                      // one line per row in the log listing
+
+. list measure rates version avg_after_shown avg_after_shown_lo avg_after_shown_hi avg_after_p before_p ///
+>     n_rows n_starters n_comparison if column == "0", noobs sepby(measure) abbreviate(24) clean
+
+    measure       rates      version   avg_after_shown   avg_after_shown_lo   avg_after_shown_hi   avg_after_p   before_p   n_rows   n_starters   n_comparison  
+          1        main         main             10.23                -6.16                29.48         0.236      0.276    20070          742           2832  
+          1        main      nodoubt              9.55                -5.85                27.48         0.238      0.783    16864          740           2657  
+          1        main       no2017             11.56                -5.12                31.17         0.185      0.125    19787          705           2832  
+          1        main        exact              8.62                -8.95                29.57         0.358      0.000    18121          511           2832  
+          1        main   no2017rows             14.59                -1.46                33.26         0.077      0.820    18016          739           2687  
+          1   gridfixed         main             11.00                -5.51                30.40         0.204      0.302    20070          742           2832  
+          1   gridfixed      nodoubt             10.56                -4.98                28.63         0.194      0.821    16864          740           2657  
+          1   gridfixed       no2017             12.43                -4.39                32.20         0.156      0.148    19787          705           2832  
+          1   gridfixed        exact              9.54                -8.18                30.67         0.311      0.000    18121          511           2832  
+          1   gridfixed   no2017rows             15.47                -0.69                34.27         0.062      0.846    18016          739           2687  
+          1       scen2         main             11.30                -5.21                30.70         0.191      0.304    20070          742           2832  
+          1       scen2      nodoubt             10.86                -4.68                28.93         0.181      0.825    16864          740           2657  
+          1       scen2       no2017             12.78                -4.05                32.55         0.145      0.147    19787          705           2832  
+          1       scen2        exact              9.97                -7.75                31.08         0.289      0.000    18121          511           2832  
+          1       scen2   no2017rows             15.83                -0.36                34.66         0.056      0.842    18016          739           2687  
+          2        main         main              7.61                -7.75                25.52         0.350      0.022    20070          742           2832  
+          2        main      nodoubt              7.00                -7.38                23.62         0.358      0.083    16864          740           2657  
+          2        main       no2017              3.90               -11.06                21.39         0.629      0.023    19787          705           2832  
+          2        main        exact             10.35                -7.12                31.10         0.263      0.000    18121          511           2832  
+          2        main   no2017rows              3.29               -10.27                18.91         0.652      0.066    18016          739           2687  
+          2   gridfixed         main              6.86                -8.39                24.66         0.398      0.025    20070          742           2832  
+          2   gridfixed      nodoubt              6.03                -8.20                22.46         0.426      0.096    16864          740           2657  
+          2   gridfixed       no2017              3.11               -11.75                20.46         0.700      0.029    19787          705           2832  
+          2   gridfixed        exact              9.42                -7.89                29.98         0.306      0.000    18121          511           2832  
+          2   gridfixed   no2017rows              2.50               -10.94                17.97         0.730      0.073    18016          739           2687  
+          2       scen2         main              6.57                -8.59                24.26         0.416      0.025    20070          742           2832  
+          2       scen2      nodoubt              5.74                -8.41                22.08         0.446      0.097    16864          740           2657  
+          2       scen2       no2017              2.79               -11.98                20.02         0.728      0.029    19787          705           2832  
+          2       scen2        exact              9.00                -8.19                29.39         0.325      0.000    18121          511           2832  
+          2       scen2   no2017rows              2.19               -11.19                17.58         0.762      0.070    18016          739           2687  
+          3        main         main             -1.28                -4.46                 2.01         0.441      0.106    20070          742           2832  
+          3        main      nodoubt             -0.30                -3.82                 3.36         0.872      0.113    16864          740           2657  
+          3        main       no2017             -1.21                -4.43                 2.12         0.472      0.068    19787          705           2832  
+          3        main        exact             -2.82                -6.64                 1.16         0.162      0.049    18121          511           2832  
+          3        main   no2017rows             -0.91                -4.24                 2.53         0.600      0.213    18016          739           2687  
+          3   gridfixed         main             -1.97                -5.17                 1.35         0.241      0.128    20070          742           2832  
+          3   gridfixed      nodoubt             -1.20                -4.74                 2.47         0.517      0.147    16864          740           2657  
+          3   gridfixed       no2017             -1.97                -5.21                 1.38         0.247      0.078    19787          705           2832  
+          3   gridfixed        exact             -3.64                -7.50                 0.38         0.075      0.058    18121          511           2832  
+          3   gridfixed   no2017rows             -1.67                -5.02                 1.81         0.342      0.246    18016          739           2687  
+          3       scen2         main             -2.23                -5.27                 0.90         0.160      0.112    20070          742           2832  
+          3       scen2      nodoubt             -1.47                -4.80                 1.98         0.399      0.157    16864          740           2657  
+          3       scen2       no2017             -2.27                -5.34                 0.90         0.158      0.075    19787          705           2832  
+          3       scen2        exact             -4.02                -7.66                -0.23         0.038      0.041    18121          511           2832  
+          3       scen2   no2017rows             -1.97                -5.13                 1.29         0.233      0.224    18016          739           2687  
+          4        main         main             18.79                -1.88                43.82         0.078      0.191    18001          725           2621  
+          4        main      nodoubt             17.00                -2.69                40.67         0.095      0.853    14871          719           2436  
+          4        main       no2017             15.15                -5.13                39.76         0.153      0.402    17741          689           2621  
+          4        main        exact             31.84                 5.75                64.36         0.014      0.154    16183          498           2621  
+          4        main   no2017rows             18.66                -0.02                40.83         0.050      0.568    16028          720           2478  
+          4   gridfixed         main             18.79                -1.88                43.82         0.078      0.191    18001          725           2621  
+          4   gridfixed      nodoubt             17.00                -2.69                40.67         0.095      0.853    14871          719           2436  
+          4   gridfixed       no2017             15.15                -5.13                39.76         0.153      0.402    17741          689           2621  
+          4   gridfixed        exact             31.84                 5.75                64.36         0.014      0.154    16183          498           2621  
+          4   gridfixed   no2017rows             18.66                -0.02                40.83         0.050      0.568    16028          720           2478  
+          4       scen2         main             17.59                -2.75                42.18         0.095      0.190    18001          725           2621  
+          4       scen2      nodoubt             15.87                -3.54                39.18         0.115      0.856    14871          719           2436  
+          4       scen2       no2017             13.90                -6.03                38.07         0.185      0.399    17741          689           2621  
+          4       scen2        exact             29.98                 4.40                61.82         0.019      0.155    16183          498           2621  
+          4       scen2   no2017rows             17.32                -1.07                39.13         0.066      0.561    16028          720           2478  
+          5        main         main             -5.05               -18.88                11.13         0.519      0.124    19146          719           2703  
+          5        main      nodoubt             -3.92               -18.89                13.81         0.643      0.279    15949          714           2523  
+          5        main       no2017             -8.66               -22.10                 7.10         0.265      0.216    18870          682           2703  
+          5        main        exact             -9.97               -25.46                 8.72         0.275      0.039    17256          491           2703  
+          5        main   no2017rows             -7.60               -21.91                 9.33         0.357      0.099    17148          713           2564  
+          5   gridfixed         main             -5.05               -18.88                11.13         0.519      0.124    19146          719           2703  
+          5   gridfixed      nodoubt             -3.92               -18.89                13.81         0.643      0.279    15949          714           2523  
+          5   gridfixed       no2017             -8.66               -22.10                 7.10         0.265      0.216    18870          682           2703  
+          5   gridfixed        exact             -9.97               -25.46                 8.72         0.275      0.039    17256          491           2703  
+          5   gridfixed   no2017rows             -7.60               -21.91                 9.33         0.357      0.099    17148          713           2564  
+          5       scen2         main             -5.05               -18.88                11.13         0.519      0.124    19146          719           2703  
+          5       scen2      nodoubt             -3.92               -18.89                13.81         0.643      0.279    15949          714           2523  
+          5       scen2       no2017             -8.66               -22.10                 7.10         0.265      0.216    18870          682           2703  
+          5       scen2        exact             -9.97               -25.46                 8.72         0.275      0.039    17256          491           2703  
+          5       scen2   no2017rows             -7.60               -21.91                 9.33         0.357      0.099    17148          713           2564  
+          6        main         main             -1.91                -4.78                 0.96         0.192      0.075    20070          742           2832  
+          6        main      nodoubt             -1.08                -4.13                 1.97         0.487      0.205    16864          740           2657  
+          6        main       no2017             -1.94                -4.86                 0.97         0.190      0.051    19787          705           2832  
+          6        main        exact             -3.38                -6.88                 0.13         0.059      0.016    18121          511           2832  
+          6        main   no2017rows             -1.46                -4.36                 1.45         0.325      0.224    18016          739           2687  
+          6   gridfixed         main             -2.04                -4.91                 0.82         0.162      0.070    20070          742           2832  
+          6   gridfixed      nodoubt             -1.23                -4.27                 1.81         0.426      0.190    16864          740           2657  
+          6   gridfixed       no2017             -2.08                -4.98                 0.83         0.161      0.048    19787          705           2832  
+          6   gridfixed        exact             -3.57                -7.06                -0.08         0.045      0.017    18121          511           2832  
+          6   gridfixed   no2017rows             -1.62                -4.51                 1.28         0.275      0.206    18016          739           2687  
+          6       scen2         main             -1.83                -4.70                 1.05         0.212      0.080    20070          742           2832  
+          6       scen2      nodoubt             -1.01                -4.06                 2.05         0.518      0.204    16864          740           2657  
+          6       scen2       no2017             -1.84                -4.76                 1.07         0.215      0.053    19787          705           2832  
+          6       scen2        exact             -3.32                -6.83                 0.19         0.064      0.019    18121          511           2832  
+          6       scen2   no2017rows             -1.40                -4.31                 1.51         0.345      0.237    18016          739           2687  
+          7         any         main             18.62                 7.48                30.91         0.001      0.599    20070          742           2832  
+          7         any      nodoubt             17.22                 5.57                30.16         0.003      0.393    16864          740           2657  
+          7         any       no2017             15.92                 5.04                27.92         0.003      0.737    19787          705           2832  
+          7         any        exact             19.86                 6.48                34.92         0.003      0.714    18121          511           2832  
+          7         any   no2017rows             18.37                 6.61                31.42         0.002      0.314    18016          739           2687  
+          8         any         main              9.01                -6.97                27.73         0.286      0.027    20070          742           2832  
+          8         any      nodoubt              7.32                -7.47                24.47         0.351      0.167    16864          740           2657  
+          8         any       no2017              5.18               -10.38                23.43         0.536      0.024    19787          705           2832  
+          8         any        exact             13.56                -4.93                35.64         0.161      0.000    18121          511           2832  
+          8         any   no2017rows              4.24                -9.61                20.22         0.568      0.121    18016          739           2687  
+
+. set linesize 120
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 6/8: the notes' numbers, read from the table (never typed)"
+Step 6/8: the notes' numbers, read from the table (never typed)
+
+. *---------------------------------------------------------------------------
+. * Per measure m, set of rates r and version v: the shown average ("+10.2%" or
+. * "-1.9 points"), whether its 95% interval excludes 0 ("clear"), and before-start p.
+. gen byte clear = avg_after_shown_lo > 0 | avg_after_shown_hi < 0
+
+. gen double shr = round(avg_after_shown, 0.1)                      // round first: no "-0.0"
+
+. gen str20 ptxt = cond(shr > 0, "+", "") + string(shr, "%9.1f") + cond(unit == "percentage points", " points", "%")
+
+. gen byte rnum = 1 * (rates == "main") + 2 * (rates == "gridfixed") + 3 * (rates == "scen2")
+
+. forvalues m = 1/`nmeas' {
+  2.     forvalues r = 1/`nr' {
+  3.         forvalues s = 1/`nv' {
+  4.             local v "`v`s''"
+  5.             quietly levelsof ptxt if measure == `m' & rnum == `r' & version == "`v'" & reference, local(tt) clean
+  6.             local pt`m'_`r'`v' "`tt'"
+  7.             quietly summarize clear if measure == `m' & rnum == `r' & version == "`v'" & reference, meanonly
+  8.             local cl`m'_`r'`v' = r(mean)
+  9.             quietly summarize avg_after_shown if measure == `m' & rnum == `r' & version == "`v'" & reference, meano
+> nly
+ 10.             local av`m'_`r'`v' = r(mean)
+ 11.             quietly summarize before_p if measure == `m' & rnum == `r' & version == "`v'" & reference, meanonly
+ 12.             local bp`m'_`r'`v' = r(mean)
+ 13.         }
+ 14.     }
+ 15. }
+
+. * (a) The answer first: how far the other rates move each drawn average (main
+. * version), in the chart's own units, and whether any row changes between clear
+. * and not clear.
+. local dmax 0
+
+. forvalues m = 1/`nmeas' {
+  2.     if `u`m'' != 1 continue                                          // the % rows
+  3.     local lo = min(`av`m'_1main', `av`m'_2main', `av`m'_3main')
+  4.     local hi = max(`av`m'_1main', `av`m'_2main', `av`m'_3main')
+  5.     if `hi' - `lo' > `dmax' {
+  6.         local dmax = `hi' - `lo'
+  7.         local dm `m'
+  8.     }
+  9. }
+
+. local dsh = max(`av6_1main', `av6_2main', `av6_3main') - min(`av6_1main', `av6_2main', `av6_3main')
+
+. local dmaxt = string(`dmax', "%9.1f")
+
+. local dsht  = string(`dsh', "%9.1f")
+
+. local headtxt "Other rates move each % change by at most `dmaxt' percentage points (`w`dm'') and the share in (b) by a
+> t most `dsht' points."
+
+. * rows clear under all three sets, under some only, under none (main version)
+. local call ""
+
+. local csome ""
+
+. forvalues m = 1/`nmeas' {
+  2.     local k = `cl`m'_1main' + `cl`m'_2main' + `cl`m'_3main'
+  3.     if `k' == 3 local call = "`call'" + cond("`call'" != "", ", ", "") + "`w`m''"
+  4.     if inrange(`k', 1, 2) local csome = "`csome'" + cond("`csome'" != "", ", ", "") + "`w`m''"
+  5. }
+
+. if "`call'" == "" & "`csome'" == "" local cltxt "No row is clearly different from 0 under any set."
+
+. else if "`csome'" == "" local cltxt "Clearly different from 0 under all three sets: `call'; the other rows under none.
+> "
+
+. else local cltxt "Clear under some sets only: `csome'" + cond("`call'" != "", "; under all three: `call'", "") + "."
+
+. * (b) Why the rates matter so little here.
+. * Plain words for the year fixed effects: "the comparison removes whatever all firms share in a year".
+. local whytxt "Row (5) cannot change: its grid rate is the same for all firms in a year, and the comparison removes wha
+> t all firms share"
+
+. local whytxt "`whytxt' in a year (checked); other rows move only through each firm's fuel and electricity mix."
+
+. * (c) The three sets, from the file.
+. local dlot = cond(`dlo' > 0, "+", "") + string(`dlo', "%9.0f") + "%"
+
+. local dhit = cond(`dhi' > 0, "+", "") + string(`dhi', "%9.0f") + "%"
+
+. local ratetxt "CO2 is not measured: GJ of each fuel × a rate per fuel, plus bought kWh × a national grid rate; the fil
+> e stores all three"
+
+. local ratetxt "`ratetxt' sets but not their outside source. Main: grid rate `gkg_first' kg CO2 per kWh (`gy0') rising 
+> to `gkg_last' (`gy1'), then kept"
+
+. local ratetxt "`ratetxt' (no later rate in the file). Grid rate fixed: `gkg_fix' in every year. Scenario 2: `gkg_fix',
+>  and each fuel's rate `dlot'"
+
+. local ratetxt "`ratetxt' to `dhit' of main (all rates: Table `exhibit')."
+
+. local nb = uchar(160)                                   // no-break space: "p = 0.022" stays on one line
+
+. * (d) Before-start check for the drawn rows (main rates, main version).
+. local nfail 0
+
+. local failtxt ""
+
+. forvalues m = 1/`nmeas' {
+  2.     if `bp`m'_1main' < 0.05 {
+  3.         local ++nfail
+  4.         local failtxt = "`failtxt'" + cond(`nfail' > 1, ", ", "") + "`w`m'' (p`nb'=`nb'" + string(`bp`m'_1main', "%
+> 5.3f") + ")"
+  5.     }
+  6. }
+
+. if `nfail' == 0 local btxt "Before the start no row differed clearly (right column; p below 0.05 would be a warning)."
+
+. else local btxt "Warning: `failtxt' already differed before the start."
+
+. * (e) Single years whose interval excludes 0 (main rates, main version), each
+. * with the number of versions in which that year is clear; the chance rate; and
+. * how many single years the other rates move between clear and not clear.
+. local ndots 0
+
+. local nsy 0
+
+. local nflip 0
+
+. local sytxt ""
+
+. forvalues m = 1/`nmeas' {
+  2.     quietly count if measure == `m' & rnum == 1 & version == "main" & !reference & !missing(b)
+  3.     local ndots = `ndots' + r(N)
+  4.     quietly levelsof event_time if measure == `m' & rnum == 1 & version == "main" & !reference & !missing(b), local
+> (ka)
+  5.     foreach k of local ka {
+  6.         quietly count if measure == `m' & version == "main" & event_time == `k' & (lo > 0 | hi < 0)
+  7.         if !inlist(r(N), 0, 3) local ++nflip                            // clear under some sets only
+  8.     }
+  9.     quietly levelsof event_time if measure == `m' & rnum == 1 & version == "main" & !reference & (lo > 0 | hi < 0),
+>  local(ks)
+ 10.     local part ""
+ 11.     local nk 0
+ 12.     foreach k of local ks {
+ 13.         local ++nk
+ 14.         local ++nsy
+ 15.         quietly count if measure == `m' & rnum == 1 & event_time == `k' & (lo > 0 | hi < 0)
+ 16.         local nvc = r(N)
+ 17.         local kl = cond(`k' > 0, "+", "") + string(`k')
+ 18.         quietly summarize grouped if measure == `m' & rnum == 1 & event_time == `k' & version == "main", meanonly
+ 19.         if r(max) == 1 local kl = cond(`k' < 0, "≤ ", "≥ ") + "`kl'"
+ 20.         local part = "`part'" + cond(`nk' > 1, ", ", "") + "`kl' (`nvc')"
+ 21.     }
+ 22.     if `nk' > 0 local sytxt = "`sytxt'" + cond("`sytxt'" != "", "; ", "") + "(`m') `part'"
+ 23. }
+
+. local fliptxt = cond(`nflip' == 0, "none", "`nflip'")
+
+. * The full list goes under the regression table (Panel A shows every single year);
+. * the chart, which draws only averages, gives the count and points there.
+. if "`sytxt'" == "" {
+.     local sytxt "No single year in Panel A has a 95% interval that excludes 0."
+.     local sychart "No single year's interval excludes 0 (Table `exhibit', regression)."
+. }
+
+. else {
+.     local sytxt "Single years in Panel A whose 95% interval excludes 0, with the number of the `nv' versions in which 
+> they do: `sytxt'; `nsy' of `ndots', about `=round(0.05*`ndots')' by chance. Other rates move `fliptxt' of the `ndots' 
+> between clear and not clear."
+.     local sychart "Single years: `nsy' of `ndots' clear, about `=round(0.05*`ndots')' by chance (listed under Table `e
+> xhibit', regression)."
+. }
+
+. * (f) The five versions (CSV): each drawn average's range under the main rates,
+. * with the versions in which it is clear; and every case in which the three sets
+. * disagree on clear / not clear.
+. local vs_main       "all"
+
+. local vs_nodoubt    "no doubtful records"
+
+. local vs_no2017     "no 2017 starters"
+
+. local vs_exact      "exact starters"
+
+. local vs_no2017rows "no 2017 rows"
+
+. * the same versions in words for the chart (no undefined short names there)
+. local vc_nodoubt    "without doubtful energy records"
+
+. local vc_no2017     "without 2017 starters"
+
+. local vc_exact      "starters seen not exporting the year before"
+
+. local vc_no2017rows "without the 2017 rows"
+
+. local rngtxt ""
+
+. forvalues m = 1/`nmeas' {
+  2.     quietly summarize avg_after_shown if measure == `m' & rnum == 1 & reference
+  3.     local dec = cond(`u`m'' == 1, 1, 0.1)
+  4.     local fmt = cond(`u`m'' == 1, "%9.0f", "%9.1f")
+  5.     local rlo = round(r(min), `dec')
+  6.     local rhi = round(r(max), `dec')
+  7.     local un = cond(`u`m'' == 1, "%", " points")
+  8.     local rlo = cond(`rlo' > 0, "+", "") + string(`rlo', "`fmt'") + cond(`u`m'' == 1, "%", "")
+  9.     local rhi = cond(`rhi' > 0, "+", "") + string(`rhi', "`fmt'") + "`un'"
+ 10.     local nclr 0
+ 11.     local clist ""
+ 12.     foreach v in main nodoubt no2017 no2017rows exact {
+ 13.         if `cl`m'_1`v'' {
+ 14.             local ++nclr
+ 15.             local clist = "`clist'" + cond(`nclr' > 1, ", ", "") + "`vs_`v''"
+ 16.         }
+ 17.     }
+ 18.     local ctx = cond(`nclr' == 0, "never clear", cond(`nclr' == `nv', "clear in all", "clear only: `clist'"))
+ 19.     local rngtxt = "`rngtxt'" + cond(`m' > 1, "; ", "") + "(`m') `rlo' to `rhi' (`ctx')"
+ 20. }
+
+. local dis ""
+
+. local ndis 0
+
+. local ndisf 0                                           // ... of which already differ before the start
+
+. forvalues s = 1/`nv' {
+  2.     local v "`v`s''"
+  3.     forvalues m = 1/`nmeas' {
+  4.         forvalues r = 2/`nr' {
+  5.             if `cl`m'_`r'`v'' != `cl`m'_1`v'' {
+  6.                 local ++ndis
+  7.                 local st = cond(`cl`m'_`r'`v'', "clear", "not clear")
+  8.                 local dis = "`dis'" + cond(`ndis' > 1, "; ", "") + "`vc_`v'', `w`m'': `pt`m'_`r'`v'' `st' with the 
+> " ///
+>                     + lower("`rl`r''") + " (main `pt`m'_1`v''; before the start p = " + string(`bp`m'_`r'`v'', "%5.3f"
+> ) + ")"
+  9.                 if `bp`m'_`r'`v'' < 0.05 local ++ndisf
+ 10.             }
+ 11.         }
+ 12.     }
+ 13. }
+
+. local vtxt "Versions (CSV): all; no doubtful energy records; no 2017 starters; no 2017 rows; exact starters (seen not 
+> exporting the"
+
+. local vtxt "`vtxt' year before). Main-rate averages run: `rngtxt'."
+
+. if `ndis' == 0 local distxt "In every version the three sets agree on which rows are clear."
+
+. else {
+.     local distxt "The sets disagree on clear or not only in: `dis'"
+.     local distxt = "`distxt'" + cond(`ndisf' == `ndis', "; there starters already differed before the start, so these 
+> are not answers.", ".")
+. }
+
+. * Chart: one sentence for the other versions (their ranges and the full list are
+. * under the regression table): every row whose answer (clear or not) differs from
+. * the main version's under any set of rates, named per version, with the sets in
+. * which it does and its before-start p.
+. local vdtxt ""
+
+. local nvd 0
+
+. foreach v in nodoubt no2017 no2017rows exact {
+  2.     local items ""
+  3.     local ni 0
+  4.     forvalues m = 1/`nmeas' {
+  5.         local c0 = `cl`m'_1main'
+  6.         local kc = `cl`m'_1`v'' + `cl`m'_2`v'' + `cl`m'_3`v''
+  7.         if (`c0' == 0 & `kc' == 0) | (`c0' == 1 & `kc' == `nr') continue
+  8.         local ++ni
+  9.         if `kc' == `nr' local it "`w`m'' `pt`m'_1`v'', clear under all three sets"
+ 10.         else if `kc' == 0 local it "`w`m'' not clear under any set (`pt`m'_1`v'')"
+ 11.         else {
+ 12.             local sl ""
+ 13.             local rc 0
+ 14.             forvalues r = 1/`nr' {
+ 15.                 if `cl`m'_`r'`v'' == 1 - `c0' {
+ 16.                     local rc `r'
+ 17.                     local sl = "`sl'" + cond("`sl'" != "", " and ", "") + lower("`rl`r''")
+ 18.                 }
+ 19.             }
+ 20.             local it = "`w`m'' `pt`m'_`rc'`v'' " + cond(`c0', "not clear", "clear") + " only with the `sl' (main `p
+> t`m'_1`v''"
+ 21.             local it = "`it'" + cond(`bp`m'_`rc'`v'' < 0.05, "; differed before the start, p`nb'=`nb'" + string(`bp
+> `m'_`rc'`v'', "%5.3f"), "") + ")"
+ 22.         }
+ 23.         local items = "`items'" + cond(`ni' > 1, "; ", "") + "`it'"
+ 24.     }
+ 25.     if `ni' > 0 {
+ 26.         local ++nvd
+ 27.         local vdtxt = "`vdtxt'" + cond(`nvd' > 1, "; and for ", "") + "`vc_`v'': `items'"
+ 28.     }
+ 29. }
+
+. if `nvd' == 0 local vchart "Other sample versions (CSV; Table `exhibit', regression) change no row between clear and n
+> ot clear under any set."
+
+. else local vchart "Other sample versions (CSV; Table `exhibit', regression) differ only for `vdtxt'."
+
+. * (g) The rates themselves (read from the file in Step 3), and where they come from (points-table footer).
+. local ratenote "Grid rate, kg CO2 per kWh (main): `gyrtxt', carried to `cy1'; fixed: `gkg_fix' every year."
+
+. local ratenote "`ratenote' Fuels, tonnes CO2 per GJ, main / scenario 2: `frtxt'. Stored in the data file (outside sour
+> ce not named)."
+
+. foreach t in headtxt cltxt ratetxt whytxt btxt vchart sychart sytxt vtxt distxt ratenote {
+  2.     display "   ``t''"
+  3. }
+   Other rates move each % change by at most 1.2 percentage points (CO2 from fuels) and the share in (b) by at most 0.2 
+> points.
+   No row is clearly different from 0 under any set.
+   CO2 is not measured: GJ of each fuel × a rate per fuel, plus bought kWh × a national grid rate; the file stores all t
+> hree sets but not their outside source. Main: grid rate 0.60 kg CO2 per kWh (2010) rising to 0.91 (2014), then kept (n
+> o later rate in the file). Grid rate fixed: 0.87 in every year. Scenario 2: 0.87, and each fuel's rate -29% to +14% of
+>  main (all rates: Table R6-05).
+   Row (5) cannot change: its grid rate is the same for all firms in a year, and the comparison removes what all firms s
+> hare in a year (checked); other rows move only through each firm's fuel and electricity mix.
+   Warning: CO2 emitted (p = 0.022) already differed before the start.
+   Other sample versions (CSV; Table R6-05, regression) differ only for starters seen not exporting the year before: CO2
+>  per GJ -4.0% clear only with the scenario 2 rates (main -2.8%; differed before the start, p = 0.041); CO2 from fuels 
+> +31.8%, clear under all three sets; electricity's share of CO2 -3.6 points clear only with the grid rate fixed (main -
+> 3.4 points; differed before the start, p = 0.017).
+   Single years: 17 of 72 clear, about 4 by chance (listed under Table R6-05, regression).
+   Single years in Panel A whose 95% interval excludes 0, with the number of the 5 versions in which they do: (1) +5 (3)
+> ; (2) ≤ -6 (5), -5 (5), -3 (2), 0 (5); (3) -4 (3), -2 (2), +3 (2); (4) +2 (3), +3 (1); (5) -3 (5), -2 (4), 0 (4), +3 (
+> 4); (6) -2 (3), +2 (3), +3 (5); 17 of 72, about 4 by chance. Other rates move 3 of the 72 between clear and not clear.
+   Versions (CSV): all; no doubtful energy records; no 2017 starters; no 2017 rows; exact starters (seen not exporting t
+> he year before). Main-rate averages run: (1) +9% to +15% (never clear); (2) +3% to +10% (never clear); (3) -3% to 0% (
+> never clear); (4) +15% to +32% (clear only: exact starters); (5) -10% to -4% (never clear); (6) -3.4 to -1.1 points (n
+> ever clear).
+   The sets disagree on clear or not only in: starters seen not exporting the year before, CO2 per GJ: -4.0% clear with 
+> the scenario 2 rates (main -2.8%; before the start p = 0.041); starters seen not exporting the year before, electricit
+> y's share of CO2: -3.6 points clear with the grid rate fixed (main -3.4 points; before the start p = 0.017); there sta
+> rters already differed before the start, so these are not answers.
+   Grid rate, kg CO2 per kWh (main): 2010 0.60, 2011 0.69, 2012 0.78, 2013 0.87, 2014 0.91, carried to 2022; fixed: 0.87
+>  every year. Fuels, tonnes CO2 per GJ, main / scenario 2: diesel 0.0743 / 0.0834, petrol 0.0695 / 0.0746, kerosene 0.0
+> 722 / 0.0757, coal 0.0953 / 0.0934, coal briquettes 0.0982 / 0.0693, LPG 0.0631 / 0.0723, city gas 0.0561 / 0.0456, ot
+> her gas 0.0561 / 0.0456. Stored in the data file (outside source not named).
+
+. quietly summarize n_starters if measure == 1 & rnum == 1 & version == "main" & reference, meanonly
+
+. local nst = string(r(mean), "%9.0fc")
+
+. quietly summarize n_comparison if measure == 1 & rnum == 1 & version == "main" & reference, meanonly
+
+. local ncf = string(r(mean), "%9.0fc")
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 7/8: the chart: one row per measure, three markers per row (one per set of rates)"
+Step 7/8: the chart: one row per measure, three markers per row (one per set of rates)
+
+. *---------------------------------------------------------------------------
+. * Notes as one text, wrapped by printed width (R6-01's rule; widths in em).
+. * (Single years and the versions' ranges are listed under the regression table: the chart draws averages only.)
+. local txt "Notes: `headtxt' `cltxt' `ratetxt' `whytxt' `btxt' `vchart' `sychart'"
+
+. local txt "`txt' Starters (`nst') and never-exporters (`ncf') as in Figure R6-01; changes from the year before the sta
+> rt; GJ = gigajoules."
+
+. local txt "`txt' Shows timing, not cause; firm links are fictional: this tests the method, not a finding."
+
+. local maxw 53.5                                         // widest note line that fits the 9-inch PDF
+
+. local nl 0
+
+. local line ""
+
+. local lw 0
+
+. foreach w of local txt {
+  2.     local n  = ustrlen(`"`w'"')
+  3.     local na = `n' - ustrlen(ustrregexra(`"`w'"', "[ijltfr.,;:'()\-]", ""))
+  4.     local wi = `n' - ustrlen(ustrregexra(`"`w'"', "[A-Zmw]", ""))
+  5.     local pc = `n' - ustrlen(ustrregexra(`"`w'"', "%", ""))
+  6.     local dg = `n' - ustrlen(ustrregexra(`"`w'"', "[0-9+=]", ""))
+  7.     local ww = 0.29*`na' + 0.7*`wi' + 0.83*`pc' + 0.52*`dg' + 0.47*(`n' - `na' - `wi' - `pc' - `dg')
+  8.     local try = `lw' + 0.25*(`"`line'"' != "") + `ww'
+  9.     if `try' > `maxw' & `"`line'"' != "" {
+ 10.         local ++nl
+ 11.         local L`nl' `"`line'"'
+ 12.         local W`nl' = `lw'
+ 13.         local line `"`w'"'
+ 14.         local lw = `ww'
+ 15.     }
+ 16.     else {
+ 17.         local line = strtrim(`"`line' `w'"')
+ 18.         local lw = `try'
+ 19.     }
+ 20. }
+
+. local ++nl
+
+. local L`nl' `"`line'"'
+
+. local W`nl' = `lw'
+
+. local notes ""
+
+. forvalues j = 1/`nl' {
+  2.     display "   note line `j': " udstrlen(`"`L`j''"') " characters, width " %4.1f `W`j'' " of `maxw' em"
+  3.     local notes `"`notes' "`L`j''""'
+  4. }
+   note line 1: 131 characters, width 53.1 of 53.5 em
+   note line 2: 134 characters, width 53.0 of 53.5 em
+   note line 3: 137 characters, width 52.8 of 53.5 em
+   note line 4: 135 characters, width 52.4 of 53.5 em
+   note line 5: 135 characters, width 53.2 of 53.5 em
+   note line 6: 132 characters, width 53.2 of 53.5 em
+   note line 7: 135 characters, width 53.3 of 53.5 em
+   note line 8: 127 characters, width 51.6 of 53.5 em
+   note line 9: 135 characters, width 52.2 of 53.5 em
+   note line 10: 135 characters, width 53.4 of 53.5 em
+   note line 11: 128 characters, width 51.8 of 53.5 em
+   note line 12: 70 characters, width 26.4 of 53.5 em
+
+. local nb = uchar(160)                                   // no-break space: "< 0.001" stays together
+
+. * One plot, two panels stacked (R6-03's layout): (a) the five % rows, (b) the share
+. * row in percentage points. Panel (b) is drawn in panel (a)'s horizontal units and
+. * its axis labels are written at its own values, so the columns line up.
+. keep if reference & version == "main" & measure <= `nmeas'
+(1,282 observations deleted)
+
+. gen byte pan = cond(measure <= 5, 1, 2)
+
+. gen double ypos = .
+(18 missing values generated)
+
+. replace ypos = 10.6 if measure == 1
+(3 real changes made)
+
+. replace ypos =  9.6 if measure == 2
+(3 real changes made)
+
+. replace ypos =  8.6 if measure == 3
+(3 real changes made)
+
+. replace ypos =  7.3 if measure == 4
+(3 real changes made)
+
+. replace ypos =  6.3 if measure == 5
+(3 real changes made)
+
+. replace ypos =  2.9 if measure == 6
+(3 real changes made)
+
+. gen double yalt = ypos - cond(rnum == 2, 0.25, 0.50)            // hollow markers under their row
+
+. local ya_lo 5.75                                        // panel (a): gridlines from ... to ...
+
+. local ya_hi 11.05
+
+. local ya_lab 5.4                                        // its axis labels
+
+. local yb_lo 2.35
+
+. local yb_hi 3.35
+
+. local yb_lab 2.0
+
+. local ya_tit 12.25                                      // panel titles
+
+. local yb_tit 4.1
+
+. local yhd1 11.75                                        // column headers (two lines)
+
+. local yhd2 11.4
+
+. * x-axis per panel: a round step that grows with the numbers; 0 always inside (R6-01's rule).
+. forvalues p = 1/2 {
+  2.     quietly summarize avg_after_shown_lo if rnum == 1 & pan == `p'
+  3.     local xmin = min(r(min), 0)
+  4.     quietly summarize avg_after_shown_hi if rnum == 1 & pan == `p'
+  5.     local xmax = max(r(max), 0)
+  6.     quietly summarize avg_after_shown if pan == `p'
+  7.     local xmin = min(`xmin', r(min))
+  8.     local xmax = max(`xmax', r(max))
+  9.     local rng = `xmax' - `xmin'
+ 10.     local step = 10^floor(log10(`rng'))
+ 11.     if `rng'/`step' < 2       local step = `step'/5
+ 12.     else if `rng'/`step' < 5  local step = `step'/2
+ 13.     if `rng'/`step' > 6       local step = `step'*2
+ 14.     local xbot`p' = `step' * floor(`xmin'/`step')
+ 15.     local xtop`p' = `step' * ceil(`xmax'/`step')
+ 16.     local step`p' = `step'
+ 17.     local xfmt`p' = cond(`step' >= 1, "%9.0f", "%9.1f")
+ 18. }
+
+. local span = `xtop1' - `xbot1'
+
+. local k2 = `span' / (`xtop2' - `xbot2')                 // panel (b) units -> panel (a) units
+
+. foreach v in avg_after_shown avg_after_shown_lo avg_after_shown_hi {
+  2.     gen double px_`v' = cond(pan == 1, `v', `xbot1' + (`v' - `xbot2') * `k2')
+  3. }
+
+. * Layout left to right (panel (a) units): row names, the dots, the three values, before-start p.
+. local xn  = `xbot1' - 1.75 * `span'
+
+. local xc1 = `xtop1' + 0.12 * `span'
+
+. local xc2 = `xtop1' + 0.48 * `span'
+
+. local xc3 = `xtop1' + 0.84 * `span'
+
+. local xc4 = `xtop1' + 1.20 * `span'
+
+. local xr  = `xtop1' + 1.70 * `span'
+
+. * Gridlines, zero lines and axis labels, written for each panel.
+. local grid ""
+
+. local zero ""
+
+. local tx ""
+
+. forvalues p = 1/2 {
+  2.     local nt = round((`xtop`p'' - `xbot`p'') / `step`p'')
+  3.     local ylo = cond(`p' == 1, `ya_lo', `yb_lo')
+  4.     local yhi = cond(`p' == 1, `ya_hi', `yb_hi')
+  5.     local ylb = cond(`p' == 1, `ya_lab', `yb_lab')
+  6.     forvalues j = 0/`nt' {
+  7.         local v  = `xbot`p'' + `j' * `step`p''
+  8.         local xv = cond(`p' == 1, `v', `xbot1' + (`v' - `xbot2') * `k2')
+  9.         local grid `grid' `ylo' `xv' `yhi' `xv'
+ 10.         local lab = string(`v', "`xfmt`p''") + cond(`p' == 1, "%", "")
+ 11.         local tx `tx' text(`ylb' `xv' "`lab'", size(vsmall) placement(c))
+ 12.     }
+ 13.     local x0 = cond(`p' == 1, 0, `xbot1' + (0 - `xbot2') * `k2')
+ 14.     local zero `zero' `ylo' `x0' `yhi' `x0'
+ 15. }
+
+. * The three values of each row (one column per set) and before-start p (main rates).
+. gen double xcol = cond(rnum == 1, `xc1', cond(rnum == 2, `xc2', `xc3'))
+
+. gen str12 lbl = cond(shr > 0, "+", "") + string(shr, "%9.1f") + cond(pan == 1, "%", "")
+
+. gen double xnm = `xn'
+
+. gen double xc4 = `xc4'
+
+. gen double ysub = ypos - 0.42
+
+. gen str24 c4 = cond(before_p < 0.001, "<`nb'0.001", string(before_p, "%5.3f")) if rnum == 1
+(12 missing values generated)
+
+. replace c4 = c4 + ", differs" if rnum == 1 & before_p < 0.05
+(1 real change made)
+
+. gen str60 nm  = ""
+(18 missing values generated)
+
+. gen str70 sub = ""
+(18 missing values generated)
+
+. forvalues m = 1/`nmeas' {
+  2.     replace nm  = "`n`m''" if measure == `m' & rnum == 1
+  3.     replace sub = "`r`m''" if measure == `m' & rnum == 1
+  4. }
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+
+. local nplot = _N                                        // markers drawn: 3 per row
+
+. assert `nplot' == 3 * `nmeas'
+
+. twoway (pci `grid', lcolor(gs14) lwidth(vthin)) ///
+>     (pci `zero', lcolor(gs8) lwidth(thin)) ///
+>     (rspike px_avg_after_shown_hi px_avg_after_shown_lo ypos if rnum == 1, horizontal lcolor(black) lwidth(thin)) ///
+>     (scatter ypos px_avg_after_shown if rnum == 1, msymbol(O) msize(small) mcolor(black)) ///
+>     (scatter yalt px_avg_after_shown if rnum == 2, msymbol(Sh) msize(small) mcolor(gs6)) ///
+>     (scatter yalt px_avg_after_shown if rnum == 3, msymbol(Th) msize(small) mcolor(gs6)) ///
+>     (scatter ypos xcol, msymbol(none) mlabel(lbl) mlabposition(3) mlabgap(0) mlabsize(vsmall) mlabcolor(black)) ///
+>     (scatter ypos xnm if rnum == 1, msymbol(none) mlabel(nm) mlabposition(3) mlabgap(0) mlabsize(vsmall) mlabcolor(bla
+> ck)) ///
+>     (scatter ysub xnm if rnum == 1 & sub != "", msymbol(none) mlabel(sub) mlabposition(3) mlabgap(0) ///
+>         mlabsize(vsmall) mlabcolor(gs6)) ///
+>     (scatter ypos xc4 if rnum == 1, msymbol(none) mlabel(c4) mlabposition(3) mlabgap(0) mlabsize(vsmall) mlabcolor(bla
+> ck)), ///
+>     text(`ya_tit' `xn' "(a) % change after the start", size(small) placement(e)) ///
+>     text(`yb_tit' `xn' "(b) Share: change after the start in percentage points", size(small) placement(e)) ///
+>     text(`yhd2' `xn' "Measure", size(vsmall) placement(e)) ///
+>     text(`yhd1' `xc1' "Main", size(vsmall) placement(e)) text(`yhd2' `xc1' "rates", size(vsmall) placement(e)) ///
+>     text(`yhd1' `xc2' "Grid rate", size(vsmall) placement(e)) text(`yhd2' `xc2' "fixed", size(vsmall) placement(e)) //
+> /
+>     text(`yhd1' `xc3' "Scenario", size(vsmall) placement(e)) text(`yhd2' `xc3' "2", size(vsmall) placement(e)) ///
+>     text(`yhd1' `xc4' "Before the", size(vsmall) placement(e)) text(`yhd2' `xc4' "start, p", size(vsmall) placement(e)
+> ) ///
+>     `tx' ///
+>     yscale(range(1.7 12.5) off) ylabel(, nogrid) ytitle("") ///
+>     xscale(range(`xn' `xr') off) xlabel(, nogrid) xtitle("") ///
+>     legend(order(4 "Main rates: average of years 0 to +`whi'" 5 "Grid rate fixed in every year" ///
+>                  6 "Scenario 2 rates (other fuel rates, grid rate fixed)" 3 "95% interval (main rates)" 2 "0 = no diff
+> erence") ///
+>         cols(2) position(6) region(lstyle(none)) size(vsmall) symxsize(5) keygap(1) colgap(4) rowgap(0.3)) ///
+>     title("Figure `exhibit'. `ftitle'", size(medium) position(11) justification(left) span) ///
+>     subtitle("Average of years 0 to +`whi' after the start, starters minus never-exporters", size(small) position(11) 
+> justification(left) span) ///
+>     note(`notes' "`srcnote'" "`devnote'", size(vsmall) span linegap(0.6)) ///
+>     graphregion(color(white) lcolor(white) margin(r+3)) plotregion(style(none) margin(zero)) ///
+>     xsize(9) ysize(10) scale(`=7.5/10')                     // text as in R6-03 (0.75)
+
+. 
+. graph export "figures/`fname'.png", width(2700) replace
+file
+    /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r6-exporter-decarbonisation-margins/fi
+    > gures/05_emission_factor_checks.png saved as PNG format
+
+. graph export "figures/`fname'.pdf", replace
+file
+    /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r6-exporter-decarbonisation-margins/fi
+    > gures/05_emission_factor_checks.pdf saved as PDF format
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 8/8: companion tables: every plotted point, and the regressions behind the dots"
+Step 8/8: companion tables: every plotted point, and the regressions behind the dots
+
+. *---------------------------------------------------------------------------
+. * Both tables use the numbers saved in Step 5 just before the CSV (full precision,
+. * so a 4-decimal CSV value is never rounded twice), after the chart is saved.
+. * ==== COMPANION TABLE (pattern for all exhibits) =============================
+. * Owner rule, 28 Sep 2026: every chart gets a table of every plotted point, and
+. * every chart of regression coefficients also gets a regression table, written
+. * by the same do-file (spec: TABLE_BRIEF.md). This step runs AFTER the graph
+. * export, so the chart and the CSV stay byte-identical.
+. *
+. * How to use it in another exhibit file:
+. *   PART 1 (the writer, program ctable_pdf) is copied UNCHANGED.
+. *   PART 2 is the only exhibit-specific part: put the numbers in memory (the
+. *   tempfile saved right after the CSV export, or the CSV itself), build one
+. *   STRING variable per table column, one row per plotted point in chart order
+. *   (years not drawn included, with the reason in a status column), then call
+. *   ctable_pdf. Format numbers with string(x, "%9.1f") etc. so the table shows
+. *   exactly the rounding of the chart labels.
+. *
+. * ctable_pdf strvars using "tables/NN_name_table.pdf",
+. *     title("Table R1-02. ...: every plotted point")    first line, bold
+. *     header("Col 1" "Col 2" ...)       one text per column; "|" = line break
+. *     [right(numlist)]                  columns right-aligned (numbers)
+. *     [norepeat(numlist)]               columns whose repeated text is shown
+. *                                       only on the first row of a run
+. *     [rules(numlist)]                  thin gray line under these data rows
+. *     [notes("line 1" "line 2" ...)]    footer paragraphs (Notes, Source, dev line)
+. *     [subtitle(text)] [fontsize(#)] [perpage(#)] [landscape|portrait]
+. * Landscape is chosen automatically when there are more than 6 columns. Long
+. * tables continue on a new page with the header repeated ("(continued)"); a page
+. * never breaks inside a block whose first column is empty (e.g. an SE row).
+. * --- PART 1: the writer (identical in every file; do not edit) ---------------
+. capture program drop ctable_pdf
+
+. program define ctable_pdf
+  1.     version 17
+  2.     syntax varlist(string) using/, TItle(string) HEADer(string asis) ///
+>         [RIGHT(numlist integer >0) NOREPeat(numlist integer >0) RULES(numlist integer >0) ///
+>          NOTEs(string asis) SUBtitle(string) FONTsize(real 9.5) PERpage(integer 0) ///
+>          LANDscape PORTrait]
+  3.     local nc : word count `varlist'
+  4.     local nh : word count `header'
+  5.     if `nh' != `nc' {
+  6.         display as error "ctable_pdf: `nc' columns but `nh' header texts"
+  7.         exit 198
+  8.     }
+  9.     local orient = cond(`nc' > 6, "landscape", "")
+ 10.     if "`landscape'" != "" local orient "landscape"
+ 11.     if "`portrait'"  != "" local orient ""
+ 12.     * rows per page: a conservative guess for 9-10 pt text (wrapped cells take more)
+.     if `perpage' == 0 local perpage = cond("`orient'" == "landscape", 24, 40)
+ 13.     preserve
+ 14.     quietly {
+ 15.         keep `varlist'
+ 16.         rename (`varlist') (__c#), addnumber      // __c1 __c2 ... in the order given
+ 17.         forvalues j = 1/`nc' {
+ 18.             replace __c`j' = strtrim(__c`j')
+ 19.         }
+ 20.         local N = _N
+ 21.         gen long row = _n
+ 22.         * page chunks: fill up to perpage rows; prefer to end a page at a rule,
+.         * never start a page on a row whose first column is empty
+.         gen int chunk = .
+ 23.         local start 1
+ 24.         local k 0
+ 25.         while `start' <= `N' {
+ 26.             local ++k
+ 27.             local end = min(`start' + `perpage' - 1, `N')
+ 28.             if `end' < `N' {
+ 29.                 local best 0
+ 30.                 foreach r of local rules {
+ 31.                     if `r' >= `start' + floor(`perpage' / 2) & `r' <= `end' & `r' > `best' local best `r'
+ 32.                 }
+ 33.                 if `best' > 0 local end `best'
+ 34.                 else {
+ 35.                     while `end' > `start' & __c1[`end' + 1] == "" {
+ 36.                         local --end
+ 37.                     }
+ 38.                 }
+ 39.             }
+ 40.             replace chunk = `k' in `start'/`end'
+ 41.             local start = `end' + 1
+ 42.         }
+ 43.         local nk `k'
+ 44.         * blank repeated labels inside each page; a column is blanked only while the
+.         * norepeat columns to its left are unchanged too (a new panel shows its series)
+.         gen byte same = _n > 1 & chunk == chunk[_n - 1]
+ 45.         foreach j of local norepeat {
+ 46.             gen strL o`j' = __c`j'
+ 47.             replace same = same & o`j' == o`j'[_n - 1]
+ 48.             replace __c`j' = "" if same
+ 49.             drop o`j'
+ 50.         }
+ 51.         drop same
+ 52.         * column widths (% of the page), from the longest text in each column;
+.         * long text columns are capped so they wrap instead of squeezing numbers
+.         matrix W = J(1, `nc', 0)
+ 53.         local tot 0
+ 54.         forvalues j = 1/`nc' {
+ 55.             gen long L`j' = udstrlen(__c`j')
+ 56.             summarize L`j', meanonly
+ 57.             local w = max(r(max), 3)
+ 58.             local h : word `j' of `header'
+ 59.             local h = subinstr(`"`h'"', "|", " ", .)
+ 60.             foreach hw of local h {
+ 61.                 local w = max(`w', udstrlen(`"`hw'"'))
+ 62.             }
+ 63.             local w = min(`w', 34) + 2          // + 2 = room for the cell margins
+ 64.             matrix W[1, `j'] = `w'
+ 65.             local tot = `tot' + `w'
+ 66.             drop L`j'
+ 67.         }
+ 68.         local used 0
+ 69.         forvalues j = 1/`nc' {
+ 70.             if `j' < `nc' {
+ 71.                 matrix W[1, `j'] = max(floor(100 * W[1, `j'] / `tot'), 3)
+ 72.                 local used = `used' + W[1, `j']
+ 73.             }
+ 74.             else matrix W[1, `j'] = 100 - `used'
+ 75.         }
+ 76.     }
+ 77.     putpdf clear
+ 78.     putpdf begin, pagesize(A4) `orient' font("Times New Roman", `fontsize') ///
+>         margin(left, 0.8in) margin(right, 0.8in) margin(top, 0.5in) margin(bottom, 0.5in)
+ 79.     forvalues k = 1/`nk' {
+ 80.         if `k' > 1 putpdf pagebreak
+ 81.         putpdf paragraph, spacing(after, 4pt)
+ 82.         local tt = cond(`k' == 1, `"`title'"', `"`title' (continued)"')
+ 83.         putpdf text (`"`tt'"'), bold font("Times New Roman", `=`fontsize' + 1.5')
+ 84.         if `k' == 1 & `"`subtitle'"' != "" {
+ 85.             putpdf paragraph, spacing(after, 4pt)
+ 86.             putpdf text (`"`subtitle'"')
+ 87.         }
+ 88.         quietly count if chunk == `k'
+ 89.         local nr = r(N) + 1
+ 90.         quietly putpdf table T`k' = data(__c1-__c`nc') if chunk == `k', varnames border(all, nil) width(W)
+ 91.         forvalues j = 1/`nc' {
+ 92.             * header text; "|" starts a new line inside the cell
+.             local rest : word `j' of `header'
+ 93.             local opt ""
+ 94.             while `"`rest'"' != "" {
+ 95.                 gettoken part rest : rest, parse("|")
+ 96.                 if `"`part'"' == "|" {
+ 97.                     putpdf table T`k'(1, `j') = (""), linebreak append
+ 98.                     continue
+ 99.                 }
+100.                 putpdf table T`k'(1, `j') = (`"`part'"'), valign(bottom) `opt'
+101.                 local opt "append"
+102.             }
+103.             local al = cond(`: list j in right', "right", "left")
+104.             putpdf table T`k'(., `j'), halign(`al') margin(top, 0pt) margin(bottom, 0pt)
+105.         }
+106.         putpdf table T`k'(1, .), border(top, single, black) border(bottom, single, black)
+107.         putpdf table T`k'(`nr', .), border(bottom, single, black)
+108.         foreach r of local rules {
+109.             quietly summarize row if chunk == `k', meanonly
+110.             if `r' >= r(min) & `r' < r(max) {
+111.                 putpdf table T`k'(`=`r' - r(min) + 2', .), border(bottom, single, "A6A6A6")
+112.             }
+113.         }
+114.     }
+115.     local first 1
+116.     foreach n of local notes {
+117.         putpdf paragraph, spacing(before, `=cond(`first', 6, 1)'pt)
+118.         putpdf text (`"`n'"'), font("Times New Roman", `=`fontsize' - 0.5')
+119.         local first 0
+120.     }
+121.     putpdf save `"`using'"', replace
+122.     restore
+123. end
+
+. * --- end of PART 1 ------------------------------------------------------------
+. 
+. * --- PART 2: the rows of this exhibit (the only part that changes per file) ---
+. * (1) Points table: every plotted marker, in chart order (row by row: black dot,
+. * hollow square, hollow triangle).
+. use `full', clear
+
+. gen byte rnum = 1 * (rates == "main") + 2 * (rates == "gridfixed") + 3 * (rates == "scen2")
+
+. keep if reference == 1 & version == "main" & measure <= `nmeas'
+(1,282 observations deleted)
+
+. sort measure rnum
+
+. local npts = _N
+
+. assert `npts' == `nplot'                                 // every drawn marker, once
+
+. gen str34 t_pan = cond(measure <= 5, "(a) % change", "(b) Share, points")
+
+. gen str45 t_row = ""
+(18 missing values generated)
+
+. forvalues m = 1/`nmeas' {
+  2.     replace t_row = "`n`m''" if measure == `m'
+  3. }
+(3 real changes made)
+(3 real changes made)
+(3 real changes made)
+(3 real changes made)
+(3 real changes made)
+(3 real changes made)
+
+. gen str40 t_ser = cond(rnum == 1, "Dot: main rates", cond(rnum == 2, "Square: grid rate fixed", "Triangle: scenario 2 
+> rates"))
+
+. * value and interval as the chart's value columns: one decimal with a sign
+. gen double shr = round(avg_after_shown, 0.1)
+
+. gen str12 t_v  = cond(shr > 0, "+", "") + string(shr, "%9.1f")
+
+. gen str12 t_lo = string(avg_after_shown_lo, "%9.1f")
+
+. gen str12 t_hi = string(avg_after_shown_hi, "%9.1f")
+
+. gen str12 t_st = string(n_starters, "%12.0fc")
+
+. gen str12 t_cf = string(n_comparison, "%12.0fc")
+
+. gen str12 t_n  = string(n_rows, "%12.0fc")
+
+. gen str12 t_p  = cond(before_p < 0.001, "< 0.001", string(before_p, "%5.3f"))
+
+. gen str40 t_status = cond(rnum == 1, "dot, 95% bar", cond(rnum == 2, "hollow square", "hollow triangle"))
+
+. replace t_status = t_status + " (= main)" if (measure == 5 & rnum > 1) | (measure == 4 & rnum == 2)
+(3 real changes made)
+
+. assert t_v != "" & t_st != ""
+
+. local rl ""
+
+. forvalues j = 3(3)`=`npts' - 3' {
+  2.     local rl `rl' `j'
+  3. }
+
+. local txt_t = itrim(`"`txt'"')
+
+. local tnote "Table: every marker of Figure `exhibit', row by row. % change = 100 × (exp(b) − 1) of the average b of ye
+> ars 0 to +`whi';"
+
+. local tnote "`tnote' the share row in percentage points (= b). Rounded as the chart's value columns. Firms and firm-ye
+> ars in the estimate"
+
+. local tnote "`tnote' (firms with one usable year dropped). All five versions, every year since the start, full precisi
+> on: tables/`fname'.csv."
+
+. ctable_pdf t_pan t_row t_ser t_v t_lo t_hi t_st t_cf t_n t_p t_status using "tables/`fname'_table.pdf", ///
+>     title("Table `exhibit'. `ftitle': every plotted point") ///
+>     subtitle("Average of years 0 to +`whi' after the start, starters minus never-exporters, under three sets of emissi
+> on rates") ///
+>     header("Panel" "Row on the chart" "Series (legend)" "Change|(marker)" "95%|low" "95%|high" "Starters" ///
+>            "Never-|exporters" "Firm-|years" "Before|start, p" "Marker") ///
+>     right(4 5 6 7 8 9 10) norepeat(1 2) rules(`rl') fontsize(8) perpage(30) ///
+>     notes("`txt_t'" "`tnote' (= main): identical to the main rates, checked." "`ratenote'" "`srcnote' `devnote'")
+successfully created "/Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r6-exporter-decarbonis
+> ation-margins/tables/05_emission_factor_checks_table.pdf"
+
+. display "table -> tables/`fname'_table.pdf (`npts' plotted points)"
+table -> tables/05_emission_factor_checks_table.pdf (18 plotted points)
+
+. 
+. * (2) Regression table (AER style): one column per measure, one panel per set of
+. * rates; coefficient on the first line, (standard error) on the second. Columns
+. * (7) and (8) need no emission rate: they are the same in every panel.
+. use `full', clear
+
+. gen byte rnum = 1 * (rates == "main") + 2 * (rates == "gridfixed") + 3 * (rates == "scen2")
+
+. keep if version == "main"
+(1,040 observations deleted)
+
+. * check: the coefficients are those in the CSV just written (4 decimals there)
+. preserve
+
+. import delimited using "tables/`fname'.csv", clear varnames(1)
+(encoding automatically selected: ISO-8859-1)
+(48 vars, 1,300 obs)
+
+. keep if version == "main"
+(1,040 observations deleted)
+
+. keep outcome event_time b avg_after_b
+
+. rename (b avg_after_b) (b_csv a_csv)
+
+. tempfile csvb
+
+. save `csvb'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_37002.00000k saved as .dta format
+
+. restore
+
+. merge 1:1 outcome event_time using `csvb', assert(match) nogenerate
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                               260  
+    -----------------------------------------
+
+. assert abs(b - b_csv) <= 0.00005 + 1e-9 if !missing(b)
+
+. assert abs(avg_after_b - a_csv) <= 0.00005 + 1e-9
+
+. drop b_csv a_csv
+
+. * column c (1-8) of panel p (1-3) = outcome number
+. forvalues p = 1/`nr' {
+  2.     forvalues c = 1/8 {
+  3.         local oc`p'_`c' = cond(`c' <= 6, 6 * (`p' - 1) + `c', 12 + `c')     // (7) = 19, (8) = 20
+  4.     }
+  5. }
+
+. quietly levelsof event_time, local(evs)
+
+. tempname P
+
+. tempfile R
+
+. postfile `P' str70 t_lab str24(t1 t2 t3 t4 t5 t6 t7 t8) using `R'
+
+. local nrow 0
+
+. local rl ""
+
+. forvalues p = 1/`nr' {
+  2.     if `p' == 1 local ptl "Panel A. Main rates (black dots)"
+  3.     if `p' == 2 local ptl "Panel B. Grid rate fixed (squares)"
+  4.     if `p' == 3 local ptl "Panel C. Scenario 2 rates (triangles)"
+  5.     post `P' ("`ptl'") ("") ("") ("") ("") ("") ("") ("") ("")
+  6.     local ++nrow
+  7.     * year-by-year markers: Panel A only (Panels B and C: tables/`fname'.csv)
+.     if `p' == 1 {
+  8.         foreach e of local evs {
+  9.             local lab = cond(`e' > 0, "+", "") + string(`e')
+ 10.             if `e' == `wlo' - 1 local lab "≤ `e' (grouped)"
+ 11.             if `e' == `whi' + 1 local lab "≥ +`e' (grouped)"
+ 12.             if `e' == -1 {
+ 13.                 post `P' ("-1 (reference)") ("0`nb'(reference)") ("0`nb'(reference)") ("0`nb'(reference)") ("0`nb'(
+> reference)") ///
+>                     ("0`nb'(reference)") ("0`nb'(reference)") ("0`nb'(reference)") ("0`nb'(reference)")
+ 14.                 local ++nrow
+ 15.                 continue
+ 16.             }
+ 17.             forvalues c = 1/8 {
+ 18.                 quietly summarize b if outcome == `oc1_`c'' & event_time == `e', meanonly
+ 19.                 local b`c' = cond(r(N) == 0, "—", string(r(mean), "%9.3f"))
+ 20.                 quietly summarize se if outcome == `oc1_`c'' & event_time == `e', meanonly
+ 21.                 local s`c' = cond(r(N) == 0, "", "(" + string(r(mean), "%9.3f") + ")")
+ 22.             }
+ 23.             post `P' ("`lab'") ("`b1'") ("`b2'") ("`b3'") ("`b4'") ("`b5'") ("`b6'") ("`b7'") ("`b8'")
+ 24.             post `P' ("")      ("`s1'") ("`s2'") ("`s3'") ("`s4'") ("`s5'") ("`s6'") ("`s7'") ("`s8'")
+ 25.             local nrow = `nrow' + 2
+ 26.         }
+ 27.     }
+ 28.     * whole-model rows (the same number on every row of a regression: take the mean)
+.     forvalues c = 1/8 {
+ 29.         local o = `oc`p'_`c''
+ 30.         foreach x in avg_after_b avg_after_se avg_after_shown avg_after_shown_lo avg_after_shown_hi before_p ///
+>             n_rows n_firms n_starters n_comparison {
+ 31.             quietly summarize `x' if outcome == `o', meanonly
+ 32.             local `x' = r(mean)
+ 33.         }
+ 34.         local uu = cond(`c' == 6, "", "%")
+ 35.         foreach q in avg_after_shown avg_after_shown_lo avg_after_shown_hi {
+ 36.             local `q' = round(``q'', 0.1)                    // round first: no "-0.0"
+ 37.         }
+ 38.         local m1`c' = string(`avg_after_b', "%9.3f")
+ 39.         local m2`c' = "(" + string(`avg_after_se', "%9.3f") + ")"
+ 40.         local m3`c' = cond(`avg_after_shown' > 0, "+", "") + string(`avg_after_shown', "%9.1f") + "`uu'"
+ 41.         local m4`c' = "[" + string(`avg_after_shown_lo', "%9.1f") + ", " + string(`avg_after_shown_hi', "%9.1f") + 
+> "]"
+ 42.         local m5`c' = cond(`before_p' < 0.001, "<`nb'0.001", string(`before_p', "%5.3f"))
+ 43.         local m6`c' = string(`n_rows', "%12.0fc")
+ 44.         local m7`c' = string(`n_firms', "%12.0fc")
+ 45.         local m8`c' = string(`n_starters', "%12.0fc") + " + " + string(`n_comparison', "%12.0fc")
+ 46.     }
+ 47.     local l1 "Average of years 0 to +`whi', b"
+ 48.     local l2 ""
+ 49.     local l3 "`nb'`nb'as drawn (% or points)"
+ 50.     local l4 "`nb'`nb'95% interval"
+ 51.     local l5 "Before-start test, joint p"
+ 52.     local l6 "Observations (firm-years)"
+ 53.     local l7 "Firms (clusters)"
+ 54.     local l8 "`nb'`nb'starters + never-exporters"
+ 55.     forvalues k = 1/8 {
+ 56.         post `P' ("`l`k''") ("`m`k'1'") ("`m`k'2'") ("`m`k'3'") ("`m`k'4'") ("`m`k'5'") ("`m`k'6'") ("`m`k'7'") ("`
+> m`k'8'")
+ 57.     }
+ 58.     local nrow = `nrow' + 8
+ 59.     local rl `rl' `nrow'
+ 60.     if `p' == `nr' {
+ 61.         post `P' ("All panels") ("") ("") ("") ("") ("") ("") ("") ("")
+ 62.         local ++nrow
+ 63.         foreach r in "Firm fixed effects|Yes" "Year fixed effects|Yes" "Industry × year fixed effects|No" ///
+>             "Province × year fixed effects|No" "Weights|None" "Standard errors clustered by|Firm" {
+ 64.             gettoken lab cell : r, parse("|")
+ 65.             local cell = substr("`cell'", 2, .)
+ 66.             post `P' ("`lab'") ("`cell'") ("`cell'") ("`cell'") ("`cell'") ("`cell'") ("`cell'") ("`cell'") ("`cell
+> '")
+ 67.             local ++nrow
+ 68.         }
+ 69.     }
+ 70. }
+
+. postclose `P'
+
+. use `R', clear
+
+. local rnote "Notes: Each column is one regression, with firm and year fixed effects, of its measure on one marker per 
+> year since the export"
+
+. local rnote "`rnote' start, `wlo' to +`whi' except −1 (the year before the start, the reference), plus one marker per 
+> grouped end (`nout'+ years before or"
+
+. local rnote "`rnote' after); never-exporters are 0 on every marker. Columns (1)-(5), (7), (8): logs, b in log points (
+> drawn as 100 × (exp(b) − 1) %);"
+
+. local rnote "`rnote' (6): scope 2 as % of all CO2, b in percentage points. In every panel (1) = (7) − (2) and (3) = (2
+> ) − (8) exactly; (5) is identical in"
+
+. local rnote "`rnote' all panels and (4) in Panels A and B (checked). Sample: R6-01's; (4) firm-years burning fuel, (5)
+>  buying electricity. Before-start"
+
+. local rnote "`rnote' test: all years before the start are 0 together. No stars. Panels B and C year by year: tables/`f
+> name'.csv."
+
+. ctable_pdf t_lab t1 t2 t3 t4 t5 t6 t7 t8 using "tables/`fname'_regression.pdf", ///
+>     title("Table `exhibit', regression. `ftitle': estimates behind the chart") ///
+>     subtitle("Coefficient (standard error). Main version: all starters and never-exporters.") ///
+>     header("Years since the export start" "(1)|Value added|per t CO2" "(2)|CO2|emitted" "(3)|CO2 per GJ|of energy" ///
+>            "(4)|CO2 from|fuels" "(5)|CO2 from bought|electricity" "(6)|Electricity's|share of CO2" ///
+>            "(7)|Value|added" "(8)|Energy|used") ///
+>     right(2 3 4 5 6 7 8 9) rules(`rl') fontsize(8) perpage(35) landscape ///
+>     notes("`rnote'" "`sytxt' `vtxt'" "`srcnote' `devnote'")
+successfully created "/Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r6-exporter-decarbonis
+> ation-margins/tables/05_emission_factor_checks_regression.pdf"
+
+. display "table -> tables/`fname'_regression.pdf (3 panels x 8 regressions)"
+table -> tables/05_emission_factor_checks_regression.pdf (3 panels x 8 regressions)
+
+. * --- end of PART 2 ------------------------------------------------------------
+. 
+. timer off 1
+
+. quietly timer list 1
+
+. local elapsed = strtrim(string(r(t1), "%9.1f"))
+
+. display "FINISHED: figure -> figures/`fname'.png (elapsed `elapsed' s)"
+FINISHED: figure -> figures/05_emission_factor_checks.png (elapsed 65.6 s)
+
+. quietly log close          // keeps FINISHED as the last output line of the log
