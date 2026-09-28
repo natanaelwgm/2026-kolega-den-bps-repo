@@ -1,0 +1,2988 @@
+------------------------------------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r10-covid-resilience-internatio
+> nalised/logs/04_all_firms_output_jobs.log
+  log type:  text
+ opened on:  28 Sep 2026, 18:13:16
+
+. timer clear 1
+
+. timer on 1
+
+. display _newline "=== [R10-04] STARTING: output and workers around COVID, firms that left the files counted as closed 
+> ==="
+
+=== [R10-04] STARTING: output and workers around COVID, firms that left the files counted as closed ===
+
+. 
+. * reghdfe (with ftools) runs regressions that take out many sets of averages at once
+. foreach p in reghdfe ftools {
+  2.     capture which `p'
+  3.     if _rc {
+  4.         display as error "R10-04 needs the Stata add-on `p'. Install it once: ssc install `p'  - then run this file
+>  again."
+  5.         log close
+  6.         exit 199
+  7.     }
+  8. }
+
+. 
+. * ---- chart style (identical block in every file) ----
+. set scheme s1mono
+
+. capture graph set window fontface "Times New Roman"   // GUI Stata; console Stata keeps its default font
+
+. * Note: this changes your Stata graph font permanently; undo with: graph set window fontface default
+. local devnote "Development data — obscured values, fictional firm panel. Not BPS findings."
+
+. local srcnote "Source: SI/IBS annual files 2010–2022 (masked), analysis_ready_data.dta."
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 1/8: load identity, industry, province, status flags and the two outcomes"
+Step 1/8: load identity, industry, province, status flags and the two outcomes
+
+. *---------------------------------------------------------------------------
+. * export_flag  = any export activity (1 yes, 0 no, missing = unknown)
+. * import_flag  = imports reported above zero (never missing)
+. * fdi_10_flag  = 10% or more of capital held abroad (missing = unknown)
+. * gross_output_nominal = output value, current prices (masked money unit); the file has
+. *                no price index filled in (gross_output_real is empty), see the notes
+. * workers      = persons employed
+. * industry2_reported, province_code = never change within a firm
+. quietly describe using "$DATA", varlist
+
+. local allvars `r(varlist)'
+
+. local want firm_id year export_flag import_flag fdi_10_flag workers gross_output_nominal ///
+>     gross_output_real industry2_reported province_code
+
+. local have : list want & allvars          // gross_output_real: used by the cohort block when filled
+
+. use `have' using "$DATA", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. isid firm_id year
+
+. foreach v in export_flag import_flag fdi_10_flag {
+  2.     assert inlist(`v', 0, 1, .)
+  3. }
+
+. assert !missing(industry2_reported, province_code)
+
+. tempfile firmyear0
+
+. save `firmyear0'                          // the firm-year rows; the cohort block keeps one row per firm
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.000001 saved as .dta format
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 2/8: the COVID cohort and the frozen groups (blocks copied unchanged from R10-01)"
+Step 2/8: the COVID cohort and the frozen groups (blocks copied unchanged from R10-01)
+
+. *---------------------------------------------------------------------------
+. * The cohort file: the last annual file before COVID (read from the data).
+. quietly levelsof year, local(allfiles)
+
+. local cohort_year ""
+
+. foreach c of local allfiles {
+  2.     if `c' < `covid_first' local cohort_year `c'
+  3. }
+
+. assert "`cohort_year'" != ""
+
+. display "   cohort file: `cohort_year'"
+   cohort file: 2019
+
+. 
+. *===========================================================================
+. * COVID COHORT AND STATES (copy exactly into later R4 and R10 files)
+. *   Version 2 - written and reviewed in R4-01 (28 Sep 2026). Do not edit a copy;
+. *   change R4-01 and re-copy. Set -local cohort_year- before the block; R4-02
+. *   runs it once per starting file (2012 ... 2019).
+. *   In : firm-year rows in memory (one row per firm and year): firm_id year
+. *        workers gross_output_nominal (gross_output_real is used instead when
+. *        present and filled for 95%+ of the cohort-file and last-file rows).
+. *        The block collapses to one row per firm: every other variable in memory
+. *        is dropped. Build traits in a tempfile first and merge them back by
+. *        firm_id after the block.
+. *   Out: one row per firm in the cohort file or in one of the next three files.
+. *        in_cohort = 1 for the firms of the cohort file (the cohort); the others
+. *        are newcomers (new_in_file = the later file they first appear in).
+. *        Locals: f1 f2 f3 = the next three files, p1 p2 = the two files before,
+. *        outbasis = output variable used, band_pct = neutral band in percent
+. *        (10 = within 10% either way), band_lo band_hi = its limits as ratios.
+. *   The years come from the data, so the block runs unchanged on the real files.
+. *===========================================================================
+. isid firm_id year
+
+. * -- the annual files in the data, and the files around the cohort file --
+. quietly levelsof year, local(c_files)
+
+. local c_pos : list posof "`cohort_year'" in c_files
+
+. local c_nf : word count `c_files'
+
+. if `c_pos' == 0 | `c_pos' + 3 > `c_nf' {
+.     display as error "cohort file `cohort_year' must be a file year with three later files"
+.     exit 198
+. }
+
+. local f1 : word `=`c_pos' + 1' of `c_files'
+
+. local f2 : word `=`c_pos' + 2' of `c_files'
+
+. local f3 : word `=`c_pos' + 3' of `c_files'
+
+. local p1 ""
+
+. local p2 ""
+
+. if `c_pos' > 1 local p1 : word `=`c_pos' - 1' of `c_files'
+
+. if `c_pos' > 2 local p2 : word `=`c_pos' - 2' of `c_files'
+
+. * -- output: constant prices when the file has them, else current prices --
+. local outbasis "gross_output_nominal"
+
+. capture confirm numeric variable gross_output_real
+
+. if !_rc {
+.     quietly count if inlist(year, `cohort_year', `f3')
+.     local c_nrows = r(N)
+.     quietly count if inlist(year, `cohort_year', `f3') & !missing(gross_output_real)
+.     if r(N) >= 0.95 * `c_nrows' & `c_nrows' > 0 local outbasis "gross_output_real"
+. }
+
+. * -- neutral band: a stayer is "about the same" if its last-file level is
+. *    within band_pct percent of its cohort-file level, up or down (10: 0.90 to 1.10 times);
+. *    the limits match the words on the chart ("down more than 10%") exactly --
+. if "`band_pct'" == "" local band_pct 10
+
+. local band_lo = 1 - `band_pct'/100
+
+. local band_hi = 1 + `band_pct'/100
+
+. * -- which files each firm is in (1 = in the file, 0 = not) --
+. gen byte c_base    = (year == `cohort_year')
+
+. gen byte c_f1      = (year == `f1')
+
+. gen byte c_f2      = (year == `f2')
+
+. gen byte c_f3      = (year == `f3')
+
+. gen byte c_earlier = (year <  `cohort_year')                    // any file before the cohort file
+
+. gen byte c_p1      = cond("`p1'" == "", ., (year == real("`p1'")))
+
+. gen byte c_p2      = cond("`p2'" == "", ., (year == real("`p2'")))
+
+. gen double c_wk0   = workers     if year == `cohort_year'
+(30,042 missing values generated)
+
+. gen double c_wk3   = workers     if year == `f3'
+(29,872 missing values generated)
+
+. gen double c_out0  = `outbasis'  if year == `cohort_year'
+(30,042 missing values generated)
+
+. gen double c_out3  = `outbasis'  if year == `f3'
+(29,872 missing values generated)
+
+. keep if year <= `f3'
+(0 observations deleted)
+
+. collapse (max) seen_base = c_base seen_f1 = c_f1 seen_f2 = c_f2 seen_f3 = c_f3 ///
+>     seen_earlier = c_earlier seen_p1 = c_p1 seen_p2 = c_p2 ///
+>     workers_base = c_wk0 workers_f3 = c_wk3 output_base = c_out0 output_f3 = c_out3, by(firm_id)
+
+. keep if seen_base | seen_f1 | seen_f2 | seen_f3                  // firms of the cohort file or a later one
+(5,118 observations deleted)
+
+. gen int  cohort_year = `cohort_year'
+
+. gen byte in_cohort   = (seen_base == 1)
+
+. * -- new_to_file = 1: in the cohort file but in neither of the two files before
+. *    (it may still be in an older file); 0 = "incumbent" (R10 uses 0 as incumbent) --
+. gen byte new_to_file = .
+(5,345 missing values generated)
+
+. if "`p1'" != "" replace new_to_file = (seen_p1 == 0 & (seen_p2 == 0 | missing(seen_p2))) if in_cohort
+(3,007 real changes made)
+
+. * -- presence in the next three files, e.g. "110" = in f1 and f2, not in f3 --
+. gen str3 pattern = string(seen_f1) + string(seen_f2) + string(seen_f3) if in_cohort
+(2,338 missing values generated)
+
+. * -- state by the last file (f3) --
+. *    1 stayed           = in all three later files
+. *    2 absent then back = missed f1 and/or f2, in f3 again ("temporary disappearance")
+. *    3 left the files   = not in f3 (the file has no closure record: not proof of closure)
+. gen byte state_file = cond(pattern == "111", 1, cond(seen_f3 == 1, 2, 3)) if in_cohort
+(2,338 missing values generated)
+
+. *    left_when: 1 = gone from f1 on ("000"), 2 = in f1 or f2, gone by f3
+. gen byte left_when = cond(pattern == "000", 1, 2) if state_file == 3
+(4,016 missing values generated)
+
+. * -- stayers: change from the cohort file to f3; 0 in f3 counts as shrank;
+. *    no positive cohort-file level (or no f3 level) = not classified (missing) --
+. gen double ratio_wk  = workers_f3 / workers_base if state_file == 1 & workers_base > 0 & !missing(workers_base, worker
+> s_f3)
+(3,667 missing values generated)
+
+. gen double ratio_out = output_f3  / output_base  if state_file == 1 & output_base  > 0 & !missing(output_base,  output
+> _f3)
+(3,667 missing values generated)
+
+. foreach m in wk out {
+  2.     gen byte size_`m' = cond(ratio_`m' < `band_lo', 1, cond(ratio_`m' > `band_hi', 3, 2)) if !missing(ratio_`m')
+  3.     *   outcome5: 1 left the files, 2 absent then back, 3 shrank, 4 about the same, 5 grew
+.     gen byte outcome5_`m' = cond(state_file == 3, 1, cond(state_file == 2, 2, 2 + size_`m')) if in_cohort
+  4.     replace  outcome5_`m' = . if state_file == 1 & missing(size_`m')
+  5. }
+(3,667 missing values generated)
+(2,338 missing values generated)
+(0 real changes made)
+(3,667 missing values generated)
+(2,338 missing values generated)
+(0 real changes made)
+
+. * -- newcomers: the later file a firm not in the cohort file first appears in --
+. gen int new_in_file = cond(seen_f1, `f1', cond(seen_f2, `f2', `f3')) if !in_cohort
+(3,007 missing values generated)
+
+. gen str80 outcome_basis = "`outbasis'"
+
+. label define c_state 1 "stayed" 2 "absent then back" 3 "left the files", replace
+
+. label define c_left  1 "gone from the first later file" 2 "gone later", replace
+
+. label define c_size  1 "shrank" 2 "about the same" 3 "grew", replace
+
+. label define c_out5  1 "left the files" 2 "absent then back" 3 "stayed, shrank" 4 "stayed, about the same" 5 "stayed, 
+> grew", replace
+
+. label values state_file c_state
+
+. label values left_when c_left
+
+. label values size_wk size_out c_size
+
+. label values outcome5_wk outcome5_out c_out5
+
+. * -- structural checks (hold on any data) --
+. isid firm_id
+
+. assert !missing(state_file, pattern) if in_cohort
+
+. assert missing(state_file) & !missing(new_in_file) if !in_cohort
+
+. assert (state_file == 1) == (pattern == "111") if in_cohort
+
+. assert !missing(outcome5_wk) if in_cohort & state_file != 1
+
+. order firm_id cohort_year in_cohort new_to_file seen_* pattern state_file left_when ///
+>     workers_base workers_f3 ratio_wk size_wk outcome5_wk output_base output_f3 ratio_out size_out ///
+>     outcome5_out new_in_file outcome_basis
+
+. display "   cohort file `cohort_year'; later files `f1' `f2' `f3'; earlier files `p2' `p1'; output: `outbasis'; band +
+> /-`band_pct'%"
+   cohort file 2019; later files 2020 2021 2022; earlier files 2017 2018; output: gross_output_nominal; band +/-10%
+
+. *===========================================================================
+. * END OF COVID COHORT AND STATES
+. *===========================================================================
+. 
+. * back to firm-year rows: attach the cohort markers to every record of each firm
+. keep firm_id in_cohort new_to_file pattern state_file left_when
+
+. tempfile cohort
+
+. save `cohort'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.000002 saved as .dta format
+
+. use `firmyear0', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. merge m:1 firm_id using `cohort', keep(master match) nogenerate
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                        10,306
+        from master                    10,306  
+        from using                          0  
+
+    Matched                            22,743  
+    -----------------------------------------
+
+. replace in_cohort = 0 if missing(in_cohort)       // firms seen only before the cohort file
+(10,306 real changes made)
+
+. 
+. *===========================================================================
+. * R10 FROZEN PRE-COVID GROUPS (copy exactly into later R10 files)
+. *===========================================================================
+. * Needs: firm-year data with firm_id year export_flag import_flag fdi_10_flag,
+. * in_cohort and new_to_file, and the locals cohort_year p1 p2 from the cohort block
+. * (p1 = the file just before the cohort file, p2 = the one before that).
+. * Each firm is put in each group ONCE, from its own records in the files
+. * `p2', `p1' and `cohort_year' (the last file before COVID and the two before it).
+. * Answers from later files NEVER change a group.
+. *   main rule   : in the group (1) if it answered "yes" in at least half of its
+. *                 known answers in those files; other firms (0) = "yes" in fewer
+. *                 than half (most never said "yes"; e.g. yes in 1 of 3 = other);
+. *                 no known answer = left out (missing), never counted as "no".
+. *   stricter    : 1 only if "yes" in EVERY known answer; 0 only if never "yes";
+. *                 firms with both answers ("mixed") are left out (missing).
+. *   early files : main rule on the files `p2' and `p1' only (Bu Deasy's literal "pre-2019").
+. *   base file   : the answer in the `cohort_year' file only.
+. * Variable names: grp_<rule>_<x>, x = exp (export_flag), imp (import_flag),
+. * fdi (fdi_10_flag); rule = main, strict, early, base. Also k_<x> (known
+. * answers) and s_<x> (of which "yes") in the three files.
+. * Main sample of R10 = cohort firms that are not new to the file (new_to_file == 0):
+. * a firm first seen in `cohort_year' has only one year of answers and no earlier years.
+. if "`p1'" == "" | "`p2'" == "" {
+.     display as error "the groups need two files before the cohort file `cohort_year'"
+.     exit 198
+. }
+
+. local grp_rule_min 0.5
+
+. gen byte in_pre   = inlist(year, `p2', `p1', `cohort_year')
+
+. gen byte in_early = inlist(year, `p2', `p1')
+
+. foreach x in exp imp fdi {
+  2.     if "`x'" == "exp" local v export_flag
+  3.     if "`x'" == "imp" local v import_flag
+  4.     if "`x'" == "fdi" local v fdi_10_flag
+  5.     bysort firm_id: egen byte k_`x' = total(in_pre & !missing(`v'))
+  6.     bysort firm_id: egen byte s_`x' = total(in_pre & `v' == 1)
+  7.     gen byte grp_main_`x'   = s_`x' / k_`x' >= `grp_rule_min' if k_`x' > 0
+  8.     gen byte grp_strict_`x' = cond(k_`x' == 0, ., cond(s_`x' == k_`x', 1, cond(s_`x' == 0, 0, .)))
+  9.     bysort firm_id: egen byte ke = total(in_early & !missing(`v'))
+ 10.     bysort firm_id: egen byte se = total(in_early & `v' == 1)
+ 11.     gen byte grp_early_`x'  = se / ke >= `grp_rule_min' if ke > 0
+ 12.     bysort firm_id: egen byte grp_base_`x' = max(cond(year == `cohort_year', `v', .))
+ 13.     drop ke se
+ 14.     * groups exist only for firms in the cohort; they are constant within a firm
+.     foreach r in main strict early base {
+ 15.         replace grp_`r'_`x' = . if !in_cohort
+ 16.         bysort firm_id: assert grp_`r'_`x' == grp_`r'_`x'[1]
+ 17.     }
+ 18.     replace k_`x' = . if !in_cohort
+ 19.     replace s_`x' = . if !in_cohort
+ 20. }
+(16,954 missing values generated)
+(18,684 missing values generated)
+(19,682 missing values generated)
+(23,283 missing values generated)
+(2,389 real changes made, 2,389 to missing)
+(2,293 real changes made, 2,293 to missing)
+(2,389 real changes made, 2,389 to missing)
+(0 real changes made)
+(13,708 real changes made, 13,708 to missing)
+(13,708 real changes made, 13,708 to missing)
+(9,520 missing values generated)
+(17,241 missing values generated)
+(11,026 missing values generated)
+(13,708 missing values generated)
+(4,188 real changes made, 4,188 to missing)
+(3,700 real changes made, 3,700 to missing)
+(4,188 real changes made, 4,188 to missing)
+(0 real changes made)
+(13,708 real changes made, 13,708 to missing)
+(13,708 real changes made, 13,708 to missing)
+(9,520 missing values generated)
+(12,702 missing values generated)
+(11,026 missing values generated)
+(13,708 missing values generated)
+(4,188 real changes made, 4,188 to missing)
+(3,976 real changes made, 3,976 to missing)
+(4,188 real changes made, 4,188 to missing)
+(0 real changes made)
+(13,708 real changes made, 13,708 to missing)
+(13,708 real changes made, 13,708 to missing)
+
+. drop in_pre in_early
+
+. label define grp 1 "in the group" 0 "other firms"
+
+. label values grp_* grp
+
+. *===========================================================================
+. * END R10 FROZEN PRE-COVID GROUPS
+. *===========================================================================
+. sort firm_id year
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 3/8: the sample, the firms that left the files (counted as closed) and the two outcomes"
+Step 3/8: the sample, the firms that left the files (counted as closed) and the two outcomes
+
+. *---------------------------------------------------------------------------
+. * Sample: firms of the cohort file that were also in one of the two files before it
+. * (new_to_file == 0, R10's main sample), their records in the files `p2' to `f3' (as R10-03).
+. keep if in_cohort & new_to_file == 0 & inrange(year, `p2', `f3')
+(21,515 observations deleted)
+
+. * stayer = in every later file (`f1', `f2' and `f3'): the firms of R10-03's solid dots
+. gen byte stayer = (state_file == 1)
+
+. egen int ind  = group(industry2_reported)
+
+. egen int prov = group(province_code)
+
+. keep firm_id year workers `outbasis' ind prov stayer state_file grp_main_exp grp_main_imp grp_main_fdi
+
+. * one row for every firm and every file of the window; the added rows are years a firm is not in
+. fillin firm_id year
+
+. foreach v in ind prov stayer state_file grp_main_exp grp_main_imp grp_main_fdi {
+  2.     bysort firm_id (_fillin year): replace `v' = `v'[1]     // firm traits never change: copy them
+  3. }
+(2,062 real changes made)
+(2,062 real changes made)
+(2,062 real changes made)
+(2,062 real changes made)
+(1,484 real changes made)
+(2,062 real changes made)
+(2,062 real changes made)
+
+. bysort firm_id: egen int last_seen = max(cond(_fillin == 0, year, .))
+
+. * ASSUMPTION (the what-if): a firm not in a later file and in none after it is CLOSED from
+. * that file on: output and workers 0. A missing file followed by a return (absent then back),
+. * and a missing earlier file, are unknown, not 0: those added rows are dropped.
+. gen byte closed = _fillin & year > `cohort_year' & year > last_seen
+
+. drop if _fillin & !closed
+(288 observations deleted)
+
+. * structural checks: stayers never closed; "left the files" (cohort block) = closed in `f3'
+. assert closed == 0 if stayer
+
+. bysort firm_id: egen byte cl_last = max(closed & year == `f3')
+
+. assert cl_last == (state_file == 3)
+
+. drop cl_last _fillin
+
+. * outcomes: change from the firm's own `cohort_year' level on the midpoint scale, in %:
+. *   200 x (level - level in `cohort_year') / (level + level in `cohort_year')
+. * It runs from -200 (fell to 0, here: closed) to +200, and is close to an ordinary % change
+. * when the change is small. Needs a positive `cohort_year' level. A firm in the file with no
+. * positive level (e.g. 0 workers recorded) is unknown that year, not closed.
+. local outname1 "`outbasis'"
+
+. local outname2 "workers"
+
+. forvalues k = 1/2 {
+  2.     bysort firm_id: egen double base`k' = max(cond(year == `cohort_year', `outname`k'', .))
+  3.     gen double lev`k' = cond(closed, 0, `outname`k'')
+  4.     gen double y`k' = 200 * (lev`k' - base`k') / (lev`k' + base`k') ///
+>         if base`k' > 0 & !missing(base`k') & (closed | (lev`k' > 0 & !missing(lev`k')))
+  5.     assert y`k' == -200 if closed & !missing(y`k')
+  6.     assert y`k' == 0 if year == `cohort_year' & !missing(y`k')
+  7. }
+(2 missing values generated)
+
+. local out_prices = cond("`outbasis'" == "gross_output_real", "constant prices", "current prices")
+
+. * the files of the window, the reference file, the files before and after it
+. quietly levelsof year, local(evyrs)
+
+. local pre_list ""
+
+. local post_list ""
+
+. foreach y of local evyrs {
+  2.     if `y' < `cohort_year' local pre_list "`pre_list' `y'"
+  3.     if `y' > `cohort_year' local post_list "`post_list' `y'"
+  4. }
+
+. local npost : word count `post_list'
+
+. * calendar years with no annual file, from the year before `p2' to `f3' (drawn as a gray band)
+. local nofile ""
+
+. forvalues y = `=`p2' - 1'/`f3' {
+  2.     local isin : list y in allfiles
+  3.     if !`isin' local nofile "`nofile' `y'"
+  4. }
+
+. local xfirst `p2'
+
+. local ybefore = `p2' - 1
+
+. local isin : list ybefore in nofile
+
+. if `isin' local xfirst `ybefore'           // the axis starts at the missing year before the window
+
+. display "   files `evyrs'; reference `cohort_year'; before:`pre_list'; after:`post_list'; no file:`nofile'"
+   files 2017 2018 2019 2020 2021 2022; reference 2019; before: 2017 2018; after: 2020 2021 2022; no file: 2016
+
+. gen byte post = year > `cohort_year'
+
+. egen byte f1tag = tag(firm_id)
+
+. quietly count if f1tag
+
+. local n_inc = r(N)
+
+. quietly count if f1tag & stayer
+
+. local n_stay = r(N)
+
+. quietly count if f1tag & state_file == 3
+
+. local n_left = r(N)
+
+. display "   firms `n_inc': in every later file (stayers) `n_stay'; not in `f3' (counted as closed) `n_left'"
+   firms 2266: in every later file (stayers) 1484; not in 2022 (counted as closed) 782
+
+. tab year closed
+
+  Calendar |
+     year: |
+ 2010-2015 |
+       and |
+2017-2022; |
+      2016 |
+unavailabl |        closed
+         e |         0          1 |     Total
+-----------+----------------------+----------
+      2017 |     1,978          0 |     1,978 
+      2018 |     2,266          0 |     2,266 
+      2019 |     2,266          0 |     2,266 
+      2020 |     1,871        395 |     2,266 
+      2021 |     1,669        597 |     2,266 
+      2022 |     1,484        782 |     2,266 
+-----------+----------------------+----------
+     Total |    11,534      1,774 |    13,308 
+
+. compress
+  variable workers was long now int
+  variable ind was int now byte
+  variable prov was int now byte
+  variable base2 was double now int
+  variable lev2 was double now int
+  (212,928 bytes saved)
+
+. tempfile evdata
+
+. save `evdata'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.000003 saved as .dta format
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 4/8: regressions: group x each file (reference `cohort_year'), and the pooled term"
+Step 4/8: regressions: group x each file (reference 2019), and the pooled term
+
+. *---------------------------------------------------------------------------
+. * Model (the same as R10-03, only the outcome differs): outcome = firm's own average + one
+. * average per industry and file + one per province and file + the group's extra change in
+. * each file against `cohort_year':  b_year = group minus other firms, percentage points.
+. * Versions:  closed   = all sample firms, closed firms at -200 after leaving: drawn, hollow square (what-if)
+. *            stay     = stayers only (firms in every later file): drawn, solid dot (other end)
+. *            infile   = every firm in whatever files it is in, no 0 rows (table only; R10-03's circles)
+. *            fyclosed = closed, firm + year averages only (table only)
+. * Pooled (Bu Deasy's "x Post2020"): the same model with one term, group x every file after
+. * `cohort_year', against the files `p2' to `cohort_year' together (a separate regression).
+. local ab_closed   "firm_id ind#year prov#year"
+
+. local ab_stay     "firm_id ind#year prov#year"
+
+. local ab_infile   "firm_id ind#year prov#year"
+
+. local ab_fyclosed "firm_id year"
+
+. tempname P
+
+. tempfile res
+
+. postfile `P' str8 grouping str8 version byte outcome_id str8 term int year double(b se df_r) ///
+>     long(rows firms singletons n_g1 n_g0 cl_g1 cl_g0 ref_g1 ref_g0 firms_g1 firms_g0 closed_rows) ///
+>     double before_p using `res', replace
+(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.000004 not found)
+
+. foreach x in exp imp fdi {
+  2.     display "   group `x'"
+  3.     foreach v in closed stay infile fyclosed {
+  4.         use `evdata', clear
+  5.         keep if !missing(grp_main_`x')
+  6.         if "`v'" == "stay"   keep if stayer
+  7.         if "`v'" == "infile" keep if !closed
+  8.         gen double X = grp_main_`x'
+  9.         local terms ""
+ 10.         foreach y of local evyrs {
+ 11.             if `y' != `cohort_year' {
+ 12.                 gen double t`y' = X * (year == `y')
+ 13.                 local terms "`terms' t`y'"
+ 14.             }
+ 15.         }
+ 16.         local pre_terms ""
+ 17.         foreach y of local pre_list {
+ 18.             local pre_terms "`pre_terms' t`y'"
+ 19.         }
+ 20.         gen double tpost = X * post
+ 21.         foreach k in 1 2 {
+ 22.             * --- year by year ---
+.             quietly reghdfe y`k' `terms', absorb(`ab_`v'') vce(cluster firm_id)
+ 23.             capture drop es
+ 24.             gen byte es = e(sample)
+ 25.             local N  = e(N)
+ 26.             local G  = e(N_clust)
+ 27.             local df = e(df_r)
+ 28.             local S  = e(num_singletons)
+ 29.             if "`S'" == "" local S 0
+ 30.             * before-COVID check: all markers before `cohort_year' are 0 together
+.             capture test `pre_terms'
+ 31.             local bp = cond(_rc, ., r(p))
+ 32.             * average of the markers after `cohort_year'
+.             local lc ""
+ 33.             foreach y of local post_list {
+ 34.                 local lc "`lc' + t`y'"
+ 35.             }
+ 36.             quietly lincom (`=substr("`lc'", 4, .)') / `npost'
+ 37.             local ab = r(estimate)
+ 38.             local as = r(se)
+ 39.             * firms behind each marker: group (X = 1) and other firms (X = 0) in that year
+.             quietly count if es & year == `cohort_year' & X == 1
+ 40.             local r1 = r(N)
+ 41.             quietly count if es & year == `cohort_year' & X == 0
+ 42.             local r0 = r(N)
+ 43.             capture drop ft
+ 44.             egen byte ft = tag(firm_id) if es
+ 45.             quietly count if ft == 1 & X == 1
+ 46.             local fg1 = r(N)
+ 47.             quietly count if ft == 1 & X == 0
+ 48.             local fg0 = r(N)
+ 49.             quietly count if es & closed
+ 50.             local ncl = r(N)
+ 51.             foreach y of local evyrs {
+ 52.                 if `y' == `cohort_year' continue
+ 53.                 quietly count if es & year == `y' & X == 1
+ 54.                 local n1 = r(N)
+ 55.                 quietly count if es & year == `y' & X == 0
+ 56.                 local n0 = r(N)
+ 57.                 quietly count if es & year == `y' & X == 1 & closed
+ 58.                 local c1 = r(N)
+ 59.                 quietly count if es & year == `y' & X == 0 & closed
+ 60.                 local c0 = r(N)
+ 61.                 * a file with no rows for this outcome is dropped by reghdfe: left empty
+.                 capture local sechk = _se[t`y']
+ 62.                 if _rc local sechk = .
+ 63.                 if `sechk' == 0 | missing(`sechk') {
+ 64.                     post `P' ("`x'") ("`v'") (`k') ("`y'") (`y') (.) (.) (`df') (`N') (`G') (`S') ///
+>                         (`n1') (`n0') (`c1') (`c0') (`r1') (`r0') (`fg1') (`fg0') (`ncl') (`bp')
+ 65.                 }
+ 66.                 else {
+ 67.                     post `P' ("`x'") ("`v'") (`k') ("`y'") (`y') (_b[t`y']) (_se[t`y']) (`df') (`N') (`G') (`S') //
+> /
+>                         (`n1') (`n0') (`c1') (`c0') (`r1') (`r0') (`fg1') (`fg0') (`ncl') (`bp')
+ 68.                 }
+ 69.             }
+ 70.             post `P' ("`x'") ("`v'") (`k') ("avgpost") (.) (`ab') (`as') (`df') (`N') (`G') (`S') ///
+>                 (.) (.) (.) (.) (`r1') (`r0') (`fg1') (`fg0') (`ncl') (`bp')
+ 71.             * --- pooled term (Bu Deasy's "x Post2020"), same rows ---
+.             quietly reghdfe y`k' tpost if es, absorb(`ab_`v'') vce(cluster firm_id)
+ 72.             assert e(N) == `N'
+ 73.             * singletons: those the yearly model dropped (the pooled model runs on its rows, so it drops none)
+.             post `P' ("`x'") ("`v'") (`k') ("pooled") (.) (_b[tpost]) (_se[tpost]) (e(df_r)) (e(N)) (e(N_clust)) ///
+>                 (`S') (.) (.) (.) (.) (`r1') (`r0') (`fg1') (`fg0') (`ncl') (`bp')
+ 74.         }
+ 75.     }
+ 76. }
+   group exp
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(3,892 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(3,892 observations deleted)
+(3,219 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(3,892 observations deleted)
+(1,276 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(3,892 observations deleted)
+   group imp
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(0 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(0 observations deleted)
+(4,538 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(0 observations deleted)
+(1,774 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(0 observations deleted)
+   group fdi
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(0 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(0 observations deleted)
+(4,538 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(0 observations deleted)
+(1,774 observations deleted)
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(0 observations deleted)
+
+. postclose `P'
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 5/8: tables -> CSV (numbers written before drawing)"
+Step 5/8: tables -> CSV (numbers written before drawing)
+
+. *---------------------------------------------------------------------------
+. use `res', clear
+
+. * reference rows (0 by definition) and rows for years with no annual file
+. preserve
+
+. keep if term == "avgpost"
+(144 observations deleted)
+
+. replace term = "`cohort_year'"
+(24 real changes made)
+
+. replace year = `cohort_year'
+(24 real changes made)
+
+. replace b = 0
+(24 real changes made)
+
+. replace se = .
+(24 real changes made, 24 to missing)
+
+. replace n_g1 = ref_g1
+(24 real changes made)
+
+. replace n_g0 = ref_g0
+(24 real changes made)
+
+. replace cl_g1 = 0
+(24 real changes made)
+
+. replace cl_g0 = 0
+(24 real changes made)
+
+. tempfile refrows
+
+. save `refrows'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.000006 saved as .dta format
+
+. restore
+
+. append using `refrows'
+
+. foreach y of local nofile {
+  2.     preserve
+  3.     keep if term == "avgpost"
+  4.     replace term = "`y'"
+  5.     replace year = `y'
+  6.     foreach v in b se n_g1 n_g0 cl_g1 cl_g0 {
+  7.         replace `v' = .
+  8.     }
+  9.     tempfile nf`y'
+ 10.     save `nf`y''
+ 11.     restore
+ 12.     append using `nf`y''
+ 13. }
+(168 observations deleted)
+(24 real changes made)
+(24 real changes made)
+(24 real changes made, 24 to missing)
+(24 real changes made, 24 to missing)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.000008 saved as .dta format
+
+. gen byte reference = term == "`cohort_year'"
+
+. gen byte no_file = 0
+
+. foreach y of local nofile {
+  2.     replace no_file = 1 if term == "`y'"
+  3. }
+(24 real changes made)
+
+. gen byte yearly = !missing(year)
+
+. * support: a marker is shown only if the group and the other firms each have min_n firms in
+. * that year and in the reference year (as R10-03)
+. gen byte shown = !missing(b) & ((n_g1 >= `min_n' & n_g0 >= `min_n' & ref_g1 >= `min_n' & ref_g0 >= `min_n') ///
+>     | !yearly)
+
+. replace shown = 0 if no_file
+(0 real changes made)
+
+. gen double tcrit = invttail(df_r, 0.025)
+
+. gen double lo = b - tcrit * se if shown & !reference
+(48 missing values generated)
+
+. gen double hi = b + tcrit * se if shown & !reference
+(48 missing values generated)
+
+. gen double p  = 2 * ttail(df_r, abs(b / se)) if shown & se > 0 & !missing(se)
+(48 missing values generated)
+
+. gen byte clear = lo > 0 | hi < 0 if !missing(lo)
+(48 missing values generated)
+
+. * labels
+. gen byte gi = cond(grouping == "exp", 1, cond(grouping == "imp", 2, 3))
+
+. gen str30 grouping_label = cond(gi == 1, "Exporters", cond(gi == 2, "Importers", "Foreign-owned (10%+)"))
+
+. gen str60 outcome_label = ""
+(216 missing values generated)
+
+. replace outcome_label = "Output: change since `cohort_year', midpoint % (`out_prices')" if outcome_id == 1
+(108 real changes made)
+
+. replace outcome_label = "Workers: change since `cohort_year', midpoint %"              if outcome_id == 2
+(108 real changes made)
+
+. gen str90 version_label = ""
+(216 missing values generated)
+
+. replace version_label = "All sample firms; left the files = closed (0) from the first file missed; firm + industry x y
+> ear + province x year" if version == "closed"
+variable version_label was str90 now str114
+(54 real changes made)
+
+. replace version_label = "Stayers (in every file `f1'-`f3'); firm + industry x year + province x year" if version == "s
+> tay"
+(54 real changes made)
+
+. replace version_label = "All sample firms in that year's file, no 0 rows; firm + industry x year + province x year" if
+>  version == "infile"
+(54 real changes made)
+
+. replace version_label = "All sample firms, left = closed (0); firm + year averages only" if version == "fyclosed"
+(54 real changes made)
+
+. gen str70 period = ""
+(216 missing values generated)
+
+. replace period = "year " + term if yearly
+(168 real changes made)
+
+. replace period = "reference: " + term + " (0 by definition)" if reference
+(24 real changes made)
+
+. replace period = "average of the markers" + "`post_list'" if term == "avgpost"
+(24 real changes made)
+
+. replace period = "pooled: group x" + "`post_list'" + " vs `p2'-`cohort_year'" if term == "pooled"
+(24 real changes made)
+
+. gen str40 on_chart = "table only"
+
+. replace on_chart = "solid dot" if version == "stay" & yearly & shown & !reference
+(30 real changes made)
+
+. replace on_chart = "hollow square" if version == "closed" & yearly & shown & !reference
+(30 real changes made)
+
+. replace on_chart = "gray diamond (reference)" if version == "stay" & reference
+(6 real changes made)
+
+. replace on_chart = "same diamond (reference)" if version == "closed" & reference
+(6 real changes made)
+
+. replace on_chart = "printed in the panel" if inlist(version, "stay", "closed") & inlist(term, "pooled", "avgpost")
+(24 real changes made)
+
+. gen byte in_figure = inlist(on_chart, "solid dot", "hollow square", "gray diamond (reference)", "printed in the panel"
+> )
+
+. gen str120 note = ""
+(216 missing values generated)
+
+. replace note = "No annual file" if no_file
+(24 real changes made)
+
+. replace note = "No rows in this file for this outcome (not estimable)" if missing(b) & yearly & !no_file
+(0 real changes made)
+
+. replace note = "Fewer than `min_n' firms of a group in this year or in `cohort_year': left empty" ///
+>     if !shown & !missing(b) & yearly
+(0 real changes made)
+
+. replace note = "Average of the markers after `cohort_year', against `cohort_year' only; table only" if term == "avgpos
+> t"
+(24 real changes made)
+
+. replace note = "Average of the markers after `cohort_year', against `cohort_year' only; printed in the panel" ///
+>     if term == "avgpost" & in_figure
+(12 real changes made)
+
+. * structural checks
+. assert lo <= b + 1e-9 & b <= hi + 1e-9 if !missing(lo)
+
+. assert b == 0 if reference
+
+. assert n_g1 <= firms_g1 & n_g0 <= firms_g0 if !missing(n_g1)
+
+. assert cl_g1 == 0 & cl_g0 == 0 if inlist(version, "stay", "infile") & !missing(cl_g1)
+
+. assert cl_g1 == 0 & cl_g0 == 0 if yearly & year <= `cohort_year' & !missing(cl_g1)
+
+. gen byte vorder = cond(version == "closed", 1, cond(version == "stay", 2, cond(version == "infile", 3, 4)))
+
+. gen int torder = cond(yearly, year, cond(term == "avgpost", 9001, 9002))
+
+. sort gi vorder outcome_id torder
+
+. rename (cl_g1 cl_g0) (closed_g1 closed_g0)
+
+. order grouping grouping_label version version_label outcome_id outcome_label term period year reference ///
+>     in_figure on_chart shown b se df_r p lo hi clear n_g1 n_g0 closed_g1 closed_g0 ref_g1 ref_g0 ///
+>     firms_g1 firms_g0 rows closed_rows firms singletons before_p note
+
+. format b se lo hi %9.4f
+
+. format p before_p %6.4f
+
+. format df_r rows closed_rows firms singletons n_g* closed_g* ref_g* firms_g* %9.0f
+
+. export delimited grouping-note using "tables/`fname'.csv", datafmt replace
+file tables/04_all_firms_output_jobs.csv saved
+
+. list grouping version outcome_id term b lo hi clear n_g1 n_g0 closed_g1 closed_g0 if inlist(version, "closed", "stay")
+>  ///
+>     & (yearly | term == "pooled"), noobs sepby(grouping version outcome_id) abbreviate(24)
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      exp |  closed |          1 |   2016 |        . |        . |       . |     . |    . |    . |         . |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         .                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      exp |  closed |          1 |   2017 | -17.2313 | -27.7130 | -6.7495 |     1 |  346 | 1046 |         0 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         0                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      exp |  closed |          1 |   2018 |  -9.9429 | -19.2686 | -0.6171 |     1 |  401 | 1198 |         0 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         0                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      exp |  closed |          1 |   2019 |   0.0000 |        . |       . |     . |  401 | 1198 |         0 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         0                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      exp |  closed |          1 |   2020 |   4.2077 |  -7.5742 | 15.9895 |     0 |  401 | 1198 |        80 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                       206                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      exp |  closed |          1 |   2021 |   3.3942 |  -9.5359 | 16.3243 |     0 |  401 | 1198 |       126 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                       300                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      exp |  closed |          1 |   2022 |   3.5522 |  -9.9712 | 17.0756 |     0 |  401 | 1198 |       158 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                       392                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      exp |  closed |          1 | pooled |  12.3119 |   1.0435 | 23.5804 |     1 |    . |    . |         . |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         .                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      exp |  closed |          2 |   2016 |        . |        . |       . |     . |    . |    . |         . |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         .                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      exp |  closed |          2 |   2017 |   6.2447 |  -2.4526 | 14.9419 |     0 |  346 | 1046 |         0 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         0                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      exp |  closed |          2 |   2018 |   7.9494 |   0.7199 | 15.1789 |     1 |  401 | 1198 |         0 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         0                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      exp |  closed |          2 |   2019 |   0.0000 |        . |       . |     . |  401 | 1198 |         0 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         0                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      exp |  closed |          2 |   2020 |   5.4185 |  -5.5726 | 16.4096 |     0 |  401 | 1198 |        80 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                       206                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      exp |  closed |          2 |   2021 |  10.6245 |  -1.8470 | 23.0959 |     0 |  401 | 1198 |       126 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                       300                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      exp |  closed |          2 |   2022 |   6.5279 |  -6.2429 | 19.2986 |     0 |  401 | 1196 |       158 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                       392                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      exp |  closed |          2 | pooled |   2.8783 |  -7.5245 | 13.2811 |     0 |    . |    . |         . |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         .                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      exp |    stay |          1 |   2016 |        . |        . |       . |     . |    . |    . |         . |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         .                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      exp |    stay |          1 |   2017 | -16.9327 | -29.7922 | -4.0732 |     1 |  220 |  725 |         0 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         0                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      exp |    stay |          1 |   2018 | -10.9653 | -22.3338 |  0.4032 |     0 |  243 |  801 |         0 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         0                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      exp |    stay |          1 |   2019 |   0.0000 |        . |       . |     . |  243 |  801 |         0 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         0                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      exp |    stay |          1 |   2020 |   2.4601 |  -8.3401 | 13.2603 |     0 |  243 |  801 |         0 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         0                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      exp |    stay |          1 |   2021 |   3.7514 |  -8.7975 | 16.3004 |     0 |  243 |  801 |         0 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         0                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      exp |    stay |          1 |   2022 |   4.5447 |  -8.9455 | 18.0348 |     0 |  243 |  801 |         0 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         0                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      exp |    stay |          1 | pooled |  12.5581 |   2.1311 | 22.9851 |     1 |    . |    . |         . |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         .                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      exp |    stay |          2 |   2016 |        . |        . |       . |     . |    . |    . |         . |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         .                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      exp |    stay |          2 |   2017 |   7.7001 |  -2.4029 | 17.8030 |     0 |  220 |  725 |         0 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         0                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      exp |    stay |          2 |   2018 |   8.7718 |   0.0025 | 17.5411 |     1 |  243 |  801 |         0 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         0                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      exp |    stay |          2 |   2019 |   0.0000 |        . |       . |     . |  243 |  801 |         0 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         0                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      exp |    stay |          2 |   2020 |   5.5254 |  -2.7529 | 13.8038 |     0 |  243 |  801 |         0 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         0                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      exp |    stay |          2 |   2021 |  11.7954 |   1.7217 | 21.8692 |     1 |  243 |  801 |         0 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         0                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      exp |    stay |          2 |   2022 |   7.9246 |  -2.4093 | 18.2585 |     0 |  243 |  799 |         0 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         0                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      exp |    stay |          2 | pooled |   3.0192 |  -4.7352 | 10.7735 |     0 |    . |    . |         . |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         .                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      imp |  closed |          1 |   2016 |        . |        . |       . |     . |    . |    . |         . |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         .                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      imp |  closed |          1 |   2017 | -13.4365 | -21.8413 | -5.0316 |     1 | 1142 |  832 |         0 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         0                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      imp |  closed |          1 |   2018 |  -4.3916 | -11.3233 |  2.5400 |     0 | 1328 |  933 |         0 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         0                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      imp |  closed |          1 |   2019 |   0.0000 |        . |       . |     . | 1328 |  933 |         0 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         0                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      imp |  closed |          1 |   2020 |  -1.6221 | -11.2071 |  7.9629 |     0 | 1328 |  933 |       235 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                       156                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      imp |  closed |          1 |   2021 |  -7.3021 | -17.9937 |  3.3896 |     0 | 1328 |  933 |       353 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                       239                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      imp |  closed |          1 |   2022 | -15.0567 | -25.8088 | -4.3046 |     1 | 1328 |  933 |       480 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                       297                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      imp |  closed |          1 | pooled |  -2.4809 | -11.9250 |  6.9633 |     0 |    . |    . |         . |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         .                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      imp |  closed |          2 |   2016 |        . |        . |       . |     . |    . |    . |         . |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         .                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      imp |  closed |          2 |   2017 |  -0.5612 |  -6.7161 |  5.5938 |     0 | 1142 |  832 |         0 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         0                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      imp |  closed |          2 |   2018 |  -3.9743 |  -8.9819 |  1.0333 |     0 | 1328 |  933 |         0 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         0                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      imp |  closed |          2 |   2019 |   0.0000 |        . |       . |     . | 1328 |  933 |         0 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         0                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      imp |  closed |          2 |   2020 |   2.8844 |  -5.9237 | 11.6926 |     0 | 1328 |  933 |       235 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                       156                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      imp |  closed |          2 |   2021 |  12.9879 |   3.4932 | 22.4826 |     1 | 1328 |  933 |       353 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                       239                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      imp |  closed |          2 |   2022 |   1.7590 |  -7.8639 | 11.3819 |     0 | 1328 |  931 |       480 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                       297                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      imp |  closed |          2 | pooled |   7.4469 |  -0.9894 | 15.8832 |     0 |    . |    . |         . |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         .                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      imp |    stay |          1 |   2016 |        . |        . |       . |     . |    . |    . |         . |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         .                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      imp |    stay |          1 |   2017 |  -5.8427 | -15.9628 |  4.2773 |     0 |  756 |  587 |         0 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         0                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      imp |    stay |          1 |   2018 |  -1.6976 | -10.3310 |  6.9358 |     0 |  847 |  634 |         0 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         0                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      imp |    stay |          1 |   2019 |   0.0000 |        . |       . |     . |  847 |  634 |         0 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         0                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      imp |    stay |          1 |   2020 |  -1.5364 | -10.5501 |  7.4774 |     0 |  847 |  634 |         0 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         0                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      imp |    stay |          1 |   2021 | -12.2117 | -22.8584 | -1.5649 |     1 |  847 |  634 |         0 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         0                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      imp |    stay |          1 |   2022 | -17.8157 | -29.3339 | -6.2975 |     1 |  847 |  634 |         0 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         0                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      imp |    stay |          1 | pooled |  -8.1499 | -17.1008 |  0.8010 |     0 |    . |    . |         . |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         .                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      imp |    stay |          2 |   2016 |        . |        . |       . |     . |    . |    . |         . |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         .                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      imp |    stay |          2 |   2017 |  -1.6819 |  -9.0808 |  5.7170 |     0 |  756 |  587 |         0 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         0                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      imp |    stay |          2 |   2018 |  -2.7556 |  -9.1032 |  3.5920 |     0 |  847 |  634 |         0 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         0                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      imp |    stay |          2 |   2019 |   0.0000 |        . |       . |     . |  847 |  634 |         0 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         0                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      imp |    stay |          2 |   2020 |   4.2446 |  -1.5872 | 10.0764 |     0 |  847 |  634 |         0 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         0                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      imp |    stay |          2 |   2021 |  12.6912 |   5.2545 | 20.1279 |     1 |  847 |  634 |         0 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         0                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      imp |    stay |          2 |   2022 |   8.3019 |   0.0080 | 16.5958 |     1 |  847 |  632 |         0 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         0                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      imp |    stay |          2 | pooled |   9.8833 |   3.8609 | 15.9057 |     1 |    . |    . |         . |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         .                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      fdi |  closed |          1 |   2016 |        . |        . |       . |     . |    . |    . |         . |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         .                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      fdi |  closed |          1 |   2017 | -17.2396 | -37.1683 |  2.6892 |     0 |   74 | 1900 |         0 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         0                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      fdi |  closed |          1 |   2018 |  -1.8573 | -16.4007 | 12.6861 |     0 |  126 | 2135 |         0 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         0                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      fdi |  closed |          1 |   2019 |   0.0000 |        . |       . |     . |  126 | 2135 |         0 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         0                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      fdi |  closed |          1 |   2020 | -17.4047 | -35.3457 |  0.5363 |     0 |  126 | 2135 |        36 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                       355                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      fdi |  closed |          1 |   2021 | -12.9990 | -33.7743 |  7.7763 |     0 |  126 | 2135 |        50 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                       542                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      fdi |  closed |          1 |   2022 | -11.4653 | -31.3435 |  8.4128 |     0 |  126 | 2135 |        63 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                       714                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      fdi |  closed |          1 | pooled |  -9.4265 | -27.4864 |  8.6335 |     0 |    . |    . |         . |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         .                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      fdi |  closed |          2 |   2016 |        . |        . |       . |     . |    . |    . |         . |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         .                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      fdi |  closed |          2 |   2017 |  -0.8184 | -18.0155 | 16.3788 |     0 |   74 | 1900 |         0 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         0                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      fdi |  closed |          2 |   2018 |  -5.4818 | -17.1782 |  6.2145 |     0 |  126 | 2135 |         0 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         0                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      fdi |  closed |          2 |   2019 |   0.0000 |        . |       . |     . |  126 | 2135 |         0 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         0                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      fdi |  closed |          2 |   2020 | -18.3175 | -35.6959 | -0.9391 |     1 |  126 | 2135 |        36 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                       355                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      fdi |  closed |          2 |   2021 | -20.1707 | -39.0973 | -1.2441 |     1 |  126 | 2135 |        50 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                       542                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      fdi |  closed |          2 |   2022 | -16.5162 | -36.0059 |  2.9736 |     0 |  126 | 2133 |        63 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                       714                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      fdi |  closed |          2 | pooled | -16.0185 | -33.0849 |  1.0480 |     0 |    . |    . |         . |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         .                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      fdi |    stay |          1 |   2016 |        . |        . |       . |     . |    . |    . |         . |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         .                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      fdi |    stay |          1 |   2017 | -21.0459 | -43.3790 |  1.2871 |     0 |   41 | 1302 |         0 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         0                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      fdi |    stay |          1 |   2018 |   2.5543 | -16.0794 | 21.1880 |     0 |   63 | 1418 |         0 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         0                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      fdi |    stay |          1 |   2019 |   0.0000 |        . |       . |     . |   63 | 1418 |         0 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         0                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      fdi |    stay |          1 |   2020 |   2.0284 | -16.0863 | 20.1431 |     0 |   63 | 1418 |         0 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         0                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      fdi |    stay |          1 |   2021 |   7.8830 | -13.0125 | 28.7784 |     0 |   63 | 1418 |         0 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         0                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      fdi |    stay |          1 |   2022 |   9.0552 | -11.1983 | 29.3087 |     0 |   63 | 1418 |         0 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         0                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      fdi |    stay |          1 | pooled |  10.3518 |  -7.2814 | 27.9850 |     0 |    . |    . |         . |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         .                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      fdi |    stay |          2 |   2016 |        . |        . |       . |     . |    . |    . |         . |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         .                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      fdi |    stay |          2 |   2017 |  -8.6444 | -28.9243 | 11.6354 |     0 |   41 | 1302 |         0 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         0                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      fdi |    stay |          2 |   2018 | -10.7061 | -26.9246 |  5.5123 |     0 |   63 | 1418 |         0 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         0                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      fdi |    stay |          2 |   2019 |   0.0000 |        . |       . |     . |   63 | 1418 |         0 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         0                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      fdi |    stay |          2 |   2020 |  -3.6520 | -18.6278 | 11.3237 |     0 |   63 | 1418 |         0 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         0                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      fdi |    stay |          2 |   2021 |  -4.7528 | -19.0740 |  9.5684 |     0 |   63 | 1418 |         0 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         0                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      fdi |    stay |          2 |   2022 |   3.4687 | -14.4932 | 21.4307 |     0 |   63 | 1416 |         0 |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         0                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+  +------------------------------------------------------------------------------------------------------------+
+  | grouping | version | outcome_id |   term |        b |       lo |      hi | clear | n_g1 | n_g0 | closed_g1 |
+  |      fdi |    stay |          2 | pooled |   4.4897 |  -9.4172 | 18.3966 |     0 |    . |    . |         . |
+  |------------------------------------------------------------------------------------------------------------|
+  |                                                 closed_g0                                                  |
+  |                                                         .                                                  |
+  +------------------------------------------------------------------------------------------------------------+
+
+. list grouping version outcome_id before_p firms_g1 firms_g0 rows closed_rows singletons if term == "pooled", ///
+>     noobs sepby(grouping) abbreviate(24)
+
+  +------------------------------------------------------------------------------------------------------+
+  | grouping    version   outcome_id   before_p   firms_g1   firms_g0    rows   closed_rows   singletons |
+  |------------------------------------------------------------------------------------------------------|
+  |      exp     closed            1     0.0054        401       1198    9387          1262           29 |
+  |      exp     closed            2     0.0931        401       1198    9385          1262           29 |
+  |      exp       stay            1     0.0345        243        801    6165             0           32 |
+  |      exp       stay            2     0.1305        243        801    6163             0           32 |
+  |      exp     infile            1     0.0095        401       1198    8114             0           26 |
+  |      exp     infile            2     0.0883        401       1198    8112             0           26 |
+  |      exp   fyclosed            1     0.0330        402       1202    9416          1276            0 |
+  |      exp   fyclosed            2     0.0456        402       1202    9414          1276            0 |
+  |------------------------------------------------------------------------------------------------------|
+  |      imp     closed            1     0.0060       1328        933   13279          1760           29 |
+  |      imp     closed            2     0.2178       1328        933   13277          1760           29 |
+  |      imp       stay            1     0.4871        847        634    8748             0           22 |
+  |      imp       stay            2     0.6912        847        634    8746             0           22 |
+  |      imp     infile            1     0.0032       1328        933   11512             0           22 |
+  |      imp     infile            2     0.2434       1328        933   11510             0           22 |
+  |      imp   fyclosed            1     0.0000       1329        937   13308          1774            0 |
+  |      imp   fyclosed            2     0.0050       1329        937   13306          1774            0 |
+  |------------------------------------------------------------------------------------------------------|
+  |      fdi     closed            1     0.1623        126       2135   13279          1760           29 |
+  |      fdi     closed            2     0.6295        126       2135   13277          1760           29 |
+  |      fdi       stay            1     0.0479         63       1418    8748             0           22 |
+  |      fdi       stay            2     0.4056         63       1418    8746             0           22 |
+  |      fdi     infile            1     0.1287        126       2135   11512             0           22 |
+  |      fdi     infile            2     0.6097        126       2135   11510             0           22 |
+  |      fdi   fyclosed            1     0.3567        127       2139   13308          1774            0 |
+  |      fdi   fyclosed            2     0.9445        127       2139   13306          1774            0 |
+  +------------------------------------------------------------------------------------------------------+
+
+. tempfile ctsrc
+
+. save `ctsrc'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.000009 saved as .dta format
+
+. 
+. * Totals (table only): each group's total output and workers in each file as % of the same
+. * firms' `cohort_year' total. "closed": every sample firm with a known level that year, closed
+. * firms counted as 0; "stay": stayers only. Same rows as the outcomes above (y not missing).
+. use `evdata', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. tempfile tot
+
+. local first 1
+
+. foreach x in all exp imp fdi {
+  2.     foreach v in closed stay {
+  3.         forvalues k = 1/2 {
+  4.             preserve
+  5.             keep if !missing(y`k')
+  6.             if "`v'" == "stay" keep if stayer
+  7.             if "`x'" == "all" gen byte grp = 9
+  8.             else {
+  9.                 gen byte grp = grp_main_`x'
+ 10.                 drop if missing(grp)               // left out: no known answer
+ 11.             }
+ 12.             gen byte one = 1
+ 13.             collapse (sum) total_year = lev`k' total_base = base`k' firms = one firms_closed = closed, by(grp year)
+ 14.             gen str8 grouping = "`x'"
+ 15.             gen str8 version = "`v'"
+ 16.             gen byte outcome_id = `k'
+ 17.             if !`first' append using `tot'
+ 18.             save `tot', replace
+ 19.             local first 0
+ 20.             restore
+ 21.         }
+ 22.     }
+ 23. }
+(0 observations deleted)
+(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.00000a not found)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.00000a saved as .dta format
+(2 observations deleted)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.00000a saved as .dta format
+(0 observations deleted)
+(4,538 observations deleted)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.00000a saved as .dta format
+(2 observations deleted)
+(4,538 observations deleted)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.00000a saved as .dta format
+(0 observations deleted)
+(3,892 missing values generated)
+(3,892 observations deleted)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.00000a saved as .dta format
+(2 observations deleted)
+(3,892 missing values generated)
+(3,892 observations deleted)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.00000a saved as .dta format
+(0 observations deleted)
+(4,538 observations deleted)
+(2,573 missing values generated)
+(2,573 observations deleted)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.00000a saved as .dta format
+(2 observations deleted)
+(4,538 observations deleted)
+(2,573 missing values generated)
+(2,573 observations deleted)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.00000a saved as .dta format
+(0 observations deleted)
+(0 observations deleted)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.00000a saved as .dta format
+(2 observations deleted)
+(0 observations deleted)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.00000a saved as .dta format
+(0 observations deleted)
+(4,538 observations deleted)
+(0 observations deleted)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.00000a saved as .dta format
+(2 observations deleted)
+(4,538 observations deleted)
+(0 observations deleted)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.00000a saved as .dta format
+(0 observations deleted)
+(0 observations deleted)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.00000a saved as .dta format
+(2 observations deleted)
+(0 observations deleted)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.00000a saved as .dta format
+(0 observations deleted)
+(4,538 observations deleted)
+(0 observations deleted)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.00000a saved as .dta format
+(2 observations deleted)
+(4,538 observations deleted)
+(0 observations deleted)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.00000a saved as .dta format
+
+. use `tot', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. gen double pct_of_base = 100 * total_year / total_base
+
+. assert abs(pct_of_base - 100) < 1e-9 if year == `cohort_year'
+
+. assert firms_closed == 0 if version == "stay" | year <= `cohort_year'
+
+. gen str40 group_label = cond(grp == 9, "All sample firms", cond(grp == 1, "In the group", "Other firms"))
+
+. gen str40 outcome_label = cond(outcome_id == 1, "Output (`out_prices')", "Workers")
+
+. gen str80 version_label = cond(version == "closed", "All firms; left the files = closed (0)", ///
+>     "Stayers (in every file `f1'-`f3')")
+
+. gen byte gorder = 1*(grouping == "all") + 2*(grouping == "exp") + 3*(grouping == "imp") + 4*(grouping == "fdi")
+
+. gen byte sorder = 1*(grp == 9) + 2*(grp == 1) + 3*(grp == 0)
+
+. gen byte vorder = cond(version == "closed", 1, 2)
+
+. sort gorder outcome_id sorder vorder year
+
+. order grouping group_label outcome_id outcome_label version version_label year pct_of_base firms firms_closed ///
+>     total_year total_base
+
+. keep grouping-total_base gorder sorder vorder
+
+. format pct_of_base %8.2f
+
+. format firms firms_closed %9.0f
+
+. format total_year total_base %20.2f
+
+. export delimited grouping-total_base using "tables/`fname'_totals.csv", datafmt replace
+file tables/04_all_firms_output_jobs_totals.csv saved
+
+. list grouping group_label outcome_id version pct_of_base firms firms_closed if year == `f3', ///
+>     noobs sepby(grouping outcome_id) abbreviate(24)
+
+  +-----------------------------------------------------------------------------------------+
+  | grouping        group_label   outcome_id   version   pct_of_base   firms   firms_closed |
+  |-----------------------------------------------------------------------------------------|
+  |      all   All sample firms            1    closed         67.58    2266            782 |
+  |      all   All sample firms            1      stay        124.23    1484              0 |
+  |-----------------------------------------------------------------------------------------|
+  |      all   All sample firms            2    closed         59.95    2264            782 |
+  |      all   All sample firms            2      stay        106.02    1482              0 |
+  |-----------------------------------------------------------------------------------------|
+  |      exp       In the group            1    closed         89.32     402            159 |
+  |      exp       In the group            1      stay        146.27     243              0 |
+  |      exp        Other firms            1    closed        112.50    1202            396 |
+  |      exp        Other firms            1      stay        171.98     806              0 |
+  |-----------------------------------------------------------------------------------------|
+  |      exp       In the group            2    closed         48.15     402            159 |
+  |      exp       In the group            2      stay         98.10     243              0 |
+  |      exp        Other firms            2    closed         71.71    1200            396 |
+  |      exp        Other firms            2      stay        119.56     804              0 |
+  |-----------------------------------------------------------------------------------------|
+  |      imp       In the group            1    closed         59.59    1329            481 |
+  |      imp       In the group            1      stay        105.19     848              0 |
+  |      imp        Other firms            1    closed        115.95     937            301 |
+  |      imp        Other firms            1      stay        284.43     636              0 |
+  |-----------------------------------------------------------------------------------------|
+  |      imp       In the group            2    closed         57.82    1329            481 |
+  |      imp       In the group            2      stay        100.02     848              0 |
+  |      imp        Other firms            2    closed         67.59     935            301 |
+  |      imp        Other firms            2      stay        130.02     634              0 |
+  |-----------------------------------------------------------------------------------------|
+  |      fdi       In the group            1    closed         28.19     127             64 |
+  |      fdi       In the group            1      stay         83.31      63              0 |
+  |      fdi        Other firms            1    closed         78.33    2139            718 |
+  |      fdi        Other firms            1      stay        130.53    1421              0 |
+  |-----------------------------------------------------------------------------------------|
+  |      fdi       In the group            2    closed         31.59     127             64 |
+  |      fdi       In the group            2      stay         85.82      63              0 |
+  |      fdi        Other firms            2    closed         66.13    2137            718 |
+  |      fdi        Other firms            2      stay        108.69    1419              0 |
+  +-----------------------------------------------------------------------------------------+
+
+. tempfile totsrc
+
+. save `totsrc'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.00000r saved as .dta format
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 6/8: numbers for the notes and panel texts, read from the table (never typed)"
+Step 6/8: numbers for the notes and panel texts, read from the table (never typed)
+
+. *---------------------------------------------------------------------------
+. use `ctsrc', clear
+
+. local olab1 "output"
+
+. local olab2 "workers"
+
+. local glab1 "exporters'"
+
+. local glab2 "importers'"
+
+. local glab3 "foreign-owned firms'"
+
+. local post_first : word 1 of `post_list'
+
+. local post_last  : word `npost' of `post_list'
+
+. local post_rng = "`post_first'–" + substr("`post_last'", 3, 2)
+
+. local pool_rng = "`p2'–" + substr("`cohort_year'", 3, 2)
+
+. * markers before COVID clearly away from 0 (either drawn version): flagged in the panel
+. * ("Already apart before COVID"; there the pooled term carries a change that started earlier)
+. forvalues g = 1/3 {
+  2.     forvalues k = 1/2 {
+  3.         quietly count if gi == `g' & outcome_id == `k' & inlist(version, "stay", "closed") & yearly ///
+>             & year < `cohort_year' & clear == 1
+  4.         local flag_`g'_`k' = r(N) > 0
+  5.     }
+  6. }
+
+. local n_apart 0
+
+. forvalues g = 1/3 {
+  2.     forvalues k = 1/2 {
+  3.         local n_apart = `n_apart' + `flag_`g'_`k''
+  4.     }
+  5. }
+
+. display "   drawn panels already apart before COVID: `n_apart'"
+   drawn panels already apart before COVID: 3
+
+. local n_inc_s  = strtrim(string(`n_inc', "%9.0fc"))
+
+. local n_stay_s = strtrim(string(`n_stay', "%9.0fc"))
+
+. local n_left_s = strtrim(string(`n_left', "%9.0fc"))
+
+. * the pooled terms per panel, whole points, with their 95% intervals
+. * two lines per panel (text size 1.85, a little under vsmall, so a line with both versions fits
+. * the panel), whole points with their 95% intervals, as in R10-03 (first number = the
+. * firms in every file, the dots; "what-if" = leavers counted as closed, the squares):
+. *   line 1 = average of the markers after COVID, against `cohort_year' alone
+. *   line 2 = the pooled term (Bu Deasy's x Post2020), against `p2'-`cohort_year' together
+. *   line 3 = "Already apart before COVID" where a drawn marker before `cohort_year' is clear
+. forvalues g = 1/3 {
+  2.     forvalues k = 1/2 {
+  3.         foreach tm in avgpost pooled {
+  4.             foreach v in stay closed {
+  5.                 quietly summarize b if gi == `g' & outcome_id == `k' & version == "`v'" & term == "`tm'"
+  6.                 local pv = r(mean)
+  7.                 quietly summarize lo if gi == `g' & outcome_id == `k' & version == "`v'" & term == "`tm'"
+  8.                 local pl = r(mean)
+  9.                 quietly summarize hi if gi == `g' & outcome_id == `k' & version == "`v'" & term == "`tm'"
+ 10.                 local ph = r(mean)
+ 11.                 local s1 = cond(round(`pv') > 0, "+", "") + string(round(`pv'), "%9.0f")
+ 12.                 local s2 = cond(round(`pl') > 0, "+", "") + string(round(`pl'), "%9.0f")
+ 13.                 local s3 = cond(round(`ph') > 0, "+", "") + string(round(`ph'), "%9.0f")
+ 14.                 local v_`v' "`s1' (`s2' to `s3')"
+ 15.             }
+ 16.             local v_`tm' "`v_stay'; what-if `v_closed'"
+ 17.         }
+ 18.         local ptxt1_`g'_`k' "`post_rng' vs `cohort_year': `v_avgpost'"
+ 19.         local ptxt2_`g'_`k' "`post_rng' vs `pool_rng': `v_pooled'"
+ 20.         local ptxt3_`g'_`k' = cond(`flag_`g'_`k'', "Already apart before COVID", "")
+ 21.     }
+ 22. }
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 7/8: dot-and-whisker panels: 3 groups x 2 outcomes, two ends per year, one shared scale"
+Step 7/8: dot-and-whisker panels: 3 groups x 2 outcomes, two ends per year, one shared scale
+
+. *---------------------------------------------------------------------------
+. keep if inlist(version, "closed", "stay") & yearly & !no_file
+(144 observations deleted)
+
+. gen byte panel = 2 * (gi - 1) + outcome_id
+
+. label define panel 1 "(a) Exporters: output" 2 "(b) Exporters: workers" ///
+>     3 "(c) Importers: output" 4 "(d) Importers: workers" ///
+>     5 "(e) Foreign-owned: output" 6 "(f) Foreign-owned: workers"
+
+. label values panel panel
+
+. * marker sets: stayers just left of the year, leavers-closed just right; the reference once
+. gen double xs = year - 0.15 if version == "stay" & shown & !reference
+(42 missing values generated)
+
+. gen double ys = b           if version == "stay" & shown & !reference
+(42 missing values generated)
+
+. gen double ls = lo          if version == "stay" & shown & !reference
+(42 missing values generated)
+
+. gen double hs = hi          if version == "stay" & shown & !reference
+(42 missing values generated)
+
+. gen double xa = year + 0.15 if version == "closed" & shown & !reference
+(42 missing values generated)
+
+. gen double ya = b           if version == "closed" & shown & !reference
+(42 missing values generated)
+
+. gen double la = lo          if version == "closed" & shown & !reference
+(42 missing values generated)
+
+. gen double ha = hi          if version == "closed" & shown & !reference
+(42 missing values generated)
+
+. gen double xr = year        if version == "stay" & reference
+(66 missing values generated)
+
+. gen double yr = 0           if version == "stay" & reference
+(66 missing values generated)
+
+. * one shared y scale: a round step that grows with the numbers; 0 always inside
+. egen double ymn = rowmin(ls la)
+(12 missing values generated)
+
+. egen double ymx = rowmax(hs ha)
+(12 missing values generated)
+
+. quietly summarize ymn
+
+. local ymin = min(r(min), 0)
+
+. quietly summarize ymx
+
+. local ymax = max(r(max), 0)
+
+. local rng = `ymax' - `ymin'
+
+. local step = 10^floor(log10(`rng'))
+
+. if `rng'/`step' < 2       local step = `step'/5
+
+. else if `rng'/`step' < 5  local step = `step'/2
+
+. local ybot = `step' * floor(`ymin'/`step')
+
+. local ytop = `step' * ceil(`ymax'/`step')
+
+. local ytx1 = `ytop' + 0.52 * (`ytop' - `ybot')          // three text lines above the markers
+
+. local ytx2 = `ytop' + 0.33 * (`ytop' - `ybot')
+
+. local ytx3 = `ytop' + 0.14 * (`ytop' - `ybot')
+
+. local yroof = `ytop' + 0.58 * (`ytop' - `ybot')
+
+. display "   y from `ybot' to `ytop' by `step'"
+   y from -50 to 30 by 10
+
+. * labelled every second step, always through 0; faint grid at every step
+. local ylab "0"
+
+. forvalues m = 1/20 {
+  2.     if -2 * `m' * `step' >= `ybot' local ylab "`=-2 * `m' * `step'' `ylab'"
+  3.     if  2 * `m' * `step' <= `ytop' local ylab "`ylab' `=2 * `m' * `step''"
+  4. }
+
+. * per panel: the gray no-file band, the 0 line, the COVID line and the two pooled-term texts
+. local xl = `xfirst' - 0.5
+
+. local xr2 = `f3' + 0.5
+
+. local n0 = _N
+
+. set obs `=_N + 6'
+Number of observations (_N) was 72, now 78.
+
+. foreach v in bx by0 by1 zy zx0 zx1 cx cy0 cy1 tx ty1 ty2 ty3 {
+  2.     gen double `v' = .
+  3. }
+(78 missing values generated)
+(78 missing values generated)
+(78 missing values generated)
+(78 missing values generated)
+(78 missing values generated)
+(78 missing values generated)
+(78 missing values generated)
+(78 missing values generated)
+(78 missing values generated)
+(78 missing values generated)
+(78 missing values generated)
+(78 missing values generated)
+(78 missing values generated)
+
+. gen str80 ttx1 = ""
+(78 missing values generated)
+
+. gen str80 ttx2 = ""
+(78 missing values generated)
+
+. gen str60 ttx3 = ""
+(78 missing values generated)
+
+. local nf1 : word 1 of `nofile'
+
+. forvalues pp = 1/6 {
+  2.     local r = `n0' + `pp'
+  3.     local g = ceil(`pp' / 2)
+  4.     local k = `pp' - 2 * (`g' - 1)
+  5.     quietly replace panel = `pp' in `r'
+  6.     if "`nf1'" != "" {
+  7.         quietly replace bx  = `nf1' in `r'
+  8.         quietly replace by0 = `ybot' in `r'
+  9.         quietly replace by1 = `ytop' in `r'
+ 10.     }
+ 11.     quietly replace zy  = 0 in `r'
+ 12.     quietly replace zx0 = `xl' in `r'
+ 13.     quietly replace zx1 = `xr2' in `r'
+ 14.     quietly replace cx  = `cohort_year' + 0.5 in `r'
+ 15.     quietly replace cy0 = `ybot' in `r'
+ 16.     quietly replace cy1 = `ytop' in `r'
+ 17.     quietly replace tx  = `xl' + 0.05 in `r'
+ 18.     quietly replace ty1 = `ytx1' in `r'
+ 19.     quietly replace ty2 = `ytx2' in `r'
+ 20.     quietly replace ty3 = `ytx3' in `r'
+ 21.     quietly replace ttx1 = "`ptxt1_`g'_`k''" in `r'
+ 22.     quietly replace ttx2 = "`ptxt2_`g'_`k''" in `r'
+ 23.     quietly replace ttx3 = "`ptxt3_`g'_`k''" in `r'
+ 24. }
+
+. sort panel
+
+. * x labels: every calendar year of the axis, two digits (as R10-03)
+. local xlab ""
+
+. forvalues y = `xfirst'/`f3' {
+  2.     local xlab `"`xlab' `y' "`=substr("`y'", 3, 2)'""'
+  3. }
+
+. * Notes: one text, wrapped here into lines of at most 102 characters (PDF text runs wider than the PNG)
+. local npre1 = `: word count `pre_list'' + 1          // files before COVID incl. the reference
+
+. local aparttxt ""
+
+. if `n_apart' > 0 local aparttxt "Already apart before COVID: the group was already moving away from similar firms, so 
+> the `pool_rng' number includes that earlier change and does not measure COVID: read the `cohort_year' number."
+
+. local ntext "Notes: Firms = `n_inc_s' firms in the `cohort_year' file and in `p2' or `p1', grouped once by their `pool
+> _rng' answers. Change since `cohort_year' = 200 × (year − `cohort_year') ÷ (year + `cohort_year'): −200 = fell to zero
+> ; small changes ≈ ordinary % changes. Marker = group minus similar firms (same industry, province), % points; line = 9
+> 5% interval, crossing 0 = no clear gap. Dots = the `n_stay_s' firms in every file `f1'–`f3' (R10-03's firms; R10-03 us
+> es logs). Squares = WHAT-IF, not a finding: the `n_left_s' firms missing from every later file counted as closed (−200
+> ); no file records closures, and the true gap need not lie between dots and squares. Firm links are fictional in the d
+> evelopment data: who left, and every square, means nothing here. Printed (first = dots): `post_rng' vs `cohort_year' =
+>  average of the markers after COVID; `post_rng' vs `pool_rng' = Bu Deasy's ×~Post2020. `aparttxt' Current prices. Asso
+> ciation, not the effect of COVID."
+
+. local notelines ""
+
+. local line ""
+
+. foreach w of local ntext {
+  2.     if ustrlen("`line' `w'") > 102 & "`line'" != "" {
+  3.         local notelines `"`notelines' "`line'""'
+  4.         local line "`w'"
+  5.     }
+  6.     else local line = strtrim("`line' `w'")
+  7. }
+
+. local notelines `"`notelines' "`line'""'
+
+. * "~" keeps a symbol with its words on one line; it prints as a space
+. local notelines : subinstr local notelines "~" " ", all
+
+. display `"   note lines: `notelines'"'
+   note lines:  "Notes: Firms = 2,266 firms in the 2019 file and in 2017 or 2018, grouped once by their 2017–19" "answer
+> s. Change since 2019 = 200 × (year − 2019) ÷ (year + 2019): −200 = fell to zero; small changes ≈" "ordinary % changes.
+>  Marker = group minus similar firms (same industry, province), % points; line = 95%" "interval, crossing 0 = no clear 
+> gap. Dots = the 1,484 firms in every file 2020–2022 (R10-03's firms;" "R10-03 uses logs). Squares = WHAT-IF, not a fin
+> ding: the 782 firms missing from every later file" "counted as closed (−200); no file records closures, and the true g
+> ap need not lie between dots and" "squares. Firm links are fictional in the development data: who left, and every squa
+> re, means nothing" "here. Printed (first = dots): 2020–22 vs 2019 = average of the markers after COVID; 2020–22 vs 201
+> 7–19" "= Bu Deasy's × Post2020. Already apart before COVID: the group was already moving away from similar" "firms, so
+>  the 2017–19 number includes that earlier change and does not measure COVID: read the 2019" "number. Current prices. A
+> ssociation, not the effect of COVID."
+
+. local nfkey ""
+
+. local f3rng = "`f1'–" + substr("`f3'", 3, 2)
+
+. if "`nf1'" != "" local nfkey `"1 "No annual file (`nf1')""'
+
+. 
+. * Stata draws markers about twice as large in the PNG as in the PDF, so each file gets its own
+. * marker size (same data, same layout)
+. foreach out in png pdf {
+  2.     local msz = cond("`out'" == "png", "vsmall", "small")
+  3.     twoway (rbar by0 by1 bx, barwidth(0.8) fcolor(gs14) lcolor(gs14) lwidth(none)) ///
+>         (rspike zx0 zx1 zy, horizontal lcolor(gs8) lwidth(thin)) ///
+>         (rspike cy0 cy1 cx, lcolor(gs6) lpattern(dash) lwidth(thin)) ///
+>         (rspike la ha xa, lcolor(gs10) lwidth(thin)) ///
+>         (rspike ls hs xs, lcolor(black) lwidth(medthin)) ///
+>         (scatter ya xa, msymbol(S) mfcolor(white) mlcolor(gs5) mlwidth(medthin) msize(`msz')) ///
+>         (scatter ys xs, msymbol(O) mcolor(black) msize(`msz')) ///
+>         (scatter yr xr, msymbol(D) mcolor(gs8) msize(`msz')) ///
+>         (scatter ty1 tx, msymbol(none) mlabel(ttx1) mlabpos(3) mlabgap(0) mlabsize(1.85) mlabcolor(black)) ///
+>         (scatter ty2 tx, msymbol(none) mlabel(ttx2) mlabpos(3) mlabgap(0) mlabsize(1.85) mlabcolor(black)) ///
+>         (scatter ty3 tx, msymbol(none) mlabel(ttx3) mlabpos(3) mlabgap(0) mlabsize(1.85) mlabcolor(black)), ///
+>         by(panel, cols(2) imargin(small) graphregion(color(white) lcolor(white) ilcolor(white) margin(r+2)) ///
+>             legend(pos(6)) ///
+>             title("Figure R10-04. Output and workers around COVID, internationalised firms:" ///
+>                   "firms in every later file, and a what-if counting every firm that left as closed", ///
+>                   size(small) pos(11) span) ///
+>             note(`notelines' "`srcnote'" "`devnote'", size(vsmall) span linegap(0.6))) ///
+>         subtitle(, pos(11) nobox fcolor(white) lcolor(white) size(small)) ///
+>         yscale(range(`ybot' `yroof') noline) ///
+>         ylabel(`ylab', angle(0) format(%9.0f) noticks tlength(0) labsize(vsmall) grid glcolor(gs15) glwidth(vthin)) //
+> /
+>         ymtick(`ybot'(`step')`ytop', noticks tlength(0) grid glcolor(gs15) glwidth(vthin)) ///
+>         ytitle("Group minus similar firms: change since `cohort_year', % points", size(vsmall)) ///
+>         xscale(range(`xl' `xr2') noline) xlabel(`xlab', noticks tlength(0) labsize(vsmall) nogrid) ///
+>         xtitle("Year of the survey file (`=substr("`xfirst'", 3, 2)' = `xfirst')", size(vsmall)) ///
+>         legend(order(7 "In every file `f3rng' (as Figure R10-03)" 6 "What-if: leavers counted as closed" ///
+>                      5 "95% interval, in every file" 4 "95% interval, what-if" ///
+>                      8 "`cohort_year' = reference (0)" 3 "COVID (from March `covid_first')" ///
+>                      2 "0 = no difference" `nfkey') ///
+>             cols(2) region(lcolor(none)) size(vsmall) symxsize(6) keygap(1) colgap(6) rowgap(0.3)) ///
+>         plotregion(style(none)) xsize(8) ysize(11.5)
+  4.     if "`out'" == "png" graph export "figures/`fname'.png", width(2400) replace
+  5.     else graph export "figures/`fname'.pdf", replace
+  6. }
+file
+    /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r10-covid-resilience-internationalised
+    > /figures/04_all_firms_output_jobs.png saved as PNG format
+file
+    /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r10-covid-resilience-internationalised
+    > /figures/04_all_firms_output_jobs.pdf saved as PDF format
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 8/8: companion tables: every plotted point, the regression tables and the totals"
+Step 8/8: companion tables: every plotted point, the regression tables and the totals
+
+. *---------------------------------------------------------------------------
+. * ==== COMPANION TABLE (pattern for all exhibits) =============================
+. * Owner rule, 28 Sep 2026: every chart gets a table of every plotted point, and
+. * every chart of regression coefficients also gets a regression table, written
+. * by the same do-file (spec: TABLE_BRIEF.md). This step runs AFTER the graph
+. * export, so the chart and the CSV stay byte-identical.
+. *
+. * How to use it in another exhibit file:
+. *   PART 1 (the writer, program ctable_pdf) is copied UNCHANGED.
+. *   PART 2 is the only exhibit-specific part: put the numbers in memory (the
+. *   tempfile saved right after the CSV export, or the CSV itself), build one
+. *   STRING variable per table column, one row per plotted point in chart order
+. *   (years not drawn included, with the reason in a status column), then call
+. *   ctable_pdf. Format numbers with string(x, "%9.1f") etc. so the table shows
+. *   exactly the rounding of the chart labels.
+. *
+. * ctable_pdf strvars using "tables/NN_name_table.pdf",
+. *     title("Table R1-02. ...: every plotted point")    first line, bold
+. *     header("Col 1" "Col 2" ...)       one text per column; "|" = line break
+. *     [right(numlist)]                  columns right-aligned (numbers)
+. *     [norepeat(numlist)]               columns whose repeated text is shown
+. *                                       only on the first row of a run
+. *     [rules(numlist)]                  thin gray line under these data rows
+. *     [notes("line 1" "line 2" ...)]    footer paragraphs (Notes, Source, dev line)
+. *     [subtitle(text)] [fontsize(#)] [perpage(#)] [landscape|portrait]
+. * Landscape is chosen automatically when there are more than 6 columns. Long
+. * tables continue on a new page with the header repeated ("(continued)"); a page
+. * never breaks inside a block whose first column is empty (e.g. an SE row).
+. * --- PART 1: the writer (identical in every file; do not edit) ---------------
+. capture program drop ctable_pdf
+
+. program define ctable_pdf
+  1.     version 17
+  2.     syntax varlist(string) using/, TItle(string) HEADer(string asis) ///
+>         [RIGHT(numlist integer >0) NOREPeat(numlist integer >0) RULES(numlist integer >0) ///
+>          NOTEs(string asis) SUBtitle(string) FONTsize(real 9.5) PERpage(integer 0) ///
+>          LANDscape PORTrait]
+  3.     local nc : word count `varlist'
+  4.     local nh : word count `header'
+  5.     if `nh' != `nc' {
+  6.         display as error "ctable_pdf: `nc' columns but `nh' header texts"
+  7.         exit 198
+  8.     }
+  9.     local orient = cond(`nc' > 6, "landscape", "")
+ 10.     if "`landscape'" != "" local orient "landscape"
+ 11.     if "`portrait'"  != "" local orient ""
+ 12.     * rows per page: a conservative guess for 9-10 pt text (wrapped cells take more)
+.     if `perpage' == 0 local perpage = cond("`orient'" == "landscape", 24, 40)
+ 13.     preserve
+ 14.     quietly {
+ 15.         keep `varlist'
+ 16.         rename (`varlist') (__c#), addnumber      // __c1 __c2 ... in the order given
+ 17.         forvalues j = 1/`nc' {
+ 18.             replace __c`j' = strtrim(__c`j')
+ 19.         }
+ 20.         local N = _N
+ 21.         gen long row = _n
+ 22.         * page chunks: fill up to perpage rows; prefer to end a page at a rule,
+.         * never start a page on a row whose first column is empty
+.         gen int chunk = .
+ 23.         local start 1
+ 24.         local k 0
+ 25.         while `start' <= `N' {
+ 26.             local ++k
+ 27.             local end = min(`start' + `perpage' - 1, `N')
+ 28.             if `end' < `N' {
+ 29.                 local best 0
+ 30.                 foreach r of local rules {
+ 31.                     if `r' >= `start' + floor(`perpage' / 2) & `r' <= `end' & `r' > `best' local best `r'
+ 32.                 }
+ 33.                 if `best' > 0 local end `best'
+ 34.                 else {
+ 35.                     while `end' > `start' & __c1[`end' + 1] == "" {
+ 36.                         local --end
+ 37.                     }
+ 38.                 }
+ 39.             }
+ 40.             replace chunk = `k' in `start'/`end'
+ 41.             local start = `end' + 1
+ 42.         }
+ 43.         local nk `k'
+ 44.         * blank repeated labels inside each page; a column is blanked only while the
+.         * norepeat columns to its left are unchanged too (a new panel shows its series)
+.         gen byte same = _n > 1 & chunk == chunk[_n - 1]
+ 45.         foreach j of local norepeat {
+ 46.             gen strL o`j' = __c`j'
+ 47.             replace same = same & o`j' == o`j'[_n - 1]
+ 48.             replace __c`j' = "" if same
+ 49.             drop o`j'
+ 50.         }
+ 51.         drop same
+ 52.         * column widths (% of the page), from the longest text in each column;
+.         * long text columns are capped so they wrap instead of squeezing numbers
+.         matrix W = J(1, `nc', 0)
+ 53.         local tot 0
+ 54.         forvalues j = 1/`nc' {
+ 55.             gen long L`j' = udstrlen(__c`j')
+ 56.             summarize L`j', meanonly
+ 57.             local w = max(r(max), 3)
+ 58.             local h : word `j' of `header'
+ 59.             local h = subinstr(`"`h'"', "|", " ", .)
+ 60.             foreach hw of local h {
+ 61.                 local w = max(`w', udstrlen(`"`hw'"'))
+ 62.             }
+ 63.             local w = min(`w', 34) + 2          // + 2 = room for the cell margins
+ 64.             matrix W[1, `j'] = `w'
+ 65.             local tot = `tot' + `w'
+ 66.             drop L`j'
+ 67.         }
+ 68.         local used 0
+ 69.         forvalues j = 1/`nc' {
+ 70.             if `j' < `nc' {
+ 71.                 matrix W[1, `j'] = max(floor(100 * W[1, `j'] / `tot'), 3)
+ 72.                 local used = `used' + W[1, `j']
+ 73.             }
+ 74.             else matrix W[1, `j'] = 100 - `used'
+ 75.         }
+ 76.     }
+ 77.     putpdf clear
+ 78.     putpdf begin, pagesize(A4) `orient' font("Times New Roman", `fontsize') ///
+>         margin(left, 0.8in) margin(right, 0.8in) margin(top, 0.5in) margin(bottom, 0.5in)
+ 79.     forvalues k = 1/`nk' {
+ 80.         if `k' > 1 putpdf pagebreak
+ 81.         putpdf paragraph, spacing(after, 4pt)
+ 82.         local tt = cond(`k' == 1, `"`title'"', `"`title' (continued)"')
+ 83.         putpdf text (`"`tt'"'), bold font("Times New Roman", `=`fontsize' + 1.5')
+ 84.         if `k' == 1 & `"`subtitle'"' != "" {
+ 85.             putpdf paragraph, spacing(after, 4pt)
+ 86.             putpdf text (`"`subtitle'"')
+ 87.         }
+ 88.         quietly count if chunk == `k'
+ 89.         local nr = r(N) + 1
+ 90.         quietly putpdf table T`k' = data(__c1-__c`nc') if chunk == `k', varnames border(all, nil) width(W)
+ 91.         forvalues j = 1/`nc' {
+ 92.             * header text; "|" starts a new line inside the cell
+.             local rest : word `j' of `header'
+ 93.             local opt ""
+ 94.             while `"`rest'"' != "" {
+ 95.                 gettoken part rest : rest, parse("|")
+ 96.                 if `"`part'"' == "|" {
+ 97.                     putpdf table T`k'(1, `j') = (""), linebreak append
+ 98.                     continue
+ 99.                 }
+100.                 putpdf table T`k'(1, `j') = (`"`part'"'), valign(bottom) `opt'
+101.                 local opt "append"
+102.             }
+103.             local al = cond(`: list j in right', "right", "left")
+104.             putpdf table T`k'(., `j'), halign(`al') margin(top, 0pt) margin(bottom, 0pt)
+105.         }
+106.         putpdf table T`k'(1, .), border(top, single, black) border(bottom, single, black)
+107.         putpdf table T`k'(`nr', .), border(bottom, single, black)
+108.         foreach r of local rules {
+109.             quietly summarize row if chunk == `k', meanonly
+110.             if `r' >= r(min) & `r' < r(max) {
+111.                 putpdf table T`k'(`=`r' - r(min) + 2', .), border(bottom, single, "A6A6A6")
+112.             }
+113.         }
+114.     }
+115.     local first 1
+116.     foreach n of local notes {
+117.         putpdf paragraph, spacing(before, `=cond(`first', 6, 1)'pt)
+118.         putpdf text (`"`n'"'), font("Times New Roman", `=`fontsize' - 0.5')
+119.         local first 0
+120.     }
+121.     putpdf save `"`using'"', replace
+122.     restore
+123. end
+
+. * --- end of PART 1 ------------------------------------------------------------
+. * --- PART 2: the rows of this exhibit (the only part that changes per file) ---
+. * Source: the tables saved right after the CSV exports (full precision, same
+. * estimation run as the chart).
+. * (1) Points table: one row per point of the chart, panel by panel: firms in every file,
+. *     then leavers closed, left to right (the no-file year included), then the two numbers
+. *     printed in the panel.
+. use `ctsrc', clear
+
+. quietly count if in_figure
+
+. local n_fig = r(N)                     // drawn markers + reference diamonds + printed pooled terms
+
+. keep if inlist(version, "stay", "closed") & (yearly | inlist(term, "pooled", "avgpost"))
+(108 observations deleted)
+
+. gen byte panel = 2 * (gi - 1) + outcome_id
+
+. local pl1 "(a) Exporters: output"
+
+. local pl2 "(b) Exporters: workers"
+
+. local pl3 "(c) Importers: output"
+
+. local pl4 "(d) Importers: workers"
+
+. local pl5 "(e) Foreign-owned: output"
+
+. local pl6 "(f) Foreign-owned: workers"
+
+. gen str60 t_panel = ""
+(108 missing values generated)
+
+. forvalues pp = 1/6 {
+  2.     replace t_panel = "`pl`pp''" if panel == `pp'
+  3. }
+(18 real changes made)
+(18 real changes made)
+(18 real changes made)
+(18 real changes made)
+(18 real changes made)
+(18 real changes made)
+
+. gen byte srow = cond(term == "pooled", 4, cond(term == "avgpost", 2, 0)) + cond(version == "stay", 1, 2)
+
+. gen str70 t_series = ""
+(108 missing values generated)
+
+. replace t_series = "In every file (dot)" if srow == 1
+(42 real changes made)
+
+. replace t_series = "If leavers closed (square, what-if)" if srow == 2
+(42 real changes made)
+
+. replace t_series = "Average vs `cohort_year', in every file (printed)" if srow == 3
+(6 real changes made)
+
+. replace t_series = "Average vs `cohort_year', what-if (printed)" if srow == 4
+(6 real changes made)
+
+. replace t_series = "Pooled, in every file (printed)" if srow == 5
+(6 real changes made)
+
+. replace t_series = "Pooled, what-if (printed)" if srow == 6
+(6 real changes made)
+
+. gen str24 t_pos = cond(yearly, string(year), cond(term == "avgpost", "`post_rng' vs `cohort_year'", "`post_rng' vs `po
+> ol_rng'"))
+
+. * values: markers carry no label on the chart, so one decimal; the printed pooled terms are whole
+. gen str12 t_v  = cond(b > 0.05, "+", "") + string(b, "%9.1f") if yearly & !missing(lo)
+(48 missing values generated)
+
+. gen str12 t_lo = cond(lo > 0.05, "+", "") + string(lo, "%9.1f") if yearly & !missing(lo)
+(48 missing values generated)
+
+. gen str12 t_hi = cond(hi > 0.05, "+", "") + string(hi, "%9.1f") if yearly & !missing(hi)
+(48 missing values generated)
+
+. replace t_v  = cond(round(b) > 0, "+", "") + string(round(b), "%9.0f") if !yearly
+(24 real changes made)
+
+. replace t_lo = cond(round(lo) > 0, "+", "") + string(round(lo), "%9.0f") if !yearly
+(24 real changes made)
+
+. replace t_hi = cond(round(hi) > 0, "+", "") + string(round(hi), "%9.0f") if !yearly
+(24 real changes made)
+
+. replace t_v = "0" if reference
+(12 real changes made)
+
+. gen str12 t_n1 = string(n_g1, "%12.0fc") if !missing(n_g1)
+(36 missing values generated)
+
+. gen str12 t_n0 = string(n_g0, "%12.0fc") if !missing(n_g0)
+(36 missing values generated)
+
+. replace t_n1 = string(firms_g1, "%12.0fc") if !yearly
+(24 real changes made)
+
+. replace t_n0 = string(firms_g0, "%12.0fc") if !yearly
+(24 real changes made)
+
+. gen str24 t_cl = string(closed_g1, "%12.0fc") + " / " + string(closed_g0, "%12.0fc") if yearly & !missing(closed_g1)
+(36 missing values generated)
+
+. replace t_cl = string(closed_rows, "%12.0fc") + " firm-years" if !yearly
+(24 real changes made)
+
+. gen str80 t_status = ""
+(108 missing values generated)
+
+. replace t_status = "drawn: solid dot" if on_chart == "solid dot"
+(30 real changes made)
+
+. replace t_status = "drawn: hollow square" if on_chart == "hollow square"
+(30 real changes made)
+
+. replace t_status = "gray diamond: reference (0 by definition)" if reference & srow == 1
+(6 real changes made)
+
+. replace t_status = "same gray diamond (reference)" if reference & srow == 2
+(6 real changes made)
+
+. replace t_status = "printed, line 1 (whole points)" if term == "avgpost"
+(12 real changes made)
+
+. replace t_status = "printed, line 2 (whole points)" if term == "pooled"
+(12 real changes made)
+
+. replace t_status = "not drawn: no annual file" if no_file
+(12 real changes made)
+
+. * the year with no annual file: one row per panel for both series (keeps two panels and the notes on a page)
+. drop if no_file & srow == 2
+(6 observations deleted)
+
+. * the reference diamond is drawn once per panel: one row for both series
+. drop if reference & srow == 2
+(6 observations deleted)
+
+. replace t_status = "gray diamond: reference (0), both series" if reference
+(6 real changes made)
+
+. replace t_series = "Both series" if no_file
+(6 real changes made)
+
+. replace t_status = "not drawn: no annual file (both series)" if no_file
+(6 real changes made)
+
+. replace t_status = "not drawn: fewer than `min_n' firms in a group" if t_status == "" & !missing(b) & !shown
+(0 real changes made)
+
+. replace t_status = "not drawn: no rows in this file" if t_status == ""
+(0 real changes made)
+
+. assert t_status != ""
+
+. * check: every drawn marker, reference diamond and printed number is in the table once
+. quietly count if in_figure
+
+. assert r(N) == `n_fig'
+
+. sort panel srow torder
+
+. local nrows = _N
+
+. local rl ""
+
+. forvalues i = 1/`=_N - 1' {
+  2.     if panel[`i'] != panel[`i' + 1] local rl "`rl' `i'"
+  3. }
+
+. local ntab : subinstr local ntext "~" " ", all
+
+. ctable_pdf t_panel t_series t_pos t_v t_lo t_hi t_n1 t_n0 t_cl t_status using "tables/`fname'_table.pdf", ///
+>     title("Table R10-04. Output and workers around COVID, firms in every file and the what-if counting leavers as clos
+> ed: every plotted point") ///
+>     subtitle("Group minus similar firms, change since `cohort_year', % points (midpoint). Difference = b of the regres
+> sion table (CSV: full precision). Counted closed = out of every later file, set to 0: an assumption (what-if), not a f
+> inding.") ///
+>     header("Panel" "Series" "Year" "Differ-|ence" "95%|low" "95%|high" "Group|firms" "Other|firms" "Counted closed|gro
+> up / other" "Status") ///
+>     right(4 5 6 7 8 9) norepeat(1 2) rules(`rl') perpage(36) fontsize(7.5) ///
+>     notes("`ntab' `srcnote' `devnote'")     // one paragraph: two panels and the notes fit one page
+successfully created "/Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r10-covid-resilience-i
+> nternationalised/tables/04_all_firms_output_jobs_table.pdf"
+
+. display "table -> tables/`fname'_table.pdf (`nrows' rows; `n_fig' drawn or printed)"
+table -> tables/04_all_firms_output_jobs_table.pdf (96 rows; 90 drawn or printed)
+
+. 
+. * (2) Regression tables (AER style): coefficient on the first line, (standard error)
+. * on the second. The outcome is already in % points, so no % row. One panel per group.
+. *   _regression.pdf : the four models drawn per group (2 outcomes x leavers closed / stayers)
+. *   _checks.pdf     : table-only versions: all firms in their files without 0 rows
+. *                     (R10-03's circles on this scale); leavers closed, firm + year averages only
+. use `ctsrc', clear
+
+. * check: the coefficients are those in the CSV just written (4 decimals there)
+. preserve
+
+. import delimited using "tables/`fname'.csv", clear varnames(1) stringcols(1 3 7)
+(encoding automatically selected: ISO-8859-1)
+(34 vars, 216 obs)
+
+. keep grouping version outcome_id term b
+
+. rename b b_csv
+
+. tempfile csvb
+
+. save `csvb'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.00000t saved as .dta format
+
+. restore
+
+. merge 1:1 grouping version outcome_id term using `csvb', assert(match) nogenerate
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                               216  
+    -----------------------------------------
+
+. assert abs(b - b_csv) <= 0.00005 + 1e-9 if !missing(b)
+
+. assert missing(b_csv) if missing(b)
+
+. drop b_csv
+
+. local ntabs 2
+
+. local cols1 "closed:1 stay:1 closed:2 stay:2"
+
+. local cols2 "infile:1 fyclosed:1 infile:2 fyclosed:2"
+
+. local file1 "`fname'_regression"
+
+. local file2 "`fname'_checks"
+
+. local ttl1 "Table R10-04, regression. Output and workers around COVID, firms in every file and the what-if counting le
+> avers as closed: estimates behind the chart"
+
+. local ttl2 "Table R10-04, checks. Table-only versions: estimates not drawn"
+
+. local hdr1 `""Group × year" "(1)|Output|leavers closed" "(2)|Output|in every file" "(3)|Workers|leavers closed" "(4)|W
+> orkers|in every file""'
+
+. local hdr2 `""Group × year" "(1)|Output|in their files" "(2)|Output|closed, firm + year" "(3)|Workers|in their files" 
+> "(4)|Workers|closed, firm + year""'
+
+. local plab1 "Panel A. Exporters vs other firms"
+
+. local plab2 "Panel B. Importers vs other firms"
+
+. local plab3 "Panel C. Foreign-owned (10%+) vs other firms"
+
+. local pre_eq = subinstr(strtrim("`pre_list'"), " ", ", ", .)
+
+. forvalues tb = 1/`ntabs' {
+  2.     local nc : word count `cols`tb''
+  3.     tempname Q
+  4.     tempfile R
+  5.     local tv ""
+  6.     forvalues c = 1/`nc' {
+  7.         local tv "`tv' t`c'"
+  8.     }
+  9.     postfile `Q' str70 t_lab str24(`tv') using `R', replace
+ 10.     local nterm 0
+ 11.     local rl ""
+ 12.     forvalues g = 1/3 {
+ 13.         local cells ""
+ 14.         forvalues c = 1/`nc' {
+ 15.             local cells `"`cells' ("")"'
+ 16.         }
+ 17.         post `Q' ("`plab`g''") `cells'
+ 18.         local ++nterm
+ 19.         foreach tm in `evyrs' avgpost pooled {
+ 20.             local l1 ""
+ 21.             local l2 ""
+ 22.             forvalues c = 1/`nc' {
+ 23.                 local cs : word `c' of `cols`tb''
+ 24.                 gettoken vv kk : cs, parse(":")
+ 25.                 local kk = substr("`kk'", 2, .)
+ 26.                 quietly summarize b if gi == `g' & version == "`vv'" & outcome_id == `kk' & term == "`tm'", meanonl
+> y
+ 27.                 local bb = r(mean)
+ 28.                 quietly summarize se if gi == `g' & version == "`vv'" & outcome_id == `kk' & term == "`tm'", meanon
+> ly
+ 29.                 local ss = r(mean)
+ 30.                 if "`tm'" == "`cohort_year'" {
+ 31.                     local l1 `"`l1' ("—")"'
+ 32.                 }
+ 33.                 else if missing(`bb') {
+ 34.                     local l1 `"`l1' ("n.a.")"'
+ 35.                     local l2 `"`l2' ("")"'
+ 36.                 }
+ 37.                 else {
+ 38.                     local l1 `"`l1' ("`=string(`bb', "%9.2f")'")"'
+ 39.                     local l2 `"`l2' ("(`=string(`ss', "%9.2f")')")"'
+ 40.                 }
+ 41.             }
+ 42.             if "`tm'" == "`cohort_year'" local lab "`tm' (reference, set to 0)"
+ 43.             else if "`tm'" == "avgpost" local lab "Average `post_rng' (vs `cohort_year')"
+ 44.             else if "`tm'" == "pooled" local lab "Pooled × `post_rng' (vs `pool_rng')"
+ 45.             else local lab "Group × `tm'"
+ 46.             post `Q' ("`lab'") `l1'
+ 47.             local ++nterm
+ 48.             if "`tm'" != "`cohort_year'" {
+ 49.                 post `Q' ("") `l2'
+ 50.                 local ++nterm
+ 51.             }
+ 52.         }
+ 53.         * whole-model rows (the yearly model of each column)
+.         foreach st in before_p rows closed_rows firms firms_g1 {
+ 54.             local ll ""
+ 55.             forvalues c = 1/`nc' {
+ 56.                 local cs : word `c' of `cols`tb''
+ 57.                 gettoken vv kk : cs, parse(":")
+ 58.                 local kk = substr("`kk'", 2, .)
+ 59.                 quietly summarize `st' if gi == `g' & version == "`vv'" & outcome_id == `kk' & term == "avgpost", m
+> eanonly
+ 60.                 if "`st'" == "before_p" local cv = cond(missing(r(mean)), "n.a.", cond(r(mean) < 0.001, "< 0.001", 
+> string(r(mean), "%5.3f")))
+ 61.                 else local cv = string(r(mean), "%12.0fc")
+ 62.                 local ll `"`ll' ("`cv'")"'
+ 63.             }
+ 64.             if "`st'" == "before_p"    local lab "Before-COVID test p (`pre_eq' = 0)"
+ 65.             if "`st'" == "rows"        local lab "Observations (firm-years)"
+ 66.             if "`st'" == "closed_rows" local lab "of which closed (set to −200)"
+ 67.             if "`st'" == "firms"       local lab "Firms (clusters)"
+ 68.             if "`st'" == "firms_g1"    local lab "Firms in the group"
+ 69.             post `Q' ("`lab'") `ll'
+ 70.             local ++nterm
+ 71.         }
+ 72.         local rl "`rl' `nterm'"
+ 73.     }
+ 74.     * design rows, the same for every panel
+.     foreach d in firm indyr provyr yr sample wgt clu {
+ 75.         local ll ""
+ 76.         forvalues c = 1/`nc' {
+ 77.             local cs : word `c' of `cols`tb''
+ 78.             gettoken vv kk : cs, parse(":")
+ 79.             if "`d'" == "firm"   local cv "Yes"
+ 80.             if "`d'" == "indyr"  local cv = cond("`vv'" == "fyclosed", "No", "Yes")
+ 81.             if "`d'" == "provyr" local cv = cond("`vv'" == "fyclosed", "No", "Yes")
+ 82.             if "`d'" == "yr"     local cv = cond("`vv'" == "fyclosed", "Yes", "Inside ind. × year")
+ 83.             if "`d'" == "sample" local cv = cond("`vv'" == "stay", "In every file", cond("`vv'" == "infile", "In th
+> eir files", "All, leavers = 0"))
+ 84.             if "`d'" == "wgt"    local cv "None"
+ 85.             if "`d'" == "clu"    local cv "Firm"
+ 86.             local ll `"`ll' ("`cv'")"'
+ 87.         }
+ 88.         if "`d'" == "firm"   local lab "Firm fixed effects"
+ 89.         if "`d'" == "indyr"  local lab "Industry × year fixed effects"
+ 90.         if "`d'" == "provyr" local lab "Province × year fixed effects"
+ 91.         if "`d'" == "yr"     local lab "Year fixed effects"
+ 92.         if "`d'" == "sample" local lab "Sample"
+ 93.         if "`d'" == "wgt"    local lab "Weights"
+ 94.         if "`d'" == "clu"    local lab "Standard errors clustered by"
+ 95.         post `Q' ("`lab'") `ll'
+ 96.     }
+ 97.     postclose `Q'
+ 98.     preserve
+ 99.     use `R', clear
+100.     local rnote "Notes: Each column is one regression of the change since `cohort_year' on the midpoint scale, in %
+> "
+101.     local rnote "`rnote' (200 × (level − `cohort_year' level) ÷ (level + `cohort_year' level), from −200 to +200), 
+> on the group"
+102.     local rnote "`rnote' times each file from `p2' to `f3' except `cohort_year' (the reference, set to 0), with the
+>  fixed effects listed."
+103.     local rnote "`rnote' Firms: the `n_inc_s' firms of the `cohort_year' file also in the `p2' or `p1' file, groupe
+> d once from their `pool_rng'"
+104.     local rnote "`rnote' answers (in the group if yes in at least half of the known answers; no known answer = left
+>  out)."
+105.     local rnote "`rnote' Leavers closed = ASSUMPTION (a what-if, not a finding): a firm missing from every later fi
+> le counts as closed,"
+106.     local rnote "`rnote' output and workers 0 (−200) from the first file it misses; the files record no closures, a
+> nd the true gap need not"
+107.     local rnote "`rnote' lie between this version and firms in every file. Firm links are fictional in the developm
+> ent data. In every file ="
+108.     local rnote "`rnote' the `n_stay_s' firms in every file `f1'–`f3' (the firms of R10-03). In their files = every
+>  record, no 0 rows."
+109.     local rnote "`rnote' Pooled = the same model with one term, group × every file after `cohort_year' (Bu Deasy's 
+> 'Post2020'),"
+110.     local rnote "`rnote' against `pool_rng' together, its own regression. Average = mean of the `post_rng' markers.
+>  Before-COVID test: joint p that the markers"
+111.     local rnote "`rnote' before `cohort_year' are all 0. Output = value of goods produced, `out_prices'. Singleton 
+> firms dropped by reghdfe. No stars."
+112.     ctable_pdf t_lab `tv' using "tables/`file`tb''.pdf", ///
+>         title("`ttl`tb''") ///
+>         subtitle("Coefficient in % points of the midpoint change since `cohort_year'; (standard error, clustered by fi
+> rm).") ///
+>         header(`hdr`tb'') right(2 3 4 5) rules(`rl') portrait fontsize(9) perpage(48) ///
+>         notes("`rnote'" "`srcnote'" "`devnote'")
+113.     restore
+114.     display "table -> tables/`file`tb''.pdf"
+115. }
+(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.00000u not found)
+successfully created "/Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r10-covid-resilience-i
+> nternationalised/tables/04_all_firms_output_jobs_regression.pdf"
+table -> tables/04_all_firms_output_jobs_regression.pdf
+(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_26882.00000w not found)
+successfully created "/Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r10-covid-resilience-i
+> nternationalised/tables/04_all_firms_output_jobs_checks.pdf"
+table -> tables/04_all_firms_output_jobs_checks.pdf
+
+. 
+. * (3) Totals (table only, not drawn): each group's total as % of the same firms' total in
+. *     `cohort_year', one row per group and version, one column per file.
+. use `totsrc', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep grouping group_label outcome_id version year pct_of_base firms firms_closed gorder sorder vorder
+
+. gen str8 t_y = string(pct_of_base, "%9.1f")
+
+. bysort grouping group_label outcome_id version: egen long nf3 = max(cond(year == `f3', firms, .))
+
+. bysort grouping group_label outcome_id version: egen long cf3 = max(cond(year == `f3', firms_closed, .))
+
+. drop pct_of_base firms firms_closed
+
+. reshape wide t_y, i(grouping group_label outcome_id version) j(year)
+(j = 2017 2018 2019 2020 2021 2022)
+
+Data                               Long   ->   Wide
+-----------------------------------------------------------------------------
+Number of observations              168   ->   28          
+Number of variables                  11   ->   15          
+j variable (6 values)              year   ->   (dropped)
+xij variables:
+                                    t_y   ->   t_y2017 t_y2018 ... t_y2022
+-----------------------------------------------------------------------------
+
+. gen str60 t_panel = cond(gorder == 1, "All sample firms", cond(gorder == 2, "(a) Exporters", ///
+>     cond(gorder == 3, "(b) Importers", "(c) Foreign-owned, 10%+")))
+
+. gen str20 t_out = cond(outcome_id == 1, "Output", "Workers")
+
+. gen str40 t_grp = cond(sorder == 1, "All", cond(sorder == 2, "In the group", "Other firms"))
+
+. gen str40 t_ver = cond(vorder == 1, "Leavers = 0 (lowest possible)", "In every file")
+
+. gen str12 t_nf = string(nf3, "%12.0fc")
+
+. gen str12 t_cf = string(cf3, "%12.0fc")
+
+. sort gorder outcome_id sorder vorder
+
+. local ycols ""
+
+. local yhdr ""
+
+. local rgt "5"
+
+. local cc 4
+
+. foreach y of local evyrs {
+  2.     local ycols "`ycols' t_y`y'"
+  3.     local yhdr `"`yhdr' "`y'""'
+  4.     local ++cc
+  5.     if `cc' > 5 local rgt "`rgt' `cc'"
+  6. }
+
+. local rgt "`rgt' `=`cc' + 1' `=`cc' + 2'"
+
+. local rl ""
+
+. forvalues i = 1/`=_N - 1' {
+  2.     if gorder[`i'] != gorder[`i' + 1] | outcome_id[`i'] != outcome_id[`i' + 1] local rl "`rl' `i'"
+  3. }
+
+. local tnote "Notes: Total output (or workers) of a group's firms in each file as % of the same firms' `cohort_year' to
+> tal (firms with a known positive"
+
+. local tnote "`tnote' `cohort_year' level and a known level that year). Leavers = 0 (lowest possible): ASSUMPTION that 
+> a firm missing from every later file closed"
+
+. local tnote "`tnote' and adds 0 from the first file it misses (largest possible loss). In every file: only the `n_stay
+> _s' firms in every file `f1'–`f3'."
+
+. local tnote "`tnote' Output in `out_prices' (masked money unit). Totals follow the largest firms and are not adjusted 
+> for industry or province."
+
+. local tnote "`tnote' Firm links are fictional in the development data, so who left the files means nothing here: run o
+> n the real BPS panel."
+
+. * ctable_pdf reads the columns in their order in the data (it uses a __c1-__cN range): put them in table order
+. order t_panel t_out t_grp t_ver `ycols' t_nf t_cf
+
+. ctable_pdf t_panel t_out t_grp t_ver `ycols' t_nf t_cf using "tables/`fname'_totals.pdf", ///
+>     title("Table R10-04, totals. Each group's total output and workers as % of its `cohort_year' total (table only)") 
+> ///
+>     subtitle("Leavers counted as 0 (lowest possible) vs firms in every file `f1'–`f3'") ///
+>     header("Group" "Outcome" "Firms" "Version" `yhdr' "Firms|in `f3'" "Counted|closed, `f3'") ///
+>     right(`rgt') norepeat(1 2 3) rules(`rl') landscape fontsize(8.5) perpage(28) ///
+>     notes("`tnote'" "`srcnote'" "`devnote'")
+successfully created "/Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r10-covid-resilience-i
+> nternationalised/tables/04_all_firms_output_jobs_totals.pdf"
+
+. display "table -> tables/`fname'_totals.pdf (`=_N' rows)"
+table -> tables/04_all_firms_output_jobs_totals.pdf (28 rows)
+
+. * --- end of PART 2 ------------------------------------------------------------
+. 
+. timer off 1
+
+. quietly timer list 1
+
+. local elapsed = strtrim(string(r(t1), "%9.1f"))
+
+. display "FINISHED: figure -> figures/`fname'.png (elapsed `elapsed' s)"
+FINISHED: figure -> figures/04_all_firms_output_jobs.png (elapsed 12.2 s)
+
+. quietly log close          // keeps FINISHED as the last output line of the log
