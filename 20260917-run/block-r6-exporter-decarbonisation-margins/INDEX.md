@@ -10,8 +10,6 @@ Tables that go with the charts: every chart has a table PDF with each plotted po
 
 - 01: `tables/01_margins_export_start_regression.pdf`, `tables/01_margins_export_start_table.pdf`
 - 02: `tables/02_fuels_vs_electricity_regression.pdf`, `tables/02_fuels_vs_electricity_table.pdf`
-- 03: `tables/03_energy_mix_shares_regression.pdf`, `tables/03_energy_mix_shares_table.pdf`
-- 04: `tables/04_own_electricity_regression.pdf`, `tables/04_own_electricity_table.pdf`
 <!-- tables-end -->
 
 
