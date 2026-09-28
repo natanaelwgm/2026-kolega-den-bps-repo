@@ -1,0 +1,1532 @@
+------------------------------------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r4-covid-survival/logs/02_state
+> s_normal_vs_covid.log
+  log type:  text
+ opened on:  28 Sep 2026, 16:53:08
+
+. timer clear 1
+
+. timer on 1
+
+. display _newline "=== [R4-02] STARTING: stayed, left the files, came back - COVID years against normal years ==="
+
+=== [R4-02] STARTING: stayed, left the files, came back - COVID years against normal years ===
+
+. 
+. * ---- chart style (identical block in every file) ----
+. set scheme s1mono
+
+. capture graph set window fontface "Times New Roman"   // GUI Stata; console Stata keeps its default font
+
+. * Note: this changes your Stata graph font permanently; undo with: graph set window fontface default
+. local devnote "Development data — obscured values, fictional firm panel. Not BPS findings."
+
+. local srcnote "Source: SI/IBS annual files 2010–2022 (masked), analysis_ready_data.dta."
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 1/6: load firm, year, workers and output; choose the starting files"
+Step 1/6: load firm, year, workers and output; choose the starting files
+
+. *---------------------------------------------------------------------------
+. * workers              = persons engaged (price-free: the size measure drawn)
+. * gross_output_nominal = output value in current prices (table only)
+. * gross_output_real    = output in constant prices; empty in the development
+. *                        file, used automatically when filled (see Step 2)
+. quietly describe using "$DATA", varlist
+
+. local allvars `r(varlist)'
+
+. local want firm_id year workers gross_output_nominal gross_output_real
+
+. local have : list want & allvars
+
+. use `have' using "$DATA", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. isid firm_id year
+
+. assert !missing(firm_id, year)
+
+. tempfile panel
+
+. save `panel'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_81969.000001 saved as .dta format
+
+. 
+. * Starting files: every annual file with two files before it (so "also in one
+. * of the two files before" can be told) and three files after it (the follow-up).
+. * Read from the data, so the list is right on the real files too.
+. quietly levelsof year, local(allfiles)
+
+. local nfiles : word count `allfiles'
+
+. local starts ""
+
+. forvalues i = 3/`=`nfiles' - 3' {
+  2.     local starts `starts' `: word `i' of `allfiles''
+  3. }
+
+. assert "`starts'" != ""
+
+. display "   starting files: `starts'"
+   starting files: 2012 2013 2014 2015 2017 2018 2019
+
+. * The first annual file after COVID reached Indonesia (March 2020): a starting
+. * file whose next file is this one is followed through the COVID years.
+. local covid_first 2020
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 2/6: for each starting file, the states of its firms (shared R4 block)"
+Step 2/6: for each starting file, the states of its firms (shared R4 block)
+
+. *---------------------------------------------------------------------------
+. * Four states, left to right on the chart (they add up to the starting file's firms):
+. *   1 stayed        = in all three later files
+. *   2 absent, back  = missed the first and/or second later file, in the third again
+. *   3 left later    = in the first or second later file, not in the third
+. *   4 left at once  = in none of the three later files
+. * Two groups of firms: all firms of the starting file, and only the firms also
+. * in one of the two files before it (new_to_file == 0).
+. local sc1 "state_file == 1"
+
+. local sc2 "state_file == 2"
+
+. local sc3 "state_file == 3 & left_when == 2"
+
+. local sc4 "state_file == 3 & left_when == 1"
+
+. local sl1 "Stayed: in all three later files"
+
+. local sl2 "Absent, then back in the third later file"
+
+. local sl3 "Left later: gone by the third later file"
+
+. local sl4 "Left at once: in none of the three later files"
+
+. local gcA "in_cohort"
+
+. local gcB "in_cohort & new_to_file == 0"
+
+. tempname pf
+
+. tempfile res
+
+. postfile `pf' str1 section int cohort_year str20 later_files byte status_code str40 status_text ///
+>     str12 row_kind int item_order str60 item byte drawn double(firms base_firms pct ci_lo ci_hi) ///
+>     str24 outcome_basis double band_pct using `res', replace
+(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_81969.000002 not found)
+
+. 
+. foreach cohort_year of local starts {
+  2. use `panel', clear
+  3. *===========================================================================
+. * COVID COHORT AND STATES (copy exactly into later R4 and R10 files)
+. *   Version 2 - written and reviewed in R4-01 (28 Sep 2026). Do not edit a copy;
+. *   change R4-01 and re-copy. Set -local cohort_year- before the block; R4-02
+. *   runs it once per starting file (2012 ... 2019).
+. *   In : firm-year rows in memory (one row per firm and year): firm_id year
+. *        workers gross_output_nominal (gross_output_real is used instead when
+. *        present and filled for 95%+ of the cohort-file and last-file rows).
+. *        The block collapses to one row per firm: every other variable in memory
+. *        is dropped. Build traits in a tempfile first and merge them back by
+. *        firm_id after the block.
+. *   Out: one row per firm in the cohort file or in one of the next three files.
+. *        in_cohort = 1 for the firms of the cohort file (the cohort); the others
+. *        are newcomers (new_in_file = the later file they first appear in).
+. *        Locals: f1 f2 f3 = the next three files, p1 p2 = the two files before,
+. *        outbasis = output variable used, band_pct = neutral band in percent
+. *        (10 = within 10% either way), band_lo band_hi = its limits as ratios.
+. *   The years come from the data, so the block runs unchanged on the real files.
+. *===========================================================================
+. isid firm_id year
+  4. * -- the annual files in the data, and the files around the cohort file --
+. quietly levelsof year, local(c_files)
+  5. local c_pos : list posof "`cohort_year'" in c_files
+  6. local c_nf : word count `c_files'
+  7. if `c_pos' == 0 | `c_pos' + 3 > `c_nf' {
+  8.     display as error "cohort file `cohort_year' must be a file year with three later files"
+  9.     exit 198
+ 10. }
+ 11. local f1 : word `=`c_pos' + 1' of `c_files'
+ 12. local f2 : word `=`c_pos' + 2' of `c_files'
+ 13. local f3 : word `=`c_pos' + 3' of `c_files'
+ 14. local p1 ""
+ 15. local p2 ""
+ 16. if `c_pos' > 1 local p1 : word `=`c_pos' - 1' of `c_files'
+ 17. if `c_pos' > 2 local p2 : word `=`c_pos' - 2' of `c_files'
+ 18. * -- output: constant prices when the file has them, else current prices --
+. local outbasis "gross_output_nominal"
+ 19. capture confirm numeric variable gross_output_real
+ 20. if !_rc {
+ 21.     quietly count if inlist(year, `cohort_year', `f3')
+ 22.     local c_nrows = r(N)
+ 23.     quietly count if inlist(year, `cohort_year', `f3') & !missing(gross_output_real)
+ 24.     if r(N) >= 0.95 * `c_nrows' & `c_nrows' > 0 local outbasis "gross_output_real"
+ 25. }
+ 26. * -- neutral band: a stayer is "about the same" if its last-file level is
+. *    within band_pct percent of its cohort-file level, up or down (10: 0.90 to 1.10 times);
+. *    the limits match the words on the chart ("down more than 10%") exactly --
+. if "`band_pct'" == "" local band_pct 10
+ 27. local band_lo = 1 - `band_pct'/100
+ 28. local band_hi = 1 + `band_pct'/100
+ 29. * -- which files each firm is in (1 = in the file, 0 = not) --
+. gen byte c_base    = (year == `cohort_year')
+ 30. gen byte c_f1      = (year == `f1')
+ 31. gen byte c_f2      = (year == `f2')
+ 32. gen byte c_f3      = (year == `f3')
+ 33. gen byte c_earlier = (year <  `cohort_year')                    // any file before the cohort file
+ 34. gen byte c_p1      = cond("`p1'" == "", ., (year == real("`p1'")))
+ 35. gen byte c_p2      = cond("`p2'" == "", ., (year == real("`p2'")))
+ 36. gen double c_wk0   = workers     if year == `cohort_year'
+ 37. gen double c_wk3   = workers     if year == `f3'
+ 38. gen double c_out0  = `outbasis'  if year == `cohort_year'
+ 39. gen double c_out3  = `outbasis'  if year == `f3'
+ 40. keep if year <= `f3'
+ 41. collapse (max) seen_base = c_base seen_f1 = c_f1 seen_f2 = c_f2 seen_f3 = c_f3 ///
+>     seen_earlier = c_earlier seen_p1 = c_p1 seen_p2 = c_p2 ///
+>     workers_base = c_wk0 workers_f3 = c_wk3 output_base = c_out0 output_f3 = c_out3, by(firm_id)
+ 42. keep if seen_base | seen_f1 | seen_f2 | seen_f3                  // firms of the cohort file or a later one
+ 43. gen int  cohort_year = `cohort_year'
+ 44. gen byte in_cohort   = (seen_base == 1)
+ 45. * -- new_to_file = 1: in the cohort file but in neither of the two files before
+. *    (it may still be in an older file); 0 = "incumbent" (R10 uses 0 as incumbent) --
+. gen byte new_to_file = .
+ 46. if "`p1'" != "" replace new_to_file = (seen_p1 == 0 & (seen_p2 == 0 | missing(seen_p2))) if in_cohort
+ 47. * -- presence in the next three files, e.g. "110" = in f1 and f2, not in f3 --
+. gen str3 pattern = string(seen_f1) + string(seen_f2) + string(seen_f3) if in_cohort
+ 48. * -- state by the last file (f3) --
+. *    1 stayed           = in all three later files
+. *    2 absent then back = missed f1 and/or f2, in f3 again ("temporary disappearance")
+. *    3 left the files   = not in f3 (the file has no closure record: not proof of closure)
+. gen byte state_file = cond(pattern == "111", 1, cond(seen_f3 == 1, 2, 3)) if in_cohort
+ 49. *    left_when: 1 = gone from f1 on ("000"), 2 = in f1 or f2, gone by f3
+. gen byte left_when = cond(pattern == "000", 1, 2) if state_file == 3
+ 50. * -- stayers: change from the cohort file to f3; 0 in f3 counts as shrank;
+. *    no positive cohort-file level (or no f3 level) = not classified (missing) --
+. gen double ratio_wk  = workers_f3 / workers_base if state_file == 1 & workers_base > 0 & !missing(workers_base, worker
+> s_f3)
+ 51. gen double ratio_out = output_f3  / output_base  if state_file == 1 & output_base  > 0 & !missing(output_base,  out
+> put_f3)
+ 52. foreach m in wk out {
+ 53.     gen byte size_`m' = cond(ratio_`m' < `band_lo', 1, cond(ratio_`m' > `band_hi', 3, 2)) if !missing(ratio_`m')
+ 54.     *   outcome5: 1 left the files, 2 absent then back, 3 shrank, 4 about the same, 5 grew
+.     gen byte outcome5_`m' = cond(state_file == 3, 1, cond(state_file == 2, 2, 2 + size_`m')) if in_cohort
+ 55.     replace  outcome5_`m' = . if state_file == 1 & missing(size_`m')
+ 56. }
+ 57. * -- newcomers: the later file a firm not in the cohort file first appears in --
+. gen int new_in_file = cond(seen_f1, `f1', cond(seen_f2, `f2', `f3')) if !in_cohort
+ 58. gen str80 outcome_basis = "`outbasis'"
+ 59. label define c_state 1 "stayed" 2 "absent then back" 3 "left the files", replace
+ 60. label define c_left  1 "gone from the first later file" 2 "gone later", replace
+ 61. label define c_size  1 "shrank" 2 "about the same" 3 "grew", replace
+ 62. label define c_out5  1 "left the files" 2 "absent then back" 3 "stayed, shrank" 4 "stayed, about the same" 5 "staye
+> d, grew", replace
+ 63. label values state_file c_state
+ 64. label values left_when c_left
+ 65. label values size_wk size_out c_size
+ 66. label values outcome5_wk outcome5_out c_out5
+ 67. * -- structural checks (hold on any data) --
+. isid firm_id
+ 68. assert !missing(state_file, pattern) if in_cohort
+ 69. assert missing(state_file) & !missing(new_in_file) if !in_cohort
+ 70. assert (state_file == 1) == (pattern == "111") if in_cohort
+ 71. assert !missing(outcome5_wk) if in_cohort & state_file != 1
+ 72. order firm_id cohort_year in_cohort new_to_file seen_* pattern state_file left_when ///
+>     workers_base workers_f3 ratio_wk size_wk outcome5_wk output_base output_f3 ratio_out size_out ///
+>     outcome5_out new_in_file outcome_basis
+ 73. display "   cohort file `cohort_year'; later files `f1' `f2' `f3'; earlier files `p2' `p1'; output: `outbasis'; ban
+> d +/-`band_pct'%"
+ 74. *===========================================================================
+. * END OF COVID COHORT AND STATES
+. *===========================================================================
+. 
+. * -- how this starting file is followed: COVID years, reaching 2020, across a missing file, or normal --
+. local gapyrs ""
+ 75. forvalues yy = `=`cohort_year' + 1'/`=`f3' - 1' {
+ 76.     if !inlist(`yy', `f1', `f2') local gapyrs `gapyrs' `yy'
+ 77. }
+ 78. if `f1' == `covid_first' {
+ 79.     local st 1
+ 80.     local sttxt "COVID years"
+ 81. }
+ 82. else if `f3' >= `covid_first' {
+ 83.     local st 2
+ 84.     local sttxt "Partly COVID years"
+ 85. }
+ 86. else if "`gapyrs'" != "" {
+ 87.     local st 3
+ 88.     local gw : word count `gapyrs'
+ 89.     local sttxt = cond(`gw' == 1, "Skips `gapyrs' (no file)", "Skips missing files")
+ 90. }
+ 91. else {
+ 92.     local st 4
+ 93.     local sttxt "Normal years"
+ 94. }
+ 95. local lf_`cohort_year' "`f1', `f2', `f3'"
+ 96. local st_`cohort_year' `st'
+ 97. local sttxt_`cohort_year' "`sttxt'"
+ 98. local gap_`cohort_year' "`gapyrs'"
+ 99. * -- post the counts: states (drawn), stayers by workers and output, newcomers (table only) --
+. foreach g in A B {
+100.     quietly count if `gc`g''
+101.     local N = r(N)
+102.     forvalues s = 1/4 {
+103.         quietly count if `gc`g'' & `sc`s''
+104.         local k = r(N)
+105.         local lo .
+106.         local hi .
+107.         if `N' > 0 {
+108.             quietly cii proportions `N' `k', wilson
+109.             local lo = 100 * r(lb)
+110.             local hi = 100 * r(ub)
+111.         }
+112.         post `pf' ("`g'") (`cohort_year') ("`f1' `f2' `f3'") (`st') ("`sttxt'") ("state") (`s') ("`sl`s''") (1) ///
+>             (`k') (`N') (cond(`N' > 0, 100 * `k' / `N', .)) (`lo') (`hi') ("`outbasis'") (`band_pct')
+113.     }
+114.     * stayers split by workers and by output, third later file against the starting file
+.     quietly count if `gc`g'' & state_file == 1
+115.     local NS = r(N)
+116.     foreach m in wk out {
+117.         local mw = cond("`m'" == "wk", "workers", "output")
+118.         local j 0
+119.         foreach z in 3 2 1 . {
+120.             local ++j
+121.             local zl = cond("`z'" == "3", "up more than", cond("`z'" == "2", "about the same, within", ///
+>                 cond("`z'" == "1", "down more than", "not comparable")))
+122.             local zt = cond("`z'" == ".", "Stayed, `mw' not comparable", "Stayed, `mw' `zl' `band_pct'%")
+123.             if "`z'" == "." quietly count if `gc`g'' & state_file == 1 & missing(size_`m')
+124.             else            quietly count if `gc`g'' & state_file == 1 & size_`m' == `z'
+125.             local k = r(N)
+126.             post `pf' ("`g'") (`cohort_year') ("`f1' `f2' `f3'") (`st') ("`sttxt'") ("stayers_`m'") (`j') ("`zt'") 
+> (0) ///
+>                 (`k') (`NS') (cond(`NS' > 0, 100 * `k' / `NS', .)) (.) (.) ("`outbasis'") (`band_pct')
+127.         }
+128.     }
+129. }
+130. * newcomers: firms not in the starting file, first seen in each later file (percent of the starting file's firms)
+. quietly count if in_cohort
+131. local N = r(N)
+132. local j 0
+133. foreach f in `f1' `f2' `f3' {
+134.     local ++j
+135.     quietly count if !in_cohort & new_in_file == `f'
+136.     post `pf' ("A") (`cohort_year') ("`f1' `f2' `f3'") (`st') ("`sttxt'") ("newcomers") (`j') ("Not in the starting
+>  file, first in the `f' file") (0) ///
+>         (r(N)) (`N') (100 * r(N) / `N') (.) (.) ("`outbasis'") (`band_pct')
+137. }
+138. }
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(30,690 missing values generated)
+(30,417 missing values generated)
+(30,690 missing values generated)
+(30,417 missing values generated)
+(18,566 observations deleted)
+(1,092 observations deleted)
+(4,347 missing values generated)
+(2,359 real changes made)
+(1,988 missing values generated)
+(1,988 missing values generated)
+(3,334 missing values generated)
+(3,001 missing values generated)
+(3,001 missing values generated)
+(3,001 missing values generated)
+(1,988 missing values generated)
+(0 real changes made)
+(3,001 missing values generated)
+(1,988 missing values generated)
+(0 real changes made)
+(2,359 missing values generated)
+   cohort file 2012; later files 2013 2014 2015; earlier files 2010 2011; output: gross_output_nominal; band +/-10%
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(30,680 missing values generated)
+(29,692 missing values generated)
+(30,680 missing values generated)
+(29,692 missing values generated)
+(15,209 observations deleted)
+(1,666 observations deleted)
+(5,081 missing values generated)
+(2,369 real changes made)
+(2,712 missing values generated)
+(2,712 missing values generated)
+(4,087 missing values generated)
+(3,706 missing values generated)
+(3,706 missing values generated)
+(3,706 missing values generated)
+(2,712 missing values generated)
+(0 real changes made)
+(3,706 missing values generated)
+(2,712 missing values generated)
+(0 real changes made)
+(2,369 missing values generated)
+   cohort file 2013; later files 2014 2015 2017; earlier files 2011 2012; output: gross_output_nominal; band +/-10%
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(30,597 missing values generated)
+(30,038 missing values generated)
+(30,597 missing values generated)
+(30,038 missing values generated)
+(12,198 observations deleted)
+(2,245 observations deleted)
+(5,139 missing values generated)
+(2,452 real changes made)
+(2,687 missing values generated)
+(2,687 missing values generated)
+(4,044 missing values generated)
+(3,782 missing values generated)
+(3,782 missing values generated)
+(3,782 missing values generated)
+(2,687 missing values generated)
+(0 real changes made)
+(3,782 missing values generated)
+(2,687 missing values generated)
+(0 real changes made)
+(2,452 missing values generated)
+   cohort file 2014; later files 2015 2017 2018; earlier files 2012 2013; output: gross_output_nominal; band +/-10%
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(30,417 missing values generated)
+(30,042 missing values generated)
+(30,417 missing values generated)
+(30,042 missing values generated)
+(9,191 observations deleted)
+(2,807 observations deleted)
+(5,318 missing values generated)
+(2,632 real changes made)
+(2,686 missing values generated)
+(2,686 missing values generated)
+(4,125 missing values generated)
+(3,879 missing values generated)
+(3,879 missing values generated)
+(3,879 missing values generated)
+(2,686 missing values generated)
+(0 real changes made)
+(3,879 missing values generated)
+(2,686 missing values generated)
+(0 real changes made)
+(2,632 missing values generated)
+   cohort file 2015; later files 2017 2018 2019; earlier files 2013 2014; output: gross_output_nominal; band +/-10%
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(29,692 missing values generated)
+(30,113 missing values generated)
+(29,692 missing values generated)
+(30,113 missing values generated)
+(6,255 observations deleted)
+(3,390 observations deleted)
+(5,472 missing values generated)
+(3,357 real changes made)
+(2,115 missing values generated)
+(2,115 missing values generated)
+(3,797 missing values generated)
+(3,790 missing values generated)
+(3,790 missing values generated)
+(3,790 missing values generated)
+(2,115 missing values generated)
+(0 real changes made)
+(3,790 missing values generated)
+(2,115 missing values generated)
+(0 real changes made)
+(3,357 missing values generated)
+   cohort file 2017; later files 2018 2019 2020; earlier files 2014 2015; output: gross_output_nominal; band +/-10%
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(30,038 missing values generated)
+(29,971 missing values generated)
+(30,038 missing values generated)
+(29,971 missing values generated)
+(3,177 observations deleted)
+(4,373 observations deleted)
+(5,278 missing values generated)
+(3,011 real changes made)
+(2,267 missing values generated)
+(2,267 missing values generated)
+(3,936 missing values generated)
+(3,609 missing values generated)
+(3,609 missing values generated)
+(3,609 missing values generated)
+(2,267 missing values generated)
+(0 real changes made)
+(3,609 missing values generated)
+(2,267 missing values generated)
+(0 real changes made)
+(3,011 missing values generated)
+   cohort file 2018; later files 2019 2020 2021; earlier files 2015 2017; output: gross_output_nominal; band +/-10%
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(30,042 missing values generated)
+(29,872 missing values generated)
+(30,042 missing values generated)
+(29,872 missing values generated)
+(0 observations deleted)
+(5,118 observations deleted)
+(5,345 missing values generated)
+(3,007 real changes made)
+(2,338 missing values generated)
+(2,338 missing values generated)
+(4,016 missing values generated)
+(3,667 missing values generated)
+(3,667 missing values generated)
+(3,667 missing values generated)
+(2,338 missing values generated)
+(0 real changes made)
+(3,667 missing values generated)
+(2,338 missing values generated)
+(0 real changes made)
+(3,007 missing values generated)
+   cohort file 2019; later files 2020 2021 2022; earlier files 2017 2018; output: gross_output_nominal; band +/-10%
+
+. postclose `pf'
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 3/6: write the table (numbers before drawing)"
+Step 3/6: write the table (numbers before drawing)
+
+. *---------------------------------------------------------------------------
+. use `res', clear
+
+. * Reconciliation (structural): the four states add up to the starting file's firms.
+. bysort section cohort_year: egen double c_sum = total(firms) if row_kind == "state"
+(133 missing values generated)
+
+. assert c_sum == base_firms if row_kind == "state"
+
+. drop c_sum
+
+. foreach m in wk out {
+  2.     bysort section cohort_year: egen double c_sum = total(firms) if row_kind == "stayers_`m'"
+  3.     assert c_sum == base_firms if row_kind == "stayers_`m'"
+  4.     drop c_sum
+  5. }
+(133 missing values generated)
+(133 missing values generated)
+
+. * Gap to the COVID-years starting file: its share minus this share, in percentage points (drawn shares).
+. gen double c_cov = pct if status_code == 1
+(162 missing values generated)
+
+. bysort section row_kind item_order: egen double covid_pct = max(c_cov)
+
+. gen double covid_minus_this_pts = covid_pct - pct if drawn == 1
+(133 missing values generated)
+
+. drop c_cov covid_pct
+
+. gen byte section_order = cond(section == "A", 1, 2)
+
+. gen str64 section_name = cond(section == "A", "All firms in the starting file", ///
+>     "Only firms also in one of the two files before")
+
+. gen byte kind_order = cond(row_kind == "state", 1, cond(row_kind == "stayers_wk", 2, cond(row_kind == "stayers_out", 3
+> , 4)))
+
+. sort section_order kind_order cohort_year item_order
+
+. format firms base_firms %9.0f
+
+. format pct ci_lo ci_hi covid_minus_this_pts %6.1f
+
+. order section section_name cohort_year later_files status_code status_text row_kind item_order item drawn ///
+>     firms base_firms pct ci_lo ci_hi covid_minus_this_pts outcome_basis band_pct
+
+. export delimited section-band_pct using "tables/02_states_normal_vs_covid.csv", datafmt replace
+file tables/02_states_normal_vs_covid.csv saved
+
+. list section cohort_year status_text item firms base_firms pct ci_lo ci_hi covid_minus_this_pts ///
+>     if drawn, noobs sepby(section cohort_year) abbreviate(24)
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       A |        2012 |         Normal years |               Stayed: in all three later files |  1346 |       2359 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |         57.1          |           55.1          |           59.0          |                          -1.3          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       A |        2012 |         Normal years |      Absent, then back in the third later file |     0 |       2359 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |          0.0          |            0.0          |            0.2          |                           0.0          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       A |        2012 |         Normal years |       Left later: gone by the third later file |   439 |       2359 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |         18.6          |           17.1          |           20.2          |                          -1.3          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       A |        2012 |         Normal years | Left at once: in none of the three later files |   574 |       2359 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |         24.3          |           22.6          |           26.1          |                           2.5          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       A |        2013 | Skips 2016 (no file) |               Stayed: in all three later files |  1375 |       2369 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |         58.0          |           56.0          |           60.0          |                          -2.2          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       A |        2013 | Skips 2016 (no file) |      Absent, then back in the third later file |     0 |       2369 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |          0.0          |            0.0          |            0.2          |                           0.0          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       A |        2013 | Skips 2016 (no file) |       Left later: gone by the third later file |   415 |       2369 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |         17.5          |           16.0          |           19.1          |                          -0.2          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       A |        2013 | Skips 2016 (no file) | Left at once: in none of the three later files |   579 |       2369 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |         24.4          |           22.8          |           26.2          |                           2.4          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       A |        2014 | Skips 2016 (no file) |               Stayed: in all three later files |  1357 |       2452 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |         55.3          |           53.4          |           57.3          |                           0.5          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       A |        2014 | Skips 2016 (no file) |      Absent, then back in the third later file |     0 |       2452 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |          0.0          |            0.0          |            0.2          |                           0.0          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       A |        2014 | Skips 2016 (no file) |       Left later: gone by the third later file |   533 |       2452 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |         21.7          |           20.1          |           23.4          |                          -4.4          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       A |        2014 | Skips 2016 (no file) | Left at once: in none of the three later files |   562 |       2452 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |         22.9          |           21.3          |           24.6          |                           4.0          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       A |        2015 | Skips 2016 (no file) |               Stayed: in all three later files |  1439 |       2632 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |         54.7          |           52.8          |           56.6          |                           1.1          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       A |        2015 | Skips 2016 (no file) |      Absent, then back in the third later file |     0 |       2632 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |          0.0          |            0.0          |            0.1          |                           0.0          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       A |        2015 | Skips 2016 (no file) |       Left later: gone by the third later file |   610 |       2632 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |         23.2          |           21.6          |           24.8          |                          -5.9          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       A |        2015 | Skips 2016 (no file) | Left at once: in none of the three later files |   583 |       2632 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |         22.2          |           20.6          |           23.8          |                           4.7          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       A |        2017 |   Partly COVID years |               Stayed: in all three later files |  1682 |       3357 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |         50.1          |           48.4          |           51.8          |                           5.7          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       A |        2017 |   Partly COVID years |      Absent, then back in the third later file |     0 |       3357 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |          0.0          |            0.0          |            0.1          |                           0.0          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       A |        2017 |   Partly COVID years |       Left later: gone by the third later file |   692 |       3357 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |         20.6          |           19.3          |           22.0          |                          -3.3          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       A |        2017 |   Partly COVID years | Left at once: in none of the three later files |   983 |       3357 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |         29.3          |           27.8          |           30.8          |                          -2.4          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       A |        2018 |   Partly COVID years |               Stayed: in all three later files |  1669 |       3011 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |         55.4          |           53.6          |           57.2          |                           0.4          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       A |        2018 |   Partly COVID years |      Absent, then back in the third later file |     0 |       3011 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |          0.0          |            0.0          |            0.1          |                           0.0          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       A |        2018 |   Partly COVID years |       Left later: gone by the third later file |   597 |       3011 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |         19.8          |           18.4          |           21.3          |                          -2.5          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       A |        2018 |   Partly COVID years | Left at once: in none of the three later files |   745 |       3011 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |         24.7          |           23.2          |           26.3          |                           2.1          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       A |        2019 |          COVID years |               Stayed: in all three later files |  1678 |       3007 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |         55.8          |           54.0          |           57.6          |                           0.0          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       A |        2019 |          COVID years |      Absent, then back in the third later file |     0 |       3007 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |          0.0          |            0.0          |            0.1          |                           0.0          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       A |        2019 |          COVID years |       Left later: gone by the third later file |   521 |       3007 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |         17.3          |           16.0          |           18.7          |                           0.0          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       A |        2019 |          COVID years | Left at once: in none of the three later files |   808 |       3007 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |         26.9          |           25.3          |           28.5          |                           0.0          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       B |        2012 |         Normal years |               Stayed: in all three later files |  1213 |       1796 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |         67.5          |           65.3          |           69.7          |                          -2.0          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       B |        2012 |         Normal years |      Absent, then back in the third later file |     0 |       1796 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |          0.0          |            0.0          |            0.2          |                           0.0          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       B |        2012 |         Normal years |       Left later: gone by the third later file |   305 |       1796 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |         17.0          |           15.3          |           18.8          |                           0.1          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       B |        2012 |         Normal years | Left at once: in none of the three later files |   278 |       1796 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |         15.5          |           13.9          |           17.2          |                           2.0          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       B |        2013 | Skips 2016 (no file) |               Stayed: in all three later files |  1213 |       1785 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |         68.0          |           65.8          |           70.1          |                          -2.5          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       B |        2013 | Skips 2016 (no file) |      Absent, then back in the third later file |     0 |       1785 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |          0.0          |            0.0          |            0.2          |                           0.0          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       B |        2013 | Skips 2016 (no file) |       Left later: gone by the third later file |   302 |       1785 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |         16.9          |           15.3          |           18.7          |                           0.2          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       B |        2013 | Skips 2016 (no file) | Left at once: in none of the three later files |   270 |       1785 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |         15.1          |           13.5          |           16.9          |                           2.3          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       B |        2014 | Skips 2016 (no file) |               Stayed: in all three later files |  1171 |       1790 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |         65.4          |           63.2          |           67.6          |                           0.1          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       B |        2014 | Skips 2016 (no file) |      Absent, then back in the third later file |     0 |       1790 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |          0.0          |            0.0          |            0.2          |                           0.0          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       B |        2014 | Skips 2016 (no file) |       Left later: gone by the third later file |   383 |       1790 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |         21.4          |           19.6          |           23.4          |                          -4.3          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       B |        2014 | Skips 2016 (no file) | Left at once: in none of the three later files |   236 |       1790 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |         13.2          |           11.7          |           14.8          |                           4.2          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       B |        2015 | Skips 2016 (no file) |               Stayed: in all three later files |  1205 |       1890 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |         63.8          |           61.6          |           65.9          |                           1.7          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       B |        2015 | Skips 2016 (no file) |      Absent, then back in the third later file |     0 |       1890 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |          0.0          |            0.0          |            0.2          |                           0.0          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       B |        2015 | Skips 2016 (no file) |       Left later: gone by the third later file |   431 |       1890 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |         22.8          |           21.0          |           24.7          |                          -5.7          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       B |        2015 | Skips 2016 (no file) | Left at once: in none of the three later files |   254 |       1890 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |         13.4          |           12.0          |           15.1          |                           4.0          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       B |        2017 |   Partly COVID years |               Stayed: in all three later files |  1241 |       2049 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |         60.6          |           58.4          |           62.7          |                           4.9          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       B |        2017 |   Partly COVID years |      Absent, then back in the third later file |     0 |       2049 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |          0.0          |            0.0          |            0.2          |                           0.0          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       B |        2017 |   Partly COVID years |       Left later: gone by the third later file |   401 |       2049 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |         19.6          |           17.9          |           21.3          |                          -2.5          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       B |        2017 |   Partly COVID years | Left at once: in none of the three later files |   407 |       2049 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |         19.9          |           18.2          |           21.6          |                          -2.4          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       B |        2018 |   Partly COVID years |               Stayed: in all three later files |  1510 |       2374 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |         63.6          |           61.6          |           65.5          |                           1.9          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       B |        2018 |   Partly COVID years |      Absent, then back in the third later file |     0 |       2374 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |          0.0          |            0.0          |            0.2          |                           0.0          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       B |        2018 |   Partly COVID years |       Left later: gone by the third later file |   468 |       2374 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |         19.7          |           18.2          |           21.4          |                          -2.6          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       B |        2018 |   Partly COVID years | Left at once: in none of the three later files |   396 |       2374 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |         16.7          |           15.2          |           18.2          |                           0.8          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       B |        2019 |          COVID years |               Stayed: in all three later files |  1484 |       2266 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |         65.5          |           63.5          |           67.4          |                           0.0          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       B |        2019 |          COVID years |      Absent, then back in the third later file |     0 |       2266 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |          0.0          |            0.0          |            0.2          |                           0.0          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       B |        2019 |          COVID years |       Left later: gone by the third later file |   387 |       2266 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |         17.1          |           15.6          |           18.7          |                           0.0          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+  +--------------------------------------------------------------------------------------------------------------------+
+  | section | cohort_year |          status_text |                                           item | firms | base_firms |
+  |       B |        2019 |          COVID years | Left at once: in none of the three later files |   395 |       2266 |
+  |-----------------------+--------------------------------------------------------------------------------------------|
+  |          pct          |          ci_lo          |          ci_hi          |          covid_minus_this_pts          |
+  |         17.4          |           15.9          |           19.0          |                           0.0          |
+  +--------------------------------------------------------------------------------------------------------------------+
+
+. list section cohort_year item firms base_firms pct if !drawn, noobs sepby(section cohort_year) abbreviate(24)
+
+  +------------------------------------------------------------------------------------------------------+
+  | section   cohort_year                                               item   firms   base_firms    pct |
+  |------------------------------------------------------------------------------------------------------|
+  |       A          2012                   Stayed, workers up more than 10%     564         1346   41.9 |
+  |       A          2012         Stayed, workers about the same, within 10%     259         1346   19.2 |
+  |       A          2012                 Stayed, workers down more than 10%     523         1346   38.9 |
+  |       A          2012                     Stayed, workers not comparable       0         1346    0.0 |
+  |------------------------------------------------------------------------------------------------------|
+  |       A          2013                   Stayed, workers up more than 10%     620         1375   45.1 |
+  |       A          2013         Stayed, workers about the same, within 10%     237         1375   17.2 |
+  |       A          2013                 Stayed, workers down more than 10%     518         1375   37.7 |
+  |       A          2013                     Stayed, workers not comparable       0         1375    0.0 |
+  |------------------------------------------------------------------------------------------------------|
+  |       A          2014                   Stayed, workers up more than 10%     587         1357   43.3 |
+  |       A          2014         Stayed, workers about the same, within 10%     232         1357   17.1 |
+  |       A          2014                 Stayed, workers down more than 10%     538         1357   39.6 |
+  |       A          2014                     Stayed, workers not comparable       0         1357    0.0 |
+  |------------------------------------------------------------------------------------------------------|
+  |       A          2015                   Stayed, workers up more than 10%     763         1439   53.0 |
+  |       A          2015         Stayed, workers about the same, within 10%     230         1439   16.0 |
+  |       A          2015                 Stayed, workers down more than 10%     446         1439   31.0 |
+  |       A          2015                     Stayed, workers not comparable       0         1439    0.0 |
+  |------------------------------------------------------------------------------------------------------|
+  |       A          2017                   Stayed, workers up more than 10%     709         1682   42.2 |
+  |       A          2017         Stayed, workers about the same, within 10%     223         1682   13.3 |
+  |       A          2017                 Stayed, workers down more than 10%     750         1682   44.6 |
+  |       A          2017                     Stayed, workers not comparable       0         1682    0.0 |
+  |------------------------------------------------------------------------------------------------------|
+  |       A          2018                   Stayed, workers up more than 10%     665         1669   39.8 |
+  |       A          2018         Stayed, workers about the same, within 10%     252         1669   15.1 |
+  |       A          2018                 Stayed, workers down more than 10%     752         1669   45.1 |
+  |       A          2018                     Stayed, workers not comparable       0         1669    0.0 |
+  |------------------------------------------------------------------------------------------------------|
+  |       A          2019                   Stayed, workers up more than 10%     541         1678   32.2 |
+  |       A          2019         Stayed, workers about the same, within 10%     202         1678   12.0 |
+  |       A          2019                 Stayed, workers down more than 10%     935         1678   55.7 |
+  |       A          2019                     Stayed, workers not comparable       0         1678    0.0 |
+  |------------------------------------------------------------------------------------------------------|
+  |       A          2012                    Stayed, output up more than 10%     911         1346   67.7 |
+  |       A          2012          Stayed, output about the same, within 10%      97         1346    7.2 |
+  |       A          2012                  Stayed, output down more than 10%     338         1346   25.1 |
+  |       A          2012                      Stayed, output not comparable       0         1346    0.0 |
+  |------------------------------------------------------------------------------------------------------|
+  |       A          2013                    Stayed, output up more than 10%    1005         1375   73.1 |
+  |       A          2013          Stayed, output about the same, within 10%      89         1375    6.5 |
+  |       A          2013                  Stayed, output down more than 10%     281         1375   20.4 |
+  |       A          2013                      Stayed, output not comparable       0         1375    0.0 |
+  |------------------------------------------------------------------------------------------------------|
+  |       A          2014                    Stayed, output up more than 10%     983         1357   72.4 |
+  |       A          2014          Stayed, output about the same, within 10%      94         1357    6.9 |
+  |       A          2014                  Stayed, output down more than 10%     280         1357   20.6 |
+  |       A          2014                      Stayed, output not comparable       0         1357    0.0 |
+  |------------------------------------------------------------------------------------------------------|
+  |       A          2015                    Stayed, output up more than 10%    1006         1439   69.9 |
+  |       A          2015          Stayed, output about the same, within 10%      90         1439    6.3 |
+  |       A          2015                  Stayed, output down more than 10%     343         1439   23.8 |
+  |       A          2015                      Stayed, output not comparable       0         1439    0.0 |
+  |------------------------------------------------------------------------------------------------------|
+  |       A          2017                    Stayed, output up more than 10%     774         1682   46.0 |
+  |       A          2017          Stayed, output about the same, within 10%     164         1682    9.8 |
+  |       A          2017                  Stayed, output down more than 10%     744         1682   44.2 |
+  |       A          2017                      Stayed, output not comparable       0         1682    0.0 |
+  |------------------------------------------------------------------------------------------------------|
+  |       A          2018                    Stayed, output up more than 10%     685         1669   41.0 |
+  |       A          2018          Stayed, output about the same, within 10%     137         1669    8.2 |
+  |       A          2018                  Stayed, output down more than 10%     847         1669   50.7 |
+  |       A          2018                      Stayed, output not comparable       0         1669    0.0 |
+  |------------------------------------------------------------------------------------------------------|
+  |       A          2019                    Stayed, output up more than 10%     578         1678   34.4 |
+  |       A          2019          Stayed, output about the same, within 10%     133         1678    7.9 |
+  |       A          2019                  Stayed, output down more than 10%     967         1678   57.6 |
+  |       A          2019                      Stayed, output not comparable       0         1678    0.0 |
+  |------------------------------------------------------------------------------------------------------|
+  |       A          2012   Not in the starting file, first in the 2013 file     584         2359   24.8 |
+  |       A          2012   Not in the starting file, first in the 2014 file     662         2359   28.1 |
+  |       A          2012   Not in the starting file, first in the 2015 file     742         2359   31.5 |
+  |------------------------------------------------------------------------------------------------------|
+  |       A          2013   Not in the starting file, first in the 2014 file     662         2369   27.9 |
+  |       A          2013   Not in the starting file, first in the 2015 file     742         2369   31.3 |
+  |       A          2013   Not in the starting file, first in the 2017 file    1308         2369   55.2 |
+  |------------------------------------------------------------------------------------------------------|
+  |       A          2014   Not in the starting file, first in the 2015 file     742         2452   30.3 |
+  |       A          2014   Not in the starting file, first in the 2017 file    1308         2452   53.3 |
+  |       A          2014   Not in the starting file, first in the 2018 file     637         2452   26.0 |
+  |------------------------------------------------------------------------------------------------------|
+  |       A          2015   Not in the starting file, first in the 2017 file    1308         2632   49.7 |
+  |       A          2015   Not in the starting file, first in the 2018 file     637         2632   24.2 |
+  |       A          2015   Not in the starting file, first in the 2019 file     741         2632   28.2 |
+  |------------------------------------------------------------------------------------------------------|
+  |       A          2017   Not in the starting file, first in the 2018 file     637         3357   19.0 |
+  |       A          2017   Not in the starting file, first in the 2019 file     741         3357   22.1 |
+  |       A          2017   Not in the starting file, first in the 2020 file     737         3357   22.0 |
+  |------------------------------------------------------------------------------------------------------|
+  |       A          2018   Not in the starting file, first in the 2019 file     741         3011   24.6 |
+  |       A          2018   Not in the starting file, first in the 2020 file     737         3011   24.5 |
+  |       A          2018   Not in the starting file, first in the 2021 file     789         3011   26.2 |
+  |------------------------------------------------------------------------------------------------------|
+  |       A          2019   Not in the starting file, first in the 2020 file     737         3007   24.5 |
+  |       A          2019   Not in the starting file, first in the 2021 file     789         3007   26.2 |
+  |       A          2019   Not in the starting file, first in the 2022 file     812         3007   27.0 |
+  |------------------------------------------------------------------------------------------------------|
+  |       B          2012                   Stayed, workers up more than 10%     509         1213   42.0 |
+  |       B          2012         Stayed, workers about the same, within 10%     231         1213   19.0 |
+  |       B          2012                 Stayed, workers down more than 10%     473         1213   39.0 |
+  |       B          2012                     Stayed, workers not comparable       0         1213    0.0 |
+  |------------------------------------------------------------------------------------------------------|
+  |       B          2013                   Stayed, workers up more than 10%     549         1213   45.3 |
+  |       B          2013         Stayed, workers about the same, within 10%     216         1213   17.8 |
+  |       B          2013                 Stayed, workers down more than 10%     448         1213   36.9 |
+  |       B          2013                     Stayed, workers not comparable       0         1213    0.0 |
+  |------------------------------------------------------------------------------------------------------|
+  |       B          2014                   Stayed, workers up more than 10%     513         1171   43.8 |
+  |       B          2014         Stayed, workers about the same, within 10%     205         1171   17.5 |
+  |       B          2014                 Stayed, workers down more than 10%     453         1171   38.7 |
+  |       B          2014                     Stayed, workers not comparable       0         1171    0.0 |
+  |------------------------------------------------------------------------------------------------------|
+  |       B          2015                   Stayed, workers up more than 10%     655         1205   54.4 |
+  |       B          2015         Stayed, workers about the same, within 10%     203         1205   16.8 |
+  |       B          2015                 Stayed, workers down more than 10%     347         1205   28.8 |
+  |       B          2015                     Stayed, workers not comparable       0         1205    0.0 |
+  |------------------------------------------------------------------------------------------------------|
+  |       B          2017                   Stayed, workers up more than 10%     528         1241   42.5 |
+  |       B          2017         Stayed, workers about the same, within 10%     170         1241   13.7 |
+  |       B          2017                 Stayed, workers down more than 10%     543         1241   43.8 |
+  |       B          2017                     Stayed, workers not comparable       0         1241    0.0 |
+  |------------------------------------------------------------------------------------------------------|
+  |       B          2018                   Stayed, workers up more than 10%     608         1510   40.3 |
+  |       B          2018         Stayed, workers about the same, within 10%     234         1510   15.5 |
+  |       B          2018                 Stayed, workers down more than 10%     668         1510   44.2 |
+  |       B          2018                     Stayed, workers not comparable       0         1510    0.0 |
+  |------------------------------------------------------------------------------------------------------|
+  |       B          2019                   Stayed, workers up more than 10%     476         1484   32.1 |
+  |       B          2019         Stayed, workers about the same, within 10%     183         1484   12.3 |
+  |       B          2019                 Stayed, workers down more than 10%     825         1484   55.6 |
+  |       B          2019                     Stayed, workers not comparable       0         1484    0.0 |
+  |------------------------------------------------------------------------------------------------------|
+  |       B          2012                    Stayed, output up more than 10%     836         1213   68.9 |
+  |       B          2012          Stayed, output about the same, within 10%      85         1213    7.0 |
+  |       B          2012                  Stayed, output down more than 10%     292         1213   24.1 |
+  |       B          2012                      Stayed, output not comparable       0         1213    0.0 |
+  |------------------------------------------------------------------------------------------------------|
+  |       B          2013                    Stayed, output up more than 10%     905         1213   74.6 |
+  |       B          2013          Stayed, output about the same, within 10%      74         1213    6.1 |
+  |       B          2013                  Stayed, output down more than 10%     234         1213   19.3 |
+  |       B          2013                      Stayed, output not comparable       0         1213    0.0 |
+  |------------------------------------------------------------------------------------------------------|
+  |       B          2014                    Stayed, output up more than 10%     860         1171   73.4 |
+  |       B          2014          Stayed, output about the same, within 10%      88         1171    7.5 |
+  |       B          2014                  Stayed, output down more than 10%     223         1171   19.0 |
+  |       B          2014                      Stayed, output not comparable       0         1171    0.0 |
+  |------------------------------------------------------------------------------------------------------|
+  |       B          2015                    Stayed, output up more than 10%     850         1205   70.5 |
+  |       B          2015          Stayed, output about the same, within 10%      78         1205    6.5 |
+  |       B          2015                  Stayed, output down more than 10%     277         1205   23.0 |
+  |       B          2015                      Stayed, output not comparable       0         1205    0.0 |
+  |------------------------------------------------------------------------------------------------------|
+  |       B          2017                    Stayed, output up more than 10%     576         1241   46.4 |
+  |       B          2017          Stayed, output about the same, within 10%     125         1241   10.1 |
+  |       B          2017                  Stayed, output down more than 10%     540         1241   43.5 |
+  |       B          2017                      Stayed, output not comparable       0         1241    0.0 |
+  |------------------------------------------------------------------------------------------------------|
+  |       B          2018                    Stayed, output up more than 10%     624         1510   41.3 |
+  |       B          2018          Stayed, output about the same, within 10%     131         1510    8.7 |
+  |       B          2018                  Stayed, output down more than 10%     755         1510   50.0 |
+  |       B          2018                      Stayed, output not comparable       0         1510    0.0 |
+  |------------------------------------------------------------------------------------------------------|
+  |       B          2019                    Stayed, output up more than 10%     506         1484   34.1 |
+  |       B          2019          Stayed, output about the same, within 10%     120         1484    8.1 |
+  |       B          2019                  Stayed, output down more than 10%     858         1484   57.8 |
+  |       B          2019                      Stayed, output not comparable       0         1484    0.0 |
+  +------------------------------------------------------------------------------------------------------+
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 4/6: numbers for the notes (read from the data, never typed)"
+Step 4/6: numbers for the notes (read from the data, never typed)
+
+. *---------------------------------------------------------------------------
+. quietly summarize firms if drawn & section == "A" & item_order == 2
+
+. local n_back = r(sum)
+
+. local outbasis = outcome_basis[1]
+
+. local covidfile ""
+
+. local reach ""
+
+. local across ""
+
+. foreach c of local starts {
+  2.     if `st_`c'' == 1 local covidfile `c'
+  3.     if `st_`c'' == 2 local reach `reach' `c'
+  4.     if `st_`c'' == 3 local across `across' `c'
+  5. }
+
+. * word lists for the notes, e.g. "2013, 2014 and 2015"
+. foreach w in reach across {
+  2.     local n`w' : word count ``w''
+  3.     local t`w' ""
+  4.     forvalues i = 1/`n`w'' {
+  5.         local x : word `i' of ``w''
+  6.         if `i' == 1 local t`w' "`x'"
+  7.         else if `i' == `n`w'' local t`w' "`t`w'' and `x'"
+  8.         else local t`w' "`t`w'', `x'"
+  9.     }
+ 10. }
+
+. * Reading rule for the notes: the COVID-years stayed share against the range of the
+. * starting files followed only before COVID reached Indonesia (status 3 and 4).
+. foreach g in A B {
+  2.     quietly summarize pct if drawn & section == "`g'" & item_order == 1 & status_code >= 3
+  3.     local rmin`g' = strtrim(string(r(min), "%5.1f"))
+  4.     local rmax`g' = strtrim(string(r(max), "%5.1f"))
+  5.     local nnorm`g' = r(N)
+  6.     quietly summarize pct if drawn & section == "`g'" & item_order == 1 & status_code == 1
+  7.     local rcov`g' = strtrim(string(r(mean), "%5.1f"))
+  8.     local rpos`g' = cond(r(mean) < real("`rmin`g''"), "below", cond(r(mean) > real("`rmax`g''"), "above", "inside")
+> )
+  9. }
+
+. local reading ""
+
+. if `nnormA' > 0 & `nnormB' > 0 & "`rcovA'" != "." & "`rcovB'" != "." {
+.     local reading "Reading: the `covidfile' firms' stayed share (dashed line, `rcovA'%) is `rposA' the range of the fi
+> les followed only before `covid_first' (`rminA'% to `rmaxA'%; lower group: `rcovB'%, `rposB' `rminB'% to `rmaxB'%); wi
+> th the fictional firm links of the development data this says nothing about COVID either way."
+. }
+
+. local gapall ""
+
+. foreach c of local across {
+  2.     local gapall : list gapall | gap_`c'
+  3. }
+
+. local gapall : list sort gapall
+
+. local gapt = subinstr("`gapall'", " ", ", ", .)
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 5/6: 100% bars, one per starting file, two groups of firms"
+Step 5/6: 100% bars, one per starting file, two groups of firms
+
+. *---------------------------------------------------------------------------
+. keep if drawn
+(133 observations deleted)
+
+. * y positions: a bold heading per group, one row per starting file (oldest on top),
+. * and an empty row for every year with no annual file between starting files.
+. gen double y = .
+(56 missing values generated)
+
+. local pos 0
+
+. local ylab ""
+
+. local headtext ""
+
+. local gaprows ""
+
+. local nstarts : word count `starts'
+
+. foreach g in A B {
+  2.     if "`g'" == "B" local pos = `pos' + 0.8
+  3.     local ++pos
+  4.     local head = cond("`g'" == "A", "All firms in the starting file", "Only firms also in one of the two files befo
+> re")
+  5.     local headtext `"`headtext' text(`=`pos' - 0.15' 0 "{bf:`head'}", placement(e) size(vsmall))"'   // heading ove
+> r the bars
+  6.     local first_`g' = `pos' + 1
+  7.     forvalues i = 1/`nstarts' {
+  8.         local c : word `i' of `starts'
+  9.         if `i' > 1 {
+ 10.             local cprev : word `=`i' - 1' of `starts'
+ 11.             forvalues gy = `=`cprev' + 1'/`=`c' - 1' {
+ 12.                 local ++pos
+ 13.                 local ylab `"`ylab' `pos' "`gy': no annual file""'
+ 14.                 local gaprows `gaprows' `g'`gy'
+ 15.             }
+ 16.         }
+ 17.         local ++pos
+ 18.         quietly replace y = `pos' if section == "`g'" & cohort_year == `c'
+ 19.         local rl "`c' file, then `lf_`c''"
+ 20.         if `st_`c'' == 1 local rl "{bf:`rl'}"
+ 21.         local ylab `"`ylab' `pos' "`rl'""'
+ 22.     }
+ 23.     local last_`g' = `pos'
+ 24. }
+
+. local ymax = `pos' + 0.6
+
+. assert !missing(y)
+
+. * pieces left to right: stayed, absent then back, left later, left at once
+. sort section cohort_year item_order
+
+. by section cohort_year: gen double x1 = sum(pct)
+
+. gen double x0 = x1 - pct
+
+. gen double mid = (x0 + x1) / 2
+
+. gen double ylab_y = y - 0.10                                  // text sits low in Stata: centre it in the bar
+
+. gen str8 in_lbl = strtrim(string(pct, "%5.1f")) if pct >= 7   // label a piece only when it is wide enough
+(14 missing values generated)
+
+. * status text right of each bar
+. gen double st_x = 101.5
+
+. gen str40 st_lbl = status_text if item_order == 1
+(42 missing values generated)
+
+. * dashed line: the COVID-years stayed share, over each group's rows
+. quietly summarize pct if status_code == 1 & section == "A" & item_order == 1
+
+. local refA = r(mean)
+
+. quietly summarize pct if status_code == 1 & section == "B" & item_order == 1
+
+. local refB = r(mean)
+
+. local yA0 = `first_A' - 0.45
+
+. local yA1 = `last_A' + 0.5
+
+. local yB0 = `first_B' - 0.45
+
+. local yB1 = `last_B' + 0.5
+
+. local charttitle "Figure R4-02. Stayed in the files or left them: the `covidfile' firms against earlier years"
+
+. 
+. * Notes: one text, wrapped into lines of at most 108 characters (PDF text runs wider than the PNG)
+. local ntext "Notes: Each bar = the firms of one annual file (the starting file), followed in its next three annual fil
+> es. Absent, then back = missed the first or second later file, in the third again (`n_back' firms here); left later = 
+> in the first or second, not in the third. Lower group: only firms also in one of the two files before (firms new to th
+> e files leave more often). Starting files `tacross' are followed across the missing `gapt' file. `reading' Shares only
+> , not the effect of COVID. Left the files is not proof of closure: a firm may have closed, fallen out of the survey or
+>  stopped answering. Firm links are fictional in the development data, so who stays, leaves or comes back means nothing
+>  here; read these results on the real BPS files."
+
+. local notelines ""
+
+. local line ""
+
+. foreach w of local ntext {
+  2.     if ustrlen("`line' `w'") > 108 & "`line'" != "" {
+  3.         local notelines `"`notelines' "`line'""'
+  4.         local line "`w'"
+  5.     }
+  6.     else local line = strtrim("`line' `w'")
+  7. }
+
+. local notelines `"`notelines' "`line'""'
+
+. display `"   note lines: `notelines'"'
+   note lines:  "Notes: Each bar = the firms of one annual file (the starting file), followed in its next three annual f
+> iles." "Absent, then back = missed the first or second later file, in the third again (0 firms here); left later =" "i
+> n the first or second, not in the third. Lower group: only firms also in one of the two files before (firms" "new to t
+> he files leave more often). Starting files 2013, 2014 and 2015 are followed across the missing 2016" "file. Reading: t
+> he 2019 firms' stayed share (dashed line, 55.8%) is inside the range of the files followed" "only before 2020 (54.7% t
+> o 58.0%; lower group: 65.5%, inside 63.8% to 68.0%); with the fictional firm links" "of the development data this says
+>  nothing about COVID either way. Shares only, not the effect of COVID. Left" "the files is not proof of closure: a fir
+> m may have closed, fallen out of the survey or stopped answering." "Firm links are fictional in the development data, 
+> so who stays, leaves or comes back means nothing here;" "read these results on the real BPS files."
+
+. 
+. twoway (rbar x0 x1 y if item_order == 1, horizontal barwidth(0.9) fcolor(gs4) lcolor(gs4) lwidth(vthin)) ///
+>     (rbar x0 x1 y if item_order == 2, horizontal barwidth(0.9) fcolor(gs9) lcolor(gs9) lwidth(vthin)) ///
+>     (rbar x0 x1 y if item_order == 3, horizontal barwidth(0.9) fcolor(gs13) lcolor(gs10) lwidth(vthin)) ///
+>     (rbar x0 x1 y if item_order == 4, horizontal barwidth(0.9) fcolor(white) lcolor(gs4) lwidth(thin)) ///
+>     (scatteri `yA0' `refA' `yA1' `refA', recast(line) lpattern(shortdash) lcolor(black) lwidth(medthin)) ///
+>     (scatteri `yB0' `refB' `yB1' `refB', recast(line) lpattern(shortdash) lcolor(black) lwidth(medthin)) ///
+>     (scatter ylab_y mid if item_order == 1 & in_lbl != "", msymbol(none) mlabel(in_lbl) mlabposition(0) mlabcolor(whit
+> e) mlabsize(vsmall)) ///
+>     (scatter ylab_y mid if item_order != 1 & in_lbl != "", msymbol(none) mlabel(in_lbl) mlabposition(0) mlabcolor(blac
+> k) mlabsize(vsmall)) ///
+>     (scatter ylab_y st_x if st_lbl != "", msymbol(none) mlabel(st_lbl) mlabposition(3) mlabgap(0) mlabcolor(black) mla
+> bsize(vsmall)), ///
+>     `headtext' ///
+>     yscale(reverse noline range(0.2 `ymax')) ylabel(`ylab', angle(0) noticks nogrid labsize(vsmall) labgap(1)) ytitle(
+> "") ///
+>     xscale(range(0 130) noline) xlabel(0(20)100, labsize(vsmall) tlcolor(gs10) nogrid) ///
+>     xtitle("Percent of the firms in the starting file", size(vsmall)) ///
+>     legend(order(1 "Stayed (in all three later files)" 2 "Absent, then back" 3 "Left later" ///
+>                  4 "Left at once (in none of the three)" 5 "Stayed share of the `covidfile' firms") ///
+>            cols(2) position(6) region(lstyle(none)) size(vsmall) symysize(2.2) symxsize(4) keygap(1) rowgap(0.3) colga
+> p(6)) ///
+>     title("`charttitle'", size(small) position(11) justification(left) span) ///
+>     note(`notelines' "`srcnote'" "`devnote'", size(vsmall) span linegap(0.6)) ///
+>     graphregion(color(white) lcolor(white) margin(r+2)) plotregion(style(none) margin(t=1 b=1)) ///
+>     xsize(7.5) ysize(8)
+
+. 
+. graph export "figures/02_states_normal_vs_covid.png", width(2250) replace
+file
+    /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r4-covid-survival/figures/02_states_no
+    > rmal_vs_covid.png saved as PNG format
+
+. graph export "figures/02_states_normal_vs_covid.pdf", replace
+file
+    /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r4-covid-survival/figures/02_states_no
+    > rmal_vs_covid.pdf saved as PDF format
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 6/6: companion table - every plotted piece, one row each (putpdf, no add-on)"
+Step 6/6: companion table - every plotted piece, one row each (putpdf, no add-on)
+
+. *---------------------------------------------------------------------------
+. * Read back the CSV just written, so the table shows exactly the charted numbers.
+. import delimited using "tables/02_states_normal_vs_covid.csv", clear varnames(1) encoding("utf-8") ///
+>     stringcols(1 2 4 6 7 9 17)
+(18 vars, 189 obs)
+
+. keep if drawn == 1
+(133 observations deleted)
+
+. local nrow = _N
+
+. gen byte sorder = cond(section == "A", 1, 2)
+
+. sort sorder cohort_year item_order
+
+. local ngap : word count `gaprows'
+
+. local ntab = `nrow' + `ngap' + 3                           // header + two group headings + gap rows
+
+. putpdf clear
+
+. putpdf begin, font("Times New Roman", 9) margin(all, 0.6in) landscape
+
+. putpdf paragraph, spacing(after, 6pt)
+
+. putpdf text ("Table R4-02. `=substr("`charttitle'", strpos("`charttitle'", ".") + 2, .)': every plotted point"), bold
+
+. matrix colw = (19, 28, 7, 7, 7, 7, 8, 17)                  // column widths, % of the page width
+
+. putpdf table T = (`ntab', 8), border(all, nil) width(colw)
+
+. local h1 "Starting file (row on the chart)"
+
+. local h2 "Piece of the bar"
+
+. local h3 "Percent"
+
+. local h4 "95% low"
+
+. local h5 "95% high"
+
+. local h6 "Firms"
+
+. local h7 "Firms in bar"
+
+. local h8 "Status"
+
+. forvalues c = 1/8 {
+  2.     local al = cond(inlist(`c', 1, 2, 8), "left", "right")
+  3.     putpdf table T(1, `c') = ("`h`c''"), bold halign(`al') border(top, single) border(bottom, single)
+  4.     if `c' == 8 putpdf table T(1, 8), margin(left, 8pt)
+  5. }
+
+. local r 1
+
+. local prevs ""
+
+. local prevc ""
+
+. forvalues i = 1/`nrow' {
+  2.     local s = section[`i']
+  3.     local c = cohort_year[`i']
+  4.     if "`s'" != "`prevs'" {
+  5.         local ++r
+  6.         putpdf table T(`r', 1) = ("`=section_name[`i']'"), bold colspan(8)
+  7.         local prevs "`s'"
+  8.         local prevc ""
+  9.     }
+ 10.     * a row for every year with no annual file, where the chart leaves an empty row
+.     if "`prevc'" != "" {
+ 11.         forvalues gy = `=`prevc' + 1'/`=`c' - 1' {
+ 12.             local ++r
+ 13.             putpdf table T(`r', 1) = ("`gy': no annual file")
+ 14.             putpdf table T(`r', 8) = ("not drawn: no file"), margin(left, 8pt)
+ 15.         }
+ 16.     }
+ 17.     local prevc `c'
+ 18.     local ++r
+ 19.     local rl = cond(item_order[`i'] == 1, "`c' file, then `lf_`c''", "")
+ 20.     putpdf table T(`r', 1) = ("`rl'")
+ 21.     putpdf table T(`r', 2) = ("`=item[`i']'")
+ 22.     putpdf table T(`r', 3) = ("`=strtrim(string(pct[`i'], "%5.1f"))'"), halign(right)
+ 23.     putpdf table T(`r', 4) = ("`=strtrim(string(ci_lo[`i'], "%5.1f"))'"), halign(right)
+ 24.     putpdf table T(`r', 5) = ("`=strtrim(string(ci_hi[`i'], "%5.1f"))'"), halign(right)
+ 25.     putpdf table T(`r', 6) = ("`=strtrim(string(firms[`i'], "%12.0fc"))'"), halign(right)
+ 26.     putpdf table T(`r', 7) = ("`=strtrim(string(base_firms[`i'], "%12.0fc"))'"), halign(right)
+ 27.     local stt = cond(pct[`i'] == 0, "drawn (zero width)", cond(pct[`i'] < 7, "drawn (no label: narrow)", "drawn"))
+ 28.     if item_order[`i'] == 1 local stt "`stt'; `=status_text[`i']'"
+ 29.     putpdf table T(`r', 8) = ("`stt'"), margin(left, 8pt)
+ 30. }
+
+. assert `r' == `ntab'
+
+. forvalues c = 1/8 {
+  2.     putpdf table T(`ntab', `c'), border(bottom, single)
+  3. }
+
+. putpdf paragraph, spacing(before, 6pt)
+
+. putpdf text ("95% interval: Wilson interval for a share, treating the firms of the starting file as a sample; the star
+> ting files share many firms, so intervals of different bars are not independent. Firms = firms in this piece; firms in
+>  the bar = all firms of the starting file in that group. Status after the first piece of each bar: how the starting fi
+> le is followed. The dashed line on the chart is the Stayed percent of the `covidfile' file in each group."), font("Tim
+> es New Roman", 9)
+
+. putpdf paragraph
+
+. putpdf text ("`ntext'"), font("Times New Roman", 9)
+
+. putpdf paragraph
+
+. putpdf text ("`srcnote'"), font("Times New Roman", 9)
+
+. putpdf paragraph
+
+. putpdf text ("`devnote'"), font("Times New Roman", 9)
+
+. putpdf save "tables/02_states_normal_vs_covid_table.pdf", replace
+successfully created "/Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r4-covid-survival/tabl
+> es/02_states_normal_vs_covid_table.pdf"
+
+. display "table -> tables/02_states_normal_vs_covid_table.pdf (`nrow' plotted pieces, `ngap' rows for years with no fil
+> e)"
+table -> tables/02_states_normal_vs_covid_table.pdf (56 plotted pieces, 2 rows for years with no file)
+
+. 
+. timer off 1
+
+. quietly timer list 1
+
+. local elapsed = strtrim(string(r(t1), "%9.1f"))
+
+. display "FINISHED: figure -> figures/02_states_normal_vs_covid.png (elapsed `elapsed' s)"
+FINISHED: figure -> figures/02_states_normal_vs_covid.png (elapsed 3.4 s)
+
+. quietly log close          // keeps FINISHED as the last output line of the log

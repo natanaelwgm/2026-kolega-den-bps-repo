@@ -1,0 +1,1697 @@
+------------------------------------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r4-covid-survival/logs/03_compo
+> sition_before_after.log
+  log type:  text
+ opened on:  28 Sep 2026, 16:55:51
+
+. timer clear 1
+
+. timer on 1
+
+. display _newline "=== [R4-03] STARTING: the mix of firms before and after COVID, against normal years ==="
+
+=== [R4-03] STARTING: the mix of firms before and after COVID, against normal years ===
+
+. 
+. * ---- chart style (identical block in every file) ----
+. set scheme s1mono
+
+. capture graph set window fontface "Times New Roman"   // GUI Stata; console Stata keeps its default font
+
+. * Note: this changes your Stata graph font permanently; undo with: graph set window fontface default
+. local devnote "Development data — obscured values, fictional firm panel. Not BPS findings."
+
+. local srcnote "Source: SI/IBS annual files 2010–2022 (masked), analysis_ready_data.dta."
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 1/8: load firm, year, workers, output, importer, foreign ownership and sector"
+Step 1/8: load firm, year, workers, output, importer, foreign ownership and sector
+
+. *---------------------------------------------------------------------------
+. * workers              = persons engaged (size bands and the share of workers)
+. * import_flag          = 1 if the firm reported imports that year
+. * fdi_10_flag          = 1 if foreign owners hold 10% or more (the R1-R4 rule)
+. * industry2_reported   = first two digits of the reported industry code
+. * gross_output_*       = only needed by the shared cohort block (Step 3)
+. quietly describe using "$DATA", varlist
+
+. local allvars `r(varlist)'
+
+. local want firm_id year workers gross_output_nominal gross_output_real import_flag fdi_10_flag industry2_reported
+
+. local have : list want & allvars
+
+. use `have' using "$DATA", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. isid firm_id year
+
+. assert !missing(firm_id, year)
+
+. tempfile panel
+
+. save `panel'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_87514.000001 saved as .dta format
+
+. 
+. * The COVID pair: the last annual file before COVID reached Indonesia (March 2020)
+. * against the third file after it. The main normal-years pair starts in 2012.
+. local covid_year   2019
+
+. local placebo_year 2012
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 2/8: the normal-years pairs, read from the files"
+Step 2/8: the normal-years pairs, read from the files
+
+. *---------------------------------------------------------------------------
+. * A normal-years pair = a starting file whose next three files are the next three
+. * calendar years and end before the COVID starting file (e.g. 2010 -> 2013).
+. * Pairs that cross the missing 2016 file are left out. On files with 2016 the
+. * rule adds those pairs by itself.
+. quietly levelsof year, local(files)
+
+. local normal_bases ""
+
+. foreach b of local files {
+  2.     local ok = (`b' + 3 < `covid_year')
+  3.     forvalues k = 1/3 {
+  4.         local nx = `b' + `k'
+  5.         local isin : list posof "`nx'" in files
+  6.         if `isin' == 0 local ok 0
+  7.     }
+  8.     if `ok' local normal_bases `normal_bases' `b'
+  9. }
+
+. local isin : list posof "`placebo_year'" in normal_bases
+
+. if `isin' == 0 {
+.     display as error "the normal-years starting file `placebo_year' needs three later consecutive files"
+.     exit 198
+. }
+
+. display "   normal-years starting files: `normal_bases'; COVID starting file: `covid_year'"
+   normal-years starting files: 2010 2011 2012; COVID starting file: 2019
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 3/8: for every starting file, which firms stayed, left or came in (shared block)"
+Step 3/8: for every starting file, which firms stayed, left or came in (shared block)
+
+. *---------------------------------------------------------------------------
+. * The block below is the R4-01 block, copied exactly. It runs once per starting
+. * file. Kept per firm: link = 1 in the starting file and the third later file,
+. * 2 in the starting file only (left the files), 3 in the third later file only
+. * (came in after the starting file).
+. tempfile links
+
+. local pairs ""
+
+. local first 1
+
+. foreach cohort_year in `normal_bases' `covid_year' {
+  2.     use `panel', clear
+  3. *===========================================================================
+. * COVID COHORT AND STATES (copy exactly into later R4 and R10 files)
+. *   Version 2 - written and reviewed in R4-01 (28 Sep 2026). Do not edit a copy;
+. *   change R4-01 and re-copy. Set -local cohort_year- before the block; R4-02
+. *   runs it once per starting file (2012 ... 2019).
+. *   In : firm-year rows in memory (one row per firm and year): firm_id year
+. *        workers gross_output_nominal (gross_output_real is used instead when
+. *        present and filled for 95%+ of the cohort-file and last-file rows).
+. *        The block collapses to one row per firm: every other variable in memory
+. *        is dropped. Build traits in a tempfile first and merge them back by
+. *        firm_id after the block.
+. *   Out: one row per firm in the cohort file or in one of the next three files.
+. *        in_cohort = 1 for the firms of the cohort file (the cohort); the others
+. *        are newcomers (new_in_file = the later file they first appear in).
+. *        Locals: f1 f2 f3 = the next three files, p1 p2 = the two files before,
+. *        outbasis = output variable used, band_pct = neutral band in percent
+. *        (10 = within 10% either way), band_lo band_hi = its limits as ratios.
+. *   The years come from the data, so the block runs unchanged on the real files.
+. *===========================================================================
+. isid firm_id year
+  4. * -- the annual files in the data, and the files around the cohort file --
+. quietly levelsof year, local(c_files)
+  5. local c_pos : list posof "`cohort_year'" in c_files
+  6. local c_nf : word count `c_files'
+  7. if `c_pos' == 0 | `c_pos' + 3 > `c_nf' {
+  8.     display as error "cohort file `cohort_year' must be a file year with three later files"
+  9.     exit 198
+ 10. }
+ 11. local f1 : word `=`c_pos' + 1' of `c_files'
+ 12. local f2 : word `=`c_pos' + 2' of `c_files'
+ 13. local f3 : word `=`c_pos' + 3' of `c_files'
+ 14. local p1 ""
+ 15. local p2 ""
+ 16. if `c_pos' > 1 local p1 : word `=`c_pos' - 1' of `c_files'
+ 17. if `c_pos' > 2 local p2 : word `=`c_pos' - 2' of `c_files'
+ 18. * -- output: constant prices when the file has them, else current prices --
+. local outbasis "gross_output_nominal"
+ 19. capture confirm numeric variable gross_output_real
+ 20. if !_rc {
+ 21.     quietly count if inlist(year, `cohort_year', `f3')
+ 22.     local c_nrows = r(N)
+ 23.     quietly count if inlist(year, `cohort_year', `f3') & !missing(gross_output_real)
+ 24.     if r(N) >= 0.95 * `c_nrows' & `c_nrows' > 0 local outbasis "gross_output_real"
+ 25. }
+ 26. * -- neutral band: a stayer is "about the same" if its last-file level is
+. *    within band_pct percent of its cohort-file level, up or down (10: 0.90 to 1.10 times);
+. *    the limits match the words on the chart ("down more than 10%") exactly --
+. if "`band_pct'" == "" local band_pct 10
+ 27. local band_lo = 1 - `band_pct'/100
+ 28. local band_hi = 1 + `band_pct'/100
+ 29. * -- which files each firm is in (1 = in the file, 0 = not) --
+. gen byte c_base    = (year == `cohort_year')
+ 30. gen byte c_f1      = (year == `f1')
+ 31. gen byte c_f2      = (year == `f2')
+ 32. gen byte c_f3      = (year == `f3')
+ 33. gen byte c_earlier = (year <  `cohort_year')                    // any file before the cohort file
+ 34. gen byte c_p1      = cond("`p1'" == "", ., (year == real("`p1'")))
+ 35. gen byte c_p2      = cond("`p2'" == "", ., (year == real("`p2'")))
+ 36. gen double c_wk0   = workers     if year == `cohort_year'
+ 37. gen double c_wk3   = workers     if year == `f3'
+ 38. gen double c_out0  = `outbasis'  if year == `cohort_year'
+ 39. gen double c_out3  = `outbasis'  if year == `f3'
+ 40. keep if year <= `f3'
+ 41. collapse (max) seen_base = c_base seen_f1 = c_f1 seen_f2 = c_f2 seen_f3 = c_f3 ///
+>     seen_earlier = c_earlier seen_p1 = c_p1 seen_p2 = c_p2 ///
+>     workers_base = c_wk0 workers_f3 = c_wk3 output_base = c_out0 output_f3 = c_out3, by(firm_id)
+ 42. keep if seen_base | seen_f1 | seen_f2 | seen_f3                  // firms of the cohort file or a later one
+ 43. gen int  cohort_year = `cohort_year'
+ 44. gen byte in_cohort   = (seen_base == 1)
+ 45. * -- new_to_file = 1: in the cohort file but in neither of the two files before
+. *    (it may still be in an older file); 0 = "incumbent" (R10 uses 0 as incumbent) --
+. gen byte new_to_file = .
+ 46. if "`p1'" != "" replace new_to_file = (seen_p1 == 0 & (seen_p2 == 0 | missing(seen_p2))) if in_cohort
+ 47. * -- presence in the next three files, e.g. "110" = in f1 and f2, not in f3 --
+. gen str3 pattern = string(seen_f1) + string(seen_f2) + string(seen_f3) if in_cohort
+ 48. * -- state by the last file (f3) --
+. *    1 stayed           = in all three later files
+. *    2 absent then back = missed f1 and/or f2, in f3 again ("temporary disappearance")
+. *    3 left the files   = not in f3 (the file has no closure record: not proof of closure)
+. gen byte state_file = cond(pattern == "111", 1, cond(seen_f3 == 1, 2, 3)) if in_cohort
+ 49. *    left_when: 1 = gone from f1 on ("000"), 2 = in f1 or f2, gone by f3
+. gen byte left_when = cond(pattern == "000", 1, 2) if state_file == 3
+ 50. * -- stayers: change from the cohort file to f3; 0 in f3 counts as shrank;
+. *    no positive cohort-file level (or no f3 level) = not classified (missing) --
+. gen double ratio_wk  = workers_f3 / workers_base if state_file == 1 & workers_base > 0 & !missing(workers_base, worker
+> s_f3)
+ 51. gen double ratio_out = output_f3  / output_base  if state_file == 1 & output_base  > 0 & !missing(output_base,  out
+> put_f3)
+ 52. foreach m in wk out {
+ 53.     gen byte size_`m' = cond(ratio_`m' < `band_lo', 1, cond(ratio_`m' > `band_hi', 3, 2)) if !missing(ratio_`m')
+ 54.     *   outcome5: 1 left the files, 2 absent then back, 3 shrank, 4 about the same, 5 grew
+.     gen byte outcome5_`m' = cond(state_file == 3, 1, cond(state_file == 2, 2, 2 + size_`m')) if in_cohort
+ 55.     replace  outcome5_`m' = . if state_file == 1 & missing(size_`m')
+ 56. }
+ 57. * -- newcomers: the later file a firm not in the cohort file first appears in --
+. gen int new_in_file = cond(seen_f1, `f1', cond(seen_f2, `f2', `f3')) if !in_cohort
+ 58. gen str80 outcome_basis = "`outbasis'"
+ 59. label define c_state 1 "stayed" 2 "absent then back" 3 "left the files", replace
+ 60. label define c_left  1 "gone from the first later file" 2 "gone later", replace
+ 61. label define c_size  1 "shrank" 2 "about the same" 3 "grew", replace
+ 62. label define c_out5  1 "left the files" 2 "absent then back" 3 "stayed, shrank" 4 "stayed, about the same" 5 "staye
+> d, grew", replace
+ 63. label values state_file c_state
+ 64. label values left_when c_left
+ 65. label values size_wk size_out c_size
+ 66. label values outcome5_wk outcome5_out c_out5
+ 67. * -- structural checks (hold on any data) --
+. isid firm_id
+ 68. assert !missing(state_file, pattern) if in_cohort
+ 69. assert missing(state_file) & !missing(new_in_file) if !in_cohort
+ 70. assert (state_file == 1) == (pattern == "111") if in_cohort
+ 71. assert !missing(outcome5_wk) if in_cohort & state_file != 1
+ 72. order firm_id cohort_year in_cohort new_to_file seen_* pattern state_file left_when ///
+>     workers_base workers_f3 ratio_wk size_wk outcome5_wk output_base output_f3 ratio_out size_out ///
+>     outcome5_out new_in_file outcome_basis
+ 73. display "   cohort file `cohort_year'; later files `f1' `f2' `f3'; earlier files `p2' `p1'; output: `outbasis'; ban
+> d +/-`band_pct'%"
+ 74. *===========================================================================
+. * END OF COVID COHORT AND STATES
+. *===========================================================================
+.     * -- keep, per firm, the link between the starting file and its third later file --
+.     keep firm_id cohort_year in_cohort seen_f3
+ 75.     gen byte link = cond(in_cohort & seen_f3, 1, cond(in_cohort, 2, cond(seen_f3, 3, .)))
+ 76.     drop if missing(link)             // came in after the starting file, gone again by the third later file
+ 77.     rename cohort_year base_year
+ 78.     gen int end_year = `f3'
+ 79.     keep firm_id base_year end_year link
+ 80.     if !`first' append using `links'
+ 81.     save `links', replace
+ 82.     local first 0
+ 83.     local end_`cohort_year' `f3'
+ 84. }
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(33,049 missing values generated)
+(33,049 missing values generated)
+(30,715 missing values generated)
+(30,680 missing values generated)
+(30,715 missing values generated)
+(30,680 missing values generated)
+(23,650 observations deleted)
+(0 observations deleted)
+(4,035 missing values generated)
+(1,701 missing values generated)
+(1,701 missing values generated)
+(3,044 missing values generated)
+(2,692 missing values generated)
+(2,692 missing values generated)
+(2,692 missing values generated)
+(1,701 missing values generated)
+(0 real changes made)
+(2,692 missing values generated)
+(1,701 missing values generated)
+(0 real changes made)
+(2,334 missing values generated)
+   cohort file 2010; later files 2011 2012 2013; earlier files  ; output: gross_output_nominal; band +/-10%
+(675 missing values generated)
+(675 observations deleted)
+(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_87514.000002 not found)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_87514.000002 saved as .dta format
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(33,049 missing values generated)
+(30,712 missing values generated)
+(30,597 missing values generated)
+(30,712 missing values generated)
+(30,597 missing values generated)
+(21,198 observations deleted)
+(551 observations deleted)
+(4,146 missing values generated)
+(2,337 real changes made)
+(1,809 missing values generated)
+(1,809 missing values generated)
+(3,147 missing values generated)
+(2,808 missing values generated)
+(2,808 missing values generated)
+(2,808 missing values generated)
+(1,809 missing values generated)
+(0 real changes made)
+(2,808 missing values generated)
+(1,809 missing values generated)
+(0 real changes made)
+(2,337 missing values generated)
+   cohort file 2011; later files 2012 2013 2014; earlier files  2010; output: gross_output_nominal; band +/-10%
+(695 missing values generated)
+(695 observations deleted)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_87514.000002 saved as .dta format
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(30,690 missing values generated)
+(30,417 missing values generated)
+(30,690 missing values generated)
+(30,417 missing values generated)
+(18,566 observations deleted)
+(1,092 observations deleted)
+(4,347 missing values generated)
+(2,359 real changes made)
+(1,988 missing values generated)
+(1,988 missing values generated)
+(3,334 missing values generated)
+(3,001 missing values generated)
+(3,001 missing values generated)
+(3,001 missing values generated)
+(1,988 missing values generated)
+(0 real changes made)
+(3,001 missing values generated)
+(1,988 missing values generated)
+(0 real changes made)
+(2,359 missing values generated)
+   cohort file 2012; later files 2013 2014 2015; earlier files 2010 2011; output: gross_output_nominal; band +/-10%
+(702 missing values generated)
+(702 observations deleted)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_87514.000002 saved as .dta format
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(30,042 missing values generated)
+(29,872 missing values generated)
+(30,042 missing values generated)
+(29,872 missing values generated)
+(0 observations deleted)
+(5,118 observations deleted)
+(5,345 missing values generated)
+(3,007 real changes made)
+(2,338 missing values generated)
+(2,338 missing values generated)
+(4,016 missing values generated)
+(3,667 missing values generated)
+(3,667 missing values generated)
+(3,667 missing values generated)
+(2,338 missing values generated)
+(0 real changes made)
+(3,667 missing values generated)
+(2,338 missing values generated)
+(0 real changes made)
+(3,007 missing values generated)
+   cohort file 2019; later files 2020 2021 2022; earlier files 2017 2018; output: gross_output_nominal; band +/-10%
+(839 missing values generated)
+(839 observations deleted)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_87514.000002 saved as .dta format
+
+. local covid_end   `end_`covid_year''
+
+. local placebo_end `end_`placebo_year''
+
+. local nb_first : word 1 of `normal_bases'
+
+. local nb_n     : word count `normal_bases'
+
+. local nb_last  : word `nb_n' of `normal_bases'
+
+. display "   COVID pair `covid_year'-`covid_end'; main normal pair `placebo_year'-`placebo_end'; `nb_n' normal pairs"
+   COVID pair 2019-2022; main normal pair 2012-2015; 3 normal pairs
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 4/8: the groups - size band, importer, foreign-owned, sector"
+Step 4/8: the groups - size band, importer, foreign-owned, sector
+
+. *---------------------------------------------------------------------------
+. use `panel', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. * size band from the workers in that file; 0 workers counts as "fewer than 20"
+. gen byte g_siz  = cond(workers < 20, 1, cond(workers < 100, 2, 3)) if !missing(workers)
+
+. gen byte g_imp  = import_flag                 // 1 importer, 0 not; missing = no answer
+
+. gen byte g_fdi  = fdi_10_flag                 // 1 foreign-owned 10%+, 0 not; missing = no answer
+(311 missing values generated)
+
+. gen int  sec2   = real(industry2_reported)    // missing = no sector recorded
+
+. * sectors with fewer than 30 firms in the 2019 file or the 2022 file are pooled into
+. * "Other sectors" (code 98), so no row rests on a handful of firms
+. bysort sec2: egen double n_sec_b = total(year == `covid_year')
+
+. bysort sec2: egen double n_sec_e = total(year == `covid_end')
+
+. gen int g_sec = cond(min(n_sec_b, n_sec_e) < 30, 98, sec2) if !missing(sec2)
+
+. quietly levelsof sec2 if g_sec == 98, local(pooled) separate(", ")
+
+. display "   sectors pooled into Other sectors: `pooled'"
+   sectors pooled into Other sectors: 19, 21, 33
+
+. keep firm_id year workers g_siz g_imp g_fdi g_sec
+
+. gen long rid = _n
+
+. quietly reshape long g_, i(rid) j(dim) string
+
+. rename g_ cat
+
+. tempfile stacked
+
+. save `stacked'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_87514.000003 saved as .dta format
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 5/8: shares in each pair of files, and the three parts of each change"
+Step 5/8: shares in each pair of files, and the three parts of each change
+
+. *---------------------------------------------------------------------------
+. * For each pair (starting file b, third later file e) and each group:
+. *   share of firms  = firms in the group / firms with a known answer (x 100)
+. *   share of workers = workers in the group's firms / workers in firms with a known answer
+. *   change = share in e - share in b, in percentage points.
+. * The change splits exactly into three parts (Melitz-Polanec rule, as in R9: firms that
+. * left are compared with the firms in both files in b, firms that came in with the firms
+. * in both files in e, so a shift shared by all firms is not credited to newcomers).
+. * sS_b, sS_e = share among the firms in both files, measured in b and in e;
+. * wL = left firms' weight in b; wE = came-in firms' weight in e:
+. *   left      = - wL x (share among the firms that left    - sS_b)
+. *   came in   =   wE x (share among the firms that came in - sS_e)
+. *   changed   =   sS_e - sS_b   (the firms in both files moving between groups)
+. * For firms the weight is the firm count, for workers the worker count.
+. tempfile cells
+
+. local first 1
+
+. foreach b in `normal_bases' `covid_year' {
+  2.     use `stacked' if inlist(year, `b', `end_`b''), clear
+  3.     gen int base_year = `b'
+  4.     quietly merge m:1 firm_id base_year using `links', keepusing(link) keep(master match)
+  5.     assert _merge == 3                          // every firm of the two files has a link
+  6.     drop _merge
+  7.     gen byte side = cond(year == `b', 1, 2)     // 1 starting file, 2 third later file
+  8.     assert inlist(link, 1, 2) if side == 1
+  9.     assert inlist(link, 1, 3) if side == 2
+ 10.     gen byte one = 1
+ 11.     collapse (sum) n = one w = workers, by(base_year side link dim cat)
+ 12.     if !`first' append using `cells'
+ 13.     save `cells', replace
+ 14.     local first 0
+ 15. }
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_87514.000004 not found)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_87514.000004 saved as .dta format
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_87514.000004 saved as .dta format
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_87514.000004 saved as .dta format
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_87514.000004 saved as .dta format
+
+. * group totals among known answers (weights of the formula above)
+. use `cells', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. drop if missing(cat)
+(0 observations deleted)
+
+. gen int sl = 10 * side + link                   // 11 both (start) 12 left 21 both (end) 23 came in
+
+. tempfile known
+
+. preserve
+
+. collapse (sum) K = n W = w, by(base_year dim sl)
+
+. save `known'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_87514.000005 saved as .dta format
+
+. restore
+
+. keep base_year dim cat sl n w
+
+. gen str12 dimcat = dim + ":" + string(cat)
+
+. fillin base_year dimcat sl                      // groups with no firms in a cell get 0
+
+. replace n = 0 if _fillin
+(0 real changes made)
+
+. replace w = 0 if _fillin
+(0 real changes made)
+
+. drop _fillin dim cat
+
+. gen str3 dim = substr(dimcat, 1, strpos(dimcat, ":") - 1)
+
+. gen int  cat = real(substr(dimcat, strpos(dimcat, ":") + 1, .))
+
+. merge m:1 base_year dim sl using `known', nogen keep(master match)
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                               464  
+    -----------------------------------------
+
+. replace K = 0 if missing(K)
+(0 real changes made)
+
+. replace W = 0 if missing(W)
+(0 real changes made)
+
+. drop dimcat
+
+. quietly reshape wide n w K W, i(base_year dim cat) j(sl)
+
+. foreach s in 11 12 21 23 {
+  2.     foreach v in n w K W {
+  3.         capture confirm variable `v'`s'
+  4.         if _rc gen double `v'`s' = 0
+  5.         replace `v'`s' = 0 if missing(`v'`s')
+  6.     }
+  7. }
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+
+. gen int end_year = .
+(116 missing values generated)
+
+. foreach b in `normal_bases' `covid_year' {
+  2.     replace end_year = `end_`b'' if base_year == `b'
+  3. }
+(29 real changes made)
+(29 real changes made)
+(29 real changes made)
+(29 real changes made)
+
+. foreach m in firms workers {
+  2.     local c = cond("`m'" == "firms", "n", "w")
+  3.     local T = cond("`m'" == "firms", "K", "W")
+  4.     gen double share_`m'_base = 100 * (`c'11 + `c'12) / (`T'11 + `T'12)
+  5.     gen double share_`m'_end  = 100 * (`c'21 + `c'23) / (`T'21 + `T'23)
+  6.     gen double chg_`m'        = share_`m'_end - share_`m'_base
+  7.     gen double s_both_b = `c'11 / `T'11
+  8.     gen double s_left   = cond(`T'12 > 0, `c'12 / `T'12, 0)
+  9.     gen double s_both_e = `c'21 / `T'21
+ 10.     gen double s_came   = cond(`T'23 > 0, `c'23 / `T'23, 0)
+ 11.     gen double part_left_`m'    = -100 * `T'12 / (`T'11 + `T'12) * (s_left   - s_both_b)
+ 12.     gen double part_came_in_`m' =  100 * `T'23 / (`T'21 + `T'23) * (s_came   - s_both_e)
+ 13.     gen double part_changed_`m' =  100 * (s_both_e - s_both_b)
+ 14.     * the three parts add up to the change (exact identity)
+.     assert abs(part_left_`m' + part_came_in_`m' + part_changed_`m' - chg_`m') < 1e-9 if !missing(s_both_b, s_both_e)
+ 15.     drop s_both_b s_left s_both_e s_came
+ 16. }
+
+. rename (n11 n12 n21 n23) (firms_both_base firms_left firms_both_end firms_came_in)
+
+. rename (K11 K12 K21 K23) (known_both_base known_left known_both_end known_came_in)
+
+. rename (w11 w12 w21 w23) (workers_both_base workers_left workers_both_end workers_came_in)
+
+. rename (W11 W12 W21 W23) (wknown_both_base wknown_left wknown_both_end wknown_came_in)
+
+. gen double firms_base = firms_both_base + firms_left
+
+. gen double known_base = known_both_base + known_left
+
+. gen double firms_end  = firms_both_end + firms_came_in
+
+. gen double known_end  = known_both_end + known_came_in
+
+. gen str11 pair_role = cond(base_year == `covid_year', "covid", cond(base_year == `placebo_year', "normal_main", "norma
+> l"))
+
+. * readable group names (sector names as in R3-03)
+. gen str40 group = ""
+(116 missing values generated)
+
+. replace group = "Fewer than 20 workers"       if dim == "siz" & cat == 1
+(4 real changes made)
+
+. replace group = "20–99 workers"               if dim == "siz" & cat == 2
+(4 real changes made)
+
+. replace group = "100 or more workers"         if dim == "siz" & cat == 3
+(4 real changes made)
+
+. replace group = "Importer"                    if dim == "imp" & cat == 1
+(4 real changes made)
+
+. replace group = "Not an importer"             if dim == "imp" & cat == 0
+(4 real changes made)
+
+. replace group = "Foreign-owned (10% or more)" if dim == "fdi" & cat == 1
+(4 real changes made)
+
+. replace group = "Not foreign-owned"           if dim == "fdi" & cat == 0
+(4 real changes made)
+
+. label define secname 10 "Food products" 11 "Beverages" 12 "Tobacco" 13 "Textiles" 14 "Clothing" ///
+>     15 "Leather and footwear" 16 "Wood products" 17 "Paper" 18 "Printing" 19 "Refined petroleum, coke" ///
+>     20 "Chemicals" 21 "Medicines" 22 "Rubber and plastics" 23 "Cement, glass, ceramics" ///
+>     24 "Steel and other metals" 25 "Metal products" 26 "Computers, electronics" 27 "Electrical equipment" ///
+>     28 "Machinery" 29 "Motor vehicles" 30 "Motorcycles, other vehicles" 31 "Furniture" 32 "Other manufacturing" ///
+>     33 "Machine repair" 98 "Other sectors", replace
+
+. gen int sec_code = cat if dim == "sec"
+(28 missing values generated)
+
+. label values sec_code secname
+
+. decode sec_code, gen(sec_name)
+
+. replace group = sec_name if dim == "sec"
+(88 real changes made)
+
+. replace group = "Sector code " + string(cat) if dim == "sec" & group == ""
+(0 real changes made)
+
+. drop sec_code sec_name
+
+. gen str7 section = cond(dim == "siz", "size", cond(dim == "sec", "sector", "trade"))
+
+. order base_year end_year pair_role section dim cat group firms_base known_base firms_end known_end ///
+>     share_firms_base share_firms_end chg_firms part_left_firms part_came_in_firms part_changed_firms ///
+>     share_workers_base share_workers_end chg_workers part_left_workers part_came_in_workers part_changed_workers
+
+. sort dim cat base_year
+
+. format share_* chg_* part_* %9.3f
+
+. format firms_* known_* workers_* wknown_* %12.0f
+
+. export delimited using "tables/03_composition_before_after_pairs.csv", datafmt replace
+file tables/03_composition_before_after_pairs.csv saved
+
+. tempfile allpairs
+
+. save `allpairs'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_87514.000007 saved as .dta format
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 6/8: one row per chart row -> CSV (numbers before drawing)"
+Step 6/8: one row per chart row -> CSV (numbers before drawing)
+
+. *---------------------------------------------------------------------------
+. * normal-years range = lowest and highest change over the normal-years pairs
+. use `allpairs', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if pair_role != "covid"
+(29 observations deleted)
+
+. collapse (min) nmin_firms = chg_firms nmin_workers = chg_workers ///
+>          (max) nmax_firms = chg_firms nmax_workers = chg_workers (count) n_normal_pairs = chg_firms, by(dim cat)
+
+. tempfile nrange
+
+. save `nrange'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_87514.000008 saved as .dta format
+
+. use `allpairs' if pair_role == "normal_main", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep dim cat chg_firms chg_workers part_left_firms part_came_in_firms part_changed_firms
+
+. rename (chg_firms chg_workers part_left_firms part_came_in_firms part_changed_firms) ///
+>        (norm_chg_firms norm_chg_workers norm_part_left norm_part_came_in norm_part_changed)
+
+. tempfile nmain
+
+. save `nmain'
+file /var/folders/0k/wcj_06q55_gd0c7z2x717jsc0000gn/T//S_87514.000009 saved as .dta format
+
+. use `allpairs' if pair_role == "covid", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. merge 1:1 dim cat using `nmain', nogen
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                                29  
+    -----------------------------------------
+
+. merge 1:1 dim cat using `nrange', nogen
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                                29  
+    -----------------------------------------
+
+. * drawn rows: the three size bands, importers, foreign-owned firms, every sector
+. gen byte drawn = inlist(dim, "siz", "sec") | (inlist(dim, "imp", "fdi") & cat == 1)
+
+. gen byte doubt = (dim == "imp")                 // importer records change in 2017 and 2022
+
+. gen str60 status = cond(drawn, "drawn", "not drawn: the rest of the row above")
+
+. replace status = "drawn gray: records in doubt" if drawn & doubt
+(1 real change made)
+
+. * the exporter row cannot be built: kept as a not-drawn row with the reason
+. local nobs = _N + 1
+
+. set obs `nobs'
+Number of observations (_N) was 29, now 30.
+
+. replace dim = "exp" in `nobs'
+(1 real change made)
+
+. replace section = "trade" in `nobs'
+(1 real change made)
+
+. replace group = "Exporter" in `nobs'
+(1 real change made)
+
+. replace drawn = 0 in `nobs'
+(1 real change made)
+
+. replace doubt = 0 in `nobs'
+(1 real change made)
+
+. replace status = "not drawn: the `covid_end' file records no non-exporters" in `nobs'
+(1 real change made)
+
+. replace base_year = `covid_year' in `nobs'
+(1 real change made)
+
+. replace end_year = `covid_end' in `nobs'
+(1 real change made)
+
+. * row order: size, trade, then sectors from the largest rise in the share of firms to the largest fall
+. gen byte sec_ord = cond(dim == "siz", 1, cond(inlist(dim, "imp", "fdi", "exp"), 2, 3))
+
+. gen byte sub_ord = cond(dim == "siz", cat, cond(dim == "imp", 1 + (cat == 0), cond(dim == "fdi", 3 + (cat == 0), cond(
+> dim == "exp", 5, cond(cat == 98, 2, 1)))))
+
+. gen double sort_chg = cond(dim == "sec", -chg_firms, 0)
+
+. sort sec_ord sub_ord sort_chg cat
+
+. gen int row_order = _n
+
+. gen str9  covid_pair   = "`covid_year'-`covid_end'"
+
+. gen str9  normal_pair  = "`placebo_year'-`placebo_end'"
+
+. gen str60 normal_pairs = "`nb_first' to `nb_last' starting files"
+
+. gen str40 pooled_sectors = "`pooled'" if dim == "sec" & cat == 98
+(29 missing values generated)
+
+. order row_order section group drawn status doubt covid_pair firms_base known_base firms_end known_end ///
+>     share_firms_base share_firms_end chg_firms norm_chg_firms nmin_firms nmax_firms ///
+>     share_workers_base share_workers_end chg_workers norm_chg_workers nmin_workers nmax_workers ///
+>     part_left_firms part_came_in_firms part_changed_firms firms_both_base firms_left firms_both_end firms_came_in ///
+>     known_both_base known_left known_both_end known_came_in normal_pair normal_pairs n_normal_pairs norm_part_left nor
+> m_part_came_in norm_part_changed ///
+>     part_left_workers part_came_in_workers part_changed_workers pooled_sectors dim cat
+
+. keep row_order-cat
+
+. format share_* chg_* norm_* nmin_* nmax_* part_* %9.3f
+
+. export delimited using "tables/03_composition_before_after.csv", datafmt replace
+file tables/03_composition_before_after.csv saved
+
+. list row_order group drawn firms_base firms_end share_firms_base share_firms_end chg_firms norm_chg_firms ///
+>     nmin_firms nmax_firms, noobs sep(0) abbreviate(24)
+
+  +---------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | drawn | firms_base | firms_end | share_firms_base | share_firms_end |
+  |         1 |       Fewer than 20 workers |     1 |        313 |       582 |           10.409 |          18.319 |
+  |---------------------------------------------------------------------------------------------------------------|
+  |        chg_firms        |        norm_chg_firms        |        nmin_firms        |        nmax_firms         |
+  |            7.910        |                -1.129        |            -1.532        |            -0.191         |
+  +---------------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | drawn | firms_base | firms_end | share_firms_base | share_firms_end |
+  |         2 |               20–99 workers |     1 |       1643 |      1544 |           54.639 |          48.599 |
+  |---------------------------------------------------------------------------------------------------------------|
+  |        chg_firms        |        norm_chg_firms        |        nmin_firms        |        nmax_firms         |
+  |           -6.040        |                 1.008        |            -0.918        |             1.685         |
+  +---------------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | drawn | firms_base | firms_end | share_firms_base | share_firms_end |
+  |         3 |         100 or more workers |     1 |       1051 |      1051 |           34.952 |          33.082 |
+  |---------------------------------------------------------------------------------------------------------------|
+  |        chg_firms        |        norm_chg_firms        |        nmin_firms        |        nmax_firms         |
+  |           -1.870        |                 0.121        |            -0.153        |             1.109         |
+  +---------------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | drawn | firms_base | firms_end | share_firms_base | share_firms_end |
+  |         4 |                    Importer |     1 |       1596 |      1129 |           53.076 |          35.537 |
+  |---------------------------------------------------------------------------------------------------------------|
+  |        chg_firms        |        norm_chg_firms        |        nmin_firms        |        nmax_firms         |
+  |          -17.539        |                 4.475        |             2.537        |             6.290         |
+  +---------------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | drawn | firms_base | firms_end | share_firms_base | share_firms_end |
+  |         5 |             Not an importer |     0 |       1411 |      2048 |           46.924 |          64.463 |
+  |---------------------------------------------------------------------------------------------------------------|
+  |        chg_firms        |        norm_chg_firms        |        nmin_firms        |        nmax_firms         |
+  |           17.539        |                -4.475        |            -6.290        |            -2.537         |
+  +---------------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | drawn | firms_base | firms_end | share_firms_base | share_firms_end |
+  |         6 | Foreign-owned (10% or more) |     1 |        285 |       342 |            9.478 |          10.765 |
+  |---------------------------------------------------------------------------------------------------------------|
+  |        chg_firms        |        norm_chg_firms        |        nmin_firms        |        nmax_firms         |
+  |            1.287        |                 0.728        |            -0.470        |             0.728         |
+  +---------------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | drawn | firms_base | firms_end | share_firms_base | share_firms_end |
+  |         7 |           Not foreign-owned |     0 |       2722 |      2835 |           90.522 |          89.235 |
+  |---------------------------------------------------------------------------------------------------------------|
+  |        chg_firms        |        norm_chg_firms        |        nmin_firms        |        nmax_firms         |
+  |           -1.287        |                -0.728        |            -0.728        |             0.470         |
+  +---------------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | drawn | firms_base | firms_end | share_firms_base | share_firms_end |
+  |         8 |                    Exporter |     0 |          . |         . |                . |               . |
+  |---------------------------------------------------------------------------------------------------------------|
+  |        chg_firms        |        norm_chg_firms        |        nmin_firms        |        nmax_firms         |
+  |                .        |                     .        |                 .        |                 .         |
+  +---------------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | drawn | firms_base | firms_end | share_firms_base | share_firms_end |
+  |         9 |               Food products |     1 |        666 |       765 |           22.148 |          24.079 |
+  |---------------------------------------------------------------------------------------------------------------|
+  |        chg_firms        |        norm_chg_firms        |        nmin_firms        |        nmax_firms         |
+  |            1.931        |                -1.108        |            -1.108        |             1.850         |
+  +---------------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | drawn | firms_base | firms_end | share_firms_base | share_firms_end |
+  |        10 |         Rubber and plastics |     1 |        243 |       300 |            8.081 |           9.443 |
+  |---------------------------------------------------------------------------------------------------------------|
+  |        chg_firms        |        norm_chg_firms        |        nmin_firms        |        nmax_firms         |
+  |            1.362        |                 1.093        |            -0.621        |             1.093         |
+  +---------------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | drawn | firms_base | firms_end | share_firms_base | share_firms_end |
+  |        11 |                   Chemicals |     1 |        143 |       189 |            4.756 |           5.949 |
+  |---------------------------------------------------------------------------------------------------------------|
+  |        chg_firms        |        norm_chg_firms        |        nmin_firms        |        nmax_firms         |
+  |            1.193        |                 0.168        |            -0.586        |             0.168         |
+  +---------------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | drawn | firms_base | firms_end | share_firms_base | share_firms_end |
+  |        12 |      Steel and other metals |     1 |         42 |        71 |            1.397 |           2.235 |
+  |---------------------------------------------------------------------------------------------------------------|
+  |        chg_firms        |        norm_chg_firms        |        nmin_firms        |        nmax_firms         |
+  |            0.838        |                -0.009        |            -0.044        |             0.156         |
+  +---------------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | drawn | firms_base | firms_end | share_firms_base | share_firms_end |
+  |        13 |              Metal products |     1 |        128 |       150 |            4.257 |           4.721 |
+  |---------------------------------------------------------------------------------------------------------------|
+  |        chg_firms        |        norm_chg_firms        |        nmin_firms        |        nmax_firms         |
+  |            0.465        |                 0.038        |             0.038        |             0.498         |
+  +---------------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | drawn | firms_base | firms_end | share_firms_base | share_firms_end |
+  |        14 |                       Paper |     1 |         72 |        90 |            2.394 |           2.833 |
+  |---------------------------------------------------------------------------------------------------------------|
+  |        chg_firms        |        norm_chg_firms        |        nmin_firms        |        nmax_firms         |
+  |            0.438        |                -0.005        |            -0.005        |             0.533         |
+  +---------------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | drawn | firms_base | firms_end | share_firms_base | share_firms_end |
+  |        15 |        Electrical equipment |     1 |         51 |        64 |            1.696 |           2.014 |
+  |---------------------------------------------------------------------------------------------------------------|
+  |        chg_firms        |        norm_chg_firms        |        nmin_firms        |        nmax_firms         |
+  |            0.318        |                -0.382        |            -0.382        |             0.184         |
+  +---------------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | drawn | firms_base | firms_end | share_firms_base | share_firms_end |
+  |        16 |                   Machinery |     1 |         62 |        75 |            2.062 |           2.361 |
+  |---------------------------------------------------------------------------------------------------------------|
+  |        chg_firms        |        norm_chg_firms        |        nmin_firms        |        nmax_firms         |
+  |            0.299        |                 0.320        |             0.152        |             0.320         |
+  +---------------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | drawn | firms_base | firms_end | share_firms_base | share_firms_end |
+  |        17 |                     Tobacco |     1 |         73 |        85 |            2.428 |           2.675 |
+  |---------------------------------------------------------------------------------------------------------------|
+  |        chg_firms        |        norm_chg_firms        |        nmin_firms        |        nmax_firms         |
+  |            0.248        |                -1.356        |            -1.356        |            -0.364         |
+  +---------------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | drawn | firms_base | firms_end | share_firms_base | share_firms_end |
+  |        18 |                   Beverages |     1 |         58 |        69 |            1.929 |           2.172 |
+  |---------------------------------------------------------------------------------------------------------------|
+  |        chg_firms        |        norm_chg_firms        |        nmin_firms        |        nmax_firms         |
+  |            0.243        |                 0.264        |            -0.108        |             0.478         |
+  +---------------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | drawn | firms_base | firms_end | share_firms_base | share_firms_end |
+  |        19 |     Cement, glass, ceramics |     1 |        166 |       180 |            5.520 |           5.666 |
+  |---------------------------------------------------------------------------------------------------------------|
+  |        chg_firms        |        norm_chg_firms        |        nmin_firms        |        nmax_firms         |
+  |            0.145        |                -0.005        |            -0.855        |             0.005         |
+  +---------------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | drawn | firms_base | firms_end | share_firms_base | share_firms_end |
+  |        20 |              Motor vehicles |     1 |         67 |        67 |            2.228 |           2.109 |
+  |---------------------------------------------------------------------------------------------------------------|
+  |        chg_firms        |        norm_chg_firms        |        nmin_firms        |        nmax_firms         |
+  |           -0.119        |                 0.248        |             0.182        |             0.248         |
+  +---------------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | drawn | firms_base | firms_end | share_firms_base | share_firms_end |
+  |        21 | Motorcycles, other vehicles |     1 |         48 |        43 |            1.596 |           1.353 |
+  |---------------------------------------------------------------------------------------------------------------|
+  |        chg_firms        |        norm_chg_firms        |        nmin_firms        |        nmax_firms         |
+  |           -0.243        |                -0.036        |            -0.036        |             0.492         |
+  +---------------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | drawn | firms_base | firms_end | share_firms_base | share_firms_end |
+  |        22 |      Computers, electronics |     1 |         39 |        30 |            1.297 |           0.944 |
+  |---------------------------------------------------------------------------------------------------------------|
+  |        chg_firms        |        norm_chg_firms        |        nmin_firms        |        nmax_firms         |
+  |           -0.353        |                 0.020        |             0.020        |             0.564         |
+  +---------------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | drawn | firms_base | firms_end | share_firms_base | share_firms_end |
+  |        23 |               Wood products |     1 |        116 |       111 |            3.858 |           3.494 |
+  |---------------------------------------------------------------------------------------------------------------|
+  |        chg_firms        |        norm_chg_firms        |        nmin_firms        |        nmax_firms         |
+  |           -0.364        |                -0.307        |            -1.304        |            -0.270         |
+  +---------------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | drawn | firms_base | firms_end | share_firms_base | share_firms_end |
+  |        24 |                   Furniture |     1 |        143 |       136 |            4.756 |           4.281 |
+  |---------------------------------------------------------------------------------------------------------------|
+  |        chg_firms        |        norm_chg_firms        |        nmin_firms        |        nmax_firms         |
+  |           -0.475        |                -0.272        |            -0.426        |            -0.012         |
+  +---------------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | drawn | firms_base | firms_end | share_firms_base | share_firms_end |
+  |        25 |                    Printing |     1 |        113 |       100 |            3.758 |           3.148 |
+  |---------------------------------------------------------------------------------------------------------------|
+  |        chg_firms        |        norm_chg_firms        |        nmin_firms        |        nmax_firms         |
+  |           -0.610        |                 0.524        |             0.063        |             0.524         |
+  +---------------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | drawn | firms_base | firms_end | share_firms_base | share_firms_end |
+  |        26 |         Other manufacturing |     1 |         94 |        75 |            3.126 |           2.361 |
+  |---------------------------------------------------------------------------------------------------------------|
+  |        chg_firms        |        norm_chg_firms        |        nmin_firms        |        nmax_firms         |
+  |           -0.765        |                 0.331        |             0.130        |             0.331         |
+  +---------------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | drawn | firms_base | firms_end | share_firms_base | share_firms_end |
+  |        27 |        Leather and footwear |     1 |         96 |        71 |            3.193 |           2.235 |
+  |---------------------------------------------------------------------------------------------------------------|
+  |        chg_firms        |        norm_chg_firms        |        nmin_firms        |        nmax_firms         |
+  |           -0.958        |                 0.089        |            -0.762        |             0.214         |
+  +---------------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | drawn | firms_base | firms_end | share_firms_base | share_firms_end |
+  |        28 |                    Clothing |     1 |        248 |       204 |            8.247 |           6.421 |
+  |---------------------------------------------------------------------------------------------------------------|
+  |        chg_firms        |        norm_chg_firms        |        nmin_firms        |        nmax_firms         |
+  |           -1.826        |                -0.813        |            -1.380        |            -0.813         |
+  +---------------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | drawn | firms_base | firms_end | share_firms_base | share_firms_end |
+  |        29 |                    Textiles |     1 |        270 |       218 |            8.979 |           6.862 |
+  |---------------------------------------------------------------------------------------------------------------|
+  |        chg_firms        |        norm_chg_firms        |        nmin_firms        |        nmax_firms         |
+  |           -2.117        |                 0.669        |            -0.574        |             0.669         |
+  +---------------------------------------------------------------------------------------------------------------+
+
+  +---------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | drawn | firms_base | firms_end | share_firms_base | share_firms_end |
+  |        30 |               Other sectors |     1 |         69 |        84 |            2.295 |           2.644 |
+  |---------------------------------------------------------------------------------------------------------------|
+  |        chg_firms        |        norm_chg_firms        |        nmin_firms        |        nmax_firms         |
+  |            0.349        |                 0.528        |             0.230        |             0.717         |
+  +---------------------------------------------------------------------------------------------------------------+
+
+. list row_order group chg_workers norm_chg_workers part_left_firms part_came_in_firms part_changed_firms ///
+>     firms_left firms_came_in, noobs sep(0) abbreviate(24)
+
+  +-----------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | chg_workers | norm_chg_workers | part_left_firms | part_came_in_firms |
+  |         1 |       Fewer than 20 workers |       0.410 |           -0.065 |          -0.338 |             -0.811 |
+  |-----------------------------------------+-----------------------------------------------------------------------|
+  |           part_changed_firms            |           firms_left            |            firms_came_in            |
+  |                        9.058            |                  144            |                      261            |
+  +-----------------------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | chg_workers | norm_chg_workers | part_left_firms | part_came_in_firms |
+  |         2 |               20–99 workers |       0.556 |            1.048 |           2.035 |             -0.149 |
+  |-----------------------------------------+-----------------------------------------------------------------------|
+  |           part_changed_firms            |           firms_left            |            firms_came_in            |
+  |                       -7.926            |                  692            |                      726            |
+  +-----------------------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | chg_workers | norm_chg_workers | part_left_firms | part_came_in_firms |
+  |         3 |         100 or more workers |      -0.966 |           -0.983 |          -1.698 |              0.960 |
+  |-----------------------------------------+-----------------------------------------------------------------------|
+  |           part_changed_firms            |           firms_left            |            firms_came_in            |
+  |                       -1.132            |                  493            |                      512            |
+  +-----------------------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | chg_workers | norm_chg_workers | part_left_firms | part_came_in_firms |
+  |         4 |                    Importer |      -5.755 |           -3.379 |           1.036 |             -3.379 |
+  |-----------------------------------------+-----------------------------------------------------------------------|
+  |           part_changed_firms            |           firms_left            |            firms_came_in            |
+  |                      -15.197            |                  688            |                      476            |
+  +-----------------------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | chg_workers | norm_chg_workers | part_left_firms | part_came_in_firms |
+  |         5 |             Not an importer |       5.755 |            3.379 |          -1.036 |              3.379 |
+  |-----------------------------------------+-----------------------------------------------------------------------|
+  |           part_changed_firms            |           firms_left            |            firms_came_in            |
+  |                       15.197            |                  641            |                     1023            |
+  +-----------------------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | chg_workers | norm_chg_workers | part_left_firms | part_came_in_firms |
+  |         6 | Foreign-owned (10% or more) |       4.678 |            5.434 |          -0.896 |              2.243 |
+  |-----------------------------------------+-----------------------------------------------------------------------|
+  |           part_changed_firms            |           firms_left            |            firms_came_in            |
+  |                       -0.060            |                  141            |                      199            |
+  +-----------------------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | chg_workers | norm_chg_workers | part_left_firms | part_came_in_firms |
+  |         7 |           Not foreign-owned |      -4.678 |           -5.434 |           0.896 |             -2.243 |
+  |-----------------------------------------+-----------------------------------------------------------------------|
+  |           part_changed_firms            |           firms_left            |            firms_came_in            |
+  |                        0.060            |                 1188            |                     1300            |
+  +-----------------------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | chg_workers | norm_chg_workers | part_left_firms | part_came_in_firms |
+  |         8 |                    Exporter |           . |                . |               . |                  . |
+  |-----------------------------------------+-----------------------------------------------------------------------|
+  |           part_changed_firms            |           firms_left            |            firms_came_in            |
+  |                            .            |                    .            |                        .            |
+  +-----------------------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | chg_workers | norm_chg_workers | part_left_firms | part_came_in_firms |
+  |         9 |               Food products |       4.520 |           -6.604 |           6.994 |             -5.063 |
+  |-----------------------------------------+-----------------------------------------------------------------------|
+  |           part_changed_firms            |           firms_left            |            firms_came_in            |
+  |                        0.000            |                  177            |                      276            |
+  +-----------------------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | chg_workers | norm_chg_workers | part_left_firms | part_came_in_firms |
+  |        10 |         Rubber and plastics |       1.479 |            0.586 |           1.514 |             -0.152 |
+  |-----------------------------------------+-----------------------------------------------------------------------|
+  |           part_changed_firms            |           firms_left            |            firms_came_in            |
+  |                        0.000            |                   82            |                      139            |
+  +-----------------------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | chg_workers | norm_chg_workers | part_left_firms | part_came_in_firms |
+  |        11 |                   Chemicals |       1.685 |            2.094 |           0.310 |              0.883 |
+  |-----------------------------------------+-----------------------------------------------------------------------|
+  |           part_changed_firms            |           firms_left            |            firms_came_in            |
+  |                        0.000            |                   58            |                      104            |
+  +-----------------------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | chg_workers | norm_chg_workers | part_left_firms | part_came_in_firms |
+  |        12 |      Steel and other metals |       1.639 |           -0.007 |          -0.503 |              1.341 |
+  |-----------------------------------------+-----------------------------------------------------------------------|
+  |           part_changed_firms            |           firms_left            |            firms_came_in            |
+  |                        0.000            |                   27            |                       56            |
+  +-----------------------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | chg_workers | norm_chg_workers | part_left_firms | part_came_in_firms |
+  |        13 |              Metal products |       0.641 |           -1.572 |          -0.085 |              0.550 |
+  |-----------------------------------------+-----------------------------------------------------------------------|
+  |           part_changed_firms            |           firms_left            |            firms_came_in            |
+  |                        0.000            |                   58            |                       80            |
+  +-----------------------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | chg_workers | norm_chg_workers | part_left_firms | part_came_in_firms |
+  |        14 |                       Paper |       0.717 |            2.405 |           0.109 |              0.330 |
+  |-----------------------------------------+-----------------------------------------------------------------------|
+  |           part_changed_firms            |           firms_left            |            firms_came_in            |
+  |                        0.000            |                   30            |                       48            |
+  +-----------------------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | chg_workers | norm_chg_workers | part_left_firms | part_came_in_firms |
+  |        15 |        Electrical equipment |      -0.582 |            0.510 |          -0.445 |              0.763 |
+  |-----------------------------------------+-----------------------------------------------------------------------|
+  |           part_changed_firms            |           firms_left            |            firms_came_in            |
+  |                        0.000            |                   30            |                       43            |
+  +-----------------------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | chg_workers | norm_chg_workers | part_left_firms | part_came_in_firms |
+  |        16 |                   Machinery |      -0.016 |            1.431 |          -0.512 |              0.811 |
+  |-----------------------------------------+-----------------------------------------------------------------------|
+  |           part_changed_firms            |           firms_left            |            firms_came_in            |
+  |                        0.000            |                   36            |                       49            |
+  +-----------------------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | chg_workers | norm_chg_workers | part_left_firms | part_came_in_firms |
+  |        17 |                     Tobacco |      -9.149 |            4.998 |           0.135 |              0.113 |
+  |-----------------------------------------+-----------------------------------------------------------------------|
+  |           part_changed_firms            |           firms_left            |            firms_came_in            |
+  |                        0.000            |                   30            |                       42            |
+  +-----------------------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | chg_workers | norm_chg_workers | part_left_firms | part_came_in_firms |
+  |        18 |                   Beverages |       0.239 |           -0.336 |          -0.916 |              1.159 |
+  |-----------------------------------------+-----------------------------------------------------------------------|
+  |           part_changed_firms            |           firms_left            |            firms_came_in            |
+  |                        0.000            |                   41            |                       52            |
+  +-----------------------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | chg_workers | norm_chg_workers | part_left_firms | part_came_in_firms |
+  |        19 |     Cement, glass, ceramics |       0.778 |           -0.869 |           0.320 |             -0.175 |
+  |-----------------------------------------+-----------------------------------------------------------------------|
+  |           part_changed_firms            |           firms_left            |            firms_came_in            |
+  |                        0.000            |                   68            |                       82            |
+  +-----------------------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | chg_workers | norm_chg_workers | part_left_firms | part_came_in_firms |
+  |        20 |              Motor vehicles |      -2.000 |           -0.272 |           0.275 |             -0.394 |
+  |-----------------------------------------+-----------------------------------------------------------------------|
+  |           part_changed_firms            |           firms_left            |            firms_came_in            |
+  |                        0.000            |                   25            |                       25            |
+  +-----------------------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | chg_workers | norm_chg_workers | part_left_firms | part_came_in_firms |
+  |        21 | Motorcycles, other vehicles |      -0.260 |           -1.638 |          -0.464 |              0.221 |
+  |-----------------------------------------+-----------------------------------------------------------------------|
+  |           part_changed_firms            |           firms_left            |            firms_came_in            |
+  |                        0.000            |                   29            |                       24            |
+  +-----------------------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | chg_workers | norm_chg_workers | part_left_firms | part_came_in_firms |
+  |        22 |      Computers, electronics |       0.146 |           -0.730 |          -0.522 |              0.170 |
+  |-----------------------------------------+-----------------------------------------------------------------------|
+  |           part_changed_firms            |           firms_left            |            firms_came_in            |
+  |                        0.000            |                   26            |                       17            |
+  +-----------------------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | chg_workers | norm_chg_workers | part_left_firms | part_came_in_firms |
+  |        23 |               Wood products |       0.038 |            0.378 |          -1.295 |              0.931 |
+  |-----------------------------------------+-----------------------------------------------------------------------|
+  |           part_changed_firms            |           firms_left            |            firms_came_in            |
+  |                        0.000            |                   73            |                       68            |
+  +-----------------------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | chg_workers | norm_chg_workers | part_left_firms | part_came_in_firms |
+  |        24 |                   Furniture |       0.190 |            0.043 |          -0.822 |              0.348 |
+  |-----------------------------------------+-----------------------------------------------------------------------|
+  |           part_changed_firms            |           firms_left            |            firms_came_in            |
+  |                        0.000            |                   77            |                       70            |
+  +-----------------------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | chg_workers | norm_chg_workers | part_left_firms | part_came_in_firms |
+  |        25 |                    Printing |      -0.672 |            0.042 |          -1.195 |              0.585 |
+  |-----------------------------------------+-----------------------------------------------------------------------|
+  |           part_changed_firms            |           firms_left            |            firms_came_in            |
+  |                        0.000            |                   70            |                       57            |
+  +-----------------------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | chg_workers | norm_chg_workers | part_left_firms | part_came_in_firms |
+  |        26 |         Other manufacturing |      -0.232 |            1.525 |          -0.861 |              0.096 |
+  |-----------------------------------------+-----------------------------------------------------------------------|
+  |           part_changed_firms            |           firms_left            |            firms_came_in            |
+  |                        0.000            |                   56            |                       37            |
+  +-----------------------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | chg_workers | norm_chg_workers | part_left_firms | part_came_in_firms |
+  |        27 |        Leather and footwear |       1.428 |            0.932 |          -1.226 |              0.268 |
+  |-----------------------------------------+-----------------------------------------------------------------------|
+  |           part_changed_firms            |           firms_left            |            firms_came_in            |
+  |                        0.000            |                   63            |                       38            |
+  +-----------------------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | chg_workers | norm_chg_workers | part_left_firms | part_came_in_firms |
+  |        28 |                    Clothing |       1.363 |            1.076 |           0.394 |             -2.220 |
+  |-----------------------------------------+-----------------------------------------------------------------------|
+  |           part_changed_firms            |           firms_left            |            firms_came_in            |
+  |                        0.000            |                  103            |                       59            |
+  +-----------------------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | chg_workers | norm_chg_workers | part_left_firms | part_came_in_firms |
+  |        29 |                    Textiles |      -2.358 |           -0.732 |           0.318 |             -2.435 |
+  |-----------------------------------------+-----------------------------------------------------------------------|
+  |           part_changed_firms            |           firms_left            |            firms_came_in            |
+  |                        0.000            |                  114            |                       62            |
+  +-----------------------------------------------------------------------------------------------------------------+
+
+  +-----------------------------------------------------------------------------------------------------------------+
+  | row_order |                       group | chg_workers | norm_chg_workers | part_left_firms | part_came_in_firms |
+  |        30 |               Other sectors |       0.406 |           -3.262 |          -1.520 |              1.869 |
+  |-----------------------------------------+-----------------------------------------------------------------------|
+  |           part_changed_firms            |           firms_left            |            firms_came_in            |
+  |                        0.000            |                   56            |                       71            |
+  +-----------------------------------------------------------------------------------------------------------------+
+
+. * structural checks: shares of the size bands and of the sectors add up to 100 in each file
+. foreach d in siz sec {
+  2.     foreach v in share_firms_base share_firms_end share_workers_base share_workers_end {
+  3.         quietly summarize `v' if dim == "`d'"
+  4.         assert abs(r(sum) - 100) < 1e-6
+  5.     }
+  6. }
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 7/8: dot chart, three panels on one scale (percentage points)"
+Step 7/8: dot chart, three panels on one scale (percentage points)
+
+. *---------------------------------------------------------------------------
+. * numbers for the notes (read from the data, never typed)
+. * firm counts behind panel (c): the size rows cover every firm (workers never missing in a file)
+. quietly summarize known_left if row_order == 1
+
+. local n_left = strtrim(string(r(mean), "%12.0fc"))
+
+. quietly summarize known_came_in if row_order == 1
+
+. local n_came = strtrim(string(r(mean), "%12.0fc"))
+
+. quietly summarize known_both_base if row_order == 1
+
+. local n_both = strtrim(string(r(mean), "%12.0fc"))
+
+. keep if drawn
+(3 observations deleted)
+
+. * y positions: a bold heading per section, one blank row between sections
+. gen double y = .
+(27 missing values generated)
+
+. local pos 0
+
+. local ylab ""
+
+. local prevsec ""
+
+. local headsize   "Size (workers in the file)"
+
+. local headtrade  "Imports and foreign ownership"
+
+. local headsector "Sector (two-digit code), largest rise first"
+
+. forvalues i = 1/`=_N' {
+  2.     local sec = section[`i']
+  3.     if "`sec'" != "`prevsec'" {
+  4.         if "`prevsec'" != "" local pos = `pos' + 0.5
+  5.         local ++pos
+  6.         local ylab `"`ylab' `pos' "{bf:`head`sec''}""'
+  7.         local prevsec "`sec'"
+  8.     }
+  9.     local ++pos
+ 10.     replace y = `pos' in `i'
+ 11.     local lab = group[`i']
+ 12.     if doubt[`i'] local lab "`lab' (`covid_end' records in doubt)"
+ 13.     local ylab `"`ylab' `pos' "`lab'""'
+ 14. }
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+
+. local ymax = `pos' + 0.6
+
+. * three panels: (a) share of firms, (b) share of workers, (c) the three parts of (a)
+. expand 3
+(54 observations created)
+
+. bysort row_order: gen byte panel = _n
+
+. gen double covid = cond(panel == 1, chg_firms, cond(panel == 2, chg_workers, .))
+(27 missing values generated)
+
+. gen double plac  = cond(panel == 1, norm_chg_firms, cond(panel == 2, norm_chg_workers, .))
+(27 missing values generated)
+
+. gen double rlo   = cond(panel == 1, nmin_firms, cond(panel == 2, nmin_workers, .))
+(27 missing values generated)
+
+. gen double rhi   = cond(panel == 1, nmax_firms, cond(panel == 2, nmax_workers, .))
+(27 missing values generated)
+
+. gen double p_left = part_left_firms    if panel == 3
+(54 missing values generated)
+
+. gen double p_came = part_came_in_firms if panel == 3
+(54 missing values generated)
+
+. gen double p_chg  = part_changed_firms if panel == 3
+(54 missing values generated)
+
+. * value label on the COVID dot, outside the row's other marks
+. gen str8   vlab = strtrim(string(covid, "%5.1f")) if panel < 3
+(27 missing values generated)
+
+. replace vlab = "0.0" if vlab == "-0.0"
+(1 real change made)
+
+. gen double vx   = cond(covid >= 0, max(covid, plac, rhi), min(covid, plac, rlo)) if panel < 3
+(27 missing values generated)
+
+. gen byte   vpos = cond(covid >= 0, 3, 9)
+
+. label define panel 1 "(a) Share of firms" 2 "(b) Share of workers" ///
+>     3 "(c) Split of (a), `covid_year'–`covid_end'", replace
+
+. label values panel panel
+
+. * one shared x scale, step 5 points, room for the value labels
+. egen double lo_all = rowmin(covid plac rlo p_left p_came p_chg)
+
+. egen double hi_all = rowmax(covid plac rhi p_left p_came p_chg)
+
+. quietly summarize lo_all
+
+. local xlo = 5 * floor((r(min) - 3) / 5)
+
+. quietly summarize hi_all
+
+. local xhi = 5 * ceil((r(max) + 3) / 5)
+
+. local xlo = min(`xlo', -5)
+
+. local xhi = max(`xhi', 5)
+
+. local xstep = cond(`xhi' - `xlo' > 25, 10, 5)
+
+. local xl1 = `xstep' * ceil(`xlo' / `xstep')
+
+. local xl2 = `xstep' * floor(`xhi' / `xstep')
+
+. display "   x range `xlo' to `xhi'"
+   x range -25 to 15
+
+. 
+. local charttitle "Figure R4-03. The mix of firms in the `covid_year' and `covid_end' files against normal years: chang
+> e in the share of firms and of workers by size, imports, foreign ownership and sector"
+
+. local ntext "Notes: Each row = a group's share of all firms (a) or of all workers (b) in an annual file. Dot = change 
+> from the `covid_year' file to the `covid_end' file, in percentage points; hollow = the same change from `placebo_year'
+>  to `placebo_end'; gray bar = lowest to highest change over the normal-years spans (starting files `nb_first' to `nb_l
+> ast', each compared with the file three years on). (c) splits the dot in (a) into three parts that add up to it: `covi
+> d_year' firms not in the `covid_end' file (`n_left'), compared with the firms in both files in `covid_year'; `covid_en
+> d' firms not in the `covid_year' file (`n_came'), compared with the firms in both files in `covid_end'; and the change
+>  within the firms in both files (`n_both'), e.g. shrinking below 20 workers or, for sectors, a changed sector code. Sh
+> ares among firms with a known answer; sectors with under 30 firms in `covid_year' or `covid_end' are pooled; sector co
+> des are not checked across years. Exporters are not shown: the `covid_end' file records no non-exporters. Gray: the re
+> corded importer share jumps in 2017 and falls in `covid_end', likely a recording change. Whole annual files, not sampl
+> es, so no sampling interval; the gray bar shows normal movement. Shows how the mix changed, not the effect of COVID; l
+> eft the files is not proof of closure. (a) and (b) use no firm links; (c) does. Firm links are fictional in the develo
+> pment data, so who stays, leaves or comes back means nothing here; read these results on the real BPS files."
+
+. local notelines ""
+
+. local line ""
+
+. foreach w of local ntext {
+  2.     if ustrlen("`line' `w'") > 130 & "`line'" != "" {
+  3.         local notelines `"`notelines' "`line'""'
+  4.         local line "`w'"
+  5.     }
+  6.     else local line = strtrim("`line' `w'")
+  7. }
+
+. local notelines `"`notelines' "`line'""'
+
+. display `"   note lines: `notelines'"'
+   note lines:  "Notes: Each row = a group's share of all firms (a) or of all workers (b) in an annual file. Dot = chang
+> e from the 2019 file to the" "2022 file, in percentage points; hollow = the same change from 2012 to 2015; gray bar = 
+> lowest to highest change over the" "normal-years spans (starting files 2010 to 2012, each compared with the file three
+>  years on). (c) splits the dot in (a) into three" "parts that add up to it: 2019 firms not in the 2022 file (1,329), c
+> ompared with the firms in both files in 2019; 2022 firms not in" "the 2019 file (1,499), compared with the firms in bo
+> th files in 2022; and the change within the firms in both files (1,678), e.g." "shrinking below 20 workers or, for sec
+> tors, a changed sector code. Shares among firms with a known answer; sectors with under 30" "firms in 2019 or 2022 are
+>  pooled; sector codes are not checked across years. Exporters are not shown: the 2022 file records no" "non-exporters.
+>  Gray: the recorded importer share jumps in 2017 and falls in 2022, likely a recording change. Whole annual files," "n
+> ot samples, so no sampling interval; the gray bar shows normal movement. Shows how the mix changed, not the effect of 
+> COVID; left" "the files is not proof of closure. (a) and (b) use no firm links; (c) does. Firm links are fictional in 
+> the development data, so" "who stays, leaves or comes back means nothing here; read these results on the real BPS file
+> s."
+
+. * title in two lines at the colon
+. local t1 = substr("`charttitle'", 1, strpos("`charttitle'", ":"))
+
+. local t2 = strtrim(substr("`charttitle'", strpos("`charttitle'", ":") + 1, .))
+
+. sort panel y
+
+. 
+. twoway (rbar rlo rhi y if panel < 3, horizontal barwidth(0.45) fcolor(gs13) lcolor(gs13) lwidth(none)) ///
+>     (scatter y plac if panel < 3, msymbol(Oh) mcolor(black) msize(small) mlwidth(thin)) ///
+>     (scatter y covid if panel < 3 & !doubt, msymbol(O) mcolor(black) msize(small)) ///
+>     (scatter y covid if panel < 3 & doubt, msymbol(O) mcolor(gs10) msize(small)) ///
+>     (scatter y p_left if !doubt, msymbol(Th) mcolor(black) msize(small) mlwidth(thin)) ///
+>     (scatter y p_came if !doubt, msymbol(S) mcolor(black) msize(vsmall)) ///
+>     (scatter y p_chg  if !doubt, msymbol(X) mcolor(black) msize(small)) ///
+>     (scatter y p_left if doubt, msymbol(Th) mcolor(gs10) msize(small) mlwidth(thin)) ///
+>     (scatter y p_came if doubt, msymbol(S) mcolor(gs10) msize(vsmall)) ///
+>     (scatter y p_chg  if doubt, msymbol(X) mcolor(gs10) msize(small)) ///
+>     (scatter y vx if panel < 3, msymbol(none) mlabel(vlab) mlabvposition(vpos) mlabgap(0.8) mlabsize(vsmall) mlabcolor
+> (gs5)), ///
+>     by(panel, rows(1) graphregion(color(white) lcolor(white) ilcolor(white) margin(r+3)) legend(pos(6)) scale(0.8125) 
+> ///
+>         title("`t1'" "`t2'", size(small) pos(11) span) ///
+>         note(`notelines' "`srcnote'" "`devnote'", size(vsmall) span linegap(0.6))) ///
+>     subtitle(, pos(11) nobox fcolor(white) lcolor(white) size(small)) ///
+>     yscale(reverse noline range(0.4 `ymax')) ylabel(`ylab', angle(0) noticks tlength(0) nogrid labsize(vsmall)) ytitle
+> ("") ///
+>     xscale(range(`xlo' `xhi') lcolor(gs10)) ///
+>     xlabel(`xl1'(`xstep')`xl2', noticks tlength(0) labsize(vsmall) grid glcolor(gs15) glwidth(vthin)) ///
+>     xline(0, lcolor(gs8) lwidth(thin)) ///
+>     xtitle("Percentage points (0 = no change)", size(vsmall)) ///
+>     legend(order(3 "`covid_year' to `covid_end' (COVID)" 2 "`placebo_year' to `placebo_end' (normal years)" ///
+>                  1 "Range, normal years" 4 "Gray: records in doubt" ///
+>                  5 "(c) Firms that left" 6 "(c) Firms that came in" 7 "(c) Change within firms in both files") ///
+>         rows(2) region(lcolor(none)) size(vsmall) symxsize(5) keygap(1) colgap(5) rowgap(0.4)) ///
+>     plotregion(style(none)) xsize(9.5) ysize(10)
+
+. 
+. graph export "figures/03_composition_before_after.png", width(2850) replace
+file
+    /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r4-covid-survival/figures/03_compositi
+    > on_before_after.png saved as PNG format
+
+. graph export "figures/03_composition_before_after.pdf", replace
+file
+    /Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r4-covid-survival/figures/03_compositi
+    > on_before_after.pdf saved as PDF format
+
+. 
+. *---------------------------------------------------------------------------
+. display "Step 8/8: companion table - every plotted point, one chart row per line (putpdf, no add-on)"
+Step 8/8: companion table - every plotted point, one chart row per line (putpdf, no add-on)
+
+. *---------------------------------------------------------------------------
+. * Read back the CSV just written, so the table shows exactly the charted numbers.
+. import delimited using "tables/03_composition_before_after.csv", clear varnames(1) encoding("utf-8") stringcols(2 3 5 
+> 7)
+(46 vars, 30 obs)
+
+. keep if drawn == 1 | group == "Exporter"        // plotted rows, plus the row that cannot be drawn
+(2 observations deleted)
+
+. sort row_order
+
+. local nall = _N
+
+. local nsec = 0
+
+. local prev ""
+
+. forvalues i = 1/`nall' {
+  2.     if section[`i'] != "`prev'" local ++nsec
+  3.     local prev = section[`i']
+  4. }
+
+. local ntab = `nall' + `nsec' + 2                 // two header rows + section headings
+
+. putpdf clear
+
+. putpdf begin, landscape font("Times New Roman", 9) margin(all, 0.5in)
+
+. putpdf paragraph, spacing(after, 6pt)
+
+. putpdf text ("Table R4-03. `=substr("`charttitle'", strpos("`charttitle'", ".") + 2, .)' — every plotted point"), bold
+>  font("Times New Roman", 10)
+
+. matrix colw = (22, 5.1, 5.1, 5.1, 5.1, 5.1, 5.1, 5.1, 5.1, 5.1, 5.1, 5.1, 5.4, 5.4, 11.1)
+
+. putpdf table T = (`ntab', 15), border(all, nil) width(colw)
+
+. * header row 1: panels; header row 2: series. Rules first, then merge cells from the
+. * right, so the cell numbers on the left do not move.
+. forvalues c = 1/15 {
+  2.     putpdf table T(1, `c') = (""), border(top, single)
+  3. }
+
+. putpdf table T(1, 13) = ("Firms in the group"), bold halign(center) colspan(2) border(top, single)
+
+. putpdf table T(1, 10) = ("(c) Split of (a), points"), bold halign(center) colspan(3) border(top, single)
+
+. putpdf table T(1, 6)  = ("(b) Share of workers, change (points)"), bold halign(center) colspan(4) border(top, single)
+
+. putpdf table T(1, 2)  = ("(a) Share of firms, change (points)"), bold halign(center) colspan(4) border(top, single)
+
+. local cy2 = substr("`covid_end'", 3, 2)
+
+. local py2 = substr("`placebo_end'", 3, 2)
+
+. local h1  "Row on the chart"
+
+. local h2  "`covid_year'–`cy2'"
+
+. local h3  "`placebo_year'–`py2'"
+
+. local h4  "Normal low"
+
+. local h5  "Normal high"
+
+. local h6  "`covid_year'–`cy2'"
+
+. local h7  "`placebo_year'–`py2'"
+
+. local h8  "Normal low"
+
+. local h9  "Normal high"
+
+. local h10 "Left"
+
+. local h11 "Came in"
+
+. local h12 "Both files"
+
+. local h13 "`covid_year'"
+
+. local h14 "`covid_end'"
+
+. local h15 "Status"
+
+. forvalues c = 1/15 {
+  2.     local al = cond(inlist(`c', 1, 15), "left", "right")
+  3.     putpdf table T(2, `c') = ("`h`c''"), bold halign(`al') border(bottom, single)
+  4. }
+
+. local r 2
+
+. local prev ""
+
+. forvalues i = 1/`nall' {
+  2.     local sec = section[`i']
+  3.     if "`sec'" != "`prev'" {
+  4.         local ++r
+  5.         putpdf table T(`r', 1) = ("`head`sec''"), bold
+  6.         local prev "`sec'"
+  7.     }
+  8.     local ++r
+  9.     local lab = group[`i']
+ 10.     if doubt[`i'] local lab "`lab' (`covid_end' records in doubt)"
+ 11.     putpdf table T(`r', 1) = ("`lab'")
+ 12.     local c 1
+ 13.     foreach v in chg_firms norm_chg_firms nmin_firms nmax_firms chg_workers norm_chg_workers nmin_workers nmax_work
+> ers ///
+>                  part_left_firms part_came_in_firms part_changed_firms {
+ 14.         local ++c
+ 15.         local x = `v'[`i']
+ 16.         local s = cond(missing(`x'), "", strtrim(string(`x', "%6.2f")))
+ 17.         putpdf table T(`r', `c') = ("`s'"), halign(right)
+ 18.     }
+ 19.     foreach v in firms_base firms_end {
+ 20.         local ++c
+ 21.         local x = `v'[`i']
+ 22.         local s = cond(missing(`x'), "", strtrim(string(`x', "%12.0fc")))
+ 23.         putpdf table T(`r', `c') = ("`s'"), halign(right)
+ 24.     }
+ 25.     putpdf table T(`r', 15) = ("`=status[`i']'"), margin(left, 6pt)
+ 26. }
+
+. assert `r' == `ntab'
+
+. forvalues c = 1/15 {
+  2.     putpdf table T(`ntab', `c'), border(bottom, single)
+  3. }
+
+. putpdf paragraph, spacing(before, 6pt)
+
+. putpdf text ("Values in percentage points, two decimals (the chart labels round the `covid_year'–`covid_end' dot to on
+> e). Normal low and high = the ends of the gray bar. Firms in the group = firms in that row's group in each file (each 
+> share is taken over every firm with a known answer; the CSV gives those counts). Every pair of files and every share i
+> s in tables/03_composition_before_after_pairs.csv."), font("Times New Roman", 9)
+
+. putpdf paragraph
+
+. putpdf text ("`ntext'"), font("Times New Roman", 9)
+
+. putpdf paragraph
+
+. putpdf text ("`srcnote'"), font("Times New Roman", 9)
+
+. putpdf paragraph
+
+. putpdf text ("`devnote'"), font("Times New Roman", 9)
+
+. putpdf save "tables/03_composition_before_after_table.pdf", replace
+successfully created "/Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r4-covid-survival/tabl
+> es/03_composition_before_after_table.pdf"
+
+. quietly count if drawn == 1
+
+. display "table -> tables/03_composition_before_after_table.pdf (`r(N)' plotted rows, `nall' table rows)"
+table -> tables/03_composition_before_after_table.pdf (27 plotted rows, 28 table rows)
+
+. 
+. timer off 1
+
+. quietly timer list 1
+
+. local elapsed = strtrim(string(r(t1), "%9.1f"))
+
+. display "FINISHED: figure -> figures/03_composition_before_after.png (elapsed `elapsed' s)"
+FINISHED: figure -> figures/03_composition_before_after.png (elapsed 3.9 s)
+
+. quietly log close          // keeps FINISHED as the last output line of the log
