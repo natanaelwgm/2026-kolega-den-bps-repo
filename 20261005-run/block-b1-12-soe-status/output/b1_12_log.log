@@ -1,0 +1,944 @@
+-------------------------------------------------------------------------------
+      name:  b12
+       log:  /Users/toarmassie/2026-kolega-den-bps-repo/20261005-run/block-b1-1
+> 2-soe-status/output/b1_12_log.log
+  log type:  text
+ opened on:   9 Oct 2026, 16:29:44
+
+. foreach f of local files {
+  2.     display _newline as result "######## B1-12: `f' ########"
+  3.     do "$B12/`f'.do"
+  4. }
+
+######## B1-12: 01a_prep_si ########
+
+. /*==========================================================================
+>   Prep  Prepare Statistik Industri (SI) 2010-2022 for B1-12
+>   Input : $SI_DATA  (analysis_ready_data.dta from block 0)
+>   Output: data/b12_si.dta  -- 1 row = 1 firm x year
+>           (open with: use "$B12_DATA/b12_si.dta", clear  then browse)
+> 
+>   Copied from b1-17's 01a_prep_si.do (same corrections: 2017 coal / 1000,
+>   2020 FDI and 2022 exporter set missing, clean outlier flag, scope 1 = the
+>   4 fuels asked every year), plus what rows 7-16 need (same file in blocks b1
+> -07 to b1-16).
+>   Main variables created:
+>     kbli2 kbli5 prov java large size_class            sector, location, size
+>     exporter importer fdi fdi_any trade_profile rnd   firm groups
+>     main_src                                          main energy source (lar
+> gest GJ)
+>     va output capital inputs materials import_val     nominal money (masked)
+>     workers prod_workers nonprod_workers              employment
+>     va_pw out_pw cap_pw                               per worker
+>     va_share_out prod_share import_share_mat export_share foreign_share   rat
+> ios / %
+>     tfp_op tfp_lp tfp_acf tfp_wrdg                    block 0 nominal develop
+> ment TFP
+>     co2_s1 co2_s2 co2_total gj_s1 gj_s2 gj_total      emissions (t) and energ
+> y (GJ)
+>     co2_pw gj_pw co2_per_va gj_per_va co2_per_gj      intensities
+>     elec_purch_kwh elec_owngen_kwh elec_total_kwh selfgen_share   electricity
+>     ln_*                                              ln of every level varia
+> ble (missing when <= 0)
+>     clean                                             1 = not an extreme ener
+> gy outlier
+> ==========================================================================*/
+. if "$B12" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$SI_DATA", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+. * ---- identifiers ------------------------------------------------------
+. * year = survey year (there is no 2016 file)
+. generate kbli2 = real(substr(industry_code, 1, 2))
+
+. generate kbli5 = industry_code
+
+. generate prov  = real(province_code)
+
+. generate java  = inlist(prov, 31, 32, 33, 34, 35, 36) if !missing(prov)
+
+. label define java 0 "Outside Java" 1 "Java"
+
+. label values java java
+
+. label define prov 11 "Aceh" 12 "North Sumatra" 13 "West Sumatra" 14 "Riau" 15
+>  "Jambi" ///
+>     16 "South Sumatra" 17 "Bengkulu" 18 "Lampung" 19 "Bangka Belitung" 21 "Ri
+> au Islands" ///
+>     31 "DKI Jakarta" 32 "West Java" 33 "Central Java" 34 "DI Yogyakarta" 35 "
+> East Java" ///
+>     36 "Banten" 51 "Bali" 52 "West Nusa Tenggara" 53 "East Nusa Tenggara" ///
+>     61 "West Kalimantan" 62 "Central Kalimantan" 63 "South Kalimantan" 64 "Ea
+> st Kalimantan" ///
+>     65 "North Kalimantan" 71 "North Sulawesi" 72 "Central Sulawesi" 73 "South
+>  Sulawesi" ///
+>     74 "Southeast Sulawesi" 75 "Gorontalo" 76 "West Sulawesi" 81 "Maluku" 82 
+> "North Maluku" ///
+>     91 "West Papua" 94 "Papua"
+
+. label values prov prov
+
+. 
+. * ---- firm size --------------------------------------------------------
+. * medium vs large (100-worker threshold, Analysis.docx row 13; same as b1-17)
+. generate large = (workers > 100) if !missing(workers)
+
+. label define large 0 "Medium (<=100)" 1 "Large (>100)"
+
+. label values large large
+
+. * size classes by number of workers
+. generate size_class = 1 if workers < 20
+(28,867 missing values generated)
+
+. replace  size_class = 2 if workers >= 20  & workers < 50
+(12,308 real changes made)
+
+. replace  size_class = 3 if workers >= 50  & workers < 100
+(6,216 real changes made)
+
+. replace  size_class = 4 if workers >= 100 & workers < 500
+(7,730 real changes made)
+
+. replace  size_class = 5 if workers >= 500 & !missing(workers)
+(2,613 real changes made)
+
+. label define size_class 1 "<20 workers" 2 "20-49" 3 "50-99" 4 "100-499" 5 "50
+> 0+"
+
+. label values size_class size_class
+
+. 
+. * ---- imports, exports, FDI, R&D ---------------------------------------
+. * importer is only defined where the import question can be evaluated
+. generate importer = import_flag if import_observed == 1
+
+. label define importer 0 "Non-importer" 1 "Importer"
+
+. label values importer importer
+
+. 
+. generate exporter = export_flag
+(15,321 missing values generated)
+
+. generate fdi      = fdi_10_flag                     // foreign ownership >= 1
+> 0%
+(311 missing values generated)
+
+. generate fdi_any  = fdi_any_flag                    // foreign ownership > 0%
+(311 missing values generated)
+
+. * 2022: the form only asks about DIRECT exports, a "no" is never recorded -> 
+> missing
+. replace exporter = . if year == 2022
+(344 real changes made, 344 to missing)
+
+. * 2020: foreign ownership is inconsistent (47% FDI vs 8-11% other years) -> m
+> issing
+. replace fdi     = . if year == 2020
+(2,936 real changes made, 2,936 to missing)
+
+. replace fdi_any = . if year == 2020
+(2,936 real changes made, 2,936 to missing)
+
+. label define exporter 0 "Non-exporter" 1 "Exporter"
+
+. label values exporter exporter
+
+. label define fdi 0 "Domestic" 1 "FDI (>=10%)"
+
+. label values fdi fdi
+
+. label define fdi_any 0 "Domestic" 1 "Any foreign share (>0%)"
+
+. label values fdi_any fdi_any
+
+. 
+. * four-way trade profile (row 10); only where both answers are known
+. generate trade_profile = 1 if exporter == 0 & importer == 0
+(20,540 missing values generated)
+
+. replace  trade_profile = 2 if exporter == 1 & importer == 0
+(2,157 real changes made)
+
+. replace  trade_profile = 3 if exporter == 0 & importer == 1
+(1,363 real changes made)
+
+. replace  trade_profile = 4 if exporter == 1 & importer == 1
+(1,355 real changes made)
+
+. label define trade_profile 1 "Non-trading" 2 "Export only" 3 "Import only" 4 
+> "Export and import"
+
+. label values trade_profile trade_profile
+
+. 
+. * R&D activity (1 = yes). Asked in 2011 and 2017-2022; only 2017-2022 is used
+. * (same as b1-17 line 11: the 2011 question is not the same)
+. generate rnd = rd_activity_flag if inlist(rd_activity_flag, 0, 1) & year >= 2
+> 017
+(22,927 missing values generated)
+
+. label define rnd 0 "No R&D" 1 "R&D"
+
+. label values rnd rnd
+
+. 
+. * ---- SOE (row 12) -------------------------------------------------------
+. * block 0 has no government-ownership share yet. If it gets the central and
+. * local government shares (DPUSAT, DPEMDA) under these names, soe is built
+. * here and every file of this block runs.
+. capture confirm variable central_govt_pct local_govt_pct
+
+. if !_rc {
+.     generate soe = (central_govt_pct > 0 & !missing(central_govt_pct)) | ///
+>                    (local_govt_pct > 0 & !missing(local_govt_pct)) ///
+>                    if !missing(central_govt_pct) | !missing(local_govt_pct)
+.     label define soe 0 "Private" 1 "SOE (state share > 0)"
+.     label values soe soe
+. }
+
+. else display as error "No government-ownership share in block 0: soe not buil
+> t (row 12)."
+No government-ownership share in block 0: soe not built (row 12).
+
+. 
+. * ---- firm characteristics (nominal) -----------------------------------
+. generate va         = value_added_nominal
+
+. generate output     = gross_output_nominal
+
+. generate capital    = capital_stock_nominal
+(1,125 missing values generated)
+
+. generate inputs     = intermediate_inputs_nominal
+
+. generate materials  = val_rtlvcu                   // reported materials valu
+> e (RTLVCU)
+
+. generate import_val = import_value_nominal
+
+. generate va_pw   = va / workers      if workers > 0
+(28 missing values generated)
+
+. generate out_pw  = output / workers  if workers > 0
+(28 missing values generated)
+
+. generate cap_pw  = capital / workers if workers > 0
+(1,153 missing values generated)
+
+. 
+. * employment mix
+. generate prod_workers    = production_workers
+(2,681 missing values generated)
+
+. generate nonprod_workers = workers - production_workers if production_workers
+>  <= workers
+(2,682 missing values generated)
+
+. generate prod_share      = 100 * production_workers / workers if workers > 0 
+> & production_workers <= workers
+(2,710 missing values generated)
+
+. 
+. * ratios (%)
+. generate va_share_out     = 100 * va / output          if output > 0
+
+. generate import_share_mat = 100 * import_val / materials if materials > 0
+(1,154 missing values generated)
+
+. generate export_share     = export_share_pct if export_share_valid == 1   // 
+> drops 1 record above 100%
+(31,079 missing values generated)
+
+. generate foreign_share    = foreign_ownership_pct
+(311 missing values generated)
+
+. replace  foreign_share    = . if year == 2020         // same rule as fdi
+(2,936 real changes made, 2,936 to missing)
+
+. 
+. generate tfp_op   = dev_nominal_tfp_op
+(32,377 missing values generated)
+
+. generate tfp_lp   = dev_nominal_tfp_lp
+(22,765 missing values generated)
+
+. generate tfp_acf  = dev_nominal_tfp_acf
+(22,765 missing values generated)
+
+. generate tfp_wrdg = dev_nominal_tfp_wrdg
+(22,765 missing values generated)
+
+. 
+. * ---- energy & emissions -----------------------------------------------
+. * COAL 2017 CORRECTION: block 0 multiplies by 1000 (treats it as tonnes),
+. * but the price per unit shows the data are already in kg. Divide back.
+. generate co2_coal = co2_coal_s1
+
+. generate gj_coal2 = gj_coal
+
+. replace  co2_coal = co2_coal_s1 / 1000 if year == 2017
+(1,181 real changes made)
+
+. replace  gj_coal2 = gj_coal / 1000     if year == 2017
+(1,181 real changes made)
+
+. 
+. * scope 1 = the 4 fuels asked in every year: diesel, petrol, coal, LPG
+. egen co2_s1 = rowtotal(co2_diesel_s1 co2_petrol_s1 co2_coal co2_lpg_s1), miss
+> ing
+
+. egen gj_s1  = rowtotal(gj_diesel gj_petrol gj_coal2 gj_lpg), missing
+
+. * scope 2 = purchased electricity
+. generate co2_s2 = co2_scope2_s1
+
+. generate gj_s2  = gj_electricity
+
+. egen co2_total = rowtotal(co2_s1 co2_s2), missing
+
+. egen gj_total  = rowtotal(gj_s1 gj_s2), missing
+
+. 
+. generate co2_per_va  = co2_total / va      if va > 0
+
+. generate gj_per_va   = gj_total / va       if va > 0
+
+. generate co2_pw      = co2_total / workers if workers > 0
+(28 missing values generated)
+
+. generate gj_pw       = gj_total / workers  if workers > 0
+(28 missing values generated)
+
+. generate co2_per_gj  = co2_total / gj_total if gj_total > 0
+(547 missing values generated)
+
+. 
+. * ---- electricity (kWh) ------------------------------------------------
+. * purchased = PLN + non-PLN (block 0); own generation is reported separately
+. * and is not scope 2 (its fuel is already in the fuel lines)
+. generate elec_purch_kwh  = elec_purchased_kwh       // elec_owngen_kwh is use
+> d as in block 0
+
+. egen elec_total_kwh = rowtotal(elec_purch_kwh elec_owngen_kwh), missing
+
+. generate selfgen_share = 100 * elec_owngen_kwh / elec_total_kwh if elec_total
+> _kwh > 0 & !missing(elec_owngen_kwh)
+(3,362 missing values generated)
+
+. 
+. * ---- main energy source (row 16), same rule as b1-17 line 2 -------------
+. * block 0 publishes GJ for the legacy fuels; coal uses the corrected gj_coal2
+> .
+. * The fuels the 2020 form added have no GJ column in block 0: GJ per unit
+. * from the IPCC 2006 default net calorific values (Vol 2 Ch 1, Table 1.2),
+. * one plain line each.
+. generate gj_dieseloil = fuel_dieseloil_ltr * 0.03655 if fuel_dieseloil_ltr >=
+>  0   // per litre
+(23,858 missing values generated)
+
+. generate gj_fueloil   = fuel_fueloil_ltr   * 0.03838 if fuel_fueloil_ltr >= 0
+>      // per litre
+(23,858 missing values generated)
+
+. generate gj_natgas    = fuel_natgas_mmbtu  * 1.05506 if fuel_natgas_mmbtu >= 
+> 0    // per MMBTU
+(23,858 missing values generated)
+
+. generate gj_biodiesel = fuel_biodiesel_ltr * 0.02376 if fuel_biodiesel_ltr >=
+>  0   // per litre
+(30,450 missing values generated)
+
+. * biomass is left out: its unit (kg in block 0, tonne on the 2020 form) is no
+> t settled
+. generate gj_elec = gj_s2                    // purchased electricity (own gen
+> eration excluded)
+
+. 
+. * main source = the source with the largest GJ; ties go to the source listed
+. * first; firms with no energy use are "No energy reported"
+. generate main_src = 0
+
+. generate best_gj  = 0
+
+. local k 0
+
+. foreach v in gj_diesel gj_petrol gj_kerosene gj_coal2 gj_lpg gj_citygas gj_ot
+> hergas ///
+>              gj_coalbriq gj_dieseloil gj_fueloil gj_natgas gj_biodiesel gj_el
+> ec {
+  2.     local ++k
+  3.     replace main_src = `k' if `v' > best_gj & !missing(`v')
+  4.     replace best_gj  = `v' if `v' > best_gj & !missing(`v')
+  5. }
+(22,856 real changes made)
+(22,856 real changes made)
+(9,178 real changes made)
+(9,178 real changes made)
+(516 real changes made)
+(516 real changes made)
+(3,701 real changes made)
+(3,701 real changes made)
+(2,546 real changes made)
+(2,546 real changes made)
+(952 real changes made)
+(952 real changes made)
+(126 real changes made)
+(126 real changes made)
+(121 real changes made)
+(121 real changes made)
+(582 real changes made)
+(582 real changes made)
+(38 real changes made)
+(38 real changes made)
+(1,174 real changes made)
+(1,174 real changes made)
+(67 real changes made)
+(67 real changes made)
+(14,328 real changes made)
+(14,328 real changes made)
+
+. drop best_gj
+
+. label define main_src 0 "No energy reported" 1 "Diesel" 2 "Petrol" 3 "Kerosen
+> e" 4 "Coal" ///
+>     5 "LPG" 6 "City gas" 7 "Other gas" 8 "Coal briquettes" 9 "Diesel oil (202
+> 0+)" ///
+>     10 "Fuel oil (2020+)" 11 "Natural gas (2020+)" 12 "Biodiesel (2020+)" ///
+>     13 "Electricity (purchased)"
+
+. label values main_src main_src
+
+. 
+. * ---- energy outlier flag (clean), same rule as b1-17 ------------------
+. * a record is left out of the analysis (clean = 0) if any of its energy
+. * quantities is above 100x that year's 99th percentile. Nothing is deleted.
+. generate coal_kg_fix = fuel_coal_kg
+
+. replace  coal_kg_fix = fuel_coal_kg / 1000 if year == 2017
+(1,181 real changes made)
+
+. generate clean = 1
+
+. levelsof year, local(years)
+2010 2011 2012 2013 2014 2015 2017 2018 2019 2020 2021 2022
+
+. foreach q in fuel_diesel_ltr fuel_petrol_ltr fuel_kerosene_ltr coal_kg_fix fu
+> el_lpg_kg ///
+>              fuel_citygas_m3 fuel_othergas_m3 fuel_coalbriq_kg fuel_coke_kg /
+> //
+>              elec_pln_kwh elec_nonpln_kwh elec_owngen_kwh fuel_dieseloil_ltr 
+> ///
+>              fuel_fueloil_ltr fuel_natgas_mmbtu fuel_biodiesel_ltr fuel_bioma
+> ss_kg {
+  2.     foreach y of local years {
+  3.         quietly count if year == `y' & `q' > 0 & !missing(`q')
+  4.         if r(N) > 2 {
+  5.             quietly summarize `q' if year == `y' & `q' > 0, detail
+  6.             quietly replace clean = 0 if year == `y' & `q' > 100 * r(p99) 
+> & !missing(`q')
+  7.         }
+  8.     }
+  9. }
+
+. replace clean = 0 if workers == 0 & co2_s1 > 0 & !missing(co2_s1)
+(20 real changes made)
+
+. count if clean == 0
+  30
+
+. display as result "Outlier records (clean = 0): " r(N)
+Outlier records (clean = 0): 30
+
+. 
+. * ---- ln versions ------------------------------------------------------
+. foreach v in va output capital inputs materials import_val workers va_pw out_
+> pw cap_pw ///
+>              co2_s1 co2_s2 co2_total gj_s1 gj_s2 gj_total elec_total_kwh {
+  2.     generate ln_`v' = ln(`v') if `v' > 0
+  3. }
+(14,164 missing values generated)
+(21 missing values generated)
+(1,154 missing values generated)
+(20,843 missing values generated)
+(28 missing values generated)
+(28 missing values generated)
+(28 missing values generated)
+(14,177 missing values generated)
+(3,826 missing values generated)
+(1,933 missing values generated)
+(547 missing values generated)
+(3,826 missing values generated)
+(1,933 missing values generated)
+(547 missing values generated)
+(1,397 missing values generated)
+
+. 
+. * ---- save -------------------------------------------------------------
+. local soevar ""
+
+. capture confirm variable soe
+
+. if !_rc local soevar "soe"
+
+. keep  firm_id year source_row kbli2 kbli5 prov java large size_class ///
+>       importer exporter fdi fdi_any trade_profile rnd main_src `soevar' ///
+>       va output capital inputs materials import_val workers prod_workers nonp
+> rod_workers ///
+>       va_pw out_pw cap_pw va_share_out prod_share import_share_mat export_sha
+> re foreign_share ///
+>       tfp_* co2_s1 co2_s2 co2_total gj_s1 gj_s2 gj_total ///
+>       co2_per_va gj_per_va co2_pw gj_pw co2_per_gj ///
+>       elec_purch_kwh elec_owngen_kwh elec_total_kwh selfgen_share ///
+>       gj_diesel gj_petrol gj_kerosene gj_coal2 gj_lpg gj_citygas gj_othergas 
+> gj_coalbriq ///
+>       gj_dieseloil gj_fueloil gj_natgas gj_biodiesel gj_elec ///
+>       fuel_diesel_ltr fuel_petrol_ltr fuel_kerosene_ltr coal_kg_fix fuel_lpg_
+> kg ///
+>       fuel_citygas_m3 fuel_othergas_m3 fuel_coalbriq_kg fuel_coke_kg ///
+>       fuel_dieseloil_ltr fuel_fueloil_ltr fuel_natgas_mmbtu fuel_biodiesel_lt
+> r ///
+>       clean ln_*
+
+. order firm_id year source_row kbli2 kbli5 prov java large size_class ///
+>       importer exporter fdi fdi_any trade_profile rnd main_src
+
+. label variable co2_s1          "Scope 1 CO2 (t): diesel, petrol, coal, LPG"
+
+. label variable co2_s2          "Scope 2 CO2 (t): purchased electricity"
+
+. label variable co2_total       "Scope 1 + scope 2 CO2 (t)"
+
+. label variable gj_s1           "Energy (GJ): diesel, petrol, coal, LPG"
+
+. label variable gj_s2           "Energy (GJ): purchased electricity"
+
+. label variable gj_total        "Energy (GJ): scope 1 fuels + purchased electr
+> icity"
+
+. label variable inputs          "Intermediate inputs (nominal, masked)"
+
+. label variable materials       "Materials value RTLVCU (nominal, masked)"
+
+. label variable import_val      "Imports (nominal, masked)"
+
+. label variable nonprod_workers "Non-production workers = workers - production
+>  workers"
+
+. label variable va_share_out    "Value added / output (%)"
+
+. label variable prod_share      "Production workers / workers (%)"
+
+. label variable import_share_mat "Imports / materials (%)"
+
+. label variable export_share    "Export share of output (%)"
+
+. label variable foreign_share   "Foreign ownership (%); 2020 set missing"
+
+. label variable elec_purch_kwh  "Purchased electricity, PLN + non-PLN (kWh)"
+
+. label variable elec_owngen_kwh "Own-generated electricity (kWh)"
+
+. label variable elec_total_kwh  "Purchased + own-generated electricity (kWh)"
+
+. label variable selfgen_share   "Own generation / (purchased + own) electricit
+> y (%)"
+
+. label variable coal_kg_fix     "Coal (kg), 2017 divided by 1000"
+
+. label variable trade_profile   "Trade profile: none / export only / import on
+> ly / both"
+
+. label variable main_src        "Main energy source (largest GJ)"
+
+. label variable fdi_any         "Any foreign ownership (>0%); 2020 set missing
+> "
+
+. label variable rnd             "R&D activity (2017-2022 only)"
+
+. label variable clean           "1 = not an energy outlier"
+
+. compress
+  variable kbli2 was float now byte
+  variable prov was float now byte
+  variable java was float now byte
+  variable large was float now byte
+  variable size_class was float now byte
+  variable importer was float now byte
+  variable exporter was float now byte
+  variable fdi was float now byte
+  variable fdi_any was float now byte
+  variable trade_profile was float now byte
+  variable rnd was float now byte
+  variable main_src was float now byte
+  variable nonprod_workers was float now int
+  variable clean was float now byte
+  (1,355,009 bytes saved)
+
+. save "$B12_DATA/b12_si.dta", replace
+(file
+    /Users/toarmassie/2026-kolega-den-bps-repo/20261005-run/block-b1-12-soe-s
+    > tatus/data/b12_si.dta not found)
+file
+    /Users/toarmassie/2026-kolega-den-bps-repo/20261005-run/block-b1-12-soe-s
+    > tatus/data/b12_si.dta saved
+
+. display as result "01a done: $B12_DATA/b12_si.dta (" _N " rows)"
+01a done: /Users/toarmassie/2026-kolega-den-bps-repo/20261005-run/block-b1-12-s
+> oe-status/data/b12_si.dta (33049 rows)
+
+. 
+end of do-file
+
+######## B1-12: 01_overview ########
+
+. /*==========================================================================
+>   Line 1: "Elaborate SOE firms vs private firms: dicek original value dan ln,
+>  dicek pool dan jg by year"
+>   Data  : SI 2010-2022 (data/b12_si.dta), clean == 1
+>   Output sheets:
+>     t01_group_share  % of firm-years in each group (SOE vs private), pool + b
+> y year
+>     t01_profile      share of each group that exports / imports / is FDI / la
+> rge / does R&D / is in Java (mean x 100 = %), pool + by year
+> ==========================================================================*/
+. if "$B12" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B12_DATA/b12_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. capture confirm variable soe
+
+. if _rc {
+.     display as error "No SOE / government-ownership variable in block 0: noth
+> ing to tabulate (see README)."
+No SOE / government-ownership variable in block 0: nothing to tabulate (see REA
+> DME).
+.     exit
+
+end of do-file
+
+######## B1-12: 02_tfp ########
+
+. /*==========================================================================
+>   Line 2: "TFP (semua)"
+>   Data  : SI 2010-2022 (data/b12_si.dta), clean == 1
+>   Output sheets:
+>     t02_tfp  TFP, 4 methods (block 0 nominal development residuals) by SOE vs
+>  private, pool + by year
+> 
+>   NOTE: TFP = block 0 nominal development residuals on fictional firm links
+>   (not real TFP); OP has only 672 firm-years; the four methods are on
+>   different scales.
+> ==========================================================================*/
+. if "$B12" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B12_DATA/b12_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. capture confirm variable soe
+
+. if _rc {
+.     display as error "No SOE / government-ownership variable in block 0: noth
+> ing to tabulate (see README)."
+No SOE / government-ownership variable in block 0: nothing to tabulate (see REA
+> DME).
+.     exit
+
+end of do-file
+
+######## B1-12: 03_va_output_capital ########
+
+. /*==========================================================================
+>   Line 3: "Value added per worker, value added, output, output per worker, ca
+> pital, capital per worker,"
+>   Data  : SI 2010-2022 (data/b12_si.dta), clean == 1
+>   Output sheets:
+>     t03_va_output_capital  VA, VA/worker, output, output/worker, capital, cap
+> ital/worker (+ inputs, materials), level & ln by SOE vs private
+> 
+>   NOTE: Money values are nominal and masked (not deflated).
+> ==========================================================================*/
+. if "$B12" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B12_DATA/b12_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. capture confirm variable soe
+
+. if _rc {
+.     display as error "No SOE / government-ownership variable in block 0: noth
+> ing to tabulate (see README)."
+No SOE / government-ownership variable in block 0: nothing to tabulate (see REA
+> DME).
+.     exit
+
+end of do-file
+
+######## B1-12: 04_workers_and_size ########
+
+. /*==========================================================================
+>   Line 4: "number of worker, medium vs large firms (>100)"
+>   Data  : SI 2010-2022 (data/b12_si.dta), clean == 1
+>   Output sheets:
+>     t04_workers           workers (level & ln), production / non-production w
+> orkers by SOE vs private
+>     t04_large_rate        share of large firms (>100 workers) by SOE vs priva
+> te (mean x 100 = %)
+>     t04_size_class_share  % of firm-years per size class (<20 ... 500+) by SO
+> E vs private
+> 
+>   NOTE: The survey covers firms with 20+ workers, so "medium" is 20-100
+>   workers.
+> ==========================================================================*/
+. if "$B12" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B12_DATA/b12_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. capture confirm variable soe
+
+. if _rc {
+.     display as error "No SOE / government-ownership variable in block 0: noth
+> ing to tabulate (see README)."
+No SOE / government-ownership variable in block 0: nothing to tabulate (see REA
+> DME).
+.     exit
+
+end of do-file
+
+######## B1-12: 05_sector ########
+
+. /*==========================================================================
+>   Line 5: "By sector 2 digit and 5 digit"
+>   Data  : SI 2010-2022 (data/b12_si.dta), clean == 1
+>   Output sheets:
+>     t05_kbli2_share     % of firm-years per KBLI 2-digit sector by SOE vs pri
+> vate
+>     t05_kbli5_share     % of firm-years per KBLI 5-digit code by SOE vs priva
+> te
+>     t05_group_by_kbli2  within each KBLI 2-digit sector: % of firm-years per 
+> group
+> 
+>   NOTE: Industry codes are as reported; block 0 has no bridge between
+>   classification versions.
+> ==========================================================================*/
+. if "$B12" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B12_DATA/b12_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. capture confirm variable soe
+
+. if _rc {
+.     display as error "No SOE / government-ownership variable in block 0: noth
+> ing to tabulate (see README)."
+No SOE / government-ownership variable in block 0: nothing to tabulate (see REA
+> DME).
+.     exit
+
+end of do-file
+
+######## B1-12: 06_energy_use ########
+
+. /*==========================================================================
+>   Line 6: "Energi use scope 1, 2, total"
+>   Data  : SI 2010-2022 (data/b12_si.dta), clean == 1
+>   Output sheets:
+>     t06_energy          energy GJ scope 1 / 2 / total (level & ln), GJ per wo
+> rker and per VA, electricity (kWh) by SOE vs private
+>     t06_main_src_share  % of firm-years per main energy source by SOE vs priv
+> ate
+> 
+>   NOTE: Scope 1 = GJ of the 4 fuels asked every year (diesel, petrol, coal,
+>   LPG); scope 2 = purchased electricity; own generation is not scope 2.
+>   Energy reporting changes between 2015 and 2017.
+> ==========================================================================*/
+. if "$B12" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B12_DATA/b12_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. capture confirm variable soe
+
+. if _rc {
+.     display as error "No SOE / government-ownership variable in block 0: noth
+> ing to tabulate (see README)."
+No SOE / government-ownership variable in block 0: nothing to tabulate (see REA
+> DME).
+.     exit
+
+end of do-file
+
+######## B1-12: 07_emissions ########
+
+. /*==========================================================================
+>   Line 7: "Emisi 1, 2, total"
+>   Data  : SI 2010-2022 (data/b12_si.dta), clean == 1
+>   Output sheets:
+>     t07_emissions  CO2 scope 1 / 2 / total (level & ln), CO2 per worker, per 
+> VA, per GJ by SOE vs private
+> 
+>   NOTE: Scope 1 = CO2 of diesel, petrol, coal, LPG; scope 2 = purchased
+>   electricity with the block 0 grid factor (2014 value carried forward after
+>   2014).
+> ==========================================================================*/
+. if "$B12" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B12_DATA/b12_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. capture confirm variable soe
+
+. if _rc {
+.     display as error "No SOE / government-ownership variable in block 0: noth
+> ing to tabulate (see README)."
+No SOE / government-ownership variable in block 0: nothing to tabulate (see REA
+> DME).
+.     exit
+
+end of do-file
+
+######## B1-12: 08_location ########
+
+. /*==========================================================================
+>   Line 8: "Location (province, kab kota dan kecamatan kalau ada), dalam Kawas
+> an industry or not"
+>   Data  : SI 2010-2022 (data/b12_si.dta), clean == 1
+>   Output sheets:
+>     t08_java_share     % of firm-years in Java / outside Java by SOE vs priva
+> te
+>     t08_prov_share     % of firm-years per province by SOE vs private
+>     t08_group_by_java  within Java and outside Java: % of firm-years per grou
+> p
+>     t08_kab_share      % of firm-years per district -- only written if the di
+> strict code is filled in
+> 
+>   NOTE: NOT AVAILABLE: district (kab/kota) is blank in block 0; kecamatan and
+>   kawasan industri are not in block 0.
+> ==========================================================================*/
+. if "$B12" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B12_DATA/b12_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. capture confirm variable soe
+
+. if _rc {
+.     display as error "No SOE / government-ownership variable in block 0: noth
+> ing to tabulate (see README)."
+No SOE / government-ownership variable in block 0: nothing to tabulate (see REA
+> DME).
+.     exit
+
+end of do-file
+
+######## B1-12: 09_rnd ########
+
+. /*==========================================================================
+>   Line 9: "RnD"
+>   Data  : SI 2010-2022 (data/b12_si.dta), clean == 1
+>   Output sheets:
+>     t09_rnd_rate  share doing R&D by SOE vs private (mean x 100 = %), 2017-20
+> 22
+> 
+>   NOTE: R&D is used for 2017-2022 only (as b1-17); many records leave the
+>   question blank.
+> ==========================================================================*/
+. if "$B12" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B12_DATA/b12_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. capture confirm variable soe
+
+. if _rc {
+.     display as error "No SOE / government-ownership variable in block 0: noth
+> ing to tabulate (see README)."
+No SOE / government-ownership variable in block 0: nothing to tabulate (see REA
+> DME).
+.     exit
+
+end of do-file
+
+######## B1-12: 10_figures ########
+
+. /*==========================================================================
+>   Line 10: "Elaborate bs dengan output stats/stylish facts dalam bentuk
+>            table atau dengan graph, atau table yg ready untuk dibuat graph"
+>   Every other file writes its tables to output/b1_12_tables.xlsx. This
+>   file draws the charts FROM those tables (helper _charts.do), so a chart
+>   always matches its table. The exact points of every chart, and the label
+>   printed next to each point, are written to a sheet figNN_data.
+>   Runs LAST in 00_run.do.
+> 
+>   Charts (output/):
+>     fig01a_group_share.png  % of firm-years per group, by year
+>     fig01b_profile.png      who the groups are (pooled)
+>     fig02_tfp.png           TFP (Levinsohn-Petrin) by group and year
+>     fig03_va_pw.png         Value added per worker by group and year
+>     fig06_energy.png        Energy use per firm-year (median) by group and ye
+> ar
+>     fig07_emissions.png     CO2 per firm-year (median) by group and year
+> 
+>   Chart rules (repo consensus): see _charts.do.
+> ==========================================================================*/
+. if "$B12" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. 
+. use "$B12_DATA/b12_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. capture confirm variable soe
+
+. if _rc {
+.     display as error "No SOE / government-ownership variable in block 0: no c
+> harts (see README)."
+No SOE / government-ownership variable in block 0: no charts (see README).
+.     exit
+
+end of do-file
+
+. log close b12
+      name:  b12
+       log:  /Users/toarmassie/2026-kolega-den-bps-repo/20261005-run/block-b1-1
+> 2-soe-status/output/b1_12_log.log
+  log type:  text
+ closed on:   9 Oct 2026, 16:29:45
+-------------------------------------------------------------------------------

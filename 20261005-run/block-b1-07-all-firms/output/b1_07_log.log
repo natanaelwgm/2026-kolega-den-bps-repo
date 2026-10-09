@@ -1,0 +1,4879 @@
+-------------------------------------------------------------------------------
+      name:  b07
+       log:  /Users/toarmassie/2026-kolega-den-bps-repo/20261005-run/block-b1-0
+> 7-all-firms/output/b1_07_log.log
+  log type:  text
+ opened on:   9 Oct 2026, 16:28:33
+
+. foreach f of local files {
+  2.     display _newline as result "######## B1-07: `f' ########"
+  3.     do "$B07/`f'.do"
+  4. }
+
+######## B1-07: 01a_prep_si ########
+
+. /*==========================================================================
+>   Prep  Prepare Statistik Industri (SI) 2010-2022 for B1-07
+>   Input : $SI_DATA  (analysis_ready_data.dta from block 0)
+>   Output: data/b07_si.dta  -- 1 row = 1 firm x year
+>           (open with: use "$B07_DATA/b07_si.dta", clear  then browse)
+> 
+>   Copied from b1-17's 01a_prep_si.do (same corrections: 2017 coal / 1000,
+>   2020 FDI and 2022 exporter set missing, clean outlier flag, scope 1 = the
+>   4 fuels asked every year), plus what rows 7-16 need (same file in blocks b1
+> -07 to b1-16).
+>   Main variables created:
+>     kbli2 kbli5 prov java large size_class            sector, location, size
+>     exporter importer fdi fdi_any trade_profile rnd   firm groups
+>     main_src                                          main energy source (lar
+> gest GJ)
+>     va output capital inputs materials import_val     nominal money (masked)
+>     workers prod_workers nonprod_workers              employment
+>     va_pw out_pw cap_pw                               per worker
+>     va_share_out prod_share import_share_mat export_share foreign_share   rat
+> ios / %
+>     tfp_op tfp_lp tfp_acf tfp_wrdg                    block 0 nominal develop
+> ment TFP
+>     co2_s1 co2_s2 co2_total gj_s1 gj_s2 gj_total      emissions (t) and energ
+> y (GJ)
+>     co2_pw gj_pw co2_per_va gj_per_va co2_per_gj      intensities
+>     elec_purch_kwh elec_owngen_kwh elec_total_kwh selfgen_share   electricity
+>     ln_*                                              ln of every level varia
+> ble (missing when <= 0)
+>     clean                                             1 = not an extreme ener
+> gy outlier
+> ==========================================================================*/
+. if "$B07" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$SI_DATA", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+. * ---- identifiers ------------------------------------------------------
+. * year = survey year (there is no 2016 file)
+. generate kbli2 = real(substr(industry_code, 1, 2))
+
+. generate kbli5 = industry_code
+
+. generate prov  = real(province_code)
+
+. generate java  = inlist(prov, 31, 32, 33, 34, 35, 36) if !missing(prov)
+
+. label define java 0 "Outside Java" 1 "Java"
+
+. label values java java
+
+. label define prov 11 "Aceh" 12 "North Sumatra" 13 "West Sumatra" 14 "Riau" 15
+>  "Jambi" ///
+>     16 "South Sumatra" 17 "Bengkulu" 18 "Lampung" 19 "Bangka Belitung" 21 "Ri
+> au Islands" ///
+>     31 "DKI Jakarta" 32 "West Java" 33 "Central Java" 34 "DI Yogyakarta" 35 "
+> East Java" ///
+>     36 "Banten" 51 "Bali" 52 "West Nusa Tenggara" 53 "East Nusa Tenggara" ///
+>     61 "West Kalimantan" 62 "Central Kalimantan" 63 "South Kalimantan" 64 "Ea
+> st Kalimantan" ///
+>     65 "North Kalimantan" 71 "North Sulawesi" 72 "Central Sulawesi" 73 "South
+>  Sulawesi" ///
+>     74 "Southeast Sulawesi" 75 "Gorontalo" 76 "West Sulawesi" 81 "Maluku" 82 
+> "North Maluku" ///
+>     91 "West Papua" 94 "Papua"
+
+. label values prov prov
+
+. 
+. * ---- firm size --------------------------------------------------------
+. * medium vs large (100-worker threshold, Analysis.docx row 13; same as b1-17)
+. generate large = (workers > 100) if !missing(workers)
+
+. label define large 0 "Medium (<=100)" 1 "Large (>100)"
+
+. label values large large
+
+. * size classes by number of workers
+. generate size_class = 1 if workers < 20
+(28,867 missing values generated)
+
+. replace  size_class = 2 if workers >= 20  & workers < 50
+(12,308 real changes made)
+
+. replace  size_class = 3 if workers >= 50  & workers < 100
+(6,216 real changes made)
+
+. replace  size_class = 4 if workers >= 100 & workers < 500
+(7,730 real changes made)
+
+. replace  size_class = 5 if workers >= 500 & !missing(workers)
+(2,613 real changes made)
+
+. label define size_class 1 "<20 workers" 2 "20-49" 3 "50-99" 4 "100-499" 5 "50
+> 0+"
+
+. label values size_class size_class
+
+. 
+. * ---- imports, exports, FDI, R&D ---------------------------------------
+. * importer is only defined where the import question can be evaluated
+. generate importer = import_flag if import_observed == 1
+
+. label define importer 0 "Non-importer" 1 "Importer"
+
+. label values importer importer
+
+. 
+. generate exporter = export_flag
+(15,321 missing values generated)
+
+. generate fdi      = fdi_10_flag                     // foreign ownership >= 1
+> 0%
+(311 missing values generated)
+
+. generate fdi_any  = fdi_any_flag                    // foreign ownership > 0%
+(311 missing values generated)
+
+. * 2022: the form only asks about DIRECT exports, a "no" is never recorded -> 
+> missing
+. replace exporter = . if year == 2022
+(344 real changes made, 344 to missing)
+
+. * 2020: foreign ownership is inconsistent (47% FDI vs 8-11% other years) -> m
+> issing
+. replace fdi     = . if year == 2020
+(2,936 real changes made, 2,936 to missing)
+
+. replace fdi_any = . if year == 2020
+(2,936 real changes made, 2,936 to missing)
+
+. label define exporter 0 "Non-exporter" 1 "Exporter"
+
+. label values exporter exporter
+
+. label define fdi 0 "Domestic" 1 "FDI (>=10%)"
+
+. label values fdi fdi
+
+. label define fdi_any 0 "Domestic" 1 "Any foreign share (>0%)"
+
+. label values fdi_any fdi_any
+
+. 
+. * four-way trade profile (row 10); only where both answers are known
+. generate trade_profile = 1 if exporter == 0 & importer == 0
+(20,540 missing values generated)
+
+. replace  trade_profile = 2 if exporter == 1 & importer == 0
+(2,157 real changes made)
+
+. replace  trade_profile = 3 if exporter == 0 & importer == 1
+(1,363 real changes made)
+
+. replace  trade_profile = 4 if exporter == 1 & importer == 1
+(1,355 real changes made)
+
+. label define trade_profile 1 "Non-trading" 2 "Export only" 3 "Import only" 4 
+> "Export and import"
+
+. label values trade_profile trade_profile
+
+. 
+. * R&D activity (1 = yes). Asked in 2011 and 2017-2022; only 2017-2022 is used
+. * (same as b1-17 line 11: the 2011 question is not the same)
+. generate rnd = rd_activity_flag if inlist(rd_activity_flag, 0, 1) & year >= 2
+> 017
+(22,927 missing values generated)
+
+. label define rnd 0 "No R&D" 1 "R&D"
+
+. label values rnd rnd
+
+. 
+. * ---- firm characteristics (nominal) -----------------------------------
+. generate va         = value_added_nominal
+
+. generate output     = gross_output_nominal
+
+. generate capital    = capital_stock_nominal
+(1,125 missing values generated)
+
+. generate inputs     = intermediate_inputs_nominal
+
+. generate materials  = val_rtlvcu                   // reported materials valu
+> e (RTLVCU)
+
+. generate import_val = import_value_nominal
+
+. generate va_pw   = va / workers      if workers > 0
+(28 missing values generated)
+
+. generate out_pw  = output / workers  if workers > 0
+(28 missing values generated)
+
+. generate cap_pw  = capital / workers if workers > 0
+(1,153 missing values generated)
+
+. 
+. * employment mix
+. generate prod_workers    = production_workers
+(2,681 missing values generated)
+
+. generate nonprod_workers = workers - production_workers if production_workers
+>  <= workers
+(2,682 missing values generated)
+
+. generate prod_share      = 100 * production_workers / workers if workers > 0 
+> & production_workers <= workers
+(2,710 missing values generated)
+
+. 
+. * ratios (%)
+. generate va_share_out     = 100 * va / output          if output > 0
+
+. generate import_share_mat = 100 * import_val / materials if materials > 0
+(1,154 missing values generated)
+
+. generate export_share     = export_share_pct if export_share_valid == 1   // 
+> drops 1 record above 100%
+(31,079 missing values generated)
+
+. generate foreign_share    = foreign_ownership_pct
+(311 missing values generated)
+
+. replace  foreign_share    = . if year == 2020         // same rule as fdi
+(2,936 real changes made, 2,936 to missing)
+
+. 
+. generate tfp_op   = dev_nominal_tfp_op
+(32,377 missing values generated)
+
+. generate tfp_lp   = dev_nominal_tfp_lp
+(22,765 missing values generated)
+
+. generate tfp_acf  = dev_nominal_tfp_acf
+(22,765 missing values generated)
+
+. generate tfp_wrdg = dev_nominal_tfp_wrdg
+(22,765 missing values generated)
+
+. 
+. * ---- energy & emissions -----------------------------------------------
+. * COAL 2017 CORRECTION: block 0 multiplies by 1000 (treats it as tonnes),
+. * but the price per unit shows the data are already in kg. Divide back.
+. generate co2_coal = co2_coal_s1
+
+. generate gj_coal2 = gj_coal
+
+. replace  co2_coal = co2_coal_s1 / 1000 if year == 2017
+(1,181 real changes made)
+
+. replace  gj_coal2 = gj_coal / 1000     if year == 2017
+(1,181 real changes made)
+
+. 
+. * scope 1 = the 4 fuels asked in every year: diesel, petrol, coal, LPG
+. egen co2_s1 = rowtotal(co2_diesel_s1 co2_petrol_s1 co2_coal co2_lpg_s1), miss
+> ing
+
+. egen gj_s1  = rowtotal(gj_diesel gj_petrol gj_coal2 gj_lpg), missing
+
+. * scope 2 = purchased electricity
+. generate co2_s2 = co2_scope2_s1
+
+. generate gj_s2  = gj_electricity
+
+. egen co2_total = rowtotal(co2_s1 co2_s2), missing
+
+. egen gj_total  = rowtotal(gj_s1 gj_s2), missing
+
+. 
+. generate co2_per_va  = co2_total / va      if va > 0
+
+. generate gj_per_va   = gj_total / va       if va > 0
+
+. generate co2_pw      = co2_total / workers if workers > 0
+(28 missing values generated)
+
+. generate gj_pw       = gj_total / workers  if workers > 0
+(28 missing values generated)
+
+. generate co2_per_gj  = co2_total / gj_total if gj_total > 0
+(547 missing values generated)
+
+. 
+. * ---- electricity (kWh) ------------------------------------------------
+. * purchased = PLN + non-PLN (block 0); own generation is reported separately
+. * and is not scope 2 (its fuel is already in the fuel lines)
+. generate elec_purch_kwh  = elec_purchased_kwh       // elec_owngen_kwh is use
+> d as in block 0
+
+. egen elec_total_kwh = rowtotal(elec_purch_kwh elec_owngen_kwh), missing
+
+. generate selfgen_share = 100 * elec_owngen_kwh / elec_total_kwh if elec_total
+> _kwh > 0 & !missing(elec_owngen_kwh)
+(3,362 missing values generated)
+
+. 
+. * ---- main energy source (row 16), same rule as b1-17 line 2 -------------
+. * block 0 publishes GJ for the legacy fuels; coal uses the corrected gj_coal2
+> .
+. * The fuels the 2020 form added have no GJ column in block 0: GJ per unit
+. * from the IPCC 2006 default net calorific values (Vol 2 Ch 1, Table 1.2),
+. * one plain line each.
+. generate gj_dieseloil = fuel_dieseloil_ltr * 0.03655 if fuel_dieseloil_ltr >=
+>  0   // per litre
+(23,858 missing values generated)
+
+. generate gj_fueloil   = fuel_fueloil_ltr   * 0.03838 if fuel_fueloil_ltr >= 0
+>      // per litre
+(23,858 missing values generated)
+
+. generate gj_natgas    = fuel_natgas_mmbtu  * 1.05506 if fuel_natgas_mmbtu >= 
+> 0    // per MMBTU
+(23,858 missing values generated)
+
+. generate gj_biodiesel = fuel_biodiesel_ltr * 0.02376 if fuel_biodiesel_ltr >=
+>  0   // per litre
+(30,450 missing values generated)
+
+. * biomass is left out: its unit (kg in block 0, tonne on the 2020 form) is no
+> t settled
+. generate gj_elec = gj_s2                    // purchased electricity (own gen
+> eration excluded)
+
+. 
+. * main source = the source with the largest GJ; ties go to the source listed
+. * first; firms with no energy use are "No energy reported"
+. generate main_src = 0
+
+. generate best_gj  = 0
+
+. local k 0
+
+. foreach v in gj_diesel gj_petrol gj_kerosene gj_coal2 gj_lpg gj_citygas gj_ot
+> hergas ///
+>              gj_coalbriq gj_dieseloil gj_fueloil gj_natgas gj_biodiesel gj_el
+> ec {
+  2.     local ++k
+  3.     replace main_src = `k' if `v' > best_gj & !missing(`v')
+  4.     replace best_gj  = `v' if `v' > best_gj & !missing(`v')
+  5. }
+(22,856 real changes made)
+(22,856 real changes made)
+(9,178 real changes made)
+(9,178 real changes made)
+(516 real changes made)
+(516 real changes made)
+(3,701 real changes made)
+(3,701 real changes made)
+(2,546 real changes made)
+(2,546 real changes made)
+(952 real changes made)
+(952 real changes made)
+(126 real changes made)
+(126 real changes made)
+(121 real changes made)
+(121 real changes made)
+(582 real changes made)
+(582 real changes made)
+(38 real changes made)
+(38 real changes made)
+(1,174 real changes made)
+(1,174 real changes made)
+(67 real changes made)
+(67 real changes made)
+(14,328 real changes made)
+(14,328 real changes made)
+
+. drop best_gj
+
+. label define main_src 0 "No energy reported" 1 "Diesel" 2 "Petrol" 3 "Kerosen
+> e" 4 "Coal" ///
+>     5 "LPG" 6 "City gas" 7 "Other gas" 8 "Coal briquettes" 9 "Diesel oil (202
+> 0+)" ///
+>     10 "Fuel oil (2020+)" 11 "Natural gas (2020+)" 12 "Biodiesel (2020+)" ///
+>     13 "Electricity (purchased)"
+
+. label values main_src main_src
+
+. 
+. * ---- energy outlier flag (clean), same rule as b1-17 ------------------
+. * a record is left out of the analysis (clean = 0) if any of its energy
+. * quantities is above 100x that year's 99th percentile. Nothing is deleted.
+. generate coal_kg_fix = fuel_coal_kg
+
+. replace  coal_kg_fix = fuel_coal_kg / 1000 if year == 2017
+(1,181 real changes made)
+
+. generate clean = 1
+
+. levelsof year, local(years)
+2010 2011 2012 2013 2014 2015 2017 2018 2019 2020 2021 2022
+
+. foreach q in fuel_diesel_ltr fuel_petrol_ltr fuel_kerosene_ltr coal_kg_fix fu
+> el_lpg_kg ///
+>              fuel_citygas_m3 fuel_othergas_m3 fuel_coalbriq_kg fuel_coke_kg /
+> //
+>              elec_pln_kwh elec_nonpln_kwh elec_owngen_kwh fuel_dieseloil_ltr 
+> ///
+>              fuel_fueloil_ltr fuel_natgas_mmbtu fuel_biodiesel_ltr fuel_bioma
+> ss_kg {
+  2.     foreach y of local years {
+  3.         quietly count if year == `y' & `q' > 0 & !missing(`q')
+  4.         if r(N) > 2 {
+  5.             quietly summarize `q' if year == `y' & `q' > 0, detail
+  6.             quietly replace clean = 0 if year == `y' & `q' > 100 * r(p99) 
+> & !missing(`q')
+  7.         }
+  8.     }
+  9. }
+
+. replace clean = 0 if workers == 0 & co2_s1 > 0 & !missing(co2_s1)
+(20 real changes made)
+
+. count if clean == 0
+  30
+
+. display as result "Outlier records (clean = 0): " r(N)
+Outlier records (clean = 0): 30
+
+. 
+. * ---- ln versions ------------------------------------------------------
+. foreach v in va output capital inputs materials import_val workers va_pw out_
+> pw cap_pw ///
+>              co2_s1 co2_s2 co2_total gj_s1 gj_s2 gj_total elec_total_kwh {
+  2.     generate ln_`v' = ln(`v') if `v' > 0
+  3. }
+(14,164 missing values generated)
+(21 missing values generated)
+(1,154 missing values generated)
+(20,843 missing values generated)
+(28 missing values generated)
+(28 missing values generated)
+(28 missing values generated)
+(14,177 missing values generated)
+(3,826 missing values generated)
+(1,933 missing values generated)
+(547 missing values generated)
+(3,826 missing values generated)
+(1,933 missing values generated)
+(547 missing values generated)
+(1,397 missing values generated)
+
+. 
+. * ---- save -------------------------------------------------------------
+. keep  firm_id year source_row kbli2 kbli5 prov java large size_class ///
+>       importer exporter fdi fdi_any trade_profile rnd main_src ///
+>       va output capital inputs materials import_val workers prod_workers nonp
+> rod_workers ///
+>       va_pw out_pw cap_pw va_share_out prod_share import_share_mat export_sha
+> re foreign_share ///
+>       tfp_* co2_s1 co2_s2 co2_total gj_s1 gj_s2 gj_total ///
+>       co2_per_va gj_per_va co2_pw gj_pw co2_per_gj ///
+>       elec_purch_kwh elec_owngen_kwh elec_total_kwh selfgen_share ///
+>       gj_diesel gj_petrol gj_kerosene gj_coal2 gj_lpg gj_citygas gj_othergas 
+> gj_coalbriq ///
+>       gj_dieseloil gj_fueloil gj_natgas gj_biodiesel gj_elec ///
+>       fuel_diesel_ltr fuel_petrol_ltr fuel_kerosene_ltr coal_kg_fix fuel_lpg_
+> kg ///
+>       fuel_citygas_m3 fuel_othergas_m3 fuel_coalbriq_kg fuel_coke_kg ///
+>       fuel_dieseloil_ltr fuel_fueloil_ltr fuel_natgas_mmbtu fuel_biodiesel_lt
+> r ///
+>       clean ln_*
+
+. order firm_id year source_row kbli2 kbli5 prov java large size_class ///
+>       importer exporter fdi fdi_any trade_profile rnd main_src
+
+. label variable co2_s1          "Scope 1 CO2 (t): diesel, petrol, coal, LPG"
+
+. label variable co2_s2          "Scope 2 CO2 (t): purchased electricity"
+
+. label variable co2_total       "Scope 1 + scope 2 CO2 (t)"
+
+. label variable gj_s1           "Energy (GJ): diesel, petrol, coal, LPG"
+
+. label variable gj_s2           "Energy (GJ): purchased electricity"
+
+. label variable gj_total        "Energy (GJ): scope 1 fuels + purchased electr
+> icity"
+
+. label variable inputs          "Intermediate inputs (nominal, masked)"
+
+. label variable materials       "Materials value RTLVCU (nominal, masked)"
+
+. label variable import_val      "Imports (nominal, masked)"
+
+. label variable nonprod_workers "Non-production workers = workers - production
+>  workers"
+
+. label variable va_share_out    "Value added / output (%)"
+
+. label variable prod_share      "Production workers / workers (%)"
+
+. label variable import_share_mat "Imports / materials (%)"
+
+. label variable export_share    "Export share of output (%)"
+
+. label variable foreign_share   "Foreign ownership (%); 2020 set missing"
+
+. label variable elec_purch_kwh  "Purchased electricity, PLN + non-PLN (kWh)"
+
+. label variable elec_owngen_kwh "Own-generated electricity (kWh)"
+
+. label variable elec_total_kwh  "Purchased + own-generated electricity (kWh)"
+
+. label variable selfgen_share   "Own generation / (purchased + own) electricit
+> y (%)"
+
+. label variable coal_kg_fix     "Coal (kg), 2017 divided by 1000"
+
+. label variable trade_profile   "Trade profile: none / export only / import on
+> ly / both"
+
+. label variable main_src        "Main energy source (largest GJ)"
+
+. label variable fdi_any         "Any foreign ownership (>0%); 2020 set missing
+> "
+
+. label variable rnd             "R&D activity (2017-2022 only)"
+
+. label variable clean           "1 = not an energy outlier"
+
+. compress
+  variable kbli2 was float now byte
+  variable prov was float now byte
+  variable java was float now byte
+  variable large was float now byte
+  variable size_class was float now byte
+  variable importer was float now byte
+  variable exporter was float now byte
+  variable fdi was float now byte
+  variable fdi_any was float now byte
+  variable trade_profile was float now byte
+  variable rnd was float now byte
+  variable main_src was float now byte
+  variable nonprod_workers was float now int
+  variable clean was float now byte
+  (1,355,009 bytes saved)
+
+. save "$B07_DATA/b07_si.dta", replace
+(file
+    /Users/toarmassie/2026-kolega-den-bps-repo/20261005-run/block-b1-07-all-f
+    > irms/data/b07_si.dta not found)
+file
+    /Users/toarmassie/2026-kolega-den-bps-repo/20261005-run/block-b1-07-all-f
+    > irms/data/b07_si.dta saved
+
+. display as result "01a done: $B07_DATA/b07_si.dta (" _N " rows)"
+01a done: /Users/toarmassie/2026-kolega-den-bps-repo/20261005-run/block-b1-07-a
+> ll-firms/data/b07_si.dta (33049 rows)
+
+. 
+end of do-file
+
+######## B1-07: 01_overview ########
+
+. /*==========================================================================
+>   Line 1: "Elaborate semua data: dicek original value dan ln, dicek pool dan 
+> jg by year"
+>   Data  : SI 2010-2022 (data/b07_si.dta), clean == 1
+>   Output sheets:
+>     t01_profile  share of all firms that export / import / are FDI / large / 
+> do R&D / are in Java (mean x 100 = %), pool + by year
+> ==========================================================================*/
+. if "$B07" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B07_DATA/b07_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1
+(30 observations deleted)
+
+. do "$B07/_sumstats.do" "exporter importer fdi large rnd java" "" "t01_profile
+> "
+
+. /*==========================================================================
+>   _sumstats.do -- helper: descriptive statistics table, POOLED + BY YEAR
+>   (same helper as b1-17's _sumstats.do, writing to this block's workbook)
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B07/_sumstats.do" "$ECON $TFP" "exporter" "t08_econ"
+> 
+>       argument 1 = list of variables
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b1_07_tables.xlsx (max 31 characters)
+>       argument 4 = optional: "poolonly" to skip the by-year rows
+>                    (for groups with many values, e.g. 5-digit sector)
+> 
+>   Result: 1 row = variable x group x period (pool, 2010, 2011, ...)
+>           columns n mean sd p10 p25 p50 p75 p90 min max
+>   Rows with a missing group are not counted. A variable equal to the
+>   grouping variable is skipped.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars grp sheet mode
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000002 saved
+    as .dta format
+
+. local first 1
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     label define all 1 "All firms", replace
+.     label values all all
+.     local grp all
+. }
+
+. local periods "pool year"
+
+. if "`mode'" == "poolonly" local periods "pool"
+
+. foreach v of local vars {
+  2.     * a variable is not summarised by itself (e.g. exporter rate by export
+> er)
+.     if "`v'" == "`grp'" continue
+  3.     foreach period of local periods {
+  4.         preserve
+  5.         keep `v' `grp' year
+  6.         keep if !missing(`v') & !missing(`grp')
+  7.         if _N > 0 {
+  8.             if "`period'" == "pool" replace year = 0
+  9.             collapse (count) n = `v' (mean) mean = `v' (sd) sd = `v' ///
+>                      (p10) p10 = `v' (p25) p25 = `v' (p50) p50 = `v' ///
+>                      (p75) p75 = `v' (p90) p90 = `v' (min) min = `v' (max) ma
+> x = `v', ///
+>                      by(`grp' year)
+ 10.             generate str32 variable = "`v'"
+ 11.             if `first' == 0 append using `result'
+ 12.             save `result', replace
+ 13.             local first 0
+ 14.         }
+ 15.         restore
+ 16.     }
+ 17. }
+(15,642 observations deleted)
+(17,377 real changes made)
+(file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 not
+    found)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(15,642 observations deleted)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+(33,019 real changes made)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(3,246 observations deleted)
+(29,773 real changes made)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(3,246 observations deleted)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+(33,019 real changes made)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(22,919 observations deleted)
+(10,100 real changes made)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(22,919 observations deleted)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+(33,019 real changes made)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+
+. 
+. if `first' == 1 {
+.     display as error "  -> sheet `sheet' not written: no nonmissing values"
+.     use `original', clear
+.     exit
+. }
+
+. use `result', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * the group is written as text using its value label (if it has one)
+. capture decode `grp', generate(group)
+
+. if _rc generate group = string(`grp')
+
+. * keep the variables in the order they were listed
+. generate variable_order = .
+(70 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(12 real changes made)
+(13 real changes made)
+(12 real changes made)
+(13 real changes made)
+(7 real changes made)
+(13 real changes made)
+
+. sort variable_order `grp' year
+
+. keep variable group period n mean sd p10 p25 p50 p75 p90 min max
+
+. export excel using "$B07_XLSX", sheet("`sheet'", replace) firstrow(variables)
+file /Users/toarmassie/2026-kolega-den-bps-repo/20261005-run/block-b1-07-all-fi
+> rms/output/b1_07_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t01_profile (70 rows)
+
+. use `original', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+end of do-file
+
+. 
+end of do-file
+
+######## B1-07: 02_tfp ########
+
+. /*==========================================================================
+>   Line 2: "TFP (semua)"
+>   Data  : SI 2010-2022 (data/b07_si.dta), clean == 1
+>   Output sheets:
+>     t02_tfp  TFP, 4 methods (block 0 nominal development residuals), all firm
+> s, pool + by year
+> 
+>   NOTE: TFP = block 0 nominal development residuals on fictional firm links
+>   (not real TFP); OP has only 672 firm-years; the four methods are on
+>   different scales.
+> ==========================================================================*/
+. if "$B07" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B07_DATA/b07_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1
+(30 observations deleted)
+
+. local TFP "tfp_op tfp_lp tfp_acf tfp_wrdg"
+
+. do "$B07/_sumstats.do" "`TFP'" "" "t02_tfp"
+
+. /*==========================================================================
+>   _sumstats.do -- helper: descriptive statistics table, POOLED + BY YEAR
+>   (same helper as b1-17's _sumstats.do, writing to this block's workbook)
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B07/_sumstats.do" "$ECON $TFP" "exporter" "t08_econ"
+> 
+>       argument 1 = list of variables
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b1_07_tables.xlsx (max 31 characters)
+>       argument 4 = optional: "poolonly" to skip the by-year rows
+>                    (for groups with many values, e.g. 5-digit sector)
+> 
+>   Result: 1 row = variable x group x period (pool, 2010, 2011, ...)
+>           columns n mean sd p10 p25 p50 p75 p90 min max
+>   Rows with a missing group are not counted. A variable equal to the
+>   grouping variable is skipped.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars grp sheet mode
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000002 saved
+    as .dta format
+
+. local first 1
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     label define all 1 "All firms", replace
+.     label values all all
+.     local grp all
+. }
+
+. local periods "pool year"
+
+. if "`mode'" == "poolonly" local periods "pool"
+
+. foreach v of local vars {
+  2.     * a variable is not summarised by itself (e.g. exporter rate by export
+> er)
+.     if "`v'" == "`grp'" continue
+  3.     foreach period of local periods {
+  4.         preserve
+  5.         keep `v' `grp' year
+  6.         keep if !missing(`v') & !missing(`grp')
+  7.         if _N > 0 {
+  8.             if "`period'" == "pool" replace year = 0
+  9.             collapse (count) n = `v' (mean) mean = `v' (sd) sd = `v' ///
+>                      (p10) p10 = `v' (p25) p25 = `v' (p50) p50 = `v' ///
+>                      (p75) p75 = `v' (p90) p90 = `v' (min) min = `v' (max) ma
+> x = `v', ///
+>                      by(`grp' year)
+ 10.             generate str32 variable = "`v'"
+ 11.             if `first' == 0 append using `result'
+ 12.             save `result', replace
+ 13.             local first 0
+ 14.         }
+ 15.         restore
+ 16.     }
+ 17. }
+(32,347 observations deleted)
+(672 real changes made)
+(file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 not
+    found)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(32,347 observations deleted)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(22,738 observations deleted)
+(10,281 real changes made)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(22,738 observations deleted)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(22,738 observations deleted)
+(10,281 real changes made)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(22,738 observations deleted)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(22,738 observations deleted)
+(10,281 real changes made)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(22,738 observations deleted)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+
+. 
+. if `first' == 1 {
+.     display as error "  -> sheet `sheet' not written: no nonmissing values"
+.     use `original', clear
+.     exit
+. }
+
+. use `result', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * the group is written as text using its value label (if it has one)
+. capture decode `grp', generate(group)
+
+. if _rc generate group = string(`grp')
+
+. * keep the variables in the order they were listed
+. generate variable_order = .
+(43 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(10 real changes made)
+(11 real changes made)
+(11 real changes made)
+(11 real changes made)
+
+. sort variable_order `grp' year
+
+. keep variable group period n mean sd p10 p25 p50 p75 p90 min max
+
+. export excel using "$B07_XLSX", sheet("`sheet'", replace) firstrow(variables)
+file /Users/toarmassie/2026-kolega-den-bps-repo/20261005-run/block-b1-07-all-fi
+> rms/output/b1_07_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t02_tfp (43 rows)
+
+. use `original', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+end of do-file
+
+. 
+end of do-file
+
+######## B1-07: 03_va_output_capital ########
+
+. /*==========================================================================
+>   Line 3: "Value added per worker, value added, output, output per worker, ca
+> pital, capital per worker,"
+>   Data  : SI 2010-2022 (data/b07_si.dta), clean == 1
+>   Output sheets:
+>     t03_va_output_capital  VA, VA/worker, output, output/worker, capital, cap
+> ital/worker (+ inputs, materials), level & ln, all firms
+> 
+>   NOTE: Money values are nominal and masked (not deflated).
+> ==========================================================================*/
+. if "$B07" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B07_DATA/b07_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1
+(30 observations deleted)
+
+. local PROD "va ln_va va_pw ln_va_pw output ln_output out_pw ln_out_pw capital
+>  ln_capital cap_pw ln_cap_pw inputs ln_inputs materials ln_materials"
+
+. do "$B07/_sumstats.do" "`PROD'" "" "t03_va_output_capital"
+
+. /*==========================================================================
+>   _sumstats.do -- helper: descriptive statistics table, POOLED + BY YEAR
+>   (same helper as b1-17's _sumstats.do, writing to this block's workbook)
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B07/_sumstats.do" "$ECON $TFP" "exporter" "t08_econ"
+> 
+>       argument 1 = list of variables
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b1_07_tables.xlsx (max 31 characters)
+>       argument 4 = optional: "poolonly" to skip the by-year rows
+>                    (for groups with many values, e.g. 5-digit sector)
+> 
+>   Result: 1 row = variable x group x period (pool, 2010, 2011, ...)
+>           columns n mean sd p10 p25 p50 p75 p90 min max
+>   Rows with a missing group are not counted. A variable equal to the
+>   grouping variable is skipped.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars grp sheet mode
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000002 saved
+    as .dta format
+
+. local first 1
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     label define all 1 "All firms", replace
+.     label values all all
+.     local grp all
+. }
+
+. local periods "pool year"
+
+. if "`mode'" == "poolonly" local periods "pool"
+
+. foreach v of local vars {
+  2.     * a variable is not summarised by itself (e.g. exporter rate by export
+> er)
+.     if "`v'" == "`grp'" continue
+  3.     foreach period of local periods {
+  4.         preserve
+  5.         keep `v' `grp' year
+  6.         keep if !missing(`v') & !missing(`grp')
+  7.         if _N > 0 {
+  8.             if "`period'" == "pool" replace year = 0
+  9.             collapse (count) n = `v' (mean) mean = `v' (sd) sd = `v' ///
+>                      (p10) p10 = `v' (p25) p25 = `v' (p50) p50 = `v' ///
+>                      (p75) p75 = `v' (p90) p90 = `v' (min) min = `v' (max) ma
+> x = `v', ///
+>                      by(`grp' year)
+ 10.             generate str32 variable = "`v'"
+ 11.             if `first' == 0 append using `result'
+ 12.             save `result', replace
+ 13.             local first 0
+ 14.         }
+ 15.         restore
+ 16.     }
+ 17. }
+(0 observations deleted)
+(33,019 real changes made)
+(file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 not
+    found)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+(33,019 real changes made)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(8 observations deleted)
+(33,011 real changes made)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(8 observations deleted)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(8 observations deleted)
+(33,011 real changes made)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(8 observations deleted)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+(33,019 real changes made)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+(33,019 real changes made)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(8 observations deleted)
+(33,011 real changes made)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(8 observations deleted)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(8 observations deleted)
+(33,011 real changes made)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(8 observations deleted)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(1,125 observations deleted)
+(31,894 real changes made)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(1,125 observations deleted)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(14,149 observations deleted)
+(18,870 real changes made)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(14,149 observations deleted)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(1,133 observations deleted)
+(31,886 real changes made)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(1,133 observations deleted)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(14,153 observations deleted)
+(18,866 real changes made)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(14,153 observations deleted)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+(33,019 real changes made)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(21 observations deleted)
+(32,998 real changes made)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(21 observations deleted)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+(33,019 real changes made)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(1,151 observations deleted)
+(31,868 real changes made)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(1,151 observations deleted)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+
+. 
+. if `first' == 1 {
+.     display as error "  -> sheet `sheet' not written: no nonmissing values"
+.     use `original', clear
+.     exit
+. }
+
+. use `result', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * the group is written as text using its value label (if it has one)
+. capture decode `grp', generate(group)
+
+. if _rc generate group = string(`grp')
+
+. * keep the variables in the order they were listed
+. generate variable_order = .
+(208 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+
+. sort variable_order `grp' year
+
+. keep variable group period n mean sd p10 p25 p50 p75 p90 min max
+
+. export excel using "$B07_XLSX", sheet("`sheet'", replace) firstrow(variables)
+file /Users/toarmassie/2026-kolega-den-bps-repo/20261005-run/block-b1-07-all-fi
+> rms/output/b1_07_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t03_va_output_capital (208 rows)
+
+. use `original', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+end of do-file
+
+. 
+end of do-file
+
+######## B1-07: 04_workers_and_size ########
+
+. /*==========================================================================
+>   Line 4: "number of worker, medium vs large firms (>100)"
+>   Data  : SI 2010-2022 (data/b07_si.dta), clean == 1
+>   Output sheets:
+>     t04_workers           workers (level & ln), production / non-production w
+> orkers, all firms
+>     t04_large_rate        share of large firms (>100 workers), all firms (mea
+> n x 100 = %)
+>     t04_size_class_share  % of firm-years per size class (<20 ... 500+), all 
+> firms
+> 
+>   NOTE: The survey covers firms with 20+ workers, so "medium" is 20-100
+>   workers.
+> ==========================================================================*/
+. if "$B07" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B07_DATA/b07_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1
+(30 observations deleted)
+
+. local WORK "workers ln_workers prod_workers nonprod_workers prod_share"
+
+. do "$B07/_sumstats.do" "`WORK'" "" "t04_workers"
+
+. /*==========================================================================
+>   _sumstats.do -- helper: descriptive statistics table, POOLED + BY YEAR
+>   (same helper as b1-17's _sumstats.do, writing to this block's workbook)
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B07/_sumstats.do" "$ECON $TFP" "exporter" "t08_econ"
+> 
+>       argument 1 = list of variables
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b1_07_tables.xlsx (max 31 characters)
+>       argument 4 = optional: "poolonly" to skip the by-year rows
+>                    (for groups with many values, e.g. 5-digit sector)
+> 
+>   Result: 1 row = variable x group x period (pool, 2010, 2011, ...)
+>           columns n mean sd p10 p25 p50 p75 p90 min max
+>   Rows with a missing group are not counted. A variable equal to the
+>   grouping variable is skipped.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars grp sheet mode
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000002 saved
+    as .dta format
+
+. local first 1
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     label define all 1 "All firms", replace
+.     label values all all
+.     local grp all
+. }
+
+. local periods "pool year"
+
+. if "`mode'" == "poolonly" local periods "pool"
+
+. foreach v of local vars {
+  2.     * a variable is not summarised by itself (e.g. exporter rate by export
+> er)
+.     if "`v'" == "`grp'" continue
+  3.     foreach period of local periods {
+  4.         preserve
+  5.         keep `v' `grp' year
+  6.         keep if !missing(`v') & !missing(`grp')
+  7.         if _N > 0 {
+  8.             if "`period'" == "pool" replace year = 0
+  9.             collapse (count) n = `v' (mean) mean = `v' (sd) sd = `v' ///
+>                      (p10) p10 = `v' (p25) p25 = `v' (p50) p50 = `v' ///
+>                      (p75) p75 = `v' (p90) p90 = `v' (min) min = `v' (max) ma
+> x = `v', ///
+>                      by(`grp' year)
+ 10.             generate str32 variable = "`v'"
+ 11.             if `first' == 0 append using `result'
+ 12.             save `result', replace
+ 13.             local first 0
+ 14.         }
+ 15.         restore
+ 16.     }
+ 17. }
+(0 observations deleted)
+(33,019 real changes made)
+(file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 not
+    found)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(8 observations deleted)
+(33,011 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(8 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(2,681 observations deleted)
+(30,338 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(2,681 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(2,682 observations deleted)
+(30,337 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was int, now double to accommodate using data's values)
+(variable max was int, now double to accommodate using data's values)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(2,682 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was int, now double to accommodate using data's values)
+(variable max was int, now double to accommodate using data's values)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(2,690 observations deleted)
+(30,329 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(2,690 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+
+. 
+. if `first' == 1 {
+.     display as error "  -> sheet `sheet' not written: no nonmissing values"
+.     use `original', clear
+.     exit
+. }
+
+. use `result', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * the group is written as text using its value label (if it has one)
+. capture decode `grp', generate(group)
+
+. if _rc generate group = string(`grp')
+
+. * keep the variables in the order they were listed
+. generate variable_order = .
+(65 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+
+. sort variable_order `grp' year
+
+. keep variable group period n mean sd p10 p25 p50 p75 p90 min max
+
+. export excel using "$B07_XLSX", sheet("`sheet'", replace) firstrow(variables)
+file /Users/toarmassie/2026-kolega-den-bps-repo/20261005-run/block-b1-07-all-fi
+> rms/output/b1_07_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t04_workers (65 rows)
+
+. use `original', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+end of do-file
+
+. do "$B07/_sumstats.do" "large" "" "t04_large_rate"
+
+. /*==========================================================================
+>   _sumstats.do -- helper: descriptive statistics table, POOLED + BY YEAR
+>   (same helper as b1-17's _sumstats.do, writing to this block's workbook)
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B07/_sumstats.do" "$ECON $TFP" "exporter" "t08_econ"
+> 
+>       argument 1 = list of variables
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b1_07_tables.xlsx (max 31 characters)
+>       argument 4 = optional: "poolonly" to skip the by-year rows
+>                    (for groups with many values, e.g. 5-digit sector)
+> 
+>   Result: 1 row = variable x group x period (pool, 2010, 2011, ...)
+>           columns n mean sd p10 p25 p50 p75 p90 min max
+>   Rows with a missing group are not counted. A variable equal to the
+>   grouping variable is skipped.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars grp sheet mode
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000002 saved
+    as .dta format
+
+. local first 1
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     label define all 1 "All firms", replace
+.     label values all all
+.     local grp all
+. }
+
+. local periods "pool year"
+
+. if "`mode'" == "poolonly" local periods "pool"
+
+. foreach v of local vars {
+  2.     * a variable is not summarised by itself (e.g. exporter rate by export
+> er)
+.     if "`v'" == "`grp'" continue
+  3.     foreach period of local periods {
+  4.         preserve
+  5.         keep `v' `grp' year
+  6.         keep if !missing(`v') & !missing(`grp')
+  7.         if _N > 0 {
+  8.             if "`period'" == "pool" replace year = 0
+  9.             collapse (count) n = `v' (mean) mean = `v' (sd) sd = `v' ///
+>                      (p10) p10 = `v' (p25) p25 = `v' (p50) p50 = `v' ///
+>                      (p75) p75 = `v' (p90) p90 = `v' (min) min = `v' (max) ma
+> x = `v', ///
+>                      by(`grp' year)
+ 10.             generate str32 variable = "`v'"
+ 11.             if `first' == 0 append using `result'
+ 12.             save `result', replace
+ 13.             local first 0
+ 14.         }
+ 15.         restore
+ 16.     }
+ 17. }
+(0 observations deleted)
+(33,019 real changes made)
+(file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 not
+    found)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+
+. 
+. if `first' == 1 {
+.     display as error "  -> sheet `sheet' not written: no nonmissing values"
+.     use `original', clear
+.     exit
+. }
+
+. use `result', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * the group is written as text using its value label (if it has one)
+. capture decode `grp', generate(group)
+
+. if _rc generate group = string(`grp')
+
+. * keep the variables in the order they were listed
+. generate variable_order = .
+(13 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(13 real changes made)
+
+. sort variable_order `grp' year
+
+. keep variable group period n mean sd p10 p25 p50 p75 p90 min max
+
+. export excel using "$B07_XLSX", sheet("`sheet'", replace) firstrow(variables)
+file /Users/toarmassie/2026-kolega-den-bps-repo/20261005-run/block-b1-07-all-fi
+> rms/output/b1_07_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t04_large_rate (13 rows)
+
+. use `original', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+end of do-file
+
+. do "$B07/_shares.do" "size_class" "" "t04_size_class_share"
+
+. /*==========================================================================
+>   _shares.do -- helper: composition table (% of firms per category),
+>                 POOLED + BY YEAR, optionally within a group
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B07/_shares.do" "kbli2" "exporter" "t08_kbli2_share"
+> 
+>       argument 1 = categorical variable (the categories counted)
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b1_07_tables.xlsx (max 31 characters)
+> 
+>   Result: 1 row = group x category x period (pool, 2010, 2011, ...)
+>           columns n_firms (firm-years) and pct_firms (% of the group in that
+>           period). Firms with a missing category or group are not counted.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args cat grp sheet
+
+. 
+. preserve
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     label define all 1 "All firms", replace
+.     label values all all
+.     local grp all
+. }
+
+. keep `cat' `grp' year
+
+. keep if !missing(`cat') & !missing(`grp')
+(0 observations deleted)
+
+. if "`cat'" == "kbli5" | "`grp'" == "kbli5" {
+.     * kbli5 is text; empty text counts as missing
+.     capture confirm string variable kbli5
+.     if !_rc drop if kbli5 == ""
+. }
+
+. generate n_firms = 1
+
+. expand 2, generate(copy)              // copy of every row with year = 0 for 
+> "pool"
+(33,019 observations created)
+
+. replace year = 0 if copy == 1
+(33,019 real changes made)
+
+. collapse (sum) n_firms, by(`grp' `cat' year)
+
+. bysort `grp' year: egen total = total(n_firms)
+
+. generate pct_firms = 100 * n_firms / total
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * groups and categories are written as text using their value labels
+. capture decode `grp', generate(group)
+
+. if _rc {
+.     capture confirm string variable `grp'
+.     if _rc generate group = string(`grp')
+.     else   generate group = `grp'
+. }
+
+. capture decode `cat', generate(category)
+
+. if _rc {
+.     capture confirm string variable `cat'
+.     if _rc generate category = string(`cat')
+.     else   generate category = `cat'
+. }
+
+. sort `grp' year `cat'
+
+. keep group category period n_firms pct_firms
+
+. order group category period n_firms pct_firms
+
+. export excel using "$B07_XLSX", sheet("`sheet'", replace) firstrow(variables)
+file /Users/toarmassie/2026-kolega-den-bps-repo/20261005-run/block-b1-07-all-fi
+> rms/output/b1_07_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t04_size_class_share (65 rows)
+
+. restore
+
+. 
+end of do-file
+
+. 
+end of do-file
+
+######## B1-07: 05_fdi ########
+
+. /*==========================================================================
+>   Line 5: "FDI or not"
+>   Data  : SI 2010-2022 (data/b07_si.dta), clean == 1
+>   Output sheets:
+>     t05_fdi_rate       share FDI (>=10%) and any foreign share (>0%), all fir
+> ms (mean x 100 = %)
+>     t05_foreign_share  foreign ownership (%), all firms
+> 
+>   NOTE: 2020 FDI is set missing (47% FDI in that year is not credible), so
+>   2020 is not in these tables.
+> ==========================================================================*/
+. if "$B07" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B07_DATA/b07_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1
+(30 observations deleted)
+
+. do "$B07/_sumstats.do" "fdi fdi_any" "" "t05_fdi_rate"
+
+. /*==========================================================================
+>   _sumstats.do -- helper: descriptive statistics table, POOLED + BY YEAR
+>   (same helper as b1-17's _sumstats.do, writing to this block's workbook)
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B07/_sumstats.do" "$ECON $TFP" "exporter" "t08_econ"
+> 
+>       argument 1 = list of variables
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b1_07_tables.xlsx (max 31 characters)
+>       argument 4 = optional: "poolonly" to skip the by-year rows
+>                    (for groups with many values, e.g. 5-digit sector)
+> 
+>   Result: 1 row = variable x group x period (pool, 2010, 2011, ...)
+>           columns n mean sd p10 p25 p50 p75 p90 min max
+>   Rows with a missing group are not counted. A variable equal to the
+>   grouping variable is skipped.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars grp sheet mode
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000002 saved
+    as .dta format
+
+. local first 1
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     label define all 1 "All firms", replace
+.     label values all all
+.     local grp all
+. }
+
+. local periods "pool year"
+
+. if "`mode'" == "poolonly" local periods "pool"
+
+. foreach v of local vars {
+  2.     * a variable is not summarised by itself (e.g. exporter rate by export
+> er)
+.     if "`v'" == "`grp'" continue
+  3.     foreach period of local periods {
+  4.         preserve
+  5.         keep `v' `grp' year
+  6.         keep if !missing(`v') & !missing(`grp')
+  7.         if _N > 0 {
+  8.             if "`period'" == "pool" replace year = 0
+  9.             collapse (count) n = `v' (mean) mean = `v' (sd) sd = `v' ///
+>                      (p10) p10 = `v' (p25) p25 = `v' (p50) p50 = `v' ///
+>                      (p75) p75 = `v' (p90) p90 = `v' (min) min = `v' (max) ma
+> x = `v', ///
+>                      by(`grp' year)
+ 10.             generate str32 variable = "`v'"
+ 11.             if `first' == 0 append using `result'
+ 12.             save `result', replace
+ 13.             local first 0
+ 14.         }
+ 15.         restore
+ 16.     }
+ 17. }
+(3,246 observations deleted)
+(29,773 real changes made)
+(file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 not
+    found)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(3,246 observations deleted)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(3,246 observations deleted)
+(29,773 real changes made)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(3,246 observations deleted)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+
+. 
+. if `first' == 1 {
+.     display as error "  -> sheet `sheet' not written: no nonmissing values"
+.     use `original', clear
+.     exit
+. }
+
+. use `result', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * the group is written as text using its value label (if it has one)
+. capture decode `grp', generate(group)
+
+. if _rc generate group = string(`grp')
+
+. * keep the variables in the order they were listed
+. generate variable_order = .
+(24 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(12 real changes made)
+(12 real changes made)
+
+. sort variable_order `grp' year
+
+. keep variable group period n mean sd p10 p25 p50 p75 p90 min max
+
+. export excel using "$B07_XLSX", sheet("`sheet'", replace) firstrow(variables)
+file /Users/toarmassie/2026-kolega-den-bps-repo/20261005-run/block-b1-07-all-fi
+> rms/output/b1_07_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t05_fdi_rate (24 rows)
+
+. use `original', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+end of do-file
+
+. do "$B07/_sumstats.do" "foreign_share" "" "t05_foreign_share"
+
+. /*==========================================================================
+>   _sumstats.do -- helper: descriptive statistics table, POOLED + BY YEAR
+>   (same helper as b1-17's _sumstats.do, writing to this block's workbook)
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B07/_sumstats.do" "$ECON $TFP" "exporter" "t08_econ"
+> 
+>       argument 1 = list of variables
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b1_07_tables.xlsx (max 31 characters)
+>       argument 4 = optional: "poolonly" to skip the by-year rows
+>                    (for groups with many values, e.g. 5-digit sector)
+> 
+>   Result: 1 row = variable x group x period (pool, 2010, 2011, ...)
+>           columns n mean sd p10 p25 p50 p75 p90 min max
+>   Rows with a missing group are not counted. A variable equal to the
+>   grouping variable is skipped.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars grp sheet mode
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000002 saved
+    as .dta format
+
+. local first 1
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     label define all 1 "All firms", replace
+.     label values all all
+.     local grp all
+. }
+
+. local periods "pool year"
+
+. if "`mode'" == "poolonly" local periods "pool"
+
+. foreach v of local vars {
+  2.     * a variable is not summarised by itself (e.g. exporter rate by export
+> er)
+.     if "`v'" == "`grp'" continue
+  3.     foreach period of local periods {
+  4.         preserve
+  5.         keep `v' `grp' year
+  6.         keep if !missing(`v') & !missing(`grp')
+  7.         if _N > 0 {
+  8.             if "`period'" == "pool" replace year = 0
+  9.             collapse (count) n = `v' (mean) mean = `v' (sd) sd = `v' ///
+>                      (p10) p10 = `v' (p25) p25 = `v' (p50) p50 = `v' ///
+>                      (p75) p75 = `v' (p90) p90 = `v' (min) min = `v' (max) ma
+> x = `v', ///
+>                      by(`grp' year)
+ 10.             generate str32 variable = "`v'"
+ 11.             if `first' == 0 append using `result'
+ 12.             save `result', replace
+ 13.             local first 0
+ 14.         }
+ 15.         restore
+ 16.     }
+ 17. }
+(3,246 observations deleted)
+(29,773 real changes made)
+(file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 not
+    found)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(3,246 observations deleted)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+
+. 
+. if `first' == 1 {
+.     display as error "  -> sheet `sheet' not written: no nonmissing values"
+.     use `original', clear
+.     exit
+. }
+
+. use `result', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * the group is written as text using its value label (if it has one)
+. capture decode `grp', generate(group)
+
+. if _rc generate group = string(`grp')
+
+. * keep the variables in the order they were listed
+. generate variable_order = .
+(12 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(12 real changes made)
+
+. sort variable_order `grp' year
+
+. keep variable group period n mean sd p10 p25 p50 p75 p90 min max
+
+. export excel using "$B07_XLSX", sheet("`sheet'", replace) firstrow(variables)
+file /Users/toarmassie/2026-kolega-den-bps-repo/20261005-run/block-b1-07-all-fi
+> rms/output/b1_07_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t05_foreign_share (12 rows)
+
+. use `original', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+end of do-file
+
+. 
+end of do-file
+
+######## B1-07: 06_import ########
+
+. /*==========================================================================
+>   Line 6: "Do import or not"
+>   Data  : SI 2010-2022 (data/b07_si.dta), clean == 1
+>   Output sheets:
+>     t06_importer_rate  share importing, all firms (mean x 100 = %)
+>     t06_import_value   imports (level & ln), imports / materials (%), all fir
+> ms
+> 
+>   NOTE: Importer reporting jumps between 2015 and 2017 (questionnaire change,
+>   not a trend).
+> ==========================================================================*/
+. if "$B07" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B07_DATA/b07_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1
+(30 observations deleted)
+
+. do "$B07/_sumstats.do" "importer" "" "t06_importer_rate"
+
+. /*==========================================================================
+>   _sumstats.do -- helper: descriptive statistics table, POOLED + BY YEAR
+>   (same helper as b1-17's _sumstats.do, writing to this block's workbook)
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B07/_sumstats.do" "$ECON $TFP" "exporter" "t08_econ"
+> 
+>       argument 1 = list of variables
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b1_07_tables.xlsx (max 31 characters)
+>       argument 4 = optional: "poolonly" to skip the by-year rows
+>                    (for groups with many values, e.g. 5-digit sector)
+> 
+>   Result: 1 row = variable x group x period (pool, 2010, 2011, ...)
+>           columns n mean sd p10 p25 p50 p75 p90 min max
+>   Rows with a missing group are not counted. A variable equal to the
+>   grouping variable is skipped.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars grp sheet mode
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000002 saved
+    as .dta format
+
+. local first 1
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     label define all 1 "All firms", replace
+.     label values all all
+.     local grp all
+. }
+
+. local periods "pool year"
+
+. if "`mode'" == "poolonly" local periods "pool"
+
+. foreach v of local vars {
+  2.     * a variable is not summarised by itself (e.g. exporter rate by export
+> er)
+.     if "`v'" == "`grp'" continue
+  3.     foreach period of local periods {
+  4.         preserve
+  5.         keep `v' `grp' year
+  6.         keep if !missing(`v') & !missing(`grp')
+  7.         if _N > 0 {
+  8.             if "`period'" == "pool" replace year = 0
+  9.             collapse (count) n = `v' (mean) mean = `v' (sd) sd = `v' ///
+>                      (p10) p10 = `v' (p25) p25 = `v' (p50) p50 = `v' ///
+>                      (p75) p75 = `v' (p90) p90 = `v' (min) min = `v' (max) ma
+> x = `v', ///
+>                      by(`grp' year)
+ 10.             generate str32 variable = "`v'"
+ 11.             if `first' == 0 append using `result'
+ 12.             save `result', replace
+ 13.             local first 0
+ 14.         }
+ 15.         restore
+ 16.     }
+ 17. }
+(0 observations deleted)
+(33,019 real changes made)
+(file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 not
+    found)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+
+. 
+. if `first' == 1 {
+.     display as error "  -> sheet `sheet' not written: no nonmissing values"
+.     use `original', clear
+.     exit
+. }
+
+. use `result', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * the group is written as text using its value label (if it has one)
+. capture decode `grp', generate(group)
+
+. if _rc generate group = string(`grp')
+
+. * keep the variables in the order they were listed
+. generate variable_order = .
+(13 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(13 real changes made)
+
+. sort variable_order `grp' year
+
+. keep variable group period n mean sd p10 p25 p50 p75 p90 min max
+
+. export excel using "$B07_XLSX", sheet("`sheet'", replace) firstrow(variables)
+file /Users/toarmassie/2026-kolega-den-bps-repo/20261005-run/block-b1-07-all-fi
+> rms/output/b1_07_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t06_importer_rate (13 rows)
+
+. use `original', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+end of do-file
+
+. do "$B07/_sumstats.do" "import_val ln_import_val import_share_mat" "" "t06_im
+> port_value"
+
+. /*==========================================================================
+>   _sumstats.do -- helper: descriptive statistics table, POOLED + BY YEAR
+>   (same helper as b1-17's _sumstats.do, writing to this block's workbook)
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B07/_sumstats.do" "$ECON $TFP" "exporter" "t08_econ"
+> 
+>       argument 1 = list of variables
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b1_07_tables.xlsx (max 31 characters)
+>       argument 4 = optional: "poolonly" to skip the by-year rows
+>                    (for groups with many values, e.g. 5-digit sector)
+> 
+>   Result: 1 row = variable x group x period (pool, 2010, 2011, ...)
+>           columns n mean sd p10 p25 p50 p75 p90 min max
+>   Rows with a missing group are not counted. A variable equal to the
+>   grouping variable is skipped.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars grp sheet mode
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000002 saved
+    as .dta format
+
+. local first 1
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     label define all 1 "All firms", replace
+.     label values all all
+.     local grp all
+. }
+
+. local periods "pool year"
+
+. if "`mode'" == "poolonly" local periods "pool"
+
+. foreach v of local vars {
+  2.     * a variable is not summarised by itself (e.g. exporter rate by export
+> er)
+.     if "`v'" == "`grp'" continue
+  3.     foreach period of local periods {
+  4.         preserve
+  5.         keep `v' `grp' year
+  6.         keep if !missing(`v') & !missing(`grp')
+  7.         if _N > 0 {
+  8.             if "`period'" == "pool" replace year = 0
+  9.             collapse (count) n = `v' (mean) mean = `v' (sd) sd = `v' ///
+>                      (p10) p10 = `v' (p25) p25 = `v' (p50) p50 = `v' ///
+>                      (p75) p75 = `v' (p90) p90 = `v' (min) min = `v' (max) ma
+> x = `v', ///
+>                      by(`grp' year)
+ 10.             generate str32 variable = "`v'"
+ 11.             if `first' == 0 append using `result'
+ 12.             save `result', replace
+ 13.             local first 0
+ 14.         }
+ 15.         restore
+ 16.     }
+ 17. }
+(0 observations deleted)
+(33,019 real changes made)
+(file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 not
+    found)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(20,823 observations deleted)
+(12,196 real changes made)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(20,823 observations deleted)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(1,151 observations deleted)
+(31,868 real changes made)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(1,151 observations deleted)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+
+. 
+. if `first' == 1 {
+.     display as error "  -> sheet `sheet' not written: no nonmissing values"
+.     use `original', clear
+.     exit
+. }
+
+. use `result', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * the group is written as text using its value label (if it has one)
+. capture decode `grp', generate(group)
+
+. if _rc generate group = string(`grp')
+
+. * keep the variables in the order they were listed
+. generate variable_order = .
+(39 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+
+. sort variable_order `grp' year
+
+. keep variable group period n mean sd p10 p25 p50 p75 p90 min max
+
+. export excel using "$B07_XLSX", sheet("`sheet'", replace) firstrow(variables)
+file /Users/toarmassie/2026-kolega-den-bps-repo/20261005-run/block-b1-07-all-fi
+> rms/output/b1_07_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t06_import_value (39 rows)
+
+. use `original', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+end of do-file
+
+. 
+end of do-file
+
+######## B1-07: 07_sector ########
+
+. /*==========================================================================
+>   Line 7: "By sector 2 digit and 5 digit"
+>   Data  : SI 2010-2022 (data/b07_si.dta), clean == 1
+>   Output sheets:
+>     t07_kbli2_share  % of firm-years per KBLI 2-digit sector, all firms
+>     t07_kbli5_share  % of firm-years per KBLI 5-digit code, all firms
+>     t07_by_kbli2     TFP, VA, output, capital (level & ln) per KBLI 2-digit, 
+> pool + by year
+>     t07_by_kbli5     the same per KBLI 5-digit (pooled only)
+> 
+>   NOTE: Industry codes are as reported; block 0 has no bridge between
+>   classification versions.
+> ==========================================================================*/
+. if "$B07" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B07_DATA/b07_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1
+(30 observations deleted)
+
+. do "$B07/_shares.do" "kbli2" "" "t07_kbli2_share"
+
+. /*==========================================================================
+>   _shares.do -- helper: composition table (% of firms per category),
+>                 POOLED + BY YEAR, optionally within a group
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B07/_shares.do" "kbli2" "exporter" "t08_kbli2_share"
+> 
+>       argument 1 = categorical variable (the categories counted)
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b1_07_tables.xlsx (max 31 characters)
+> 
+>   Result: 1 row = group x category x period (pool, 2010, 2011, ...)
+>           columns n_firms (firm-years) and pct_firms (% of the group in that
+>           period). Firms with a missing category or group are not counted.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args cat grp sheet
+
+. 
+. preserve
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     label define all 1 "All firms", replace
+.     label values all all
+.     local grp all
+. }
+
+. keep `cat' `grp' year
+
+. keep if !missing(`cat') & !missing(`grp')
+(0 observations deleted)
+
+. if "`cat'" == "kbli5" | "`grp'" == "kbli5" {
+.     * kbli5 is text; empty text counts as missing
+.     capture confirm string variable kbli5
+.     if !_rc drop if kbli5 == ""
+. }
+
+. generate n_firms = 1
+
+. expand 2, generate(copy)              // copy of every row with year = 0 for 
+> "pool"
+(33,019 observations created)
+
+. replace year = 0 if copy == 1
+(33,019 real changes made)
+
+. collapse (sum) n_firms, by(`grp' `cat' year)
+
+. bysort `grp' year: egen total = total(n_firms)
+
+. generate pct_firms = 100 * n_firms / total
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * groups and categories are written as text using their value labels
+. capture decode `grp', generate(group)
+
+. if _rc {
+.     capture confirm string variable `grp'
+.     if _rc generate group = string(`grp')
+.     else   generate group = `grp'
+. }
+
+. capture decode `cat', generate(category)
+
+. if _rc {
+.     capture confirm string variable `cat'
+.     if _rc generate category = string(`cat')
+.     else   generate category = `cat'
+. }
+
+. sort `grp' year `cat'
+
+. keep group category period n_firms pct_firms
+
+. order group category period n_firms pct_firms
+
+. export excel using "$B07_XLSX", sheet("`sheet'", replace) firstrow(variables)
+file /Users/toarmassie/2026-kolega-den-bps-repo/20261005-run/block-b1-07-all-fi
+> rms/output/b1_07_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t07_kbli2_share (312 rows)
+
+. restore
+
+. 
+end of do-file
+
+. do "$B07/_shares.do" "kbli5" "" "t07_kbli5_share"
+
+. /*==========================================================================
+>   _shares.do -- helper: composition table (% of firms per category),
+>                 POOLED + BY YEAR, optionally within a group
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B07/_shares.do" "kbli2" "exporter" "t08_kbli2_share"
+> 
+>       argument 1 = categorical variable (the categories counted)
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b1_07_tables.xlsx (max 31 characters)
+> 
+>   Result: 1 row = group x category x period (pool, 2010, 2011, ...)
+>           columns n_firms (firm-years) and pct_firms (% of the group in that
+>           period). Firms with a missing category or group are not counted.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args cat grp sheet
+
+. 
+. preserve
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     label define all 1 "All firms", replace
+.     label values all all
+.     local grp all
+. }
+
+. keep `cat' `grp' year
+
+. keep if !missing(`cat') & !missing(`grp')
+(0 observations deleted)
+
+. if "`cat'" == "kbli5" | "`grp'" == "kbli5" {
+.     * kbli5 is text; empty text counts as missing
+.     capture confirm string variable kbli5
+.     if !_rc drop if kbli5 == ""
+(0 observations deleted)
+. }
+
+. generate n_firms = 1
+
+. expand 2, generate(copy)              // copy of every row with year = 0 for 
+> "pool"
+(33,019 observations created)
+
+. replace year = 0 if copy == 1
+(33,019 real changes made)
+
+. collapse (sum) n_firms, by(`grp' `cat' year)
+
+. bysort `grp' year: egen total = total(n_firms)
+
+. generate pct_firms = 100 * n_firms / total
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * groups and categories are written as text using their value labels
+. capture decode `grp', generate(group)
+
+. if _rc {
+.     capture confirm string variable `grp'
+.     if _rc generate group = string(`grp')
+.     else   generate group = `grp'
+. }
+
+. capture decode `cat', generate(category)
+
+. if _rc {
+.     capture confirm string variable `cat'
+.     if _rc generate category = string(`cat')
+.     else   generate category = `cat'
+. }
+
+. sort `grp' year `cat'
+
+. keep group category period n_firms pct_firms
+
+. order group category period n_firms pct_firms
+
+. export excel using "$B07_XLSX", sheet("`sheet'", replace) firstrow(variables)
+file /Users/toarmassie/2026-kolega-den-bps-repo/20261005-run/block-b1-07-all-fi
+> rms/output/b1_07_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t07_kbli5_share (4334 rows)
+
+. restore
+
+. 
+end of do-file
+
+. local TFP "tfp_op tfp_lp tfp_acf tfp_wrdg"
+
+. local PROD "va ln_va va_pw ln_va_pw output ln_output out_pw ln_out_pw capital
+>  ln_capital cap_pw ln_cap_pw inputs ln_inputs materials ln_materials"
+
+. do "$B07/_sumstats.do" "`TFP' `PROD'" "kbli2" "t07_by_kbli2"
+
+. /*==========================================================================
+>   _sumstats.do -- helper: descriptive statistics table, POOLED + BY YEAR
+>   (same helper as b1-17's _sumstats.do, writing to this block's workbook)
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B07/_sumstats.do" "$ECON $TFP" "exporter" "t08_econ"
+> 
+>       argument 1 = list of variables
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b1_07_tables.xlsx (max 31 characters)
+>       argument 4 = optional: "poolonly" to skip the by-year rows
+>                    (for groups with many values, e.g. 5-digit sector)
+> 
+>   Result: 1 row = variable x group x period (pool, 2010, 2011, ...)
+>           columns n mean sd p10 p25 p50 p75 p90 min max
+>   Rows with a missing group are not counted. A variable equal to the
+>   grouping variable is skipped.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars grp sheet mode
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000002 saved
+    as .dta format
+
+. local first 1
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     label define all 1 "All firms", replace
+.     label values all all
+.     local grp all
+. }
+
+. local periods "pool year"
+
+. if "`mode'" == "poolonly" local periods "pool"
+
+. foreach v of local vars {
+  2.     * a variable is not summarised by itself (e.g. exporter rate by export
+> er)
+.     if "`v'" == "`grp'" continue
+  3.     foreach period of local periods {
+  4.         preserve
+  5.         keep `v' `grp' year
+  6.         keep if !missing(`v') & !missing(`grp')
+  7.         if _N > 0 {
+  8.             if "`period'" == "pool" replace year = 0
+  9.             collapse (count) n = `v' (mean) mean = `v' (sd) sd = `v' ///
+>                      (p10) p10 = `v' (p25) p25 = `v' (p50) p50 = `v' ///
+>                      (p75) p75 = `v' (p90) p90 = `v' (min) min = `v' (max) ma
+> x = `v', ///
+>                      by(`grp' year)
+ 10.             generate str32 variable = "`v'"
+ 11.             if `first' == 0 append using `result'
+ 12.             save `result', replace
+ 13.             local first 0
+ 14.         }
+ 15.         restore
+ 16.     }
+ 17. }
+(32,347 observations deleted)
+(672 real changes made)
+(file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 not
+    found)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(32,347 observations deleted)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(22,738 observations deleted)
+(10,281 real changes made)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(22,738 observations deleted)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(22,738 observations deleted)
+(10,281 real changes made)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(22,738 observations deleted)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(22,738 observations deleted)
+(10,281 real changes made)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(22,738 observations deleted)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+(33,019 real changes made)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+(33,019 real changes made)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(8 observations deleted)
+(33,011 real changes made)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(8 observations deleted)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(8 observations deleted)
+(33,011 real changes made)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(8 observations deleted)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+(33,019 real changes made)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+(33,019 real changes made)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(8 observations deleted)
+(33,011 real changes made)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(8 observations deleted)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(8 observations deleted)
+(33,011 real changes made)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(8 observations deleted)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(1,125 observations deleted)
+(31,894 real changes made)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(1,125 observations deleted)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(14,149 observations deleted)
+(18,870 real changes made)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(14,149 observations deleted)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(1,133 observations deleted)
+(31,886 real changes made)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(1,133 observations deleted)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(14,153 observations deleted)
+(18,866 real changes made)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(14,153 observations deleted)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+(33,019 real changes made)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(21 observations deleted)
+(32,998 real changes made)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(21 observations deleted)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+(33,019 real changes made)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(1,151 observations deleted)
+(31,868 real changes made)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(1,151 observations deleted)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+
+. 
+. if `first' == 1 {
+.     display as error "  -> sheet `sheet' not written: no nonmissing values"
+.     use `original', clear
+.     exit
+. }
+
+. use `result', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * the group is written as text using its value label (if it has one)
+. capture decode `grp', generate(group)
+
+. if _rc generate group = string(`grp')
+
+. * keep the variables in the order they were listed
+. generate variable_order = .
+(5,398 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(10 real changes made)
+(132 real changes made)
+(132 real changes made)
+(132 real changes made)
+(312 real changes made)
+(312 real changes made)
+(312 real changes made)
+(312 real changes made)
+(312 real changes made)
+(312 real changes made)
+(312 real changes made)
+(312 real changes made)
+(312 real changes made)
+(312 real changes made)
+(312 real changes made)
+(312 real changes made)
+(312 real changes made)
+(312 real changes made)
+(312 real changes made)
+(312 real changes made)
+
+. sort variable_order `grp' year
+
+. keep variable group period n mean sd p10 p25 p50 p75 p90 min max
+
+. export excel using "$B07_XLSX", sheet("`sheet'", replace) firstrow(variables)
+file /Users/toarmassie/2026-kolega-den-bps-repo/20261005-run/block-b1-07-all-fi
+> rms/output/b1_07_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t07_by_kbli2 (5398 rows)
+
+. use `original', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+end of do-file
+
+. encode kbli5, generate(kbli5_code)
+
+. do "$B07/_sumstats.do" "`TFP' `PROD'" "kbli5_code" "t07_by_kbli5" "poolonly"
+
+. /*==========================================================================
+>   _sumstats.do -- helper: descriptive statistics table, POOLED + BY YEAR
+>   (same helper as b1-17's _sumstats.do, writing to this block's workbook)
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B07/_sumstats.do" "$ECON $TFP" "exporter" "t08_econ"
+> 
+>       argument 1 = list of variables
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b1_07_tables.xlsx (max 31 characters)
+>       argument 4 = optional: "poolonly" to skip the by-year rows
+>                    (for groups with many values, e.g. 5-digit sector)
+> 
+>   Result: 1 row = variable x group x period (pool, 2010, 2011, ...)
+>           columns n mean sd p10 p25 p50 p75 p90 min max
+>   Rows with a missing group are not counted. A variable equal to the
+>   grouping variable is skipped.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars grp sheet mode
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000002 saved
+    as .dta format
+
+. local first 1
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     label define all 1 "All firms", replace
+.     label values all all
+.     local grp all
+. }
+
+. local periods "pool year"
+
+. if "`mode'" == "poolonly" local periods "pool"
+
+. foreach v of local vars {
+  2.     * a variable is not summarised by itself (e.g. exporter rate by export
+> er)
+.     if "`v'" == "`grp'" continue
+  3.     foreach period of local periods {
+  4.         preserve
+  5.         keep `v' `grp' year
+  6.         keep if !missing(`v') & !missing(`grp')
+  7.         if _N > 0 {
+  8.             if "`period'" == "pool" replace year = 0
+  9.             collapse (count) n = `v' (mean) mean = `v' (sd) sd = `v' ///
+>                      (p10) p10 = `v' (p25) p25 = `v' (p50) p50 = `v' ///
+>                      (p75) p75 = `v' (p90) p90 = `v' (min) min = `v' (max) ma
+> x = `v', ///
+>                      by(`grp' year)
+ 10.             generate str32 variable = "`v'"
+ 11.             if `first' == 0 append using `result'
+ 12.             save `result', replace
+ 13.             local first 0
+ 14.         }
+ 15.         restore
+ 16.     }
+ 17. }
+(32,347 observations deleted)
+(672 real changes made)
+(file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 not
+    found)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(22,738 observations deleted)
+(10,281 real changes made)
+(label kbli5_code already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(22,738 observations deleted)
+(10,281 real changes made)
+(label kbli5_code already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(22,738 observations deleted)
+(10,281 real changes made)
+(label kbli5_code already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+(33,019 real changes made)
+(label kbli5_code already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+(33,019 real changes made)
+(label kbli5_code already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(8 observations deleted)
+(33,011 real changes made)
+(label kbli5_code already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(8 observations deleted)
+(33,011 real changes made)
+(label kbli5_code already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+(33,019 real changes made)
+(label kbli5_code already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+(33,019 real changes made)
+(label kbli5_code already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(8 observations deleted)
+(33,011 real changes made)
+(label kbli5_code already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(8 observations deleted)
+(33,011 real changes made)
+(label kbli5_code already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(1,125 observations deleted)
+(31,894 real changes made)
+(label kbli5_code already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(14,149 observations deleted)
+(18,870 real changes made)
+(label kbli5_code already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(1,133 observations deleted)
+(31,886 real changes made)
+(label kbli5_code already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(14,153 observations deleted)
+(18,866 real changes made)
+(label kbli5_code already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+(33,019 real changes made)
+(label kbli5_code already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(21 observations deleted)
+(32,998 real changes made)
+(label kbli5_code already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+(33,019 real changes made)
+(label kbli5_code already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(1,151 observations deleted)
+(31,868 real changes made)
+(label kbli5_code already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+
+. 
+. if `first' == 1 {
+.     display as error "  -> sheet `sheet' not written: no nonmissing values"
+.     use `original', clear
+.     exit
+. }
+
+. use `result', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * the group is written as text using its value label (if it has one)
+. capture decode `grp', generate(group)
+
+. if _rc generate group = string(`grp')
+
+. * keep the variables in the order they were listed
+. generate variable_order = .
+(8,100 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(67 real changes made)
+(288 real changes made)
+(288 real changes made)
+(288 real changes made)
+(451 real changes made)
+(451 real changes made)
+(451 real changes made)
+(451 real changes made)
+(451 real changes made)
+(451 real changes made)
+(451 real changes made)
+(451 real changes made)
+(451 real changes made)
+(429 real changes made)
+(451 real changes made)
+(429 real changes made)
+(451 real changes made)
+(451 real changes made)
+(451 real changes made)
+(448 real changes made)
+
+. sort variable_order `grp' year
+
+. keep variable group period n mean sd p10 p25 p50 p75 p90 min max
+
+. export excel using "$B07_XLSX", sheet("`sheet'", replace) firstrow(variables)
+file /Users/toarmassie/2026-kolega-den-bps-repo/20261005-run/block-b1-07-all-fi
+> rms/output/b1_07_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t07_by_kbli5 (8100 rows)
+
+. use `original', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+end of do-file
+
+. drop kbli5_code
+
+. 
+end of do-file
+
+######## B1-07: 08_energy_use ########
+
+. /*==========================================================================
+>   Line 8: "Energi use scope 1, 2, total"
+>   Data  : SI 2010-2022 (data/b07_si.dta), clean == 1
+>   Output sheets:
+>     t08_energy          energy GJ scope 1 / 2 / total (level & ln), GJ per wo
+> rker and per VA, electricity (kWh), all firms
+>     t08_main_src_share  % of firm-years per main energy source, all firms
+> 
+>   NOTE: Scope 1 = GJ of the 4 fuels asked every year (diesel, petrol, coal,
+>   LPG); scope 2 = purchased electricity; own generation is not scope 2.
+>   Energy reporting changes between 2015 and 2017.
+> ==========================================================================*/
+. if "$B07" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B07_DATA/b07_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1
+(30 observations deleted)
+
+. local ENERGY "gj_s1 ln_gj_s1 gj_s2 ln_gj_s2 gj_total ln_gj_total gj_pw gj_per
+> _va elec_purch_kwh elec_owngen_kwh elec_total_kwh ln_elec_total_kwh selfgen_s
+> hare"
+
+. do "$B07/_sumstats.do" "`ENERGY'" "" "t08_energy"
+
+. /*==========================================================================
+>   _sumstats.do -- helper: descriptive statistics table, POOLED + BY YEAR
+>   (same helper as b1-17's _sumstats.do, writing to this block's workbook)
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B07/_sumstats.do" "$ECON $TFP" "exporter" "t08_econ"
+> 
+>       argument 1 = list of variables
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b1_07_tables.xlsx (max 31 characters)
+>       argument 4 = optional: "poolonly" to skip the by-year rows
+>                    (for groups with many values, e.g. 5-digit sector)
+> 
+>   Result: 1 row = variable x group x period (pool, 2010, 2011, ...)
+>           columns n mean sd p10 p25 p50 p75 p90 min max
+>   Rows with a missing group are not counted. A variable equal to the
+>   grouping variable is skipped.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars grp sheet mode
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000002 saved
+    as .dta format
+
+. local first 1
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     label define all 1 "All firms", replace
+.     label values all all
+.     local grp all
+. }
+
+. local periods "pool year"
+
+. if "`mode'" == "poolonly" local periods "pool"
+
+. foreach v of local vars {
+  2.     * a variable is not summarised by itself (e.g. exporter rate by export
+> er)
+.     if "`v'" == "`grp'" continue
+  3.     foreach period of local periods {
+  4.         preserve
+  5.         keep `v' `grp' year
+  6.         keep if !missing(`v') & !missing(`grp')
+  7.         if _N > 0 {
+  8.             if "`period'" == "pool" replace year = 0
+  9.             collapse (count) n = `v' (mean) mean = `v' (sd) sd = `v' ///
+>                      (p10) p10 = `v' (p25) p25 = `v' (p50) p50 = `v' ///
+>                      (p75) p75 = `v' (p90) p90 = `v' (min) min = `v' (max) ma
+> x = `v', ///
+>                      by(`grp' year)
+ 10.             generate str32 variable = "`v'"
+ 11.             if `first' == 0 append using `result'
+ 12.             save `result', replace
+ 13.             local first 0
+ 14.         }
+ 15.         restore
+ 16.     }
+ 17. }
+(0 observations deleted)
+(33,019 real changes made)
+(file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 not
+    found)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(3,826 observations deleted)
+(29,193 real changes made)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(3,826 observations deleted)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+(33,019 real changes made)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(1,927 observations deleted)
+(31,092 real changes made)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(1,927 observations deleted)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+(33,019 real changes made)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(547 observations deleted)
+(32,472 real changes made)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(547 observations deleted)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(8 observations deleted)
+(33,011 real changes made)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(8 observations deleted)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+(33,019 real changes made)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+(33,019 real changes made)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(2,123 observations deleted)
+(30,896 real changes made)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(2,123 observations deleted)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+(33,019 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(1,396 observations deleted)
+(31,623 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(1,396 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(3,359 observations deleted)
+(29,660 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(3,359 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+
+. 
+. if `first' == 1 {
+.     display as error "  -> sheet `sheet' not written: no nonmissing values"
+.     use `original', clear
+.     exit
+. }
+
+. use `result', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * the group is written as text using its value label (if it has one)
+. capture decode `grp', generate(group)
+
+. if _rc generate group = string(`grp')
+
+. * keep the variables in the order they were listed
+. generate variable_order = .
+(169 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+
+. sort variable_order `grp' year
+
+. keep variable group period n mean sd p10 p25 p50 p75 p90 min max
+
+. export excel using "$B07_XLSX", sheet("`sheet'", replace) firstrow(variables)
+file /Users/toarmassie/2026-kolega-den-bps-repo/20261005-run/block-b1-07-all-fi
+> rms/output/b1_07_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t08_energy (169 rows)
+
+. use `original', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+end of do-file
+
+. do "$B07/_shares.do" "main_src" "" "t08_main_src_share"
+
+. /*==========================================================================
+>   _shares.do -- helper: composition table (% of firms per category),
+>                 POOLED + BY YEAR, optionally within a group
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B07/_shares.do" "kbli2" "exporter" "t08_kbli2_share"
+> 
+>       argument 1 = categorical variable (the categories counted)
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b1_07_tables.xlsx (max 31 characters)
+> 
+>   Result: 1 row = group x category x period (pool, 2010, 2011, ...)
+>           columns n_firms (firm-years) and pct_firms (% of the group in that
+>           period). Firms with a missing category or group are not counted.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args cat grp sheet
+
+. 
+. preserve
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     label define all 1 "All firms", replace
+.     label values all all
+.     local grp all
+. }
+
+. keep `cat' `grp' year
+
+. keep if !missing(`cat') & !missing(`grp')
+(0 observations deleted)
+
+. if "`cat'" == "kbli5" | "`grp'" == "kbli5" {
+.     * kbli5 is text; empty text counts as missing
+.     capture confirm string variable kbli5
+.     if !_rc drop if kbli5 == ""
+. }
+
+. generate n_firms = 1
+
+. expand 2, generate(copy)              // copy of every row with year = 0 for 
+> "pool"
+(33,019 observations created)
+
+. replace year = 0 if copy == 1
+(33,019 real changes made)
+
+. collapse (sum) n_firms, by(`grp' `cat' year)
+
+. bysort `grp' year: egen total = total(n_firms)
+
+. generate pct_firms = 100 * n_firms / total
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * groups and categories are written as text using their value labels
+. capture decode `grp', generate(group)
+
+. if _rc {
+.     capture confirm string variable `grp'
+.     if _rc generate group = string(`grp')
+.     else   generate group = `grp'
+. }
+
+. capture decode `cat', generate(category)
+
+. if _rc {
+.     capture confirm string variable `cat'
+.     if _rc generate category = string(`cat')
+.     else   generate category = `cat'
+. }
+
+. sort `grp' year `cat'
+
+. keep group category period n_firms pct_firms
+
+. order group category period n_firms pct_firms
+
+. export excel using "$B07_XLSX", sheet("`sheet'", replace) firstrow(variables)
+file /Users/toarmassie/2026-kolega-den-bps-repo/20261005-run/block-b1-07-all-fi
+> rms/output/b1_07_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t08_main_src_share (126 rows)
+
+. restore
+
+. 
+end of do-file
+
+. 
+end of do-file
+
+######## B1-07: 09_emissions ########
+
+. /*==========================================================================
+>   Line 9: "Emisi 1, 2, total"
+>   Data  : SI 2010-2022 (data/b07_si.dta), clean == 1
+>   Output sheets:
+>     t09_emissions  CO2 scope 1 / 2 / total (level & ln), CO2 per worker, per 
+> VA, per GJ, all firms
+> 
+>   NOTE: Scope 1 = CO2 of diesel, petrol, coal, LPG; scope 2 = purchased
+>   electricity with the block 0 grid factor (2014 value carried forward after
+>   2014).
+> ==========================================================================*/
+. if "$B07" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B07_DATA/b07_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1
+(30 observations deleted)
+
+. local EMIS "co2_s1 ln_co2_s1 co2_s2 ln_co2_s2 co2_total ln_co2_total co2_pw c
+> o2_per_va co2_per_gj"
+
+. do "$B07/_sumstats.do" "`EMIS'" "" "t09_emissions"
+
+. /*==========================================================================
+>   _sumstats.do -- helper: descriptive statistics table, POOLED + BY YEAR
+>   (same helper as b1-17's _sumstats.do, writing to this block's workbook)
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B07/_sumstats.do" "$ECON $TFP" "exporter" "t08_econ"
+> 
+>       argument 1 = list of variables
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b1_07_tables.xlsx (max 31 characters)
+>       argument 4 = optional: "poolonly" to skip the by-year rows
+>                    (for groups with many values, e.g. 5-digit sector)
+> 
+>   Result: 1 row = variable x group x period (pool, 2010, 2011, ...)
+>           columns n mean sd p10 p25 p50 p75 p90 min max
+>   Rows with a missing group are not counted. A variable equal to the
+>   grouping variable is skipped.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars grp sheet mode
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000002 saved
+    as .dta format
+
+. local first 1
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     label define all 1 "All firms", replace
+.     label values all all
+.     local grp all
+. }
+
+. local periods "pool year"
+
+. if "`mode'" == "poolonly" local periods "pool"
+
+. foreach v of local vars {
+  2.     * a variable is not summarised by itself (e.g. exporter rate by export
+> er)
+.     if "`v'" == "`grp'" continue
+  3.     foreach period of local periods {
+  4.         preserve
+  5.         keep `v' `grp' year
+  6.         keep if !missing(`v') & !missing(`grp')
+  7.         if _N > 0 {
+  8.             if "`period'" == "pool" replace year = 0
+  9.             collapse (count) n = `v' (mean) mean = `v' (sd) sd = `v' ///
+>                      (p10) p10 = `v' (p25) p25 = `v' (p50) p50 = `v' ///
+>                      (p75) p75 = `v' (p90) p90 = `v' (min) min = `v' (max) ma
+> x = `v', ///
+>                      by(`grp' year)
+ 10.             generate str32 variable = "`v'"
+ 11.             if `first' == 0 append using `result'
+ 12.             save `result', replace
+ 13.             local first 0
+ 14.         }
+ 15.         restore
+ 16.     }
+ 17. }
+(0 observations deleted)
+(33,019 real changes made)
+(file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 not
+    found)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(3,826 observations deleted)
+(29,193 real changes made)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(3,826 observations deleted)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+(33,019 real changes made)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(1,927 observations deleted)
+(31,092 real changes made)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(1,927 observations deleted)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+(33,019 real changes made)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(547 observations deleted)
+(32,472 real changes made)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(547 observations deleted)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(8 observations deleted)
+(33,011 real changes made)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(8 observations deleted)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+(33,019 real changes made)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(0 observations deleted)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(547 observations deleted)
+(32,472 real changes made)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(547 observations deleted)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+
+. 
+. if `first' == 1 {
+.     display as error "  -> sheet `sheet' not written: no nonmissing values"
+.     use `original', clear
+.     exit
+. }
+
+. use `result', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * the group is written as text using its value label (if it has one)
+. capture decode `grp', generate(group)
+
+. if _rc generate group = string(`grp')
+
+. * keep the variables in the order they were listed
+. generate variable_order = .
+(117 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+
+. sort variable_order `grp' year
+
+. keep variable group period n mean sd p10 p25 p50 p75 p90 min max
+
+. export excel using "$B07_XLSX", sheet("`sheet'", replace) firstrow(variables)
+file /Users/toarmassie/2026-kolega-den-bps-repo/20261005-run/block-b1-07-all-fi
+> rms/output/b1_07_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t09_emissions (117 rows)
+
+. use `original', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+end of do-file
+
+. 
+end of do-file
+
+######## B1-07: 10_location ########
+
+. /*==========================================================================
+>   Line 10: "Location (province, kab kota dan kecamatan kalau ada), dalam Kawa
+> san industry or not"
+>   Data  : SI 2010-2022 (data/b07_si.dta), clean == 1
+>   Output sheets:
+>     t10_java_share  % of firm-years in Java / outside Java, all firms
+>     t10_prov_share  % of firm-years per province, all firms
+>     t10_kab_share   % of firm-years per district -- only written if the distr
+> ict code is filled in
+> 
+>   NOTE: NOT AVAILABLE: district (kab/kota) is blank in block 0; kecamatan and
+>   kawasan industri are not in block 0.
+> ==========================================================================*/
+. if "$B07" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B07_DATA/b07_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1
+(30 observations deleted)
+
+. do "$B07/_shares.do" "java" "" "t10_java_share"
+
+. /*==========================================================================
+>   _shares.do -- helper: composition table (% of firms per category),
+>                 POOLED + BY YEAR, optionally within a group
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B07/_shares.do" "kbli2" "exporter" "t08_kbli2_share"
+> 
+>       argument 1 = categorical variable (the categories counted)
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b1_07_tables.xlsx (max 31 characters)
+> 
+>   Result: 1 row = group x category x period (pool, 2010, 2011, ...)
+>           columns n_firms (firm-years) and pct_firms (% of the group in that
+>           period). Firms with a missing category or group are not counted.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args cat grp sheet
+
+. 
+. preserve
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     label define all 1 "All firms", replace
+.     label values all all
+.     local grp all
+. }
+
+. keep `cat' `grp' year
+
+. keep if !missing(`cat') & !missing(`grp')
+(0 observations deleted)
+
+. if "`cat'" == "kbli5" | "`grp'" == "kbli5" {
+.     * kbli5 is text; empty text counts as missing
+.     capture confirm string variable kbli5
+.     if !_rc drop if kbli5 == ""
+. }
+
+. generate n_firms = 1
+
+. expand 2, generate(copy)              // copy of every row with year = 0 for 
+> "pool"
+(33,019 observations created)
+
+. replace year = 0 if copy == 1
+(33,019 real changes made)
+
+. collapse (sum) n_firms, by(`grp' `cat' year)
+
+. bysort `grp' year: egen total = total(n_firms)
+
+. generate pct_firms = 100 * n_firms / total
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * groups and categories are written as text using their value labels
+. capture decode `grp', generate(group)
+
+. if _rc {
+.     capture confirm string variable `grp'
+.     if _rc generate group = string(`grp')
+.     else   generate group = `grp'
+. }
+
+. capture decode `cat', generate(category)
+
+. if _rc {
+.     capture confirm string variable `cat'
+.     if _rc generate category = string(`cat')
+.     else   generate category = `cat'
+. }
+
+. sort `grp' year `cat'
+
+. keep group category period n_firms pct_firms
+
+. order group category period n_firms pct_firms
+
+. export excel using "$B07_XLSX", sheet("`sheet'", replace) firstrow(variables)
+file /Users/toarmassie/2026-kolega-den-bps-repo/20261005-run/block-b1-07-all-fi
+> rms/output/b1_07_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t10_java_share (26 rows)
+
+. restore
+
+. 
+end of do-file
+
+. do "$B07/_shares.do" "prov" "" "t10_prov_share"
+
+. /*==========================================================================
+>   _shares.do -- helper: composition table (% of firms per category),
+>                 POOLED + BY YEAR, optionally within a group
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B07/_shares.do" "kbli2" "exporter" "t08_kbli2_share"
+> 
+>       argument 1 = categorical variable (the categories counted)
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b1_07_tables.xlsx (max 31 characters)
+> 
+>   Result: 1 row = group x category x period (pool, 2010, 2011, ...)
+>           columns n_firms (firm-years) and pct_firms (% of the group in that
+>           period). Firms with a missing category or group are not counted.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args cat grp sheet
+
+. 
+. preserve
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     label define all 1 "All firms", replace
+.     label values all all
+.     local grp all
+. }
+
+. keep `cat' `grp' year
+
+. keep if !missing(`cat') & !missing(`grp')
+(0 observations deleted)
+
+. if "`cat'" == "kbli5" | "`grp'" == "kbli5" {
+.     * kbli5 is text; empty text counts as missing
+.     capture confirm string variable kbli5
+.     if !_rc drop if kbli5 == ""
+. }
+
+. generate n_firms = 1
+
+. expand 2, generate(copy)              // copy of every row with year = 0 for 
+> "pool"
+(33,019 observations created)
+
+. replace year = 0 if copy == 1
+(33,019 real changes made)
+
+. collapse (sum) n_firms, by(`grp' `cat' year)
+
+. bysort `grp' year: egen total = total(n_firms)
+
+. generate pct_firms = 100 * n_firms / total
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * groups and categories are written as text using their value labels
+. capture decode `grp', generate(group)
+
+. if _rc {
+.     capture confirm string variable `grp'
+.     if _rc generate group = string(`grp')
+.     else   generate group = `grp'
+. }
+
+. capture decode `cat', generate(category)
+
+. if _rc {
+.     capture confirm string variable `cat'
+.     if _rc generate category = string(`cat')
+.     else   generate category = `cat'
+. }
+
+. sort `grp' year `cat'
+
+. keep group category period n_firms pct_firms
+
+. order group category period n_firms pct_firms
+
+. export excel using "$B07_XLSX", sheet("`sheet'", replace) firstrow(variables)
+file /Users/toarmassie/2026-kolega-den-bps-repo/20261005-run/block-b1-07-all-fi
+> rms/output/b1_07_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t10_prov_share (430 rows)
+
+. restore
+
+. 
+end of do-file
+
+. 
+. * district (kab/kota): only if block 0 ever fills it in
+. preserve
+
+. use "$SI_DATA", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. quietly count if district_code != ""
+
+. local nkab = r(N)
+
+. restore
+
+. if `nkab' == 0 {
+.     display as error "District code is blank in this release: no t10_kab_shar
+> e."
+District code is blank in this release: no t10_kab_share.
+.     display as error "Kecamatan and kawasan industri are not in block 0."
+Kecamatan and kawasan industri are not in block 0.
+. }
+
+. else {
+.     merge 1:1 year source_row using "$SI_DATA", keepusing(district_code) keep
+> (master match) nogenerate
+.     encode district_code if district_code != "", generate(kab)
+.     do "$B07/_shares.do" "kab" "" "t10_kab_share"
+. }
+
+. 
+end of do-file
+
+######## B1-07: 11_rnd ########
+
+. /*==========================================================================
+>   Line 11: "RnD"
+>   Data  : SI 2010-2022 (data/b07_si.dta), clean == 1
+>   Output sheets:
+>     t11_rnd_rate  share doing R&D, all firms (mean x 100 = %), 2017-2022
+> 
+>   NOTE: R&D is used for 2017-2022 only (as b1-17); many records leave the
+>   question blank.
+> ==========================================================================*/
+. if "$B07" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B07_DATA/b07_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1
+(30 observations deleted)
+
+. do "$B07/_sumstats.do" "rnd" "" "t11_rnd_rate"
+
+. /*==========================================================================
+>   _sumstats.do -- helper: descriptive statistics table, POOLED + BY YEAR
+>   (same helper as b1-17's _sumstats.do, writing to this block's workbook)
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B07/_sumstats.do" "$ECON $TFP" "exporter" "t08_econ"
+> 
+>       argument 1 = list of variables
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b1_07_tables.xlsx (max 31 characters)
+>       argument 4 = optional: "poolonly" to skip the by-year rows
+>                    (for groups with many values, e.g. 5-digit sector)
+> 
+>   Result: 1 row = variable x group x period (pool, 2010, 2011, ...)
+>           columns n mean sd p10 p25 p50 p75 p90 min max
+>   Rows with a missing group are not counted. A variable equal to the
+>   grouping variable is skipped.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars grp sheet mode
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000002 saved
+    as .dta format
+
+. local first 1
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     label define all 1 "All firms", replace
+.     label values all all
+.     local grp all
+. }
+
+. local periods "pool year"
+
+. if "`mode'" == "poolonly" local periods "pool"
+
+. foreach v of local vars {
+  2.     * a variable is not summarised by itself (e.g. exporter rate by export
+> er)
+.     if "`v'" == "`grp'" continue
+  3.     foreach period of local periods {
+  4.         preserve
+  5.         keep `v' `grp' year
+  6.         keep if !missing(`v') & !missing(`grp')
+  7.         if _N > 0 {
+  8.             if "`period'" == "pool" replace year = 0
+  9.             collapse (count) n = `v' (mean) mean = `v' (sd) sd = `v' ///
+>                      (p10) p10 = `v' (p25) p25 = `v' (p50) p50 = `v' ///
+>                      (p75) p75 = `v' (p90) p90 = `v' (min) min = `v' (max) ma
+> x = `v', ///
+>                      by(`grp' year)
+ 10.             generate str32 variable = "`v'"
+ 11.             if `first' == 0 append using `result'
+ 12.             save `result', replace
+ 13.             local first 0
+ 14.         }
+ 15.         restore
+ 16.     }
+ 17. }
+(22,919 observations deleted)
+(10,100 real changes made)
+(file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 not
+    found)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+(22,919 observations deleted)
+(label all already defined)
+file /var/folders/yz/41p3n9b57291wbft66qyl29c0000gn/T//St35710.000001 saved
+    as .dta format
+
+. 
+. if `first' == 1 {
+.     display as error "  -> sheet `sheet' not written: no nonmissing values"
+.     use `original', clear
+.     exit
+. }
+
+. use `result', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * the group is written as text using its value label (if it has one)
+. capture decode `grp', generate(group)
+
+. if _rc generate group = string(`grp')
+
+. * keep the variables in the order they were listed
+. generate variable_order = .
+(7 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(7 real changes made)
+
+. sort variable_order `grp' year
+
+. keep variable group period n mean sd p10 p25 p50 p75 p90 min max
+
+. export excel using "$B07_XLSX", sheet("`sheet'", replace) firstrow(variables)
+file /Users/toarmassie/2026-kolega-den-bps-repo/20261005-run/block-b1-07-all-fi
+> rms/output/b1_07_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t11_rnd_rate (7 rows)
+
+. use `original', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+end of do-file
+
+. 
+end of do-file
+
+######## B1-07: 12_figures ########
+
+. /*==========================================================================
+>   Line 12: "Elaborate bs dengan output stats/stylish facts dalam bentuk
+>            table atau dengan graph, atau table yg ready untuk dibuat graph"
+>   Every other file writes its tables to output/b1_07_tables.xlsx. This
+>   file draws the charts FROM those tables (helper _charts.do), so a chart
+>   always matches its table. The exact points of every chart, and the label
+>   printed next to each point, are written to a sheet figNN_data.
+>   Runs LAST in 00_run.do.
+> 
+>   Charts (output/):
+>     fig01a_records_per_year.png  firm-years per survey year
+>     fig01b_participation.png     % exporting, importing, FDI by year
+>     fig02_tfp.png                mean TFP by year, 4 methods
+>     fig03_va_pw.png              mean ln(VA per worker) by year
+>     fig07_kbli2_share.png        % of firm-years per KBLI 2-digit (pooled)
+>     fig08_energy.png             median energy use by year
+>     fig09_emissions.png          median CO2 by year
+>     fig10_prov_share.png         % of firm-years per province (pooled)
+> 
+>   Chart rules (repo consensus): see _charts.do.
+> ==========================================================================*/
+. if "$B07" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. 
+. global FIG_XLSX "$B07_XLSX"
+
+. global FIG_OUT  "$B07_OUT"
+
+. do "$B07/_charts.do"
+
+. /*==========================================================================
+>   _charts.do -- helper: chart programs for the figures file
+> 
+>   Load once at the top of the figures file, after setting
+>       global FIG_XLSX  the block's tables workbook (charts read only from it)
+>       global FIG_OUT   the block's output folder
+> 
+>   Programs:
+>     ch_wide    load one statistic from a table sheet, by year, one column
+>                per group (s1 s2 ...); returns locals `wide' and `glabels'
+>     ch_lines   by-year lines: 2016 band, first/last labels, legend
+>     ch_qlines  lines over quintiles 1-5 (no year axis), first/last labels
+>     ch_dots    pooled dot plot per group, sorted, value labels
+>     ch_shares  pooled % of firm-years per category (horizontal bars)
+>     ch_profile pooled % exporting / importing / FDI / ... per group
+>     ch_counts  firm-years per year (bars with counts, 2016 band)
+> 
+>   Chart rules (repo consensus, WRITING-PREFERENCES-SEE-HERE.md):
+>     - lines are labelled at their first and last point only; bars and dots
+>       carry their value; labels are formatted from the table cells
+>     - 2016 has no survey file: lines break there and a gray band marks it,
+>       with a "No annual file" key in the legend
+>     - every chart has a legend, a Notes line and a separate Source line
+>     - fixed precision per unit (set by the caller with fmt())
+>     - the points of every chart, and the printed labels, are written to a
+>       sheet figNN_data in the same workbook
+> ==========================================================================*/
+. global FIG_SRC "Source: SI 2010-2022 analysis-ready data (block 0; obscured v
+> alues, fictional firm links); authors' calculations."
+
+. global C1 "42 120 214"      // blue
+
+. global C2 "235 104 52"      // orange
+
+. global C3 "27 175 122"      // green
+
+. global C4 "150 90 190"      // purple
+
+. global BAND "gs14"          // 2016 band
+
+. global GOPT "scheme(s1color) graphregion(color(white)) plotregion(color(white
+> )) xsize(7) ysize(4.5)"
+
+. 
+. * ---------------------------------------------------------------------------
+. * ch_wide, sheet(t08_tfp) key(group) stat(mean) [var(tfp_lp) filter(...) scal
+> e(100)]
+. *   key   = column whose values become the series (group, category or variabl
+> e)
+. *   var   = keep only this variable (for _sumstats sheets)
+. *   filter= any extra keep-if condition
+. *   Series keep the order of the table (= the group codes).
+. * ---------------------------------------------------------------------------
+. capture program drop ch_wide
+
+. program define ch_wide
+  1.     syntax, SHEET(string) KEY(string) STAT(string) [VAR(string) FILTER(str
+> ing asis) SCALE(real 1)]
+  2.     import excel using "$FIG_XLSX", sheet("`sheet'") firstrow clear
+  3.     foreach v in group category {
+  4.         capture confirm variable `v'
+  5.         if !_rc {
+  6.             capture confirm string variable `v'
+  7.             if _rc tostring `v', replace
+  8.         }
+  9.     }
+ 10.     if "`var'" != "" keep if variable == "`var'"
+ 11.     if `"`filter'"' != "" keep if `filter'
+ 12.     keep if period != "pool"
+ 13.     generate long order = _n
+ 14.     bysort `key' (order): generate long first = order[1]
+ 15.     egen gid = group(first)
+ 16.     local labs ""
+ 17.     local wide ""
+ 18.     quietly levelsof gid, local(ids)
+ 19.     foreach i of local ids {
+ 20.         quietly levelsof `key' if gid == `i', local(g) clean
+ 21.         local labs `"`labs' `"`g'"'"'
+ 22.         local wide "`wide' s`i'"
+ 23.     }
+ 24.     generate year = real(period)
+ 25.     generate double s = `stat' * `scale'
+ 26.     keep year gid s
+ 27.     reshape wide s, i(year) j(gid)
+ 28.     c_local glabels `"`labs'"'
+ 29.     c_local wide "`wide'"
+ 30. end
+
+. 
+. * ---------------------------------------------------------------------------
+. * ch_endlabels s1 s2, x(year) fmt(%4.2f) gap(0.1)
+. *   appends one row per printed label: _lk (series number), _lx, _ly (where
+. *   the label is drawn), _lpos (9 = left of the first point, 3 = right of
+. *   the last point) and _ltxt (the printed value). Labels at the same end
+. *   that would overlap are moved apart vertically by at least gap; the
+. *   printed value itself never changes.
+. * ---------------------------------------------------------------------------
+. capture program drop ch_endlabels
+
+. program define ch_endlabels
+  1.     syntax varlist, X(varname) FMT(string) GAP(real)
+  2.     tempfile main labs
+  3.     quietly save `main'
+  4.     local k 0
+  5.     foreach s of local varlist {
+  6.         local ++k
+  7.         use `main', clear
+  8.         keep `x' `s'
+  9.         drop if missing(`s') | missing(`x')
+ 10.         quietly summarize `x'
+ 11.         local xmin = r(min)
+ 12.         local xmax = r(max)
+ 13.         keep if inlist(`x', `xmin', `xmax')
+ 14.         generate byte _lk = `k'
+ 15.         generate byte _lpos = cond(`x' == `xmin' & `xmin' != `xmax', 9, 3)
+ 16.         rename `x' _lx
+ 17.         rename `s' _lv
+ 18.         generate str16 _ltxt = strtrim(string(_lv, "`fmt'"))
+ 19.         keep _lk _lx _lv _lpos _ltxt
+ 20.         if `k' > 1 append using `labs'
+ 21.         quietly save `labs', replace
+ 22.     }
+ 23.     generate double _ly = _lv
+ 24.     sort _lpos _lx _lv _lk
+ 25.     by _lpos _lx: replace _ly = max(_ly, _ly[_n-1] + `gap') if _n > 1
+ 26.     keep _lk _lx _ly _lpos _ltxt
+ 27.     quietly save `labs', replace
+ 28.     use `main', clear
+ 29.     append using `labs'
+ 30. end
+
+. 
+. * ---------------------------------------------------------------------------
+. * ch_lines s1 s2, labels("A" "B") fmt(%4.2f) ytitle() title() note("Notes: ..
+> ." "$FIG_SRC") sheet() file()
+. *   data in memory: year s1 [s2 [s3 [s4]]], one row per survey year
+. * ---------------------------------------------------------------------------
+. capture program drop ch_lines
+
+. program define ch_lines
+  1.     syntax varlist(min=1 max=4), LABELS(string asis) FMT(string) YTITLE(st
+> ring) ///
+>         TITLE(string) NOTE(string asis) SHEET(string) FILE(string)
+  2.     local colors `""$C1" "$C2" "$C3" "$C4""'
+  3.     local symbols "O S T D"
+  4.     * printed labels: first and last available year of each series
+.     foreach s of local varlist {
+  5.         quietly summarize year if !missing(`s')
+  6.         generate str16 lab_`s' = strtrim(string(`s', "`fmt'")) if !missing
+> (`s') & inlist(year, r(min), r(max))
+  7.     }
+  8.     * graph-ready data, with the printed labels
+.     preserve
+  9.     sort year
+ 10.     export excel using "$FIG_XLSX", sheet("`sheet'", replace) firstrow(var
+> iables)
+ 11.     restore
+ 12.     * 2016 band spans the plotted range
+.     local lo .
+ 13.     local hi .
+ 14.     foreach s of local varlist {
+ 15.         quietly summarize `s'
+ 16.         if r(min) < `lo' | `lo' == . local lo = r(min)
+ 17.         if r(max) > `hi' | `hi' == . local hi = r(max)
+ 18.     }
+ 19.     local pad = (`hi' - `lo') * 0.12
+ 20.     if `pad' == 0 local pad = abs(`hi') * 0.1 + 1
+ 21.     local lo = `lo' - `pad'
+ 22.     local hi = `hi' + `pad'
+ 23.     quietly count if year == 2016
+ 24.     if r(N) == 0 {
+ 25.         quietly set obs `=_N + 1'
+ 26.         quietly replace year = 2016 in `=_N'
+ 27.     }
+ 28.     generate band_lo = `lo' if year == 2016
+ 29.     generate band_hi = `hi' if year == 2016
+ 30.     sort year
+ 31.     * label anchors: first value left of the line, last value right of it
+.     ch_endlabels `varlist', x(year) fmt(`fmt') gap(`=(`hi' - `lo') * 0.06')
+ 32.     quietly summarize _ly
+ 33.     if r(max) > `hi' local hi = r(max)
+ 34.     * plots: 1 = band, 2..k+1 = lines, then the label layers
+.     local plots "(rbar band_lo band_hi year, barwidth(0.8) color($BAND) lwidt
+> h(none))"
+ 35.     local k 0
+ 36.     foreach s of local varlist {
+ 37.         local ++k
+ 38.         local col : word `k' of `colors'
+ 39.         local sym : word `k' of `symbols'
+ 40.         local plots `"`plots' (connected `s' year, lcolor("`col'") mcolor(
+> "`col'") msymbol(`sym') lwidth(medthick) cmissing(n))"'
+ 41.     }
+ 42.     local k 0
+ 43.     foreach s of local varlist {
+ 44.         local ++k
+ 45.         local col : word `k' of `colors'
+ 46.         local plots `"`plots' (scatter _ly _lx if _lk == `k', msymbol(none
+> ) mlabel(_ltxt) mlabvposition(_lpos) mlabcolor("`col'") mlabsize(small))"'
+ 47.     }
+ 48.     local order ""
+ 49.     local k 1
+ 50.     foreach l of local labels {
+ 51.         local ++k
+ 52.         local order `"`order' `k' `"`l'"'"'
+ 53.     }
+ 54.     local rows = cond(`k' <= 4, 1, 2)
+ 55.     twoway `plots', ///
+>         legend(order(`order' 1 "No annual file") rows(`rows') size(small) reg
+> ion(lcolor(white))) ///
+>         yscale(range(`lo' `hi')) ylabel(, angle(0) labsize(small) format(`fmt
+> ')) ///
+>         xscale(range(2008.4 2023.6)) xlabel(2010(2)2022, labsize(small)) xtit
+> le("") ///
+>         ytitle("`ytitle'", size(small) margin(0 3 0 0)) ///
+>         title("`title'", size(medsmall)) note(`note', size(vsmall)) $GOPT
+ 56.     graph export "$FIG_OUT/`file'.png", replace width(2200)
+ 57. end
+
+. 
+. * ---------------------------------------------------------------------------
+. * ch_qlines s1 s2, labels() fmt() ytitle() xtitle() title() note() sheet() fi
+> le()
+. *   data in memory: quintile (1-5) s1 [s2 [s3 [s4]]]
+. * ---------------------------------------------------------------------------
+. capture program drop ch_qlines
+
+. program define ch_qlines
+  1.     syntax varlist(min=1 max=4), LABELS(string asis) FMT(string) YTITLE(st
+> ring) XTITLE(string) ///
+>         TITLE(string) NOTE(string asis) SHEET(string) FILE(string)
+  2.     local colors `""$C1" "$C2" "$C3" "$C4""'
+  3.     local symbols "O S T D"
+  4.     foreach s of local varlist {
+  5.         quietly summarize quintile if !missing(`s')
+  6.         generate str16 lab_`s' = strtrim(string(`s', "`fmt'")) if !missing
+> (`s') & inlist(quintile, r(min), r(max))
+  7.     }
+  8.     sort quintile
+  9.     export excel using "$FIG_XLSX", sheet("`sheet'", replace) firstrow(var
+> iables)
+ 10.     local lo .
+ 11.     local hi .
+ 12.     foreach s of local varlist {
+ 13.         quietly summarize `s'
+ 14.         if r(min) < `lo' | `lo' == . local lo = r(min)
+ 15.         if r(max) > `hi' | `hi' == . local hi = r(max)
+ 16.     }
+ 17.     local gap = (`hi' - `lo') * 0.05
+ 18.     if `gap' == 0 local gap = abs(`hi') * 0.05 + 0.01
+ 19.     ch_endlabels `varlist', x(quintile) fmt(`fmt') gap(`gap')
+ 20.     local plots ""
+ 21.     local k 0
+ 22.     foreach s of local varlist {
+ 23.         local ++k
+ 24.         local col : word `k' of `colors'
+ 25.         local sym : word `k' of `symbols'
+ 26.         local plots `"`plots' (connected `s' quintile, lcolor("`col'") mco
+> lor("`col'") msymbol(`sym') lwidth(medthick))"'
+ 27.     }
+ 28.     local k 0
+ 29.     foreach s of local varlist {
+ 30.         local ++k
+ 31.         local col : word `k' of `colors'
+ 32.         local plots `"`plots' (scatter _ly _lx if _lk == `k', msymbol(none
+> ) mlabel(_ltxt) mlabvposition(_lpos) mlabcolor("`col'") mlabsize(small))"'
+ 33.     }
+ 34.     local order ""
+ 35.     local k 0
+ 36.     foreach l of local labels {
+ 37.         local ++k
+ 38.         local order `"`order' `k' `"`l'"'"'
+ 39.     }
+ 40.     twoway `plots', ///
+>         legend(order(`order') rows(1) size(small) region(lcolor(white))) ///
+>         xscale(range(0.3 5.7)) xlabel(1 "Q1 (lowest)" 2 "Q2" 3 "Q3" 4 "Q4" 5 
+> "Q5 (highest)", labsize(small)) ///
+>         ylabel(, angle(0) labsize(small) format(`fmt')) xtitle("`xtitle'", si
+> ze(small)) ///
+>         ytitle("`ytitle'", size(small) margin(0 3 0 0)) ///
+>         title("`title'", size(medsmall)) note(`note', size(vsmall)) $GOPT
+ 41.     graph export "$FIG_OUT/`file'.png", replace width(2200)
+ 42. end
+
+. 
+. * ---------------------------------------------------------------------------
+. * ch_dots, sheet() var() stat() fmt() xtitle() legend() title() note() outshe
+> et() file() [minn(100) prefix("KBLI ")]
+. *   pooled value per group, sorted from high to low; groups with fewer than
+. *   minn firm-years are left out
+. * ---------------------------------------------------------------------------
+. capture program drop ch_dots
+
+. program define ch_dots
+  1.     syntax, SHEET(string) VAR(string) STAT(string) FMT(string) XTITLE(stri
+> ng) LEGEND(string) ///
+>         TITLE(string) NOTE(string asis) OUTSHEET(string) FILE(string) [MINN(i
+> nteger 0) PREFIX(string)]
+  2.     import excel using "$FIG_XLSX", sheet("`sheet'") firstrow clear
+  3.     capture confirm string variable group
+  4.     if _rc tostring group, replace
+  5.     keep if variable == "`var'" & period == "pool" & n >= `minn'
+  6.     gsort -`stat'
+  7.     generate pos = _n
+  8.     generate str16 lab = strtrim(string(`stat', "`fmt'"))
+  9.     generate str48 name = "`prefix'" + group
+ 10.     keep pos name n `stat' lab
+ 11.     export excel using "$FIG_XLSX", sheet("`outsheet'", replace) firstrow(
+> variables)
+ 12.     local ylab ""
+ 13.     forvalues i = 1/`=_N' {
+ 14.         local ylab `"`ylab' `i' "`=name[`i']'""'
+ 15.     }
+ 16.     summarize `stat', meanonly
+ 17.     local xlo = r(min) - 0.05 * (r(max) - r(min))
+ 18.     local xhi = r(max) + 0.25 * (r(max) - r(min))
+ 19.     local ys = min(9, max(4.5, 0.22 * _N + 2.5))
+ 20.     local ns = cond(`ys' > 6, "tiny", "vsmall")
+ 21.     twoway (scatter pos `stat', msymbol(O) mcolor("$C1") ///
+>             mlabel(lab) mlabpos(3) mlabsize(vsmall) mlabcolor(black)), ///
+>         legend(on order(1 "`legend'") size(small) region(lcolor(white))) ///
+>         ylabel(`ylab', angle(0) labsize(vsmall) nogrid) yscale(reverse range(
+> 0.5 `=_N + 0.5')) ///
+>         xscale(range(`xlo' `xhi')) xlabel(, labsize(small) format(`fmt')) ///
+>         ytitle("") xtitle("`xtitle'", size(small)) ///
+>         title("`title'", size(medsmall)) note(`note', size(`ns')) ///
+>         scheme(s1color) graphregion(color(white)) plotregion(color(white)) xs
+> ize(7) ysize(`ys')
+ 22.     graph export "$FIG_OUT/`file'.png", replace width(2200)
+ 23. end
+
+. 
+. * ---------------------------------------------------------------------------
+. * ch_shares, sheet() title() note() outsheet() file() [prefix() group()]
+. *   pooled % of firm-years per category from a _shares.do sheet
+. * ---------------------------------------------------------------------------
+. capture program drop ch_shares
+
+. program define ch_shares
+  1.     syntax, SHEET(string) TITLE(string) NOTE(string asis) OUTSHEET(string)
+>  FILE(string) ///
+>         [PREFIX(string) GROUP(string)]
+  2.     import excel using "$FIG_XLSX", sheet("`sheet'") firstrow clear
+  3.     foreach v in group category {
+  4.         capture confirm string variable `v'
+  5.         if _rc tostring `v', replace
+  6.     }
+  7.     keep if period == "pool"
+  8.     if "`group'" != "" keep if group == "`group'"
+  9.     gsort -pct_firms
+ 10.     generate order = _n
+ 11.     generate str16 lab = strtrim(string(pct_firms, "%4.1f"))
+ 12.     generate str48 name = "`prefix'" + category
+ 13.     keep order name n_firms pct_firms lab
+ 14.     export excel using "$FIG_XLSX", sheet("`outsheet'", replace) firstrow(
+> variables)
+ 15.     summarize pct_firms, meanonly
+ 16.     local hi = r(max) * 1.15
+ 17.     local ys = min(9, max(4.5, 0.22 * _N + 2.5))
+ 18.     local ns = cond(`ys' > 6, "tiny", "vsmall")
+ 19.     graph hbar (asis) pct_firms, over(name, sort(order) label(labsize(vsma
+> ll))) ///
+>         bar(1, color("$C1")) blabel(bar, format(%4.1f) size(vsmall)) ///
+>         legend(on order(1 "% of firm-years (pooled)") size(small) region(lcol
+> or(white))) ///
+>         ytitle("% of firm-years", size(small)) yscale(range(0 `hi')) ylabel(,
+>  labsize(small)) ///
+>         title("`title'", size(medsmall)) note(`note', size(`ns')) ///
+>         scheme(s1color) graphregion(color(white)) plotregion(color(white)) xs
+> ize(7) ysize(`ys')
+ 20.     graph export "$FIG_OUT/`file'.png", replace width(2200)
+ 21. end
+
+. 
+. * ---------------------------------------------------------------------------
+. * ch_profile, sheet() title() note() outsheet() file()
+. *   pooled % of each group that exports / imports / is FDI / large / does
+. *   R&D / is in Java (the means of the 0/1 variables of a _sumstats sheet)
+. * ---------------------------------------------------------------------------
+. capture program drop ch_profile
+
+. program define ch_profile
+  1.     syntax, SHEET(string) TITLE(string) NOTE(string asis) OUTSHEET(string)
+>  FILE(string)
+  2.     import excel using "$FIG_XLSX", sheet("`sheet'") firstrow clear
+  3.     capture confirm string variable group
+  4.     if _rc tostring group, replace
+  5.     keep if period == "pool"
+  6.     generate pct = 100 * mean
+  7.     generate str32 rate = ""
+  8.     replace rate = "Exporting"            if variable == "exporter"
+  9.     replace rate = "Importing"            if variable == "importer"
+ 10.     replace rate = "FDI (>=10%)"          if variable == "fdi"
+ 11.     replace rate = "Large (>100)"         if variable == "large"
+ 12.     replace rate = "R&D (2017-22)"        if variable == "rnd"
+ 13.     replace rate = "Java"                 if variable == "java"
+ 14.     keep if rate != ""
+ 15.     generate long order = _n
+ 16.     bysort variable (order): generate long rate_order = order[1]
+ 17.     bysort group (order): generate long group_order = order[1]
+ 18.     generate str16 lab = strtrim(string(pct, "%4.1f"))
+ 19.     sort rate_order group_order
+ 20.     keep rate group n pct lab rate_order group_order
+ 21.     export excel using "$FIG_XLSX", sheet("`outsheet'", replace) firstrow(
+> variables)
+ 22.     * groups in code order (same colours as the line charts), labelled by 
+> name
+.     egen gnum = group(group_order)
+ 23.     quietly levelsof gnum, local(gs)
+ 24.     local ng : word count `gs'
+ 25.     foreach i of local gs {
+ 26.         quietly levelsof group if gnum == `i', local(gname) clean
+ 27.         label define gnum `i' `"`gname'"', add
+ 28.     }
+ 29.     label values gnum gnum
+ 30.     local colors `""$C1" "$C2" "$C3" "$C4""'
+ 31.     local bars ""
+ 32.     forvalues k = 1/`=min(`ng', 4)' {
+ 33.         local c : word `k' of `colors'
+ 34.         local bars `"`bars' bar(`k', color("`c'"))"'
+ 35.     }
+ 36.     summarize pct, meanonly
+ 37.     local hi = r(max) * 1.15
+ 38.     graph hbar (asis) pct, over(gnum, label(labsize(vsmall))) ///
+>         over(rate, sort(rate_order) label(labsize(vsmall))) asyvars `bars' //
+> /
+>         blabel(bar, format(%4.1f) size(vsmall)) ///
+>         legend(rows(1) size(small) region(lcolor(white))) ///
+>         ytitle("% of firm-years in the group (pooled)", size(small)) yscale(r
+> ange(0 `hi')) ylabel(, labsize(small)) ///
+>         title("`title'", size(medsmall)) note(`note', size(tiny)) ///
+>         scheme(s1color) graphregion(color(white)) plotregion(color(white)) xs
+> ize(7) ysize(6)
+ 39.     graph export "$FIG_OUT/`file'.png", replace width(2200)
+ 40. end
+
+. 
+. * ---------------------------------------------------------------------------
+. * ch_counts, sheet() var() title() note() outsheet() file()
+. *   firm-years per year = n of a variable observed for every record
+. * ---------------------------------------------------------------------------
+. capture program drop ch_counts
+
+. program define ch_counts
+  1.     syntax, SHEET(string) VAR(string) TITLE(string) NOTE(string asis) OUTS
+> HEET(string) FILE(string)
+  2.     import excel using "$FIG_XLSX", sheet("`sheet'") firstrow clear
+  3.     keep if variable == "`var'" & period != "pool"
+  4.     generate year = real(period)
+  5.     keep year n
+  6.     generate str16 lab_n = strtrim(string(n, "%9.0fc"))
+  7.     sort year
+  8.     export excel using "$FIG_XLSX", sheet("`outsheet'", replace) firstrow(
+> variables)
+  9.     summarize n, meanonly
+ 10.     local hi = r(max) * 1.15
+ 11.     set obs `=_N + 1'
+ 12.     replace year = 2016 in `=_N'
+ 13.     generate band_hi = `hi' if year == 2016
+ 14.     generate band_lo = 0 if year == 2016
+ 15.     sort year
+ 16.     twoway (rbar band_lo band_hi year, barwidth(0.8) color($BAND) lwidth(n
+> one)) ///
+>            (bar n year, barwidth(0.7) color("$C1")) ///
+>            (scatter n year, msymbol(none) mlabel(lab_n) mlabpos(12) mlabsize(
+> vsmall) mlabcolor(black)), ///
+>         legend(order(2 "Firm-years in the file" 1 "No annual file") rows(1) s
+> ize(small) region(lcolor(white))) ///
+>         yscale(range(0 `hi')) ylabel(, angle(0) labsize(small) format(%9.0fc)
+> ) ///
+>         xlabel(2010(2)2022, labsize(small)) xtitle("") ytitle("Firm-years", s
+> ize(small) margin(0 3 0 0)) ///
+>         title("`title'", size(medsmall)) note(`note', size(vsmall)) $GOPT
+ 17.     graph export "$FIG_OUT/`file'.png", replace width(2200)
+ 18. end
+
+. 
+end of do-file
+
+. 
+. 
+. * ---- fig01a: firm-years per survey year ----
+. ch_counts, sheet(t04_workers) var(workers) title("Firm-years per survey year"
+> ) ///
+>     note("Notes: excludes the 30 energy-outlier records (clean = 0). There is
+>  no 2016 survey file." "$FIG_SRC") ///
+>     outsheet(fig01a_data) file(fig01a_records_per_year)
+(13 vars, 65 obs)
+(53 observations deleted)
+file /Users/toarmassie/2026-kolega-den-bps-repo/20261005-run/block-b1-07-all-fi
+> rms/output/b1_07_tables.xlsx saved
+Number of observations (_N) was 12, now 13.
+(1 real change made)
+(12 missing values generated)
+(12 missing values generated)
+(file /Users/toarmassie/2026-kolega-den-bps-repo/20261005-run/block-b1-07-all-f
+> irms/output/fig01a_records_per_year.png not found)
+file /Users/toarmassie/2026-kolega-den-bps-repo/20261005-run/block-b1-07-all-fi
+> rms/output/fig01a_records_per_year.png written in PNG format
+
+. 
+. 
+. * ---- fig01b: % exporting, importing, FDI by year ----
+. ch_wide, sheet(t01_profile) key(variable) stat(mean) scale(100) ///
+>     filter(inlist(variable, "exporter", "importer", "fdi"))
+(13 vars, 70 obs)
+(33 observations deleted)
+(3 observations deleted)
+(j = 1 2 3)
+
+Data                               Long   ->   Wide
+-----------------------------------------------------------------------------
+Number of observations               34   ->   12          
+Number of variables                   3   ->   4           
+j variable (3 values)               gid   ->   (dropped)
+xij variables:
+                                      s   ->   s1 s2 s3
+-----------------------------------------------------------------------------
+
+. ch_lines `wide', labels("Exporting" "Importing" "FDI (foreign share >=10%)") 
+> fmt(%4.1f) ///
+>     ytitle("% of firm-years") title("Exporting, importing and foreign-owned f
+> irms") ///
+>     note("Notes: % of firm-years with a known answer. Exporter 2022 and FDI 2
+> 020 are set missing (see 01a)." ///
+>          "Importer reporting jumps between 2015 and 2017 (questionnaire chang
+> e)." "$FIG_SRC") ///
+>     sheet(fig01b_data) file(fig01b_participation)
+(10 missing values generated)
+(10 missing values generated)
+(10 missing values generated)
+file /Users/toarmassie/2026-kolega-den-bps-repo/20261005-run/block-b1-07-all-fi
+> rms/output/b1_07_tables.xlsx saved
+(12 missing values generated)
+(12 missing values generated)
+(2 observations deleted)
+(9 observations deleted)
+(1 observation deleted)
+(10 observations deleted)
+(2 observations deleted)
+(9 observations deleted)
+(1 real change made)
+(file /Users/toarmassie/2026-kolega-den-bps-repo/20261005-run/block-b1-07-all-f
+> irms/output/fig01b_participation.png not found)
+file /Users/toarmassie/2026-kolega-den-bps-repo/20261005-run/block-b1-07-all-fi
+> rms/output/fig01b_participation.png written in PNG format
+
+. 
+. 
+. * ---- fig02: mean TFP by year, 4 methods ----
+. ch_wide, sheet(t02_tfp) key(variable) stat(mean)
+(13 vars, 43 obs)
+(4 observations deleted)
+(j = 1 2 3 4)
+
+Data                               Long   ->   Wide
+-----------------------------------------------------------------------------
+Number of observations               39   ->   10          
+Number of variables                   3   ->   5           
+j variable (4 values)               gid   ->   (dropped)
+xij variables:
+                                      s   ->   s1 s2 ... s4
+-----------------------------------------------------------------------------
+
+. ch_lines `wide', labels("OP" "LP" "ACF" "WRDG") fmt(%4.2f) ///
+>     ytitle("Mean TFP (log)") title("TFP by method, all firms") ///
+>     note("Notes: block 0 nominal development residuals on fictional firm link
+> s; not real TFP." ///
+>          "The four methods are on different scales; OP has only 672 firm-year
+> s." "$FIG_SRC") ///
+>     sheet(fig02_data) file(fig02_tfp)
+(8 missing values generated)
+(8 missing values generated)
+(8 missing values generated)
+(8 missing values generated)
+file /Users/toarmassie/2026-kolega-den-bps-repo/20261005-run/block-b1-07-all-fi
+> rms/output/b1_07_tables.xlsx saved
+(10 missing values generated)
+(10 missing values generated)
+(2 observations deleted)
+(7 observations deleted)
+(1 observation deleted)
+(8 observations deleted)
+(1 observation deleted)
+(8 observations deleted)
+(1 observation deleted)
+(8 observations deleted)
+(2 real changes made)
+(file /Users/toarmassie/2026-kolega-den-bps-repo/20261005-run/block-b1-07-all-f
+> irms/output/fig02_tfp.png not found)
+file /Users/toarmassie/2026-kolega-den-bps-repo/20261005-run/block-b1-07-all-fi
+> rms/output/fig02_tfp.png written in PNG format
+
+. 
+. 
+. * ---- fig03: mean ln(VA per worker) by year ----
+. ch_wide, sheet(t03_va_output_capital) key(group) stat(mean) var(ln_va_pw)
+(13 vars, 208 obs)
+(195 observations deleted)
+(1 observation deleted)
+(j = 1)
+
+Data                               Long   ->   Wide
+-----------------------------------------------------------------------------
+Number of observations               12   ->   12          
+Number of variables                   3   ->   2           
+j variable (1 values)               gid   ->   (dropped)
+xij variables:
+                                      s   ->   s1
+-----------------------------------------------------------------------------
+
+. ch_lines `wide', labels("All firms") fmt(%4.2f) ///
+>     ytitle("Mean ln(VA per worker)") title("Value added per worker, all firms
+> ") ///
+>     note("Notes: mean of ln(nominal value added per worker); values are maske
+> d and not deflated." "$FIG_SRC") sheet(fig03_data) file(fig03_va_pw)
+(10 missing values generated)
+file /Users/toarmassie/2026-kolega-den-bps-repo/20261005-run/block-b1-07-all-fi
+> rms/output/b1_07_tables.xlsx saved
+(12 missing values generated)
+(12 missing values generated)
+(1 observation deleted)
+(10 observations deleted)
+(0 real changes made)
+(file /Users/toarmassie/2026-kolega-den-bps-repo/20261005-run/block-b1-07-all-f
+> irms/output/fig03_va_pw.png not found)
+file /Users/toarmassie/2026-kolega-den-bps-repo/20261005-run/block-b1-07-all-fi
+> rms/output/fig03_va_pw.png written in PNG format
+
+. 
+. 
+. * ---- fig07: % of firm-years per KBLI 2-digit (pooled) ----
+. ch_shares, sheet(t07_kbli2_share) prefix("KBLI ") title("Firm-years by KBLI 2
+> -digit sector (pooled)") ///
+>     note("Notes: codes as reported; no bridge between classification versions
+> ." "$FIG_SRC") ///
+>     outsheet(fig07_data) file(fig07_kbli2_share)
+(5 vars, 312 obs)
+(288 observations deleted)
+file /Users/toarmassie/2026-kolega-den-bps-repo/20261005-run/block-b1-07-all-fi
+> rms/output/b1_07_tables.xlsx saved
+(file /Users/toarmassie/2026-kolega-den-bps-repo/20261005-run/block-b1-07-all-f
+> irms/output/fig07_kbli2_share.png not found)
+file /Users/toarmassie/2026-kolega-den-bps-repo/20261005-run/block-b1-07-all-fi
+> rms/output/fig07_kbli2_share.png written in PNG format
+
+. 
+. 
+. * ---- fig08: median energy use by year ----
+. ch_wide, sheet(t08_energy) key(group) stat(p50) var(gj_total)
+(13 vars, 169 obs)
+(156 observations deleted)
+(1 observation deleted)
+(j = 1)
+
+Data                               Long   ->   Wide
+-----------------------------------------------------------------------------
+Number of observations               12   ->   12          
+Number of variables                   3   ->   2           
+j variable (1 values)               gid   ->   (dropped)
+xij variables:
+                                      s   ->   s1
+-----------------------------------------------------------------------------
+
+. ch_lines `wide', labels("Median GJ per firm-year") fmt(%9.0fc) ///
+>     ytitle("GJ") title("Energy use per firm-year (median)") ///
+>     note("Notes: scope 1 fuels (diesel, petrol, coal, LPG) + purchased electr
+> icity; energy reporting changes between 2015 and 2017." "$FIG_SRC") sheet(fig
+> 08_data) file(fig08_energy)
+(10 missing values generated)
+file /Users/toarmassie/2026-kolega-den-bps-repo/20261005-run/block-b1-07-all-fi
+> rms/output/b1_07_tables.xlsx saved
+(12 missing values generated)
+(12 missing values generated)
+(1 observation deleted)
+(10 observations deleted)
+(0 real changes made)
+(file /Users/toarmassie/2026-kolega-den-bps-repo/20261005-run/block-b1-07-all-f
+> irms/output/fig08_energy.png not found)
+file /Users/toarmassie/2026-kolega-den-bps-repo/20261005-run/block-b1-07-all-fi
+> rms/output/fig08_energy.png written in PNG format
+
+. 
+. 
+. * ---- fig09: median CO2 by year ----
+. ch_wide, sheet(t09_emissions) key(group) stat(p50) var(co2_total)
+(13 vars, 117 obs)
+(104 observations deleted)
+(1 observation deleted)
+(j = 1)
+
+Data                               Long   ->   Wide
+-----------------------------------------------------------------------------
+Number of observations               12   ->   12          
+Number of variables                   3   ->   2           
+j variable (1 values)               gid   ->   (dropped)
+xij variables:
+                                      s   ->   s1
+-----------------------------------------------------------------------------
+
+. ch_lines `wide', labels("Median tonnes CO2 per firm-year") fmt(%9.1f) ///
+>     ytitle("Tonnes CO2") title("CO2 emissions per firm-year (median)") ///
+>     note("Notes: scope 1 (4 fuels) + scope 2 (purchased electricity, 2014 gri
+> d factor carried forward after 2014)." "$FIG_SRC") sheet(fig09_data) file(fig
+> 09_emissions)
+(10 missing values generated)
+file /Users/toarmassie/2026-kolega-den-bps-repo/20261005-run/block-b1-07-all-fi
+> rms/output/b1_07_tables.xlsx saved
+(12 missing values generated)
+(12 missing values generated)
+(1 observation deleted)
+(10 observations deleted)
+(0 real changes made)
+(file /Users/toarmassie/2026-kolega-den-bps-repo/20261005-run/block-b1-07-all-f
+> irms/output/fig09_emissions.png not found)
+file /Users/toarmassie/2026-kolega-den-bps-repo/20261005-run/block-b1-07-all-fi
+> rms/output/fig09_emissions.png written in PNG format
+
+. 
+. 
+. * ---- fig10: % of firm-years per province (pooled) ----
+. ch_shares, sheet(t10_prov_share) title("Firm-years by province (pooled)") ///
+>     note("Notes: province as reported; district is blank in block 0." "$FIG_S
+> RC") ///
+>     outsheet(fig10_data) file(fig10_prov_share)
+(5 vars, 430 obs)
+(396 observations deleted)
+file /Users/toarmassie/2026-kolega-den-bps-repo/20261005-run/block-b1-07-all-fi
+> rms/output/b1_07_tables.xlsx saved
+(file /Users/toarmassie/2026-kolega-den-bps-repo/20261005-run/block-b1-07-all-f
+> irms/output/fig10_prov_share.png not found)
+file /Users/toarmassie/2026-kolega-den-bps-repo/20261005-run/block-b1-07-all-fi
+> rms/output/fig10_prov_share.png written in PNG format
+
+. 
+. 
+. graph drop _all
+
+. display as result "Figures written to $FIG_OUT"
+Figures written to /Users/toarmassie/2026-kolega-den-bps-repo/20261005-run/bloc
+> k-b1-07-all-firms/output
+
+. 
+end of do-file
+
+. log close b07
+      name:  b07
+       log:  /Users/toarmassie/2026-kolega-den-bps-repo/20261005-run/block-b1-0
+> 7-all-firms/output/b1_07_log.log
+  log type:  text
+ closed on:   9 Oct 2026, 16:28:58
+-------------------------------------------------------------------------------
