@@ -1,0 +1,1947 @@
+-------------------------------------------------------------------------------
+      name:  b205
+       log:  /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-05-en
+> ergy-mix/output/b2_05_log.log
+  log type:  text
+ opened on:   9 Oct 2026, 12:54:39
+
+. foreach f of local files {
+  2.     display _newline as result "######## B2-05: `f' ########"
+  3.     do "$B205/`f'.do"
+  4. }
+
+######## B2-05: 01a_prep_si ########
+
+. /*==========================================================================
+>   Line 1: "Energy transition and carbon lock in at plant level"
+>   (the row's subject -> data preparation)
+>   Prepare Statistik Industri (SI) 2010-2022 for B2-05
+>   Input : $SI_DATA  (analysis_ready_data.dta from block 0)
+>   Output: data/b205_si.dta  -- 1 row = 1 firm x year
+>           (open with: use "$B205_DATA/b205_si.dta", clear  then browse)
+> 
+>   Copied from block-b1-18's 01a_prep_si.do (same corrections), plus the
+>   energy-by-source variables this row needs:
+>     gj_coal2 gj_coalbriq gj_coke                     coal family (GJ)
+>     gj_diesel gj_petrol gj_kerosene gj_dieseloil gj_fueloil   oil family
+>     gj_lpg gj_citygas gj_othergas gj_natgas          gas family
+>     gj_biodiesel                                     biofuel (asked 2020+, re
+> ported 2021+)
+>     gj_elec_pln gj_elec_nonpln gj_elec_owngen        electricity by source
+>     biomass_qty    biomass quantity in block 0's column (unit NOT settled)
+>   Other variables: exporter, importer, fdi, large, kbli2, kbli5, prov, java,
+>     va, workers, co2_s1 co2_s2 co2_total gj_s1 gj_s2 gj_total, clean
+> 
+>   NOTE: the 2020+ fuels (diesel oil, fuel oil, natural gas, biodiesel) have n
+> o
+>   GJ column in block 0. GJ per unit: IPCC 2006 default net calorific values
+>   (Vol 2 Ch 1, Table 1.2). Biomass gets no GJ: block 0 calls the column kg,
+>   the 2020 form says tonne, and nothing settles which.
+> ==========================================================================*/
+. if "$B205" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$SI_DATA", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+. * ---- identifiers ------------------------------------------------------
+. * year = survey year (there is no 2016 file)
+. generate kbli2 = real(substr(industry_code, 1, 2))
+
+. generate kbli5 = industry_code
+
+. generate prov  = real(province_code)
+
+. generate java  = inlist(prov, 31, 32, 33, 34, 35, 36) if !missing(prov)
+
+. label define java 0 "Outside Java" 1 "Java"
+
+. label values java java
+
+. 
+. * ---- firm size: medium vs large (100-worker threshold) ----------------
+. generate large = (workers > 100) if !missing(workers)
+
+. label define large 0 "Medium (<=100)" 1 "Large (>100)"
+
+. label values large large
+
+. 
+. * ---- imports, exports & FDI -------------------------------------------
+. * importer is only defined where the import question can be evaluated
+. generate importer = import_flag if import_observed == 1
+
+. label define importer 0 "Non-importer" 1 "Importer"
+
+. label values importer importer
+
+. 
+. generate exporter = export_flag
+(15,321 missing values generated)
+
+. generate fdi      = fdi_10_flag                     // foreign ownership >= 1
+> 0%
+(311 missing values generated)
+
+. * 2022: the form only asks about DIRECT exports, a "no" is never recorded -> 
+> missing
+. replace exporter = . if year == 2022
+(344 real changes made, 344 to missing)
+
+. * 2020: foreign ownership is inconsistent (47% FDI vs 8-11% other years) -> m
+> issing
+. replace fdi = . if year == 2020
+(2,936 real changes made, 2,936 to missing)
+
+. label define exporter 0 "Non-exporter" 1 "Exporter"
+
+. label values exporter exporter
+
+. label define fdi 0 "Domestic" 1 "FDI"
+
+. label values fdi fdi
+
+. 
+. * ---- firm characteristics (nominal) -----------------------------------
+. generate va      = value_added_nominal
+
+. generate output  = gross_output_nominal
+
+. generate va_pw   = va / workers      if workers > 0
+(28 missing values generated)
+
+. 
+. * ---- energy & emissions -----------------------------------------------
+. * COAL 2017 CORRECTION: block 0 multiplies by 1000 (treats it as tonnes),
+. * but the price per unit shows the data are already in kg. Divide back.
+. generate co2_coal = co2_coal_s1
+
+. generate gj_coal2 = gj_coal
+
+. replace  co2_coal = co2_coal_s1 / 1000 if year == 2017
+(1,181 real changes made)
+
+. replace  gj_coal2 = gj_coal / 1000     if year == 2017
+(1,181 real changes made)
+
+. 
+. * scope 1 = the 4 fuels asked in every year: diesel, petrol, coal, LPG
+. egen co2_s1 = rowtotal(co2_diesel_s1 co2_petrol_s1 co2_coal co2_lpg_s1), miss
+> ing
+
+. egen gj_s1  = rowtotal(gj_diesel gj_petrol gj_coal2 gj_lpg), missing
+
+. * scope 2 = purchased electricity
+. generate co2_s2 = co2_scope2_s1
+
+. generate gj_s2  = gj_electricity
+
+. egen co2_total = rowtotal(co2_s1 co2_s2), missing
+
+. egen gj_total  = rowtotal(gj_s1 gj_s2), missing
+
+. 
+. * ---- energy (GJ) per source, for the energy mix (line 2) --------------
+. * block 0 publishes GJ for the legacy fuels; coal uses the corrected gj_coal2
+> .
+. * The fuels the 2020 form added have no GJ column in block 0: GJ per unit
+. * from the IPCC 2006 default net calorific values (Vol 2 Ch 1, Table 1.2),
+. * one plain line each.
+. generate gj_dieseloil = fuel_dieseloil_ltr * 0.03655 if fuel_dieseloil_ltr >=
+>  0   // per litre
+(23,858 missing values generated)
+
+. generate gj_fueloil   = fuel_fueloil_ltr   * 0.03838 if fuel_fueloil_ltr >= 0
+>      // per litre
+(23,858 missing values generated)
+
+. generate gj_natgas    = fuel_natgas_mmbtu  * 1.05506 if fuel_natgas_mmbtu >= 
+> 0    // per MMBTU
+(23,858 missing values generated)
+
+. generate gj_biodiesel = fuel_biodiesel_ltr * 0.02376 if fuel_biodiesel_ltr >=
+>  0   // per litre
+(30,450 missing values generated)
+
+. * electricity by source: 1 kWh = 3.6 MJ = 0.0036 GJ
+. generate gj_elec_pln    = elec_pln_kwh    * 0.0036     // purchased from PLN
+
+. generate gj_elec_nonpln = elec_nonpln_kwh * 0.0036     // purchased from othe
+> rs
+
+. generate gj_elec_owngen = elec_owngen_kwh * 0.0036     // generated by the fi
+> rm itself
+(2,125 missing values generated)
+
+. * biomass: quantity only, in block 0's own column (kg or tonne: not settled)
+. generate biomass_qty = fuel_biomass_kg if fuel_biomass_kg >= 0
+(23,858 missing values generated)
+
+. 
+. * ---- energy outlier flag (clean) --------------------------------------
+. * a record is left out of the analysis (clean = 0) if any of its energy
+. * quantities is above 100x that year's 99th percentile. Nothing is deleted.
+. generate coal_kg_fix = fuel_coal_kg
+
+. replace  coal_kg_fix = fuel_coal_kg / 1000 if year == 2017
+(1,181 real changes made)
+
+. generate clean = 1
+
+. levelsof year, local(years)
+2010 2011 2012 2013 2014 2015 2017 2018 2019 2020 2021 2022
+
+. foreach q in fuel_diesel_ltr fuel_petrol_ltr fuel_kerosene_ltr coal_kg_fix fu
+> el_lpg_kg ///
+>              fuel_citygas_m3 fuel_othergas_m3 fuel_coalbriq_kg fuel_coke_kg /
+> //
+>              elec_pln_kwh elec_nonpln_kwh elec_owngen_kwh fuel_dieseloil_ltr 
+> ///
+>              fuel_fueloil_ltr fuel_natgas_mmbtu fuel_biodiesel_ltr fuel_bioma
+> ss_kg {
+  2.     foreach y of local years {
+  3.         quietly count if year == `y' & `q' > 0 & !missing(`q')
+  4.         if r(N) > 2 {
+  5.             quietly summarize `q' if year == `y' & `q' > 0, detail
+  6.             quietly replace clean = 0 if year == `y' & `q' > 100 * r(p99) 
+> & !missing(`q')
+  7.         }
+  8.     }
+  9. }
+
+. replace clean = 0 if workers == 0 & co2_s1 > 0 & !missing(co2_s1)
+(20 real changes made)
+
+. count if clean == 0
+  30
+
+. display as result "Outlier records (clean = 0): " r(N)
+Outlier records (clean = 0): 30
+
+. 
+. * ---- save -------------------------------------------------------------
+. keep  firm_id year source_row kbli2 kbli5 prov java large importer exporter f
+> di ///
+>       va output va_pw workers co2_s1 co2_s2 co2_total gj_s1 gj_s2 gj_total //
+> /
+>       gj_coal2 gj_coalbriq gj_coke gj_diesel gj_petrol gj_kerosene gj_dieselo
+> il gj_fueloil ///
+>       gj_lpg gj_citygas gj_othergas gj_natgas gj_biodiesel ///
+>       gj_elec_pln gj_elec_nonpln gj_elec_owngen biomass_qty clean
+
+. order firm_id year source_row kbli2 kbli5 prov java large importer exporter f
+> di
+
+. label variable gj_coal2       "Coal energy (GJ), 2017 divided by 1000"
+
+. label variable gj_dieseloil   "Diesel oil energy (GJ), 2020+ only"
+
+. label variable gj_fueloil     "Fuel oil energy (GJ), 2020+ only"
+
+. label variable gj_natgas      "Natural gas energy (GJ), 2020+ only"
+
+. label variable gj_biodiesel   "Biodiesel energy (GJ), asked from 2020 (report
+> ed from 2021)"
+
+. label variable gj_elec_pln    "Electricity bought from PLN (GJ)"
+
+. label variable gj_elec_nonpln "Electricity bought from non-PLN (GJ)"
+
+. label variable gj_elec_owngen "Electricity generated by the firm itself (GJ)"
+
+. label variable biomass_qty    "Biomass quantity, unit NOT settled (kg or tonn
+> e), 2020+ only"
+
+. label variable clean "1 = not an energy outlier"
+
+. compress
+  variable kbli2 was double now byte
+  variable prov was double now byte
+  variable java was double now byte
+  variable large was double now byte
+  variable importer was double now byte
+  variable exporter was double now byte
+  variable fdi was double now byte
+  variable clean was double now byte
+  (1,850,744 bytes saved)
+
+. save "$B205_DATA/b205_si.dta", replace
+(file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-05-energy-mi
+    > x/data/b205_si.dta not found)
+file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-05-energy-mi
+    > x/data/b205_si.dta saved
+
+. display as result "01a done: $B205_DATA/b205_si.dta (" _N " rows)"
+01a done: /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-05-energ
+> y-mix/data/b205_si.dta (33049 rows)
+
+. 
+end of do-file
+
+######## B2-05: 02_energy_mix ########
+
+. /*==========================================================================
+>   Line 2: "Construct firm energy mix per year: coal, diesel/fuel oil, gas/lpg
+> ,
+>            electicity pln, non pln, self generation, biomass."
+>   Data  : SI 2010-2022 (data/b205_si.dta), clean == 1
+>   Output: data/b205_mix.dta  -- 1 row = 1 firm x year, GJ and % share per sou
+> rce
+>   Output sheets:
+>     t02_mix_mean        mean of firm shares (%) per source, pool + by year
+>     t02_mix_aggregate   all firms' GJ per source / all firms' GJ (%), pool + 
+> by year
+>     t02_share_stats     n mean sd p10-p90 min max of every share, pool + by y
+> ear
+>     t02_self_generation % firms generating their own electricity, and own
+>                         generation as % of the electricity they use
+>     t02_biomass         biomass reporters (2020+), shown apart, see NOTE
+> 
+>   Sources (GJ):
+>     coal         coal (2017 corrected) + coal briquettes + coke
+>     oil          diesel + petrol + kerosene + diesel oil + fuel oil
+>     gas          LPG + city gas + other gas + natural gas
+>     pln          electricity bought from PLN
+>     nonpln       electricity bought from others
+>     biofuel      biodiesel
+>   The denominator gj_mix = the sum of these six (= 100%).
+> 
+>   SELF GENERATION is NOT one of the six. The generator burns diesel, coal or
+>   gas that the firm already reports among its fuels, so adding the kWh it
+>   makes would count the same energy twice (the shares would sum to > 100).
+>   It is reported apart: own kWh / (PLN + non-PLN + own kWh).
+>   BIOMASS is NOT in the six either. Block 0 calls the column kg, the 2020 for
+> m
+>   says tonne; nothing settles which, and the GJ differ by 1000x. t02_biomass
+>   shows how many firms report it and what the share would be under each unit.
+>   NOTE: diesel oil, fuel oil, natural gas, biodiesel and biomass are asked
+>   from 2020 only; city gas, other gas, kerosene and briquettes are not asked
+>   every year. A step in 2020 is partly the new form, not a transition.
+>   Lubricant is not energy (not burned) and is left out.
+> ==========================================================================*/
+. if "$B205" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B205_DATA/b205_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1
+(30 observations deleted)
+
+. 
+. * ---- GJ per source -----------------------------------------------------
+. egen gj_c_coal   = rowtotal(gj_coal2 gj_coalbriq gj_coke)
+
+. egen gj_c_oil    = rowtotal(gj_diesel gj_petrol gj_kerosene gj_dieseloil gj_f
+> ueloil)
+
+. egen gj_c_gas    = rowtotal(gj_lpg gj_citygas gj_othergas gj_natgas)
+
+. egen gj_c_pln    = rowtotal(gj_elec_pln)
+
+. egen gj_c_nonpln = rowtotal(gj_elec_nonpln)
+
+. egen gj_c_bio    = rowtotal(gj_biodiesel)
+
+. egen gj_mix      = rowtotal(gj_c_coal gj_c_oil gj_c_gas gj_c_pln gj_c_nonpln 
+> gj_c_bio)
+
+. 
+. * ---- share of each source in the firm's GJ (%) -------------------------
+. foreach c in coal oil gas pln nonpln bio {
+  2.     generate sh_`c' = 100 * gj_c_`c' / gj_mix if gj_mix > 0
+  3. }
+(489 missing values generated)
+(489 missing values generated)
+(489 missing values generated)
+(489 missing values generated)
+(489 missing values generated)
+(489 missing values generated)
+
+. generate sh_elec = sh_pln + sh_nonpln
+(489 missing values generated)
+
+. label variable sh_coal   "Coal, briquettes, coke (% of GJ)"
+
+. label variable sh_oil    "Diesel, petrol, kerosene, diesel oil, fuel oil (% o
+> f GJ)"
+
+. label variable sh_gas    "LPG, city gas, other gas, natural gas (% of GJ)"
+
+. label variable sh_pln    "Electricity bought from PLN (% of GJ)"
+
+. label variable sh_nonpln "Electricity bought from non-PLN (% of GJ)"
+
+. label variable sh_bio    "Biodiesel (% of GJ)"
+
+. label variable sh_elec   "Electricity bought, PLN + non-PLN (% of GJ)"
+
+. 
+. * ---- self generation (apart from the mix) ------------------------------
+. generate owngen = (gj_elec_owngen > 0) if !missing(gj_elec_owngen)
+(2,123 missing values generated)
+
+. egen gj_elec_all = rowtotal(gj_elec_pln gj_elec_nonpln gj_elec_owngen)
+
+. generate sh_owngen_elec = 100 * gj_elec_owngen / gj_elec_all if gj_elec_all >
+>  0 & !missing(gj_elec_owngen)
+(3,359 missing values generated)
+
+. label variable owngen         "1 = generates some of its own electricity"
+
+. label variable sh_owngen_elec "Own generation as % of all electricity used"
+
+. 
+. generate has_energy = (gj_mix > 0)
+
+. generate ln_gj_mix  = ln(gj_mix) if gj_mix > 0
+(489 missing values generated)
+
+. label variable gj_mix "Energy used (GJ): the six sources, excl. own generatio
+> n and biomass"
+
+. count if has_energy == 0
+  489
+
+. display as result "Firm-years with no energy reported (no mix): " r(N)
+Firm-years with no energy reported (no mix): 489
+
+. save "$B205_DATA/b205_mix.dta", replace
+(file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-05-energy-mi
+    > x/data/b205_mix.dta not found)
+file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-05-energy-mi
+    > x/data/b205_mix.dta saved
+
+. 
+. * ---- A. mean of firm shares, pool + by year ----------------------------
+. generate n_firms = 1
+
+. expand 2, generate(copy)              // copy of every row with year = 0 for 
+> "pool"
+(33,019 observations created)
+
+. replace year = 0 if copy == 1
+(33,019 real changes made)
+
+. collapse (sum) n_firms n_with_energy = has_energy ///
+>          (mean) sh_coal sh_oil sh_gas sh_pln sh_nonpln sh_bio sh_elec, by(yea
+> r)
+
+. generate period = cond(year == 0, "pool", string(year))
+
+. order period n_firms n_with_energy
+
+. drop year
+
+. list period n_with_energy sh_coal sh_oil sh_gas sh_elec sh_bio, clean noobs
+
+    period   n_with~y     sh_coal      sh_oil      sh_gas     sh_elec      sh_b
+> io  
+      pool      32530   6.9774279   41.766725   9.1726489   41.977049   .106149
+> 58  
+      2010       2278   3.1307871   53.882177   4.9085238   38.078512          
+>  0  
+      2011       2307   4.2607713   52.353603   6.2773073   37.108319          
+>  0  
+      2012       2323   3.6259592   53.921827   6.4446651   36.007548          
+>  0  
+      2013       2330   4.4644124   50.883435    7.396175   37.255977          
+>  0  
+      2014       2405   5.2677242   48.335002   7.8092803   38.587994          
+>  0  
+      2015       2584   4.5550708   49.673795   7.9548017   37.816332          
+>  0  
+      2017       3303   9.7327435   40.207617   9.6416925   40.417947          
+>  0  
+      2018       2965   7.8025479   38.353766   10.560952   43.282734          
+>  0  
+      2019       2992   9.1825933   40.493351   9.2237896   41.100266          
+>  0  
+      2020       2891   10.633988   29.019113   11.925832   48.421068          
+>  0  
+      2021       3045   10.038258   27.056834    13.36749   48.961725   .575692
+> 59  
+      2022       3107   7.3010469   29.856302   11.343236   50.952244   .547171
+> 48  
+
+. export excel using "$B205_XLSX", sheet("t02_mix_mean", replace) firstrow(vari
+> ables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-05-energy-mix
+> /output/b2_05_tables.xlsx saved
+
+. 
+. * ---- B. aggregate shares: all firms' GJ per source / all firms' GJ ------
+. use "$B205_DATA/b205_mix.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if has_energy == 1
+(489 observations deleted)
+
+. expand 2, generate(copy)
+(32,530 observations created)
+
+. replace year = 0 if copy == 1
+(32,530 real changes made)
+
+. collapse (sum) gj_c_coal gj_c_oil gj_c_gas gj_c_pln gj_c_nonpln gj_c_bio gj_m
+> ix, by(year)
+
+. foreach c in coal oil gas pln nonpln bio {
+  2.     generate agg_sh_`c' = 100 * gj_c_`c' / gj_mix
+  3. }
+
+. generate period = cond(year == 0, "pool", string(year))
+
+. order period gj_mix agg_sh_*
+
+. keep  period gj_mix agg_sh_* gj_c_*
+
+. list period agg_sh_*, clean noobs
+
+    period   agg_sh~al   agg_sh~il   agg_sh_~s   agg_~_pln   agg_~npln   agg_sh
+> _~o  
+      pool   45.785527   17.078048   17.735964   18.015774   1.3650368   .01964
+> 986  
+      2010   24.112537   43.719445   4.3422135   25.895812   1.9299928         
+>   0  
+      2011   45.775298   24.453024   3.5143545   24.954304   1.3030203         
+>   0  
+      2012   31.973089    48.90677    3.563475   14.601273   .95539358         
+>   0  
+      2013   72.482156    16.59234   3.1753072   7.1131084   .63708815         
+>   0  
+      2014   51.602958   21.972324   5.2193396   20.121561    1.083818         
+>   0  
+      2015   38.080466   29.056001   4.5378089   25.735904   2.5898197         
+>   0  
+      2017   31.924244   19.870128   13.388747   32.726832   2.0900483         
+>   0  
+      2018   18.219286   30.260236   17.704166   31.747362   2.0689499         
+>   0  
+      2019   24.335439   30.107108   12.388796   31.754735   1.4139222         
+>   0  
+      2020   50.344366   2.2709758   37.636419   9.2921487   .45609105         
+>   0  
+      2021   31.732558   10.059529   29.248978   25.914254   2.9317112   .11296
+> 963  
+      2022   60.946812   6.5680097   16.910428   13.827749   1.6544183   .09258
+> 213  
+
+. export excel using "$B205_XLSX", sheet("t02_mix_aggregate", replace) firstrow
+> (variables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-05-energy-mix
+> /output/b2_05_tables.xlsx saved
+
+. 
+. * ---- C. distribution of each share (firms with energy) ------------------
+. use "$B205_DATA/b205_mix.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if has_energy == 1
+(489 observations deleted)
+
+. do "$B205/_sumstats.do" "sh_coal sh_oil sh_gas sh_pln sh_nonpln sh_elec sh_bi
+> o gj_mix ln_gj_mix" "" "t02_share_stats"
+
+. /*==========================================================================
+>   _sumstats.do -- helper: descriptive statistics table, POOLED + BY YEAR
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B205/_sumstats.do" "sh_coal sh_oil" "class" "t02_share_stats"
+> 
+>       argument 1 = list of variables
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b2_05_tables.xlsx (max 31 characters)
+> 
+>   Result: 1 row = variable x group x period (pool, 2010, 2011, ...)
+>           columns n mean sd p10 p25 p50 p75 p90 min max
+>   Rows with a missing group are not counted.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars grp sheet
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+
+. local first 1
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     local grp all
+. }
+
+. foreach v of local vars {
+  2.     foreach period in pool year {
+  3.         preserve
+  4.         keep `v' `grp' year
+  5.         keep if !missing(`v') & !missing(`grp')
+  6.         if _N > 0 {
+  7.             if "`period'" == "pool" replace year = 0
+  8.             collapse (count) n = `v' (mean) mean = `v' (sd) sd = `v' ///
+>                      (p10) p10 = `v' (p25) p25 = `v' (p50) p50 = `v' ///
+>                      (p75) p75 = `v' (p90) p90 = `v' (min) min = `v' (max) ma
+> x = `v', ///
+>                      by(`grp' year)
+  9.             generate str32 variable = "`v'"
+ 10.             if `first' == 0 append using `result'
+ 11.             save `result', replace
+ 12.             local first 0
+ 13.         }
+ 14.         restore
+ 15.     }
+ 16. }
+(0 observations deleted)
+(32,530 real changes made)
+(file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 not
+    found)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+(32,530 real changes made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+(32,530 real changes made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+(32,530 real changes made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+(32,530 real changes made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+(32,530 real changes made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+(32,530 real changes made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+(32,530 real changes made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+(32,530 real changes made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. 
+. use `result', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * the group is written as text using its value label (if it has one)
+. capture decode `grp', generate(group)
+
+. if _rc generate group = string(`grp')
+
+. * keep the variables in the order they were listed
+. generate variable_order = .
+(117 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+
+. sort variable_order `grp' year
+
+. keep variable group period n mean sd p10 p25 p50 p75 p90 min max
+
+. export excel using "$B205_XLSX", sheet("`sheet'", replace) firstrow(variables
+> )
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-05-energy-mix
+> /output/b2_05_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t02_share_stats (117 rows)
+
+. use `original', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+end of do-file
+
+. 
+. * ---- D. self generation -----------------------------------------------
+. use "$B205_DATA/b205_mix.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if !missing(owngen)
+(2,123 observations deleted)
+
+. generate n_firms = 1
+
+. generate sh_owngen_if_any = sh_owngen_elec if owngen == 1
+(21,106 missing values generated)
+
+. expand 2, generate(copy)
+(30,896 observations created)
+
+. replace year = 0 if copy == 1
+(30,896 real changes made)
+
+. collapse (sum) n_firms n_owngen = owngen gj_elec_owngen gj_elec_all ///
+>          (mean) mean_sh_owngen = sh_owngen_if_any (p50) med_sh_owngen = sh_ow
+> ngen_if_any, by(year)
+
+. generate pct_owngen = 100 * n_owngen / n_firms
+
+. generate agg_sh_owngen = 100 * gj_elec_owngen / gj_elec_all
+
+. generate period = cond(year == 0, "pool", string(year))
+
+. order period n_firms n_owngen pct_owngen mean_sh_owngen med_sh_owngen agg_sh_
+> owngen
+
+. keep  period n_firms n_owngen pct_owngen mean_sh_owngen med_sh_owngen agg_sh_
+> owngen
+
+. label variable mean_sh_owngen "Mean own generation as % of electricity, own g
+> enerators only"
+
+. list, clean noobs
+
+    period   n_firms   n_owngen   pct_own~n   mean_sh~n   med_sh_~n   agg_sh_~n
+>   
+      pool     30896       9790    31.68695   22.191857   6.6365867   19.904801
+>   
+      2010      2334        384   16.452442   39.068453   21.165024   19.396862
+>   
+      2011      2337        408    17.45828   39.064998    24.56365   14.659341
+>   
+      2012      2359        458   19.415006   37.791253   24.192886   52.469265
+>   
+      2013      2368        531   22.423986   34.568261   19.435466   18.536043
+>   
+      2014      1383        544   39.334779   39.758082    27.15091   18.413345
+>   
+      2015      1575        650   41.269841    33.95327   18.600818   31.259685
+>   
+      2017      3357       1678   49.985106     18.9397   6.9227989   7.7734738
+>   
+      2018      3010       1423   47.275748    14.55463   4.5402444   9.5835655
+>   
+      2019      3007       1408   46.824077   18.981617   6.8843166    12.35386
+>   
+      2020      2935        857   29.199319   10.388416   2.4124416   6.6300447
+>   
+      2021      3075        815   26.504065   10.925965   1.4886495   6.4062431
+>   
+      2022      3156        634    20.08872   15.661844   1.3519769   37.452309
+>   
+
+. export excel using "$B205_XLSX", sheet("t02_self_generation", replace) firstr
+> ow(variables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-05-energy-mix
+> /output/b2_05_tables.xlsx saved
+
+. 
+. * ---- E. biomass, shown apart (unit not settled) -----------------------
+. * What would biomass's share of the firm's energy be, if the column is kg
+. * (0.0116 GJ per kg) or if it is tonnes (11.6 GJ per tonne)? 11.6 GJ/t is the
+. * IPCC 2006 default for other primary solid biomass. The answer decides
+. * whether a firm is biomass-dominant.
+. use "$B205_DATA/b205_mix.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if year >= 2020
+(23,853 observations deleted)
+
+. generate bio_reporter = (biomass_qty > 0) if !missing(biomass_qty)
+
+. generate gj_bio_if_kg = biomass_qty * 0.0116 if bio_reporter == 1
+(7,694 missing values generated)
+
+. generate gj_bio_if_t  = biomass_qty * 11.6   if bio_reporter == 1
+(7,694 missing values generated)
+
+. generate dom_if_kg = (gj_bio_if_kg / (gj_mix + gj_bio_if_kg) >= 0.5) if bio_r
+> eporter == 1
+(7,694 missing values generated)
+
+. generate dom_if_t  = (gj_bio_if_t  / (gj_mix + gj_bio_if_t)  >= 0.5) if bio_r
+> eporter == 1
+(7,694 missing values generated)
+
+. generate qty_if_reporter = biomass_qty if bio_reporter == 1
+(7,694 missing values generated)
+
+. generate n_firms = 1
+
+. expand 2, generate(copy)
+(9,166 observations created)
+
+. replace year = 0 if copy == 1
+(9,166 real changes made)
+
+. collapse (sum) n_firms n_reporters = bio_reporter n_dom_if_kg = dom_if_kg n_d
+> om_if_t = dom_if_t ///
+>          (p50) med_qty = qty_if_reporter, by(year)
+
+. generate pct_reporters    = 100 * n_reporters / n_firms
+
+. generate pct_dom_if_kg    = 100 * n_dom_if_kg / n_reporters
+
+. generate pct_dom_if_tonne = 100 * n_dom_if_t / n_reporters
+
+. generate period = cond(year == 0, "pool 2020-22", string(year))
+
+. order period n_firms n_reporters pct_reporters med_qty pct_dom_if_kg pct_dom_
+> if_tonne
+
+. keep  period n_firms n_reporters pct_reporters med_qty pct_dom_if_kg pct_dom_
+> if_tonne
+
+. list, clean noobs
+
+          period   n_firms   n_repo~s   pct_rep~s     med_qty   pct_dom~g   pct
+> _dom~e  
+    pool 2020-22      9166       1472    16.05935   20650.146    34.23913   99.
+> 048913  
+            2020      2935        651   22.180579   17496.084   33.640553   99.
+> 385561  
+            2021      3075        503   16.357724   21698.389   35.188867   98.
+> 807157  
+            2022      3156        318   10.076046   25417.367   33.962264   98.
+> 742138  
+
+. export excel using "$B205_XLSX", sheet("t02_biomass", replace) firstrow(varia
+> bles)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-05-energy-mix
+> /output/b2_05_tables.xlsx saved
+
+. 
+end of do-file
+
+######## B2-05: 03_classify ########
+
+. /*==========================================================================
+>   Line 3: "Classify firm menjadi coal-intensive, oil intensive, gas intensive
+> ,
+>            electricity intensive, mixed."
+>   Data  : data/b205_mix.dta (from 02), firms with energy > 0
+>   Output: data/b205_class.dta  -- 1 row = 1 firm x year, with its class
+>   Output sheets:
+>     t03_class_by_year   number and % of firms per class, pool + by year
+>     t03_class_profile   per class (pooled): mean share of each source, and
+>                         % large, FDI, exporter, importer, Java, own generatio
+> n
+> 
+>   RULE (decided 9 Oct): a firm is X-intensive if source X supplies >= 50% of
+>   its GJ (the six sources of line 2), otherwise "mixed".
+>     electricity = PLN + non-PLN electricity bought
+>     biofuel     = biodiesel. Not in the to-do list, so it gets its own class
+>                   ("Biofuel-intensive") instead of hiding in "mixed".
+>   Self generation and biomass are not in the GJ (see 02), so they cannot
+>   decide a class. A firm that makes its own power from diesel shows up as
+>   oil-intensive, which is what it is.
+>   Change the 50 in "local cut 50" below to try another threshold.
+>   NOTE: the 2020 form adds diesel oil, fuel oil and natural gas, so part of
+>   the change in classes in 2020 is the form, not the firms.
+> ==========================================================================*/
+. if "$B205" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. local cut 50
+
+. 
+. use "$B205_DATA/b205_mix.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if has_energy == 1
+(489 observations deleted)
+
+. 
+. generate class = 6
+
+. replace  class = 1 if sh_coal >= `cut'
+(2,132 real changes made)
+
+. replace  class = 2 if sh_oil  >= `cut'
+(12,906 real changes made)
+
+. replace  class = 3 if sh_gas  >= `cut'
+(2,281 real changes made)
+
+. replace  class = 4 if sh_elec >= `cut'
+(12,450 real changes made)
+
+. replace  class = 5 if sh_bio  >= `cut'
+(23 real changes made)
+
+. label define class 1 "Coal-intensive" 2 "Oil-intensive" 3 "Gas-intensive" ///
+>                    4 "Electricity-intensive" 5 "Biofuel-intensive" 6 "Mixed"
+
+. label values class class
+
+. label variable class "Main energy source (>= `cut'% of GJ), else mixed"
+
+. * high-carbon = coal- or oil-intensive (used by the transition matrix, line 4
+> )
+. generate high_carbon = inlist(class, 1, 2)
+
+. label define high_carbon 0 "Not high-carbon" 1 "High-carbon (coal/oil)"
+
+. label values high_carbon high_carbon
+
+. 
+. * two sources at exactly 50/50 would both qualify; the later line wins
+. count if (sh_coal >= `cut') + (sh_oil >= `cut') + (sh_gas >= `cut') + (sh_ele
+> c >= `cut') + (sh_bio >= `cut') > 1
+  0
+
+. display as result "Firm-years with two sources at exactly 50%: " r(N)
+Firm-years with two sources at exactly 50%: 0
+
+. tabulate year class, row nofreq
+
+  Calendar |
+     year: |
+ 2010-2015 |
+       and |
+2017-2022; |
+      2016 |
+unavailabl |     Main energy source (>= 50% of GJ), else mixed
+         e | Coal-inte  Oil-inten  Gas-inten  Electrici  Biofuel-i |     Total
+-----------+-------------------------------------------------------+----------
+      2010 |      3.16      55.88       4.13      34.20       0.00 |    100.00 
+      2011 |      4.46      54.36       5.33      32.64       0.00 |    100.00 
+      2012 |      3.57      56.56       5.42      30.95       0.00 |    100.00 
+      2013 |      4.46      52.96       6.48      32.23       0.00 |    100.00 
+      2014 |      5.53      48.69       6.99      35.18       0.00 |    100.00 
+      2015 |      4.61      50.08       6.62      33.28       0.00 |    100.00 
+      2017 |      7.51      34.39       4.84      34.00       0.00 |    100.00 
+      2018 |      6.34      33.02       6.61      40.10       0.00 |    100.00 
+      2019 |      8.56      36.60       5.55      35.13       0.00 |    100.00 
+      2020 |      9.41      23.45       8.92      48.60       0.00 |    100.00 
+      2021 |     10.44      21.94      11.46      46.90       0.39 |    100.00 
+      2022 |      7.60      26.07      10.27      49.76       0.35 |    100.00 
+-----------+-------------------------------------------------------+----------
+     Total |      6.55      39.67       7.01      38.27       0.07 |    100.00 
+
+
+  Calendar |
+     year: |    Main
+ 2010-2015 |   energy
+       and | source (>=
+2017-2022; |   50% of
+      2016 | GJ), else
+unavailabl |   mixed
+         e |     Mixed |     Total
+-----------+-----------+----------
+      2010 |      2.63 |    100.00 
+      2011 |      3.21 |    100.00 
+      2012 |      3.49 |    100.00 
+      2013 |      3.86 |    100.00 
+      2014 |      3.62 |    100.00 
+      2015 |      5.42 |    100.00 
+      2017 |     19.26 |    100.00 
+      2018 |     13.93 |    100.00 
+      2019 |     14.17 |    100.00 
+      2020 |      9.62 |    100.00 
+      2021 |      8.87 |    100.00 
+      2022 |      5.95 |    100.00 
+-----------+-----------+----------
+     Total |      8.42 |    100.00 
+
+. save "$B205_DATA/b205_class.dta", replace
+(file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-05-energy-mi
+    > x/data/b205_class.dta not found)
+file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-05-energy-mi
+    > x/data/b205_class.dta saved
+
+. 
+. * ---- A. firms per class, pool + by year ----------------------------------
+. generate n_firms = 1
+
+. expand 2, generate(copy)              // copy of every row with year = 0 for 
+> "pool"
+(32,530 observations created)
+
+. replace year = 0 if copy == 1
+(32,530 real changes made)
+
+. collapse (sum) n_firms, by(class year)
+
+. bysort year: egen total = total(n_firms)
+
+. generate pct_firms = 100 * n_firms / total
+
+. generate period = cond(year == 0, "pool", string(year))
+
+. sort year class
+
+. order period class n_firms pct_firms
+
+. drop year total
+
+. list if period == "pool", clean noobs
+
+    period                   class   n_firms   pct_firms  
+      pool          Coal-intensive      2132   6.5539502  
+      pool           Oil-intensive     12906   39.674147  
+      pool           Gas-intensive      2281   7.0119889  
+      pool   Electricity-intensive     12450   38.272364  
+      pool       Biofuel-intensive        23   .07070397  
+      pool                   Mixed      2738    8.416846  
+
+. export excel using "$B205_XLSX", sheet("t03_class_by_year", replace) firstrow
+> (variables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-05-energy-mix
+> /output/b2_05_tables.xlsx saved
+
+. 
+. * ---- B. what each class looks like (pooled) ------------------------------
+. use "$B205_DATA/b205_class.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. generate n_firms = 1
+
+. collapse (sum) n_firms (mean) sh_coal sh_oil sh_gas sh_pln sh_nonpln sh_bio /
+> //
+>          pct_large = large pct_fdi = fdi pct_exporter = exporter pct_importer
+>  = importer ///
+>          pct_java = java pct_owngen = owngen (p50) med_workers = workers, by(
+> class)
+
+. foreach v in pct_large pct_fdi pct_exporter pct_importer pct_java pct_owngen 
+> {
+  2.     replace `v' = 100 * `v'
+  3. }
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+
+. list class n_firms sh_coal sh_oil sh_gas sh_pln, clean noobs
+
+                    class   n_firms     sh_coal      sh_oil      sh_gas      sh
+> _pln  
+           Coal-intensive      2132    75.17661   6.8187413   2.9548139   14.64
+> 7675  
+            Oil-intensive     12906   .81388557   80.895861   2.0693194   15.78
+> 1097  
+            Gas-intensive      2281   .86935183   9.6960141   73.631246   14.90
+> 1496  
+    Electricity-intensive     12450    1.137711   15.609594   3.0055109   76.87
+> 4734  
+        Biofuel-intensive        23           0   7.0275096   1.6334736   11.75
+> 5448  
+                    Mixed      2738   14.626624   30.487338   21.903183   31.37
+> 6644  
+
+. export excel using "$B205_XLSX", sheet("t03_class_profile", replace) firstrow
+> (variables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-05-energy-mix
+> /output/b2_05_tables.xlsx saved
+
+. 
+end of do-file
+
+######## B2-05: 04_transition_matrix ########
+
+. /*==========================================================================
+>   Line 4: "Buat transition matrix 2010-22 dan cek siapa yg successfully
+>            switch keluar dari high carbon fuel dan siapa yg ttp carbon-locked
+> ."
+>   Data  : data/b205_class.dta (from 03), linked over years by firm_id
+>   Output: data/b205_pairs.dta        1 row = firm x wave and its class next w
+> ave
+>           data/b205_firm_status.dta  1 row = firm, class in first and last wa
+> ve
+>   Output sheets:
+>     t04_matrix          class this wave (rows) x class next wave (columns), r
+> ow %,
+>                         pool + per wave pair (2015 -> 2017 counts as one step
+> )
+>     t04_switch_rate     among high-carbon firms: % switched out vs % locked
+>                         next wave; and % of other firms moving INTO high-carb
+> on
+>     t04_matrix_long     class in the firm's first wave x class in its last wa
+> ve
+>                         (the 2010-22 matrix; firms seen in >= 2 waves)
+>     t04_who_switches    switched out vs carbon-locked (first -> last wave):
+>                         who are they, measured in their first wave
+> 
+>   Definitions:
+>     high-carbon      = coal-intensive or oil-intensive (line 3)
+>     switched out     = high-carbon in the first wave, not in the last wave
+>     carbon-locked    = high-carbon in the first wave AND in the last wave
+>   Only firms with energy > 0 have a class; a wave without energy is skipped,
+>   so a "next wave" pair needs the firm classified in two consecutive waves.
+> 
+>   WARNING: firm_id links across years are FICTIONAL in the development data
+>   (block 0: panel_id_synthetic = 1). The code runs, but the switching numbers
+>   only mean something on the real BPS data.
+>   NOTE: 2019 -> 2020 crosses the new 2020 fuel list (diesel oil, fuel oil,
+>   natural gas added). Read that pair with care.
+>   NOTE: "electricity-intensive" is not zero-carbon: Indonesian grid power is
+>   mostly coal-fired. Here it counts as "out of high-carbon fuel" because the
+>   firm no longer burns the fuel itself.
+> ==========================================================================*/
+. if "$B205" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. 
+. * ---- wave pairs: this wave and the next one ------------------------------
+. use "$B205_DATA/b205_class.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if !missing(firm_id)
+(0 observations deleted)
+
+. sort firm_id year
+
+. by firm_id: generate next_year  = year[_n + 1]
+(10,245 missing values generated)
+
+. by firm_id: generate class_next = class[_n + 1]
+(10,245 missing values generated)
+
+. * the next wave is year + 1, except 2015 -> 2017 (there is no 2016)
+. generate step = (next_year == year + 1) | (year == 2015 & next_year == 2017)
+
+. keep if step == 1
+(10,338 observations deleted)
+
+. label values class_next class
+
+. generate high_next = inlist(class_next, 1, 2)
+
+. generate pair = string(year) + "-" + string(next_year)
+
+. count
+  22,192
+
+. display as result "Firm wave pairs with a class in both waves: " r(N)
+Firm wave pairs with a class in both waves: 22192
+
+. save "$B205_DATA/b205_pairs.dta", replace
+(file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-05-energy-mi
+    > x/data/b205_pairs.dta not found)
+file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-05-energy-mi
+    > x/data/b205_pairs.dta saved
+
+. 
+. * ---- A. transition matrix, pool + per wave pair --------------------------
+. generate n = 1
+
+. expand 2, generate(copy)              // copy of every row as "pool"
+(22,192 observations created)
+
+. replace pair = "pool" if copy == 1
+(22,192 real changes made)
+
+. collapse (sum) n, by(pair class class_next)
+
+. bysort pair class: egen n_from = total(n)
+
+. generate pct = 100 * n / n_from
+
+. drop n
+
+. reshape wide pct, i(pair class n_from) j(class_next)
+(j = 1 2 3 4 5 6)
+
+Data                               Long   ->   Wide
+-----------------------------------------------------------------------------
+Number of observations              313   ->   62          
+Number of variables                   5   ->   9           
+j variable (6 values)        class_next   ->   (dropped)
+xij variables:
+                                    pct   ->   pct1 pct2 ... pct6
+-----------------------------------------------------------------------------
+
+. * a missing cell means no firm made that move -> 0
+. foreach k in 1 2 3 4 5 6 {
+  2.     capture generate pct`k' = 0
+  3.     replace pct`k' = 0 if missing(pct`k')
+  4. }
+(2 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(54 real changes made)
+(3 real changes made)
+
+. rename (pct1 pct2 pct3 pct4 pct5 pct6) (to_coal to_oil to_gas to_elec to_biof
+> uel to_mixed)
+
+. generate pool = (pair == "pool")
+
+. sort pool pair class
+
+. rename class from_class
+
+. order pair from_class n_from to_coal to_oil to_gas to_elec to_biofuel to_mixe
+> d
+
+. drop pool
+
+. list if pair == "pool", clean noobs
+
+    pair              from_class   n_from     to_coal      to_oil      to_gas  
+>    to_elec   to_biof~l    to_mixed  
+    pool          Coal-intensive     1599   40.087555   21.513446   6.6916823  
+>   21.95122           0   9.7560976  
+    pool           Oil-intensive     9073   4.5409457   56.420148   7.2743304  
+>  24.115508   .03306514   7.6160035  
+    pool           Gas-intensive     1604   6.4214464   36.471322   24.750623  
+>  22.007481   .12468828   10.224439  
+    pool   Electricity-intensive     7859   4.9370149    23.11999   5.0133605  
+>  59.320524   .06362133   7.5454892  
+    pool       Biofuel-intensive        8           0          75        12.5  
+>       12.5           0           0  
+    pool                   Mixed     2049   7.4670571   26.549536   9.6632504  
+>  34.407028           0   21.913128  
+
+. export excel using "$B205_XLSX", sheet("t04_matrix", replace) firstrow(variab
+> les)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-05-energy-mix
+> /output/b2_05_tables.xlsx saved
+
+. 
+. * ---- B. switch-out rate, pool + per wave pair ----------------------------
+. use "$B205_DATA/b205_pairs.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. generate switched_out = (high_carbon == 1 & high_next == 0) if high_carbon ==
+>  1
+(11,520 missing values generated)
+
+. generate locked       = (high_carbon == 1 & high_next == 1) if high_carbon ==
+>  1
+(11,520 missing values generated)
+
+. generate moved_in     = (high_next == 1) if high_carbon == 0
+(10,672 missing values generated)
+
+. generate n_pairs = 1
+
+. expand 2, generate(copy)
+(22,192 observations created)
+
+. replace pair = "pool" if copy == 1
+(22,192 real changes made)
+
+. collapse (sum) n_pairs n_high = high_carbon ///
+>          (mean) pct_switched_out = switched_out pct_locked = locked pct_moved
+> _in = moved_in, by(pair)
+
+. foreach v in pct_switched_out pct_locked pct_moved_in {
+  2.     replace `v' = 100 * `v'
+  3. }
+(12 real changes made)
+(12 real changes made)
+(12 real changes made)
+
+. label variable pct_moved_in "% of NOT high-carbon firms that are high-carbon 
+> next wave"
+
+. generate pool = (pair == "pool")
+
+. sort pool pair
+
+. drop pool
+
+. list, clean noobs
+
+         pair   n_pairs   n_high   pct_swi~t   pct_loc~d   pct_mov~n  
+    2010-2011      1739     1050   30.095238   69.904762   43.251089  
+    2011-2012      1770     1052   28.992395   71.007605   44.150418  
+    2012-2013      1748     1057    31.03122    68.96878   38.494935  
+    2013-2014      1747     1017   34.119961   65.880039   35.479452  
+    2014-2015      1841     1007   31.876862   68.123138   41.247002  
+    2015-2017      2009     1122   48.841355   51.158645   33.258174  
+    2017-2018      2345      993    46.12286    53.87714   26.775148  
+    2018-2019      2242      865   39.075145   60.924855   35.003631  
+    2019-2020      2176      980    52.44898    47.55102   22.240803  
+    2020-2021      2254      750   48.533333   51.466667   24.202128  
+    2021-2022      2321      779   40.693196   59.306804   22.243839  
+         pool     22192    10672   38.943028   61.056972   31.215278  
+
+. export excel using "$B205_XLSX", sheet("t04_switch_rate", replace) firstrow(v
+> ariables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-05-energy-mix
+> /output/b2_05_tables.xlsx saved
+
+. 
+. * ---- C. first wave x last wave per firm (the 2010-22 matrix) -------------
+. use "$B205_DATA/b205_class.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if !missing(firm_id)
+(0 observations deleted)
+
+. sort firm_id year
+
+. by firm_id: generate n_waves = _N
+
+. keep if n_waves >= 2
+(4,837 observations deleted)
+
+. by firm_id: generate first_year  = year[1]
+
+. by firm_id: generate last_year   = year[_N]
+
+. by firm_id: generate class_last  = class[_N]
+
+. by firm_id: keep if _n == 1               // keep the first wave: its class a
+> nd characteristics
+(22,285 observations deleted)
+
+. rename class class_first
+
+. label values class_last class
+
+. generate high_first = inlist(class_first, 1, 2)
+
+. generate high_last  = inlist(class_last, 1, 2)
+
+. generate status = .
+(5,408 missing values generated)
+
+. replace  status = 1 if high_first == 1 & high_last == 0
+(1,358 real changes made)
+
+. replace  status = 2 if high_first == 1 & high_last == 1
+(1,367 real changes made)
+
+. replace  status = 3 if high_first == 0 & high_last == 1
+(799 real changes made)
+
+. replace  status = 4 if high_first == 0 & high_last == 0
+(1,884 real changes made)
+
+. label define status 1 "Switched out" 2 "Carbon-locked" 3 "Moved into high-car
+> bon" 4 "Never high-carbon"
+
+. label values status status
+
+. tabulate status
+
+                status |      Freq.     Percent        Cum.
+-----------------------+-----------------------------------
+          Switched out |      1,358       25.11       25.11
+         Carbon-locked |      1,367       25.28       50.39
+Moved into high-carbon |        799       14.77       65.16
+     Never high-carbon |      1,884       34.84      100.00
+-----------------------+-----------------------------------
+                 Total |      5,408      100.00
+
+. save "$B205_DATA/b205_firm_status.dta", replace
+(file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-05-energy-mi
+    > x/data/b205_firm_status.dta not found)
+file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-05-energy-mi
+    > x/data/b205_firm_status.dta saved
+
+. 
+. generate n = 1
+
+. collapse (sum) n, by(class_first class_last)
+
+. bysort class_first: egen n_from = total(n)
+
+. generate pct = 100 * n / n_from
+
+. drop n
+
+. reshape wide pct, i(class_first n_from) j(class_last)
+(j = 1 2 3 4 5 6)
+
+Data                               Long   ->   Wide
+-----------------------------------------------------------------------------
+Number of observations               30   ->   6           
+Number of variables                   4   ->   8           
+j variable (6 values)        class_last   ->   (dropped)
+xij variables:
+                                    pct   ->   pct1 pct2 ... pct6
+-----------------------------------------------------------------------------
+
+. foreach k in 1 2 3 4 5 6 {
+  2.     capture generate pct`k' = 0
+  3.     replace pct`k' = 0 if missing(pct`k')
+  4. }
+(1 real change made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(4 real changes made)
+(1 real change made)
+
+. rename (pct1 pct2 pct3 pct4 pct5 pct6) (to_coal to_oil to_gas to_elec to_biof
+> uel to_mixed)
+
+. order class_first n_from
+
+. list, clean noobs
+
+              class_first   n_from     to_coal      to_oil      to_gas     to_e
+> lec   to_biof~l    to_mixed  
+           Coal-intensive      272   25.367647   22.426471   8.4558824   33.088
+> 235           0   10.661765  
+            Oil-intensive     2453   5.5442316   44.883816   7.9902161   35.670
+> 607   .12229923     5.78883  
+            Gas-intensive      284   7.0422535   28.873239   17.957746   39.084
+> 507           0   7.0422535  
+    Electricity-intensive     2013   6.1102832   23.546945   6.4083458   57.128
+> 664    .1987084   6.6070541  
+        Biofuel-intensive        5           0          60          20         
+>  20           0           0  
+                    Mixed      381   6.5616798   18.897638   11.548556   47.506
+> 562           0   15.485564  
+
+. export excel using "$B205_XLSX", sheet("t04_matrix_long", replace) firstrow(v
+> ariables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-05-energy-mix
+> /output/b2_05_tables.xlsx saved
+
+. 
+. * ---- D. who switched out and who stayed locked ---------------------------
+. * firms that were high-carbon in their first wave; characteristics of that wa
+> ve
+. use "$B205_DATA/b205_firm_status.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if inlist(status, 1, 2)
+(2,683 observations deleted)
+
+. generate n_firms = 1
+
+. generate start_coal = (class_first == 1)
+
+. generate years_seen = last_year - first_year
+
+. collapse (sum) n_firms (mean) pct_start_coal = start_coal pct_large = large p
+> ct_fdi = fdi ///
+>          pct_exporter = exporter pct_importer = importer pct_java = java pct_
+> owngen = owngen ///
+>          sh_elec_first = sh_elec mean_years_seen = years_seen ///
+>          (p50) med_workers = workers med_va_pw = va_pw, by(status)
+
+. foreach v in pct_start_coal pct_large pct_fdi pct_exporter pct_importer pct_j
+> ava pct_owngen {
+  2.     replace `v' = 100 * `v'
+  3. }
+(2 real changes made)
+(2 real changes made)
+(2 real changes made)
+(2 real changes made)
+(2 real changes made)
+(2 real changes made)
+(2 real changes made)
+
+. list status n_firms pct_start_coal pct_large pct_fdi pct_exporter pct_java, c
+> lean noobs
+
+           status   n_firms   pct_sta~l       pct_large     pct_fdi   pct_expor
+> ~r      pct_java  
+     Switched out      1358   10.456554   25.4786450663   7.4558032   17.183770
+> 88   85.49337261  
+    Carbon-locked      1367   9.5098756   29.4074615947   6.4737243   15.695067
+> 26   68.10534016  
+
+. export excel using "$B205_XLSX", sheet("t04_who_switches", replace) firstrow(
+> variables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-05-energy-mix
+> /output/b2_05_tables.xlsx saved
+
+. 
+end of do-file
+
+######## B2-05: 05_figures_by_sector ########
+
+. /*==========================================================================
+>   Line 5: "Grafik by sectors"
+>   This line is also the block's figures file, so it runs LAST in 00_run.do.
+>   Part A builds the by-sector tables (KBLI 2-digit). Part B draws every chart
+>   FROM the Excel sheets, so a chart always matches its table, and writes the
+>   exact plotted points of each chart to a sheet figNN_data.
+> 
+>   Data  : data/b205_mix.dta (02), b205_class.dta (03), b205_pairs.dta (04)
+>   Output sheets (part A):
+>     t05_mix_by_kbli2     mean firm share (%) of each source, per sector,
+>                          pool + by year
+>     t05_class_by_kbli2   % of firms per class, per sector, pool + by year
+>     t05_switch_by_kbli2  high-carbon firms: % switched out / locked next wave
+> ,
+>                          per sector (pooled wave pairs)
+>   Charts (output/):
+>     fig02_energy_mix_by_year.png   mean firm energy mix, by year (line 2)
+>     fig03_class_by_year.png        % of firms per class, by year (line 3)
+>     fig04_switch_rate.png          switch-out and move-in rates per wave pair
+>  (line 4)
+>     fig05_mix_by_sector.png        energy mix per sector, pooled
+>     fig05_class_by_sector.png      classes per sector, pooled
+>     fig05_switch_by_sector.png     switch-out rate per sector, pooled
+>   NOTE: pooled sector charts mix the pre- and post-2020 forms (the 2020 form
+>   added diesel oil, fuel oil and natural gas). The yearly rows are in the tab
+> les.
+>   NOTE: fig04 and fig05_switch use firm_id links, which are FICTIONAL in the
+>   development data.
+> ==========================================================================*/
+. if "$B205" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. 
+. * KBLI 2-digit names for the sector tables and charts. Kept in a local becaus
+> e
+. * "use ..., clear" drops label definitions; "label define kbli2 `kbli2lab'"
+. * is repeated after each collapse below.
+. local kbli2lab `"10 "10 Food" 11 "11 Beverages" 12 "12 Tobacco" 13 "13 Textil
+> es" 14 "14 Apparel" 15 "15 Leather" 16 "16 Wood" 17 "17 Paper" 18 "18 Printin
+> g" 19 "19 Coke, refined petroleum" 20 "20 Chemicals" 21 "21 Pharmaceuticals" 
+> 22 "22 Rubber, plastics" 23 "23 Non-metallic minerals" 24 "24 Basic metals" 2
+> 5 "25 Metal products" 26 "26 Electronics" 27 "27 Electrical equipment" 28 "28
+>  Machinery" 29 "29 Motor vehicles" 30 "30 Other transport" 31 "31 Furniture" 
+> 32 "32 Other manufacturing" 33 "33 Repair, installation""'
+
+. 
+. * ======================= A. tables by sector ==============================
+. 
+. * ---- energy mix per sector ----
+. use "$B205_DATA/b205_mix.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if has_energy == 1 & !missing(kbli2)
+(489 observations deleted)
+
+. generate n_firms = 1
+
+. expand 2, generate(copy)              // copy of every row with year = 0 for 
+> "pool"
+(32,530 observations created)
+
+. replace year = 0 if copy == 1
+(32,530 real changes made)
+
+. collapse (sum) n_firms (mean) sh_coal sh_oil sh_gas sh_pln sh_nonpln sh_bio s
+> h_elec, by(kbli2 year)
+
+. label define kbli2 `kbli2lab', replace
+
+. label values kbli2 kbli2
+
+. generate period = cond(year == 0, "pool", string(year))
+
+. sort kbli2 year
+
+. order kbli2 period n_firms
+
+. drop year
+
+. export excel using "$B205_XLSX", sheet("t05_mix_by_kbli2", replace) firstrow(
+> variables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-05-energy-mix
+> /output/b2_05_tables.xlsx saved
+
+. 
+. * ---- classes per sector ----
+. use "$B205_DATA/b205_class.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if !missing(kbli2)
+(0 observations deleted)
+
+. generate n_firms = 1
+
+. generate is_coal = (class == 1)
+
+. generate is_oil  = (class == 2)
+
+. generate is_gas  = (class == 3)
+
+. generate is_elec = (class == 4)
+
+. generate is_bio  = (class == 5)
+
+. generate is_mix  = (class == 6)
+
+. generate is_high = high_carbon
+
+. expand 2, generate(copy)
+(32,530 observations created)
+
+. replace year = 0 if copy == 1
+(32,530 real changes made)
+
+. collapse (sum) n_firms (mean) pct_coal = is_coal pct_oil = is_oil pct_gas = i
+> s_gas ///
+>          pct_elec = is_elec pct_biofuel = is_bio pct_mixed = is_mix pct_high_
+> carbon = is_high, by(kbli2 year)
+
+. foreach v in pct_coal pct_oil pct_gas pct_elec pct_biofuel pct_mixed pct_high
+> _carbon {
+  2.     replace `v' = 100 * `v'
+  3. }
+(163 real changes made)
+(311 real changes made)
+(247 real changes made)
+(312 real changes made)
+(22 real changes made)
+(271 real changes made)
+(311 real changes made)
+
+. label define kbli2 `kbli2lab', replace
+
+. label values kbli2 kbli2
+
+. generate period = cond(year == 0, "pool", string(year))
+
+. sort kbli2 year
+
+. order kbli2 period n_firms
+
+. drop year
+
+. export excel using "$B205_XLSX", sheet("t05_class_by_kbli2", replace) firstro
+> w(variables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-05-energy-mix
+> /output/b2_05_tables.xlsx saved
+
+. 
+. * ---- switching out of high-carbon per sector (pooled wave pairs) ----
+. use "$B205_DATA/b205_pairs.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if high_carbon == 1 & !missing(kbli2)
+(11,520 observations deleted)
+
+. generate n_high = 1
+
+. generate switched_out = (high_next == 0)
+
+. generate locked       = (high_next == 1)
+
+. collapse (sum) n_high (mean) pct_switched_out = switched_out pct_locked = loc
+> ked, by(kbli2)
+
+. replace pct_switched_out = 100 * pct_switched_out
+(24 real changes made)
+
+. replace pct_locked       = 100 * pct_locked
+(24 real changes made)
+
+. label define kbli2 `kbli2lab', replace
+
+. label values kbli2 kbli2
+
+. export excel using "$B205_XLSX", sheet("t05_switch_by_kbli2", replace) firstr
+> ow(variables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-05-energy-mix
+> /output/b2_05_tables.xlsx saved
+
+. 
+. * ======================= B. charts from the sheets ========================
+. 
+. * ---- fig02: energy mix by year (line 2) ----
+. import excel using "$B205_XLSX", sheet("t02_mix_mean") firstrow clear
+(10 vars, 13 obs)
+
+. drop if period == "pool"
+(1 observation deleted)
+
+. keep period sh_coal sh_oil sh_gas sh_pln sh_nonpln sh_bio
+
+. export excel using "$B205_XLSX", sheet("fig02_data", replace) firstrow(variab
+> les)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-05-energy-mix
+> /output/b2_05_tables.xlsx saved
+
+. graph bar (asis) sh_coal sh_oil sh_gas sh_pln sh_nonpln sh_bio, over(period) 
+> stack ///
+>     ytitle("Mean share of the firm's energy (%)") ///
+>     legend(order(1 "Coal" 2 "Oil (diesel, petrol, fuel oil)" 3 "Gas / LPG" //
+> /
+>                  4 "Electricity PLN" 5 "Electricity non-PLN" 6 "Biodiesel") r
+> ows(2) size(small)) ///
+>     title("Firm energy mix by year") ///
+>     note("Own generation and biomass are not in the mix (see 02). No survey i
+> n 2016." ///
+>          "Diesel oil, fuel oil and natural gas are asked from 2020 only.", si
+> ze(vsmall)) ///
+>     graphregion(color(white))
+
+. graph export "$B205_OUT/fig02_energy_mix_by_year.png", replace width(2000)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-05-energy-mix
+> /output/fig02_energy_mix_by_year.png written in PNG format
+
+. 
+. * ---- fig03: classes by year (line 3) ----
+. import excel using "$B205_XLSX", sheet("t03_class_by_year") firstrow clear
+(4 vars, 68 obs)
+
+. drop if period == "pool"
+(6 observations deleted)
+
+. generate k = ""
+(62 missing values generated)
+
+. replace k = "coal"    if class == "Coal-intensive"
+variable k was str1 now str4
+(12 real changes made)
+
+. replace k = "oil"     if class == "Oil-intensive"
+(12 real changes made)
+
+. replace k = "gas"     if class == "Gas-intensive"
+(12 real changes made)
+
+. replace k = "elec"    if class == "Electricity-intensive"
+(12 real changes made)
+
+. replace k = "biofuel" if class == "Biofuel-intensive"
+variable k was str4 now str7
+(2 real changes made)
+
+. replace k = "mixed"   if class == "Mixed"
+(12 real changes made)
+
+. keep period k pct_firms
+
+. reshape wide pct_firms, i(period) j(k) string
+(j = biofuel coal elec gas mixed oil)
+
+Data                               Long   ->   Wide
+-----------------------------------------------------------------------------
+Number of observations               62   ->   12          
+Number of variables                   3   ->   7           
+j variable (6 values)                 k   ->   (dropped)
+xij variables:
+                              pct_firms   ->   pct_firmsbiofuel pct_firmscoal .
+> .. pct_firmsoil
+-----------------------------------------------------------------------------
+
+. rename pct_firms* pct_*
+
+. foreach v in pct_coal pct_oil pct_gas pct_elec pct_biofuel pct_mixed {
+  2.     capture generate `v' = 0
+  3.     replace `v' = 0 if missing(`v')
+  4. }
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+(10 real changes made)
+(0 real changes made)
+
+. order period pct_coal pct_oil pct_gas pct_elec pct_biofuel pct_mixed
+
+. export excel using "$B205_XLSX", sheet("fig03_data", replace) firstrow(variab
+> les)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-05-energy-mix
+> /output/b2_05_tables.xlsx saved
+
+. graph bar (asis) pct_coal pct_oil pct_gas pct_elec pct_biofuel pct_mixed, ove
+> r(period) stack ///
+>     ytitle("% of firms") ///
+>     legend(order(1 "Coal-intensive" 2 "Oil-intensive" 3 "Gas-intensive" ///
+>                  4 "Electricity-intensive" 5 "Biofuel-intensive" 6 "Mixed") r
+> ows(2) size(small)) ///
+>     title("Firms by main energy source (>= 50% of GJ)") ///
+>     note("No survey in 2016. The 2020 form adds diesel oil, fuel oil and natu
+> ral gas.", size(vsmall)) ///
+>     graphregion(color(white))
+
+. graph export "$B205_OUT/fig03_class_by_year.png", replace width(2000)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-05-energy-mix
+> /output/fig03_class_by_year.png written in PNG format
+
+. 
+. * ---- fig04: switching out of high-carbon, per wave pair (line 4) ----
+. import excel using "$B205_XLSX", sheet("t04_switch_rate") firstrow clear
+(6 vars, 12 obs)
+
+. drop if pair == "pool"
+(1 observation deleted)
+
+. keep pair pct_switched_out pct_locked pct_moved_in
+
+. export excel using "$B205_XLSX", sheet("fig04_data", replace) firstrow(variab
+> les)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-05-energy-mix
+> /output/b2_05_tables.xlsx saved
+
+. graph bar (asis) pct_switched_out pct_moved_in, over(pair, label(angle(45) la
+> bsize(small))) ///
+>     ytitle("% of firms") ///
+>     legend(order(1 "High-carbon firms that switch out next wave" ///
+>                  2 "Other firms that move into high-carbon") rows(2) size(sma
+> ll)) ///
+>     title("Switching out of coal/oil, wave to wave") ///
+>     note("High-carbon = coal- or oil-intensive. Firm links are FICTIONAL in t
+> he development data." ///
+>          "2015-2017 spans the missing 2016 survey; 2019-2020 crosses the new 
+> 2020 fuel list.", size(vsmall)) ///
+>     graphregion(color(white))
+
+. graph export "$B205_OUT/fig04_switch_rate.png", replace width(2000)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-05-energy-mix
+> /output/fig04_switch_rate.png written in PNG format
+
+. 
+. * ---- fig05a: energy mix by sector, pooled (line 5) ----
+. import excel using "$B205_XLSX", sheet("t05_mix_by_kbli2") firstrow clear
+(10 vars, 312 obs)
+
+. keep if period == "pool"
+(288 observations deleted)
+
+. keep kbli2 sh_coal sh_oil sh_gas sh_pln sh_nonpln sh_bio n_firms
+
+. export excel using "$B205_XLSX", sheet("fig05_mix_data", replace) firstrow(va
+> riables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-05-energy-mix
+> /output/b2_05_tables.xlsx saved
+
+. graph hbar (asis) sh_coal sh_oil sh_gas sh_pln sh_nonpln sh_bio, ///
+>     over(kbli2, label(labsize(vsmall))) stack ///
+>     ytitle("Mean share of the firm's energy (%)") ///
+>     legend(order(1 "Coal" 2 "Oil" 3 "Gas / LPG" 4 "Electricity PLN" ///
+>                  5 "Electricity non-PLN" 6 "Biodiesel") rows(2) size(vsmall))
+>  ///
+>     title("Energy mix by sector, pooled 2010-2022", size(medium)) ///
+>     graphregion(color(white) margin(l+2 r+4)) ysize(7) xsize(10)
+
+. graph export "$B205_OUT/fig05_mix_by_sector.png", replace width(2000)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-05-energy-mix
+> /output/fig05_mix_by_sector.png written in PNG format
+
+. 
+. * ---- fig05b: classes by sector, pooled ----
+. import excel using "$B205_XLSX", sheet("t05_class_by_kbli2") firstrow clear
+(10 vars, 312 obs)
+
+. keep if period == "pool"
+(288 observations deleted)
+
+. keep kbli2 pct_coal pct_oil pct_gas pct_elec pct_biofuel pct_mixed pct_high_c
+> arbon n_firms
+
+. export excel using "$B205_XLSX", sheet("fig05_class_data", replace) firstrow(
+> variables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-05-energy-mix
+> /output/b2_05_tables.xlsx saved
+
+. graph hbar (asis) pct_coal pct_oil pct_gas pct_elec pct_biofuel pct_mixed, //
+> /
+>     over(kbli2, label(labsize(vsmall))) stack ///
+>     ytitle("% of firms") ///
+>     legend(order(1 "Coal-intensive" 2 "Oil-intensive" 3 "Gas-intensive" ///
+>                  4 "Electricity-intensive" 5 "Biofuel-intensive" 6 "Mixed") r
+> ows(2) size(vsmall)) ///
+>     title("Main energy source by sector, pooled 2010-2022", size(medium)) ///
+>     graphregion(color(white) margin(l+2 r+4)) ysize(7) xsize(10)
+
+. graph export "$B205_OUT/fig05_class_by_sector.png", replace width(2000)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-05-energy-mix
+> /output/fig05_class_by_sector.png written in PNG format
+
+. 
+. * ---- fig05c: switching out of high-carbon by sector ----
+. import excel using "$B205_XLSX", sheet("t05_switch_by_kbli2") firstrow clear
+(4 vars, 24 obs)
+
+. keep kbli2 pct_switched_out pct_locked n_high
+
+. export excel using "$B205_XLSX", sheet("fig05_switch_data", replace) firstrow
+> (variables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-05-energy-mix
+> /output/b2_05_tables.xlsx saved
+
+. graph hbar (asis) pct_switched_out, over(kbli2, sort(1) descending label(labs
+> ize(vsmall))) ///
+>     ytitle("% of high-carbon firms that are not high-carbon next wave") ///
+>     title("Switching out of coal/oil by sector, pooled wave pairs", size(medi
+> um)) ///
+>     note("High-carbon = coal- or oil-intensive. Firm links are FICTIONAL in t
+> he development data.", size(vsmall)) ///
+>     graphregion(color(white) margin(l+2 r+4)) ysize(7) xsize(10)
+
+. graph export "$B205_OUT/fig05_switch_by_sector.png", replace width(2000)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-05-energy-mix
+> /output/fig05_switch_by_sector.png written in PNG format
+
+. graph drop _all
+
+. 
+end of do-file
+
+. log close b205
+      name:  b205
+       log:  /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-05-en
+> ergy-mix/output/b2_05_log.log
+  log type:  text
+ closed on:   9 Oct 2026, 12:54:43
+-------------------------------------------------------------------------------

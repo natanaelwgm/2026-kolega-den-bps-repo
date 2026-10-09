@@ -1,0 +1,2400 @@
+-------------------------------------------------------------------------------
+      name:  b201
+       log:  /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-01-ha
+> s-decarbonised/output/b2_01_log.log
+  log type:  text
+ opened on:   9 Oct 2026, 12:54:09
+
+. foreach f of local files {
+  2.     display _newline as result "######## B2-01: `f' ########"
+  3.     do "$B201/`f'.do"
+  4. }
+
+######## B2-01: 01a_prep_si ########
+
+. /*==========================================================================
+>   Line 1: "Has Indonesian manufacturing actually decarbonised?"
+>   Prepare Statistik Industri (SI) 2010-2022 for B2-01
+>   Input : $SI_DATA  (analysis_ready_data.dta from block 0)
+>   Output: data/b201_si.dta  -- 1 row = 1 firm x year
+>           (open with: use "$B201_DATA/b201_si.dta", clear  then browse)
+> 
+>   Main variables created:
+>     kbli2 (with English sector names), va, output, workers
+>     co2_s1 co2_s2 co2_total    scope 1 (4 fuels), scope 2, total CO2 (tonnes)
+>     gj_s1 gj_s2 gj_total       the same in energy (GJ)
+>     gj_per_va gj_per_out       energy intensity
+>     co2_per_va co2_per_out     carbon intensity
+>     va_per_gj va_per_co2       energy and carbon productivity
+>     co2_s1_nine gj_s1_nine     VARIANT: block 0's nine fuels (coal-corrected)
+>     co2_s1_wide gj_s1_wide     VARIANT: nine fuels + diesel oil, fuel oil and
+>                                natural gas (the fuels the 2020 form added)
+>     co2_s2_src                 VARIANT: scope 2 on the sourced annual grid fa
+> ctor
+>     clean                      1 = not an extreme energy outlier
+>   The headline is always the 4-fuel scope 1 (the fuels asked in every year).
+>   The variants are only there to show how much the headline misses.
+> ==========================================================================*/
+. if "$B201" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$SI_DATA", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. * new variables are stored in double precision (sums of tonnes and GJ)
+. set type double
+
+. 
+. * ---- identifiers ------------------------------------------------------
+. * year = survey year (there is no 2016 file)
+. generate kbli2 = real(substr(industry_code, 1, 2))
+
+. label define kbli2 0 "All manufacturing" 10 "10 Food" 11 "11 Beverages" 12 "1
+> 2 Tobacco" 13 "13 Textiles" ///
+>     14 "14 Apparel" 15 "15 Leather, footwear" 16 "16 Wood" 17 "17 Paper" ///
+>     18 "18 Printing" 19 "19 Coke, refined petroleum" 20 "20 Chemicals" ///
+>     21 "21 Pharmaceuticals" 22 "22 Rubber, plastics" 23 "23 Non-metallic mine
+> rals" ///
+>     24 "24 Basic metals" 25 "25 Fabricated metal" 26 "26 Electronics" ///
+>     27 "27 Electrical equipment" 28 "28 Machinery" 29 "29 Motor vehicles" ///
+>     30 "30 Other transport" 31 "31 Furniture" 32 "32 Other manufacturing" ///
+>     33 "33 Repair, installation"
+
+. label values kbli2 kbli2
+
+. 
+. * ---- output, value added (nominal) ------------------------------------
+. generate va      = value_added_nominal
+
+. generate output  = gross_output_nominal
+
+. 
+. * ---- energy & emissions -----------------------------------------------
+. * COAL 2017 CORRECTION: block 0 multiplies by 1000 (treats it as tonnes),
+. * but the price per unit shows the data are already in kg. Divide back.
+. generate co2_coal = co2_coal_s1
+
+. generate gj_coal2 = gj_coal
+
+. replace  co2_coal = co2_coal_s1 / 1000 if year == 2017
+(1,181 real changes made)
+
+. replace  gj_coal2 = gj_coal / 1000     if year == 2017
+(1,181 real changes made)
+
+. 
+. * scope 1 = the 4 fuels asked in every year: diesel, petrol, coal, LPG
+. egen co2_s1 = rowtotal(co2_diesel_s1 co2_petrol_s1 co2_coal co2_lpg_s1), miss
+> ing
+
+. egen gj_s1  = rowtotal(gj_diesel gj_petrol gj_coal2 gj_lpg), missing
+
+. * scope 2 = purchased electricity (own generation is already in the fuels)
+. generate co2_s2 = co2_scope2_s1
+
+. generate gj_s2  = gj_electricity
+
+. egen co2_total = rowtotal(co2_s1 co2_s2), missing
+
+. egen gj_total  = rowtotal(gj_s1 gj_s2), missing
+
+. 
+. * ---- VARIANTS (comparison only, never in the headline) -----------------
+. * block 0's nine fuels (adds kerosene, city gas, other gas, coal briquettes,
+. * coke), with the coal correction applied
+. generate co2_s1_nine = co2_scope1_s1 - co2_coal_s1 + co2_coal
+
+. generate gj_s1_nine  = gj_fuel_s1 - gj_coal + gj_coal2
+
+. 
+. * the 2020 form added diesel oil, fuel oil and natural gas (MMBTU); block 0
+. * has their quantities but no CO2/GJ column. Factors: IPCC 2006 defaults
+. * (Vol 2 Ch 1), CO2 in tonnes per unit.
+. generate q_dieseloil = fuel_dieseloil_ltr if fuel_dieseloil_ltr >= 0
+(23,858 missing values generated)
+
+. generate q_fueloil   = fuel_fueloil_ltr   if fuel_fueloil_ltr >= 0
+(23,858 missing values generated)
+
+. generate q_natgas    = fuel_natgas_mmbtu  if fuel_natgas_mmbtu >= 0
+(23,858 missing values generated)
+
+. generate co2_dieseloil = q_dieseloil * 0.002708    // per litre
+(23,858 missing values generated)
+
+. generate co2_fueloil   = q_fueloil   * 0.002971    // per litre
+(23,858 missing values generated)
+
+. generate co2_natgas    = q_natgas    * 0.059189    // per MMBTU
+(23,858 missing values generated)
+
+. generate gj_dieseloil  = q_dieseloil * 0.03655
+(23,858 missing values generated)
+
+. generate gj_fueloil    = q_fueloil   * 0.03838
+(23,858 missing values generated)
+
+. generate gj_natgas     = q_natgas    * 1.05506
+(23,858 missing values generated)
+
+. egen co2_s1_wide = rowtotal(co2_s1_nine co2_dieseloil co2_fueloil co2_natgas)
+> , missing
+
+. egen gj_s1_wide  = rowtotal(gj_s1_nine gj_dieseloil gj_fueloil gj_natgas), mi
+> ssing
+
+. 
+. * scope 2 on the sourced grid factor: block 0 holds the 2014 factor flat afte
+> r
+. * 2014; this variant uses the 2014 Neraca factor scaled by Ember's national
+. * grid intensity
+. generate grid_src = grid_factor_s1
+
+. replace grid_src = 0.000920 if year == 2015
+(2,632 real changes made)
+
+. replace grid_src = 0.000910 if year == 2017
+(3,357 real changes made)
+
+. replace grid_src = 0.000904 if year == 2018
+(3,011 real changes made)
+
+. replace grid_src = 0.000917 if year == 2019
+(3,007 real changes made)
+
+. replace grid_src = 0.000905 if year == 2020
+(2,936 real changes made)
+
+. replace grid_src = 0.000905 if year == 2021
+(3,078 real changes made)
+
+. replace grid_src = 0.000893 if year == 2022
+(3,177 real changes made)
+
+. generate co2_s2_src = elec_purchased_kwh * grid_src
+
+. 
+. * ---- firm-level ratios ------------------------------------------------
+. generate gj_per_va   = gj_total / va        if va > 0
+
+. generate gj_per_out  = gj_total / output    if output > 0
+
+. generate co2_per_va  = co2_total / va       if va > 0
+
+. generate co2_per_out = co2_total / output   if output > 0
+
+. generate va_per_gj   = va / gj_total        if gj_total > 0
+(547 missing values generated)
+
+. generate va_per_co2  = va / co2_total       if co2_total > 0
+(547 missing values generated)
+
+. 
+. * ---- energy outlier flag (clean) --------------------------------------
+. * a record is left out of the analysis (clean = 0) if any of its energy
+. * quantities is above 100x that year's 99th percentile. Nothing is deleted.
+. generate coal_kg_fix = fuel_coal_kg
+
+. replace  coal_kg_fix = fuel_coal_kg / 1000 if year == 2017
+(1,181 real changes made)
+
+. generate byte clean = 1
+
+. levelsof year, local(years)
+2010 2011 2012 2013 2014 2015 2017 2018 2019 2020 2021 2022
+
+. foreach q in fuel_diesel_ltr fuel_petrol_ltr fuel_kerosene_ltr coal_kg_fix fu
+> el_lpg_kg ///
+>              fuel_citygas_m3 fuel_othergas_m3 fuel_coalbriq_kg fuel_coke_kg /
+> //
+>              elec_pln_kwh elec_nonpln_kwh elec_owngen_kwh fuel_dieseloil_ltr 
+> ///
+>              fuel_fueloil_ltr fuel_natgas_mmbtu fuel_biodiesel_ltr fuel_bioma
+> ss_kg {
+  2.     foreach y of local years {
+  3.         quietly count if year == `y' & `q' > 0 & !missing(`q')
+  4.         if r(N) > 2 {
+  5.             quietly summarize `q' if year == `y' & `q' > 0, detail
+  6.             quietly replace clean = 0 if year == `y' & `q' > 100 * r(p99) 
+> & !missing(`q')
+  7.         }
+  8.     }
+  9. }
+
+. replace clean = 0 if workers == 0 & co2_s1 > 0 & !missing(co2_s1)
+(20 real changes made)
+
+. count if clean == 0
+  30
+
+. display as result "Outlier records (clean = 0): " r(N)
+Outlier records (clean = 0): 30
+
+. 
+. * ---- ln versions ------------------------------------------------------
+. foreach v in va output co2_s1 co2_s2 co2_total gj_s1 gj_s2 gj_total ///
+>              gj_per_va gj_per_out co2_per_va co2_per_out va_per_gj va_per_co2
+>  {
+  2.     generate ln_`v' = ln(`v') if `v' > 0
+  3. }
+(3,826 missing values generated)
+(1,933 missing values generated)
+(547 missing values generated)
+(3,826 missing values generated)
+(1,933 missing values generated)
+(547 missing values generated)
+(547 missing values generated)
+(547 missing values generated)
+(547 missing values generated)
+(547 missing values generated)
+(547 missing values generated)
+(547 missing values generated)
+
+. set type float
+
+. 
+. * ---- save -------------------------------------------------------------
+. keep  firm_id year source_row kbli2 va output workers ///
+>       co2_s1 co2_s2 co2_total gj_s1 gj_s2 gj_total ///
+>       co2_s1_nine gj_s1_nine co2_s1_wide gj_s1_wide co2_s2_src ///
+>       gj_per_va gj_per_out co2_per_va co2_per_out va_per_gj va_per_co2 clean 
+> ln_*
+
+. order firm_id year source_row kbli2 clean
+
+. label variable kbli2       "Sector, KBLI 2-digit"
+
+. label variable va          "Value added, nominal (masked)"
+
+. label variable output      "Gross output, nominal (masked)"
+
+. label variable co2_s1      "Scope 1 CO2 (t): diesel, petrol, coal, LPG"
+
+. label variable co2_s2      "Scope 2 CO2 (t): purchased electricity, block 0 g
+> rid factor"
+
+. label variable co2_total   "Scope 1 + scope 2 CO2 (t)"
+
+. label variable gj_s1       "Scope 1 energy (GJ): the same 4 fuels"
+
+. label variable gj_s2       "Purchased electricity (GJ)"
+
+. label variable gj_total    "Total energy (GJ) = gj_s1 + gj_s2"
+
+. label variable co2_s1_nine "VARIANT scope 1 CO2 (t): block 0's nine fuels"
+
+. label variable gj_s1_nine  "VARIANT scope 1 GJ: block 0's nine fuels"
+
+. label variable co2_s1_wide "VARIANT scope 1 CO2 (t): nine fuels + diesel oil,
+>  fuel oil, natural gas"
+
+. label variable gj_s1_wide  "VARIANT scope 1 GJ: nine fuels + diesel oil, fuel
+>  oil, natural gas"
+
+. label variable co2_s2_src  "VARIANT scope 2 CO2 (t): sourced annual grid fact
+> or"
+
+. label variable clean       "1 = not an energy outlier"
+
+. compress
+  variable kbli2 was double now byte
+  (231,343 bytes saved)
+
+. save "$B201_DATA/b201_si.dta", replace
+(file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-01-has-decar
+    > bonised/data/b201_si.dta not found)
+file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-01-has-decar
+    > bonised/data/b201_si.dta saved
+
+. display as result "01a done: $B201_DATA/b201_si.dta (" _N " rows)"
+01a done: /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-01-has-d
+> ecarbonised/data/b201_si.dta (33049 rows)
+
+. 
+end of do-file
+
+######## B2-01: 02_overview ########
+
+. /*==========================================================================
+>   Line 2: "Elaborate perubahan 2010-2022 untuk:"
+>   Data  : SI 2010-2022 (data/b201_si.dta), clean == 1
+>   Output sheets:
+>     t02_overview   every indicator of lines 3-9 for all manufacturing:
+>                    value in 2010, 2015, 2017 and 2022, % change 2010-2022,
+>                    change in ln 2010-2022, and % change within each
+>                    questionnaire period (2010-2015 and 2017-2022)
+>     t02_by_kbli2   the same indicators per KBLI 2-digit sector: 2010, 2022,
+>                    % change and ln change 2010-2022
+> 
+>   Every value is an AGGREGATE: totals are sums over firms, and ratios are
+>   ratios of sums (e.g. GJ/VA = total GJ / total VA), not means of firm ratios
+> .
+>   NOTE: sums over firms rise with coverage. The number of firms and the
+>   energy reporting jump between 2015 and 2017 (questionnaire change), so the
+>   2010-2022 change mixes real change with that break; the two within-period
+>   changes do not. VA and output are nominal (and masked): read the direction,
+>   not the level. There is no 2016 survey.
+> ==========================================================================*/
+. if "$B201" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. 
+. * the indicators, in the order of the to-do list
+. local ind "n_firms output va gj_s1 gj_s2 gj_total co2_s1 co2_s2 co2_total gj_
+> per_va gj_per_out co2_per_va co2_per_out va_per_gj va_per_co2"
+
+. 
+. * ---- A. all manufacturing ----
+. use "$B201_DATA/b201_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1
+(30 observations deleted)
+
+. generate n_firms = 1
+
+. collapse (sum) n_firms output va gj_s1 gj_s2 gj_total co2_s1 co2_s2 co2_total
+> , by(year)
+
+. generate gj_per_va   = gj_total / va
+
+. generate gj_per_out  = gj_total / output
+
+. generate co2_per_va  = co2_total / va
+
+. generate co2_per_out = co2_total / output
+
+. generate va_per_gj   = va / gj_total
+
+. generate va_per_co2  = va / co2_total
+
+. 
+. keep if inlist(year, 2010, 2015, 2017, 2022)
+(8 observations deleted)
+
+. * one row per indicator, one column per year
+. local i 0
+
+. foreach v of local ind {
+  2.     local ++i
+  3.     rename `v' v`i'
+  4. }
+
+. reshape long v, i(year) j(order)
+(j = 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15)
+
+Data                               Wide   ->   Long
+-----------------------------------------------------------------------------
+Number of observations                4   ->   60          
+Number of variables                  16   ->   3           
+j variable (15 values)                    ->   order
+xij variables:
+                          v1 v2 ... v15   ->   v
+-----------------------------------------------------------------------------
+
+. reshape wide v, i(order) j(year)
+(j = 2010 2015 2017 2022)
+
+Data                               Long   ->   Wide
+-----------------------------------------------------------------------------
+Number of observations               60   ->   15          
+Number of variables                   3   ->   5           
+j variable (4 values)              year   ->   (dropped)
+xij variables:
+                                      v   ->   v2010 v2015 ... v2022
+-----------------------------------------------------------------------------
+
+. generate str24 indicator = ""
+(15 missing values generated)
+
+. local i 0
+
+. foreach v of local ind {
+  2.     local ++i
+  3.     replace indicator = "`v'" if order == `i'
+  4. }
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+
+. rename (v2010 v2015 v2017 v2022) (y2010 y2015 y2017 y2022)
+
+. generate pct_2010_2022 = 100 * (y2022 / y2010 - 1)
+
+. generate ln_change_2010_2022 = ln(y2022) - ln(y2010)
+
+. generate pct_2010_2015 = 100 * (y2015 / y2010 - 1)
+
+. generate pct_2017_2022 = 100 * (y2022 / y2017 - 1)
+
+. sort order
+
+. order indicator y2010 y2015 y2017 y2022 pct_2010_2022 ln_change_2010_2022 pct
+> _2010_2015 pct_2017_2022
+
+. drop order
+
+. list indicator y2010 y2022 pct_2010_2022 pct_2017_2022, clean noobs
+
+      indicator      y2010      y2022   pc~0_2022   pc~7_2022  
+        n_firms       2334       3156    35.21851   -5.987489  
+         output   2.86e+11   7.73e+11    170.5443    51.40707  
+             va   8.97e+10   3.24e+11    260.7812    21.53677  
+          gj_s1   1.56e+07   5.85e+07    276.2735    332.2248  
+          gj_s2    6432246   1.36e+07    111.3235    29.64602  
+       gj_total   2.20e+07   7.21e+07    228.0259    200.2005  
+         co2_s1    1265485    5457753    331.2775    376.4722  
+         co2_s2    1070254    3451073    222.4536    29.64602  
+      co2_total    2335739    8908826    281.4136     133.989  
+      gj_per_va   .0002452   .0002229   -9.078998    147.0038  
+     gj_per_out    .000077   .0000934    21.24666    98.27376  
+     co2_per_va    .000026   .0000275    5.718793    92.52524  
+    co2_per_out   8.18e-06   .0000115    40.98007    54.54295  
+      va_per_gj   4078.388   4485.639    9.985588    -59.5148  
+     va_per_co2   38397.53   36320.44   -5.409436   -48.05876  
+
+. export excel using "$B201_XLSX", sheet("t02_overview", replace) firstrow(vari
+> ables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-01-has-decarb
+> onised/output/b2_01_tables.xlsx saved
+
+. 
+. * ---- B. per sector (KBLI 2-digit) ----
+. use "$B201_DATA/b201_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1 & inlist(year, 2010, 2022)
+(27,559 observations deleted)
+
+. generate n_firms = 1
+
+. collapse (sum) n_firms output va gj_s1 gj_s2 gj_total co2_s1 co2_s2 co2_total
+> , by(kbli2 year)
+
+. generate gj_per_va   = gj_total / va
+
+. generate gj_per_out  = gj_total / output
+
+. generate co2_per_va  = co2_total / va
+
+. generate co2_per_out = co2_total / output
+
+. generate va_per_gj   = va / gj_total
+
+. generate va_per_co2  = va / co2_total
+
+. local i 0
+
+. foreach v of local ind {
+  2.     local ++i
+  3.     rename `v' v`i'
+  4. }
+
+. reshape long v, i(kbli2 year) j(order)
+(j = 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15)
+
+Data                               Wide   ->   Long
+-----------------------------------------------------------------------------
+Number of observations               48   ->   720         
+Number of variables                  17   ->   4           
+j variable (15 values)                    ->   order
+xij variables:
+                          v1 v2 ... v15   ->   v
+-----------------------------------------------------------------------------
+
+. reshape wide v, i(kbli2 order) j(year)
+(j = 2010 2022)
+
+Data                               Long   ->   Wide
+-----------------------------------------------------------------------------
+Number of observations              720   ->   360         
+Number of variables                   4   ->   4           
+j variable (2 values)              year   ->   (dropped)
+xij variables:
+                                      v   ->   v2010 v2022
+-----------------------------------------------------------------------------
+
+. generate str24 indicator = ""
+(360 missing values generated)
+
+. local i 0
+
+. foreach v of local ind {
+  2.     local ++i
+  3.     replace indicator = "`v'" if order == `i'
+  4. }
+(24 real changes made)
+(24 real changes made)
+(24 real changes made)
+(24 real changes made)
+(24 real changes made)
+(24 real changes made)
+(24 real changes made)
+(24 real changes made)
+(24 real changes made)
+(24 real changes made)
+(24 real changes made)
+(24 real changes made)
+(24 real changes made)
+(24 real changes made)
+(24 real changes made)
+
+. rename (v2010 v2022) (y2010 y2022)
+
+. generate pct_2010_2022 = 100 * (y2022 / y2010 - 1)
+
+. generate ln_change_2010_2022 = ln(y2022) - ln(y2010)
+
+. sort kbli2 order
+
+. order kbli2 indicator y2010 y2022 pct_2010_2022 ln_change_2010_2022
+
+. drop order
+
+. export excel using "$B201_XLSX", sheet("t02_by_kbli2", replace) firstrow(vari
+> ables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-01-has-decarb
+> onised/output/b2_01_tables.xlsx saved
+
+. 
+end of do-file
+
+######## B2-01: 03_output_va ########
+
+. /*==========================================================================
+>   Line 3: "Total output dan VA"
+>   Data  : SI 2010-2022 (data/b201_si.dta), clean == 1
+>   Output sheets:
+>     t03_total      all manufacturing, by year: number of firms, total output,
+>                    total VA, VA / output, index 2010 = 100, ln of each total
+>     t03_by_kbli2   the same per KBLI 2-digit sector, plus the sector's % of
+>                    all manufacturing output and VA in that year
+> 
+>   NOTE: totals are sums over the firms in the survey, so they move with the
+>   number of firms (coverage jumps between 2015 and 2017). Values are nominal
+>   and masked: read the direction, not the level. There is no 2016 survey.
+> ==========================================================================*/
+. if "$B201" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B201_DATA/b201_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1
+(30 observations deleted)
+
+. generate n_firms = 1
+
+. expand 2, generate(copy)              // copy of every row as sector 0 = all 
+> manufacturing
+(33,019 observations created)
+
+. replace kbli2 = 0 if copy == 1
+(33,019 real changes made)
+
+. collapse (sum) n_firms output va, by(kbli2 year)
+
+. 
+. generate va_share_output = va / output
+
+. foreach v in output va {
+  2.     egen base = total(cond(year == 2010, `v', .)), by(kbli2)
+  3.     generate idx_`v' = 100 * `v' / base if base > 0
+  4.     generate ln_`v'  = ln(`v') if `v' > 0
+  5.     * share of all manufacturing in the same year
+.     egen all = total(cond(kbli2 == 0, `v', .)), by(year)
+  6.     generate pct_of_all_`v' = 100 * `v' / all
+  7.     drop base all
+  8. }
+
+. sort kbli2 year
+
+. order kbli2 year n_firms output va va_share_output idx_output idx_va ln_outpu
+> t ln_va
+
+. 
+. preserve
+
+. keep if kbli2 == 0
+(288 observations deleted)
+
+. drop kbli2 pct_of_all_*
+
+. list year n_firms output va idx_output idx_va, clean noobs
+
+    year   n_firms      output          va   idx_ou~t     idx_va  
+    2010      2334   2.856e+11   8.969e+10        100        100  
+    2011      2337   2.500e+11   1.042e+11   87.52845   116.2313  
+    2012      2359   2.121e+11   7.945e+10   74.26146   88.58107  
+    2013      2368   2.785e+11   1.212e+11   97.53539   135.1728  
+    2014      2451   3.260e+11   1.253e+11   114.1701   139.6856  
+    2015      2630   4.230e+11   2.174e+11   148.1213   242.4276  
+    2017      3357   5.103e+11   2.662e+11   178.6867   296.8494  
+    2018      3010   6.847e+11   3.058e+11   239.7648   340.9154  
+    2019      3007   7.019e+11   3.115e+11   245.7991   347.3747  
+    2020      2935   5.234e+11   2.318e+11   183.2677   258.4564  
+    2021      3075   7.000e+11   2.944e+11   245.1143   328.2148  
+    2022      3156   7.726e+11   3.236e+11   270.5443   360.7812  
+
+. export excel using "$B201_XLSX", sheet("t03_total", replace) firstrow(variabl
+> es)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-01-has-decarb
+> onised/output/b2_01_tables.xlsx saved
+
+. restore
+
+. keep if kbli2 > 0
+(12 observations deleted)
+
+. export excel using "$B201_XLSX", sheet("t03_by_kbli2", replace) firstrow(vari
+> ables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-01-has-decarb
+> onised/output/b2_01_tables.xlsx saved
+
+. 
+end of do-file
+
+######## B2-01: 04_energy_use ########
+
+. /*==========================================================================
+>   Line 4: "Total energy use"
+>   Data  : SI 2010-2022 (data/b201_si.dta), clean == 1
+>   Output sheets:
+>     t04_total      all manufacturing, by year: total energy (GJ) = scope 1
+>                    fuels (gj_s1) + purchased electricity (gj_s2); index
+>                    2010 = 100; ln; and two wider fuel variants for comparison
+>     t04_by_kbli2   the same per KBLI 2-digit sector, plus the sector's % of
+>                    all manufacturing energy in that year
+> 
+>   Headline: gj_s1 = the 4 fuels asked in every year (diesel, petrol, coal,
+>   LPG), 2017 coal corrected. Own-generated electricity is not added (its fuel
+>   is already counted).
+>   Variants (columns gj_s1_nine, gj_s1_wide, gj_total_wide):
+>     gj_s1_nine  block 0's nine fuels (adds kerosene, gas, briquettes, coke)
+>     gj_s1_wide  nine fuels + diesel oil, fuel oil, natural gas, which the
+>                 questionnaire only asks from 2020. The gap between headline
+>                 and wide in 2020-2022 is mostly natural gas.
+>   NOTE: sums over firms move with coverage; energy reporting changes between
+>   2015 and 2017 (questionnaire change). There is no 2016 survey.
+> ==========================================================================*/
+. if "$B201" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B201_DATA/b201_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1
+(30 observations deleted)
+
+. generate n_firms = 1
+
+. generate n_energy = (gj_total > 0 & !missing(gj_total))   // firms reporting 
+> any energy
+
+. egen gj_total_wide = rowtotal(gj_s1_wide gj_s2), missing
+
+. expand 2, generate(copy)              // copy of every row as sector 0 = all 
+> manufacturing
+(33,019 observations created)
+
+. replace kbli2 = 0 if copy == 1
+(33,019 real changes made)
+
+. collapse (sum) n_firms n_energy gj_s1 gj_s2 gj_total gj_s1_nine gj_s1_wide gj
+> _total_wide, by(kbli2 year)
+
+. 
+. generate pct_firms_energy = 100 * n_energy / n_firms
+
+. generate s2_share = gj_s2 / gj_total
+
+. foreach v in gj_s1 gj_s2 gj_total {
+  2.     egen base = total(cond(year == 2010, `v', .)), by(kbli2)
+  3.     generate idx_`v' = 100 * `v' / base if base > 0
+  4.     generate ln_`v'  = ln(`v') if `v' > 0
+  5.     drop base
+  6. }
+
+. egen all = total(cond(kbli2 == 0, gj_total, .)), by(year)
+
+. generate pct_of_all_gj = 100 * gj_total / all
+
+. drop all
+
+. sort kbli2 year
+
+. order kbli2 year n_firms n_energy pct_firms_energy gj_s1 gj_s2 gj_total s2_sh
+> are ///
+>       idx_gj_s1 idx_gj_s2 idx_gj_total ln_gj_s1 ln_gj_s2 ln_gj_total ///
+>       gj_s1_nine gj_s1_wide gj_total_wide
+
+. 
+. preserve
+
+. keep if kbli2 == 0
+(288 observations deleted)
+
+. drop kbli2 pct_of_all_gj
+
+. list year n_firms gj_s1 gj_s2 gj_total gj_total_wide, clean noobs
+
+    year   n_firms      gj_s1       gj_s2    gj_total   gj_tot~e  
+    2010      2334   15558457   6432245.5    21990703   2.31e+07  
+    2011      2337   19542950   7275166.3    26818116   2.77e+07  
+    2012      2359   26298705   5106709.4    31405414   3.28e+07  
+    2013      2368   65285402   5669446.5    70954849   7.32e+07  
+    2014      2451   44386737    12806768    57193505   6.04e+07  
+    2015      2630   40757953    17161182    57919136   6.06e+07  
+    2017      3357   13544424    10484587    24029010   3.01e+07  
+    2018      3010   24133080    16514245    40647326   4.88e+07  
+    2019      3007   14584982   8769329.6    23354311   2.64e+07  
+    2020      2935   93594212    17453065   1.110e+08   1.79e+08  
+    2021      3075   20266678    14355209    34621887   4.97e+07  
+    2022      3156   58542356    13592849    72135205   8.77e+07  
+
+. export excel using "$B201_XLSX", sheet("t04_total", replace) firstrow(variabl
+> es)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-01-has-decarb
+> onised/output/b2_01_tables.xlsx saved
+
+. restore
+
+. keep if kbli2 > 0
+(12 observations deleted)
+
+. export excel using "$B201_XLSX", sheet("t04_by_kbli2", replace) firstrow(vari
+> ables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-01-has-decarb
+> onised/output/b2_01_tables.xlsx saved
+
+. 
+end of do-file
+
+######## B2-01: 05_emissions ########
+
+. /*==========================================================================
+>   Line 5: "Scope 1, 2 and total emissions"
+>   Data  : SI 2010-2022 (data/b201_si.dta), clean == 1
+>   Output sheets:
+>     t05_total      all manufacturing, by year: scope 1, scope 2 and total CO2
+>                    (tonnes), scope 2 share, index 2010 = 100, ln, and the
+>                    variants below for comparison
+>     t05_by_kbli2   the same per KBLI 2-digit sector, plus the sector's % of
+>                    all manufacturing CO2 in that year
+> 
+>   Headline: scope 1 = the 4 fuels asked in every year (diesel, petrol, coal,
+>   LPG; 2017 coal corrected); scope 2 = purchased electricity x block 0's grid
+>   factor (held at the 2014 value after 2014); total = scope 1 + scope 2.
+>   Variants (never mixed into the headline):
+>     co2_s1_nine   block 0's nine fuels
+>     co2_s1_wide   nine fuels + diesel oil, fuel oil, natural gas (asked
+>                   from 2020 only)
+>     co2_s2_src    scope 2 on the sourced annual grid factor
+>   NOTE: sums over firms move with coverage; energy reporting changes between
+>   2015 and 2017 (questionnaire change). There is no 2016 survey.
+> ==========================================================================*/
+. if "$B201" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B201_DATA/b201_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1
+(30 observations deleted)
+
+. generate n_firms = 1
+
+. egen co2_total_nine = rowtotal(co2_s1_nine co2_s2), missing
+
+. egen co2_total_wide = rowtotal(co2_s1_wide co2_s2), missing
+
+. expand 2, generate(copy)              // copy of every row as sector 0 = all 
+> manufacturing
+(33,019 observations created)
+
+. replace kbli2 = 0 if copy == 1
+(33,019 real changes made)
+
+. collapse (sum) n_firms co2_s1 co2_s2 co2_total co2_s1_nine co2_s1_wide co2_s2
+> _src ///
+>          co2_total_nine co2_total_wide, by(kbli2 year)
+
+. 
+. generate s2_share = co2_s2 / co2_total
+
+. foreach v in co2_s1 co2_s2 co2_total {
+  2.     egen base = total(cond(year == 2010, `v', .)), by(kbli2)
+  3.     generate idx_`v' = 100 * `v' / base if base > 0
+  4.     generate ln_`v'  = ln(`v') if `v' > 0
+  5.     drop base
+  6. }
+
+. egen all = total(cond(kbli2 == 0, co2_total, .)), by(year)
+
+. generate pct_of_all_co2 = 100 * co2_total / all
+
+. drop all
+
+. sort kbli2 year
+
+. order kbli2 year n_firms co2_s1 co2_s2 co2_total s2_share ///
+>       idx_co2_s1 idx_co2_s2 idx_co2_total ln_co2_s1 ln_co2_s2 ln_co2_total //
+> /
+>       co2_s1_nine co2_s1_wide co2_s2_src co2_total_nine co2_total_wide
+
+. 
+. preserve
+
+. keep if kbli2 == 0
+(288 observations deleted)
+
+. drop kbli2 pct_of_all_co2
+
+. list year co2_s1 co2_s2 co2_total co2_total_nine co2_total_wide, clean noobs
+
+    year      co2_s1      co2_s2   co2_total   co2_t~ne   co2_t~de  
+    2010   1265485.1   1070254.2   2335739.3    2402906    2402906  
+    2011   1711685.7   1394406.9   3106092.5    3158970    3158970  
+    2012   2160141.7   1109290.8   3269432.5    3358145    3358145  
+    2013   5954802.2   1374840.8     7329643    7455864    7455864  
+    2014   3935951.8   3251496.1   7187447.9    7380077    7380077  
+    2015   3495998.4   4357033.5     7853032    8006035    8006035  
+    2017   1145450.4     2661920   3807370.4    4253605    4253605  
+    2018   1947459.2   4192783.4   6140242.6    6618836    6618836  
+    2019   1208629.6   2226435.4   3435064.9    3613112    3613112  
+    2020   8835671.7   4431139.2    13266811   1.33e+07   1.71e+07  
+    2021   1822011.5     3644628   5466639.5    5499179    6338306  
+    2022   5457752.9   3451073.4   8908826.3    8926092    9811927  
+
+. export excel using "$B201_XLSX", sheet("t05_total", replace) firstrow(variabl
+> es)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-01-has-decarb
+> onised/output/b2_01_tables.xlsx saved
+
+. restore
+
+. keep if kbli2 > 0
+(12 observations deleted)
+
+. export excel using "$B201_XLSX", sheet("t05_by_kbli2", replace) firstrow(vari
+> ables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-01-has-decarb
+> onised/output/b2_01_tables.xlsx saved
+
+. 
+end of do-file
+
+######## B2-01: 06_energy_intensity ########
+
+. /*==========================================================================
+>   Line 6: "Energy intensity (GJ/VA) dan (GJ/output)"
+>   Data  : SI 2010-2022 (data/b201_si.dta), clean == 1
+>   Output sheets:
+>     t06_total      all manufacturing: energy intensity GJ/VA and GJ/output,
+>                    as an AGGREGATE ratio: total GJ / total VA, total GJ / tot
+> al output;
+>                    pool + by year, index 2010 = 100 and ln
+>     t06_by_kbli2   the same per KBLI 2-digit sector, pool + by year
+>     t06_firm_stats distribution across firms (n mean sd p10-p90 min max),
+>                    level and ln, pool + by year
+>   Firm level: a firm that reports no energy has GJ/VA = 0 (in the level,
+>   not in the ln).
+> 
+>   The aggregate ratio is what "manufacturing as a whole" did; the firm
+>   distribution shows the typical firm (big emitters weigh less there).
+>   "pool" = the sums over all years put together.
+>   NOTE: VA and output are nominal and masked, so a change can be price
+>   inflation rather than energy efficiency. Energy = scope 1 fuels (diesel, pe
+> trol, coal, LPG)
+>   + purchased electricity; CO2 = scope 1 + scope 2 (see 04, 05). Energy
+>   reporting changes between 2015 and 2017. There is no 2016 survey.
+> ==========================================================================*/
+. if "$B201" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. 
+. * ---- A. aggregate ratio: all manufacturing and per sector ----
+. use "$B201_DATA/b201_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1
+(30 observations deleted)
+
+. generate n_firms = 1
+
+. expand 2, generate(copy_s)            // copy of every row as sector 0 = all 
+> manufacturing
+(33,019 observations created)
+
+. replace kbli2 = 0 if copy_s == 1
+(33,019 real changes made)
+
+. expand 2, generate(copy_y)            // copy of every row with year = 0 for 
+> "pool"
+(66,038 observations created)
+
+. replace year = 0 if copy_y == 1
+(66,038 real changes made)
+
+. collapse (sum) n_firms gj_total va output, by(kbli2 year)
+
+. generate gj_per_va  = gj_total / va     if va > 0
+
+. generate gj_per_out = gj_total / output if output > 0
+
+. foreach v in gj_per_va gj_per_out {
+  2.     egen base = total(cond(year == 2010, `v', .)), by(kbli2)
+  3.     generate idx_`v' = 100 * `v' / base if base > 0 & year > 0
+  4.     generate ln_`v'  = ln(`v') if `v' > 0
+  5.     drop base
+  6. }
+(25 missing values generated)
+(25 missing values generated)
+
+. generate period = cond(year == 0, "pool", string(year))
+
+. sort kbli2 year
+
+. order kbli2 period n_firms gj_total va output gj_per_va gj_per_out
+
+. drop year
+
+. 
+. preserve
+
+. keep if kbli2 == 0
+(312 observations deleted)
+
+. drop kbli2
+
+. list period n_firms gj_per_va gj_per_out, clean noobs
+
+    period   n_firms   gj_per~a   gj_per~t  
+      pool     33019   .0002316   .0001009  
+      2010      2334   .0002452    .000077  
+      2011      2337   .0002573   .0001073  
+      2012      2359   .0003953   .0001481  
+      2013      2368   .0005853   .0002547  
+      2014      2451   .0004565   .0001754  
+      2015      2630   .0002664   .0001369  
+      2017      3357   .0000903   .0000471  
+      2018      3010   .0001329   .0000594  
+      2019      3007    .000075   .0000333  
+      2020      2935   .0004791   .0002122  
+      2021      3075   .0001176   .0000495  
+      2022      3156   .0002229   .0000934  
+
+. export excel using "$B201_XLSX", sheet("t06_total", replace) firstrow(variabl
+> es)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-01-has-decarb
+> onised/output/b2_01_tables.xlsx saved
+
+. restore
+
+. keep if kbli2 > 0
+(13 observations deleted)
+
+. export excel using "$B201_XLSX", sheet("t06_by_kbli2", replace) firstrow(vari
+> ables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-01-has-decarb
+> onised/output/b2_01_tables.xlsx saved
+
+. 
+. * ---- B. distribution across firms ----
+. use "$B201_DATA/b201_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1
+(30 observations deleted)
+
+. do "$B201/_sumstats.do" "gj_per_va gj_per_out ln_gj_per_va ln_gj_per_out" "" 
+> "t06_firm_stats"
+
+. /*==========================================================================
+>   _sumstats.do -- helper: descriptive statistics table, POOLED + BY YEAR
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B201/_sumstats.do" "gj_per_va ln_gj_per_va" "" "t06_firm_stats"
+> 
+>       argument 1 = list of variables
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b2_01_tables.xlsx (max 31 characters)
+> 
+>   Result: 1 row = variable x group x period (pool, 2010, 2011, ...)
+>           columns n mean sd p10 p25 p50 p75 p90 min max
+>   Rows with a missing group are not counted.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars grp sheet
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+
+. local first 1
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     local grp all
+. }
+
+. foreach v of local vars {
+  2.     foreach period in pool year {
+  3.         preserve
+  4.         keep `v' `grp' year
+  5.         keep if !missing(`v') & !missing(`grp')
+  6.         if _N > 0 {
+  7.             if "`period'" == "pool" replace year = 0
+  8.             collapse (count) n = `v' (mean) mean = `v' (sd) sd = `v' ///
+>                      (p10) p10 = `v' (p25) p25 = `v' (p50) p50 = `v' ///
+>                      (p75) p75 = `v' (p90) p90 = `v' (min) min = `v' (max) ma
+> x = `v', ///
+>                      by(`grp' year)
+  9.             generate str32 variable = "`v'"
+ 10.             if `first' == 0 append using `result'
+ 11.             save `result', replace
+ 12.             local first 0
+ 13.         }
+ 14.         restore
+ 15.     }
+ 16. }
+(0 observations deleted)
+(33,019 real changes made)
+(file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 not
+    found)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(0 observations deleted)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(0 observations deleted)
+(33,019 real changes made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(0 observations deleted)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(547 observations deleted)
+(32,472 real changes made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(547 observations deleted)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(547 observations deleted)
+(32,472 real changes made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(547 observations deleted)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+
+. 
+. use `result', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * the group is written as text using its value label (if it has one)
+. capture decode `grp', generate(group)
+
+. if _rc generate group = string(`grp')
+
+. * keep the variables in the order they were listed
+. generate variable_order = .
+(52 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+
+. sort variable_order `grp' year
+
+. keep variable group period n mean sd p10 p25 p50 p75 p90 min max
+
+. export excel using "$B201_XLSX", sheet("`sheet'", replace) firstrow(variables
+> )
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-01-has-decarb
+> onised/output/b2_01_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t06_firm_stats (52 rows)
+
+. use `original', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+end of do-file
+
+. 
+end of do-file
+
+######## B2-01: 07_carbon_intensity ########
+
+. /*==========================================================================
+>   Line 7: "Carbon intensity (CO2/VA) dan (CO2/output)"
+>   Data  : SI 2010-2022 (data/b201_si.dta), clean == 1
+>   Output sheets:
+>     t07_total      all manufacturing: carbon intensity CO2/VA and CO2/output,
+>                    as an AGGREGATE ratio: total CO2 / total VA, total CO2 / t
+> otal output;
+>                    pool + by year, index 2010 = 100 and ln
+>     t07_by_kbli2   the same per KBLI 2-digit sector, pool + by year
+>     t07_firm_stats distribution across firms (n mean sd p10-p90 min max),
+>                    level and ln, pool + by year
+>   Unit: tonnes CO2 per unit of nominal value (block 0 units). A firm that
+>   reports no energy has CO2/VA = 0 (in the level, not in the ln).
+> 
+>   The aggregate ratio is what "manufacturing as a whole" did; the firm
+>   distribution shows the typical firm (big emitters weigh less there).
+>   "pool" = the sums over all years put together.
+>   NOTE: VA and output are nominal and masked, so a change can be price
+>   inflation rather than cleaner production. Energy = scope 1 fuels (diesel, p
+> etrol, coal, LPG)
+>   + purchased electricity; CO2 = scope 1 + scope 2 (see 04, 05). Energy
+>   reporting changes between 2015 and 2017. There is no 2016 survey.
+> ==========================================================================*/
+. if "$B201" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. 
+. * ---- A. aggregate ratio: all manufacturing and per sector ----
+. use "$B201_DATA/b201_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1
+(30 observations deleted)
+
+. generate n_firms = 1
+
+. expand 2, generate(copy_s)            // copy of every row as sector 0 = all 
+> manufacturing
+(33,019 observations created)
+
+. replace kbli2 = 0 if copy_s == 1
+(33,019 real changes made)
+
+. expand 2, generate(copy_y)            // copy of every row with year = 0 for 
+> "pool"
+(66,038 observations created)
+
+. replace year = 0 if copy_y == 1
+(66,038 real changes made)
+
+. collapse (sum) n_firms co2_total va output, by(kbli2 year)
+
+. generate co2_per_va  = co2_total / va     if va > 0
+
+. generate co2_per_out = co2_total / output if output > 0
+
+. foreach v in co2_per_va co2_per_out {
+  2.     egen base = total(cond(year == 2010, `v', .)), by(kbli2)
+  3.     generate idx_`v' = 100 * `v' / base if base > 0 & year > 0
+  4.     generate ln_`v'  = ln(`v') if `v' > 0
+  5.     drop base
+  6. }
+(25 missing values generated)
+(25 missing values generated)
+
+. generate period = cond(year == 0, "pool", string(year))
+
+. sort kbli2 year
+
+. order kbli2 period n_firms co2_total va output co2_per_va co2_per_out
+
+. drop year
+
+. 
+. preserve
+
+. keep if kbli2 == 0
+(312 observations deleted)
+
+. drop kbli2
+
+. list period n_firms co2_per_va co2_per_out, clean noobs
+
+    period   n_firms   co2_pe~a   co2_pe~t  
+      pool     33019   .0000292   .0000127  
+      2010      2334    .000026   8.18e-06  
+      2011      2337   .0000298   .0000124  
+      2012      2359   .0000412   .0000154  
+      2013      2368   .0000605   .0000263  
+      2014      2451   .0000574    .000022  
+      2015      2630   .0000361   .0000186  
+      2017      3357   .0000143   7.46e-06  
+      2018      3010   .0000201   8.97e-06  
+      2019      3007    .000011   4.89e-06  
+      2020      2935   .0000572   .0000253  
+      2021      3075   .0000186   7.81e-06  
+      2022      3156   .0000275   .0000115  
+
+. export excel using "$B201_XLSX", sheet("t07_total", replace) firstrow(variabl
+> es)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-01-has-decarb
+> onised/output/b2_01_tables.xlsx saved
+
+. restore
+
+. keep if kbli2 > 0
+(13 observations deleted)
+
+. export excel using "$B201_XLSX", sheet("t07_by_kbli2", replace) firstrow(vari
+> ables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-01-has-decarb
+> onised/output/b2_01_tables.xlsx saved
+
+. 
+. * ---- B. distribution across firms ----
+. use "$B201_DATA/b201_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1
+(30 observations deleted)
+
+. do "$B201/_sumstats.do" "co2_per_va co2_per_out ln_co2_per_va ln_co2_per_out"
+>  "" "t07_firm_stats"
+
+. /*==========================================================================
+>   _sumstats.do -- helper: descriptive statistics table, POOLED + BY YEAR
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B201/_sumstats.do" "gj_per_va ln_gj_per_va" "" "t06_firm_stats"
+> 
+>       argument 1 = list of variables
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b2_01_tables.xlsx (max 31 characters)
+> 
+>   Result: 1 row = variable x group x period (pool, 2010, 2011, ...)
+>           columns n mean sd p10 p25 p50 p75 p90 min max
+>   Rows with a missing group are not counted.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars grp sheet
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+
+. local first 1
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     local grp all
+. }
+
+. foreach v of local vars {
+  2.     foreach period in pool year {
+  3.         preserve
+  4.         keep `v' `grp' year
+  5.         keep if !missing(`v') & !missing(`grp')
+  6.         if _N > 0 {
+  7.             if "`period'" == "pool" replace year = 0
+  8.             collapse (count) n = `v' (mean) mean = `v' (sd) sd = `v' ///
+>                      (p10) p10 = `v' (p25) p25 = `v' (p50) p50 = `v' ///
+>                      (p75) p75 = `v' (p90) p90 = `v' (min) min = `v' (max) ma
+> x = `v', ///
+>                      by(`grp' year)
+  9.             generate str32 variable = "`v'"
+ 10.             if `first' == 0 append using `result'
+ 11.             save `result', replace
+ 12.             local first 0
+ 13.         }
+ 14.         restore
+ 15.     }
+ 16. }
+(0 observations deleted)
+(33,019 real changes made)
+(file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 not
+    found)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(0 observations deleted)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(0 observations deleted)
+(33,019 real changes made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(0 observations deleted)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(547 observations deleted)
+(32,472 real changes made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(547 observations deleted)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(547 observations deleted)
+(32,472 real changes made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(547 observations deleted)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+
+. 
+. use `result', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * the group is written as text using its value label (if it has one)
+. capture decode `grp', generate(group)
+
+. if _rc generate group = string(`grp')
+
+. * keep the variables in the order they were listed
+. generate variable_order = .
+(52 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+
+. sort variable_order `grp' year
+
+. keep variable group period n mean sd p10 p25 p50 p75 p90 min max
+
+. export excel using "$B201_XLSX", sheet("`sheet'", replace) firstrow(variables
+> )
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-01-has-decarb
+> onised/output/b2_01_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t07_firm_stats (52 rows)
+
+. use `original', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+end of do-file
+
+. 
+end of do-file
+
+######## B2-01: 08_energy_productivity ########
+
+. /*==========================================================================
+>   Line 8: "Energy productivity (VA/GJ)"
+>   Data  : SI 2010-2022 (data/b201_si.dta), clean == 1
+>   Output sheets:
+>     t08_total      all manufacturing: energy productivity VA/GJ,
+>                    as an AGGREGATE ratio: total VA / total GJ;
+>                    pool + by year, index 2010 = 100 and ln
+>     t08_by_kbli2   the same per KBLI 2-digit sector, pool + by year
+>     t08_firm_stats distribution across firms (n mean sd p10-p90 min max),
+>                    level and ln, pool + by year
+>   This is the inverse of GJ/VA (line 6). Firm level: only firms with
+>   energy use > 0.
+> 
+>   The aggregate ratio is what "manufacturing as a whole" did; the firm
+>   distribution shows the typical firm (big emitters weigh less there).
+>   "pool" = the sums over all years put together.
+>   NOTE: VA is nominal and masked, so a change can be price inflation
+>   rather than energy efficiency. Energy = scope 1 fuels (diesel, petrol, coal
+> , LPG)
+>   + purchased electricity; CO2 = scope 1 + scope 2 (see 04, 05). Energy
+>   reporting changes between 2015 and 2017. There is no 2016 survey.
+> ==========================================================================*/
+. if "$B201" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. 
+. * ---- A. aggregate ratio: all manufacturing and per sector ----
+. use "$B201_DATA/b201_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1
+(30 observations deleted)
+
+. generate n_firms = 1
+
+. expand 2, generate(copy_s)            // copy of every row as sector 0 = all 
+> manufacturing
+(33,019 observations created)
+
+. replace kbli2 = 0 if copy_s == 1
+(33,019 real changes made)
+
+. expand 2, generate(copy_y)            // copy of every row with year = 0 for 
+> "pool"
+(66,038 observations created)
+
+. replace year = 0 if copy_y == 1
+(66,038 real changes made)
+
+. collapse (sum) n_firms va gj_total, by(kbli2 year)
+
+. generate va_per_gj = va / gj_total if gj_total > 0
+
+. foreach v in va_per_gj {
+  2.     egen base = total(cond(year == 2010, `v', .)), by(kbli2)
+  3.     generate idx_`v' = 100 * `v' / base if base > 0 & year > 0
+  4.     generate ln_`v'  = ln(`v') if `v' > 0
+  5.     drop base
+  6. }
+(25 missing values generated)
+
+. generate period = cond(year == 0, "pool", string(year))
+
+. sort kbli2 year
+
+. order kbli2 period n_firms va gj_total va_per_gj
+
+. drop year
+
+. 
+. preserve
+
+. keep if kbli2 == 0
+(312 observations deleted)
+
+. drop kbli2
+
+. list period n_firms va_per_gj, clean noobs
+
+    period   n_firms   va_per~j  
+      pool     33019   4318.329  
+      2010      2334   4078.388  
+      2011      2337    3887.07  
+      2012      2359   2529.671  
+      2013      2368   1708.578  
+      2014      2451   2190.445  
+      2015      2630   3753.943  
+      2017      3357    11079.7  
+      2018      3010   7522.155  
+      2019      3007   13340.09  
+      2020      2935   2087.406  
+      2021      3075   8502.273  
+      2022      3156   4485.639  
+
+. export excel using "$B201_XLSX", sheet("t08_total", replace) firstrow(variabl
+> es)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-01-has-decarb
+> onised/output/b2_01_tables.xlsx saved
+
+. restore
+
+. keep if kbli2 > 0
+(13 observations deleted)
+
+. export excel using "$B201_XLSX", sheet("t08_by_kbli2", replace) firstrow(vari
+> ables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-01-has-decarb
+> onised/output/b2_01_tables.xlsx saved
+
+. 
+. * ---- B. distribution across firms ----
+. use "$B201_DATA/b201_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1
+(30 observations deleted)
+
+. do "$B201/_sumstats.do" "va_per_gj ln_va_per_gj" "" "t08_firm_stats"
+
+. /*==========================================================================
+>   _sumstats.do -- helper: descriptive statistics table, POOLED + BY YEAR
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B201/_sumstats.do" "gj_per_va ln_gj_per_va" "" "t06_firm_stats"
+> 
+>       argument 1 = list of variables
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b2_01_tables.xlsx (max 31 characters)
+> 
+>   Result: 1 row = variable x group x period (pool, 2010, 2011, ...)
+>           columns n mean sd p10 p25 p50 p75 p90 min max
+>   Rows with a missing group are not counted.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars grp sheet
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+
+. local first 1
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     local grp all
+. }
+
+. foreach v of local vars {
+  2.     foreach period in pool year {
+  3.         preserve
+  4.         keep `v' `grp' year
+  5.         keep if !missing(`v') & !missing(`grp')
+  6.         if _N > 0 {
+  7.             if "`period'" == "pool" replace year = 0
+  8.             collapse (count) n = `v' (mean) mean = `v' (sd) sd = `v' ///
+>                      (p10) p10 = `v' (p25) p25 = `v' (p50) p50 = `v' ///
+>                      (p75) p75 = `v' (p90) p90 = `v' (min) min = `v' (max) ma
+> x = `v', ///
+>                      by(`grp' year)
+  9.             generate str32 variable = "`v'"
+ 10.             if `first' == 0 append using `result'
+ 11.             save `result', replace
+ 12.             local first 0
+ 13.         }
+ 14.         restore
+ 15.     }
+ 16. }
+(547 observations deleted)
+(32,472 real changes made)
+(file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 not
+    found)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(547 observations deleted)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(547 observations deleted)
+(32,472 real changes made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(547 observations deleted)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+
+. 
+. use `result', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * the group is written as text using its value label (if it has one)
+. capture decode `grp', generate(group)
+
+. if _rc generate group = string(`grp')
+
+. * keep the variables in the order they were listed
+. generate variable_order = .
+(26 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(13 real changes made)
+(13 real changes made)
+
+. sort variable_order `grp' year
+
+. keep variable group period n mean sd p10 p25 p50 p75 p90 min max
+
+. export excel using "$B201_XLSX", sheet("`sheet'", replace) firstrow(variables
+> )
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-01-has-decarb
+> onised/output/b2_01_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t08_firm_stats (26 rows)
+
+. use `original', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+end of do-file
+
+. 
+end of do-file
+
+######## B2-01: 09_carbon_productivity ########
+
+. /*==========================================================================
+>   Line 9: "Carbon productivity (VA/CO2)"
+>   Data  : SI 2010-2022 (data/b201_si.dta), clean == 1
+>   Output sheets:
+>     t09_total      all manufacturing: carbon productivity VA/CO2,
+>                    as an AGGREGATE ratio: total VA / total CO2;
+>                    pool + by year, index 2010 = 100 and ln
+>     t09_by_kbli2   the same per KBLI 2-digit sector, pool + by year
+>     t09_firm_stats distribution across firms (n mean sd p10-p90 min max),
+>                    level and ln, pool + by year
+>   This is the inverse of CO2/VA (line 7). Firm level: only firms with
+>   CO2 > 0.
+> 
+>   The aggregate ratio is what "manufacturing as a whole" did; the firm
+>   distribution shows the typical firm (big emitters weigh less there).
+>   "pool" = the sums over all years put together.
+>   NOTE: VA is nominal and masked, so a change can be price inflation
+>   rather than cleaner production. Energy = scope 1 fuels (diesel, petrol, coa
+> l, LPG)
+>   + purchased electricity; CO2 = scope 1 + scope 2 (see 04, 05). Energy
+>   reporting changes between 2015 and 2017. There is no 2016 survey.
+> ==========================================================================*/
+. if "$B201" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. 
+. * ---- A. aggregate ratio: all manufacturing and per sector ----
+. use "$B201_DATA/b201_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1
+(30 observations deleted)
+
+. generate n_firms = 1
+
+. expand 2, generate(copy_s)            // copy of every row as sector 0 = all 
+> manufacturing
+(33,019 observations created)
+
+. replace kbli2 = 0 if copy_s == 1
+(33,019 real changes made)
+
+. expand 2, generate(copy_y)            // copy of every row with year = 0 for 
+> "pool"
+(66,038 observations created)
+
+. replace year = 0 if copy_y == 1
+(66,038 real changes made)
+
+. collapse (sum) n_firms va co2_total, by(kbli2 year)
+
+. generate va_per_co2 = va / co2_total if co2_total > 0
+
+. foreach v in va_per_co2 {
+  2.     egen base = total(cond(year == 2010, `v', .)), by(kbli2)
+  3.     generate idx_`v' = 100 * `v' / base if base > 0 & year > 0
+  4.     generate ln_`v'  = ln(`v') if `v' > 0
+  5.     drop base
+  6. }
+(25 missing values generated)
+
+. generate period = cond(year == 0, "pool", string(year))
+
+. sort kbli2 year
+
+. order kbli2 period n_firms va co2_total va_per_co2
+
+. drop year
+
+. 
+. preserve
+
+. keep if kbli2 == 0
+(312 observations deleted)
+
+. drop kbli2
+
+. list period n_firms va_per_co2, clean noobs
+
+    period   n_firms   va_per~2  
+      pool     33019   34263.12  
+      2010      2334   38397.53  
+      2011      2337    33561.1  
+      2012      2359   24299.44  
+      2013      2368   16539.95  
+      2014      2451   17430.28  
+      2015      2630   27686.77  
+      2017      3357   69926.01  
+      2018      3010   49795.34  
+      2019      3007   90696.56  
+      2020      2935   17472.23  
+      2021      3075   53847.48  
+      2022      3156   36320.44  
+
+. export excel using "$B201_XLSX", sheet("t09_total", replace) firstrow(variabl
+> es)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-01-has-decarb
+> onised/output/b2_01_tables.xlsx saved
+
+. restore
+
+. keep if kbli2 > 0
+(13 observations deleted)
+
+. export excel using "$B201_XLSX", sheet("t09_by_kbli2", replace) firstrow(vari
+> ables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-01-has-decarb
+> onised/output/b2_01_tables.xlsx saved
+
+. 
+. * ---- B. distribution across firms ----
+. use "$B201_DATA/b201_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1
+(30 observations deleted)
+
+. do "$B201/_sumstats.do" "va_per_co2 ln_va_per_co2" "" "t09_firm_stats"
+
+. /*==========================================================================
+>   _sumstats.do -- helper: descriptive statistics table, POOLED + BY YEAR
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B201/_sumstats.do" "gj_per_va ln_gj_per_va" "" "t06_firm_stats"
+> 
+>       argument 1 = list of variables
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b2_01_tables.xlsx (max 31 characters)
+> 
+>   Result: 1 row = variable x group x period (pool, 2010, 2011, ...)
+>           columns n mean sd p10 p25 p50 p75 p90 min max
+>   Rows with a missing group are not counted.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars grp sheet
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+
+. local first 1
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     local grp all
+. }
+
+. foreach v of local vars {
+  2.     foreach period in pool year {
+  3.         preserve
+  4.         keep `v' `grp' year
+  5.         keep if !missing(`v') & !missing(`grp')
+  6.         if _N > 0 {
+  7.             if "`period'" == "pool" replace year = 0
+  8.             collapse (count) n = `v' (mean) mean = `v' (sd) sd = `v' ///
+>                      (p10) p10 = `v' (p25) p25 = `v' (p50) p50 = `v' ///
+>                      (p75) p75 = `v' (p90) p90 = `v' (min) min = `v' (max) ma
+> x = `v', ///
+>                      by(`grp' year)
+  9.             generate str32 variable = "`v'"
+ 10.             if `first' == 0 append using `result'
+ 11.             save `result', replace
+ 12.             local first 0
+ 13.         }
+ 14.         restore
+ 15.     }
+ 16. }
+(547 observations deleted)
+(32,472 real changes made)
+(file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 not
+    found)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(547 observations deleted)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(547 observations deleted)
+(32,472 real changes made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(547 observations deleted)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+
+. 
+. use `result', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * the group is written as text using its value label (if it has one)
+. capture decode `grp', generate(group)
+
+. if _rc generate group = string(`grp')
+
+. * keep the variables in the order they were listed
+. generate variable_order = .
+(26 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(13 real changes made)
+(13 real changes made)
+
+. sort variable_order `grp' year
+
+. keep variable group period n mean sd p10 p25 p50 p75 p90 min max
+
+. export excel using "$B201_XLSX", sheet("`sheet'", replace) firstrow(variables
+> )
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-01-has-decarb
+> onised/output/b2_01_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t09_firm_stats (26 rows)
+
+. use `original', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+end of do-file
+
+. 
+end of do-file
+
+######## B2-01: 10-12_scale_intensity ########
+
+. /*==========================================================================
+>   Line 10: "Pisahkan perubahan emisi menjadi:"
+>   Line 11: "Scale effect: manufacturing menjadi lebih besar"
+>   Line 12: "Intensity effect: produksi menjadi lebih clean"
+>   (one file: lines 11 and 12 are the two halves of one decomposition)
+>   Data  : SI 2010-2022 (data/b201_si.dta), clean == 1
+>   Output sheets:
+>     t10_12_total     all manufacturing: change in emissions split into the
+>                      scale and the intensity effect, for every step between
+>                      two survey years and for the windows 2010-2022,
+>                      2010-2015 and 2017-2022
+>     t10_12_by_kbli2  the same per KBLI 2-digit sector, for the three windows
+> 
+>   Method: CO2 = VA x (CO2/VA), so in logs
+>       change in ln CO2 = change in ln VA      (scale effect)
+>                        + change in ln CO2/VA  (intensity effect)
+>   and the two parts add up exactly. A negative intensity effect = production
+>   became cleaner per unit of VA. pct_change_co2 = the same change in %.
+>   CO2 = scope 1 (4 fuels) + scope 2, aggregated over firms (see line 5).
+>   NOTE: VA is NOMINAL, so the scale effect includes price inflation and the
+>   intensity effect is pushed down by it: a negative intensity effect is not
+>   by itself proof of cleaner production. Sums over firms move with coverage,
+>   which jumps between 2015 and 2017; 2015-2017 is a two-year step (no 2016
+>   survey). The windows 2010-2015 and 2017-2022 stay inside one
+>   questionnaire period.
+> ==========================================================================*/
+. if "$B201" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B201_DATA/b201_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1
+(30 observations deleted)
+
+. expand 2, generate(copy)              // copy of every row as sector 0 = all 
+> manufacturing
+(33,019 observations created)
+
+. replace kbli2 = 0 if copy == 1
+(33,019 real changes made)
+
+. collapse (sum) co2_total va, by(kbli2 year)
+
+. generate ln_co2 = ln(co2_total) if co2_total > 0
+
+. generate ln_va  = ln(va)        if va > 0
+
+. 
+. * pair every year with every later year (within the same sector)
+. tempfile from
+
+. preserve
+
+. rename (year co2_total va ln_co2 ln_va) (year_from co2_from va_from ln_co2_fr
+> om ln_va_from)
+
+. save `from'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. restore
+
+. rename (year co2_total va ln_co2 ln_va) (year_to co2_to va_to ln_co2_to ln_va
+> _to)
+
+. joinby kbli2 using `from'
+
+. 
+. * keep consecutive survey years and the three windows
+. generate str12 step = ""
+(3,600 missing values generated)
+
+. replace step = "wave to wave" if year_to - year_from == 1
+(250 real changes made)
+
+. replace step = "2015 to 2017" if year_from == 2015 & year_to == 2017
+(25 real changes made)
+
+. replace step = "window"       if (year_from == 2010 & year_to == 2022) | ///
+>                                  (year_from == 2010 & year_to == 2015) | ///
+>                                  (year_from == 2017 & year_to == 2022)
+(75 real changes made)
+
+. keep if step != ""
+(3,250 observations deleted)
+
+. 
+. generate d_ln_co2         = ln_co2_to - ln_co2_from
+
+. generate scale_effect     = ln_va_to - ln_va_from
+
+. generate intensity_effect = d_ln_co2 - scale_effect     // = change in ln(CO2
+> /VA)
+
+. generate pct_change_co2   = 100 * (co2_to / co2_from - 1)
+
+. generate pct_change_va    = 100 * (va_to / va_from - 1)
+
+. generate pct_change_co2_per_va = 100 * ((co2_to / va_to) / (co2_from / va_fro
+> m) - 1)
+
+. generate period = string(year_from) + "-" + string(year_to)
+
+. 
+. * windows first, then the steps in time order
+. generate sort1 = (step != "window")
+
+. sort kbli2 sort1 year_from year_to
+
+. order kbli2 step period year_from year_to co2_from co2_to va_from va_to ///
+>       d_ln_co2 scale_effect intensity_effect pct_change_co2 pct_change_va pct
+> _change_co2_per_va
+
+. keep  kbli2 step period year_from year_to co2_from co2_to va_from va_to ///
+>       d_ln_co2 scale_effect intensity_effect pct_change_co2 pct_change_va pct
+> _change_co2_per_va
+
+. 
+. preserve
+
+. keep if kbli2 == 0
+(336 observations deleted)
+
+. drop kbli2
+
+. list period d_ln_co2 scale_effect intensity_effect, clean noobs
+
+       period    d_ln_co2   scale_e~t   intensi~t  
+    2010-2015    1.212571    .8855324    .3270388  
+    2010-2022    1.338715    1.283102    .0556126  
+    2017-2022    .8501043    .1950474     .655057  
+    2010-2011     .285037    .1504116    .1346254  
+    2011-2012    .0512505   -.2716637    .3229141  
+    2012-2013    .8073101     .422636    .3846741  
+    2013-2014   -.0195904    .0328388   -.0524292  
+    2014-2015    .0885639    .5513096   -.4627457  
+    2015-2017   -.7239609    .2025223   -.9264832  
+    2017-2018    .4779253    .1384087    .3395166  
+    2018-2019   -.5808287    .0187702   -.5995989  
+    2019-2020     1.35123   -.2956772    1.646907  
+    2020-2021   -.8866014    .2389412   -1.125543  
+    2021-2022    .4883795    .0946045     .393775  
+
+. export excel using "$B201_XLSX", sheet("t10_12_total", replace) firstrow(vari
+> ables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-01-has-decarb
+> onised/output/b2_01_tables.xlsx saved
+
+. restore
+
+. keep if kbli2 > 0 & step == "window"
+(278 observations deleted)
+
+. export excel using "$B201_XLSX", sheet("t10_12_by_kbli2", replace) firstrow(v
+> ariables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-01-has-decarb
+> onised/output/b2_01_tables.xlsx saved
+
+. 
+end of do-file
+
+######## B2-01: 13_figures ########
+
+. /*==========================================================================
+>   Line 13: "Output: table dan graph, untuk total dan per sektor"
+>   The tables (total and per sector) are written by files 02-12 to
+>   output/b2_01_tables.xlsx. This file draws the charts FROM those tables, so
+>   a chart always matches its table. The exact points of every chart are also
+>   written to a sheet figNN_data (graph-ready, e.g. to redraw the chart in
+>   Excel or PowerPoint). Runs LAST in 00_run.do.
+> 
+>   Charts (output/):
+>     fig03_output_va.png            output and VA, index 2010 = 100
+>     fig04_energy_use.png           energy use: scope 1 fuels, electricity, to
+> tal
+>     fig05_emissions.png            scope 1, scope 2, total CO2
+>     fig05_by_sector.png            each sector's % of total CO2, 2010 vs 2022
+>     fig06_energy_intensity.png     GJ/VA and GJ/output, index 2010 = 100
+>     fig07_carbon_intensity.png     CO2/VA and CO2/output, index 2010 = 100
+>     fig08_energy_productivity.png  VA/GJ, index 2010 = 100
+>     fig09_carbon_productivity.png  VA/CO2, index 2010 = 100
+>     fig10_12_scale_intensity.png   scale vs intensity effect, step by step
+>     fig10_12_by_sector.png         scale vs intensity effect per sector, 2010
+> -2022
+>   Time charts: the dashed line at 2016 marks the questionnaire change (and
+>   the missing 2016 survey), not a trend.
+> ==========================================================================*/
+. if "$B201" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. local brk  "xline(2016, lpattern(dash) lcolor(gs10))"
+
+. local look `"xlabel(2010(2)2022) xtitle("") graphregion(color(white))"'
+
+. 
+. * ---- fig03: output and VA (line 3) ----
+. import excel using "$B201_XLSX", sheet("t03_total") firstrow clear
+(9 vars, 12 obs)
+
+. keep year idx_output idx_va
+
+. export excel using "$B201_XLSX", sheet("fig03_data", replace) firstrow(variab
+> les)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-01-has-decarb
+> onised/output/b2_01_tables.xlsx saved
+
+. twoway (connected idx_output year) (connected idx_va year, lpattern(dash)), /
+> //
+>     `brk' `look' yline(100, lcolor(gs12)) ytitle("Index, 2010 = 100") ///
+>     legend(order(1 "Gross output" 2 "Value added")) ///
+>     title("Total output and value added (nominal)") ///
+>     note("Sum over surveyed firms (clean records). Nominal and masked values.
+> " ///
+>          "Dashed line at 2016: questionnaire change, no 2016 survey.")
+
+. graph export "$B201_OUT/fig03_output_va.png", replace width(2000)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-01-has-decarb
+> onised/output/fig03_output_va.png written in PNG format
+
+. 
+. * ---- fig04: energy use (line 4) ----
+. import excel using "$B201_XLSX", sheet("t04_total") firstrow clear
+(17 vars, 12 obs)
+
+. foreach v in gj_s1 gj_s2 gj_total gj_total_wide {
+  2.     replace `v' = `v' / 1e6           // million GJ
+  3. }
+(12 real changes made)
+(12 real changes made)
+(12 real changes made)
+(12 real changes made)
+
+. keep year gj_s1 gj_s2 gj_total gj_total_wide
+
+. export excel using "$B201_XLSX", sheet("fig04_data", replace) firstrow(variab
+> les)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-01-has-decarb
+> onised/output/b2_01_tables.xlsx saved
+
+. twoway (connected gj_total year) (connected gj_s1 year) (connected gj_s2 year
+> ) ///
+>        (line gj_total_wide year, lpattern(dash) lcolor(gs8)), ///
+>     `brk' `look' ytitle("Million GJ") ///
+>     legend(order(1 "Total" 2 "Fuels (scope 1)" 3 "Purchased electricity" ///
+>                  4 "Total incl. 9 fuels + 2020-form fuels") cols(2)) ///
+>     title("Total energy use") ///
+>     note("Headline fuels: diesel, petrol, coal, LPG (asked every year)." ///
+>          "Dashed grey: adds the other fuels; from 2020 mostly natural gas.")
+
+. graph export "$B201_OUT/fig04_energy_use.png", replace width(2000)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-01-has-decarb
+> onised/output/fig04_energy_use.png written in PNG format
+
+. 
+. * ---- fig05: emissions (line 5) ----
+. import excel using "$B201_XLSX", sheet("t05_total") firstrow clear
+(17 vars, 12 obs)
+
+. foreach v in co2_s1 co2_s2 co2_total co2_total_wide {
+  2.     replace `v' = `v' / 1e6           // million tonnes
+  3. }
+(12 real changes made)
+(12 real changes made)
+(12 real changes made)
+(12 real changes made)
+
+. keep year co2_s1 co2_s2 co2_total co2_total_wide
+
+. export excel using "$B201_XLSX", sheet("fig05_data", replace) firstrow(variab
+> les)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-01-has-decarb
+> onised/output/b2_01_tables.xlsx saved
+
+. twoway (connected co2_total year) (connected co2_s1 year) (connected co2_s2 y
+> ear) ///
+>        (line co2_total_wide year, lpattern(dash) lcolor(gs8)), ///
+>     `brk' `look' ytitle("Million tonnes CO2") ///
+>     legend(order(1 "Total" 2 "Scope 1 (fuels)" 3 "Scope 2 (electricity)" ///
+>                  4 "Total incl. 9 fuels + 2020-form fuels") cols(2)) ///
+>     title("Scope 1, scope 2 and total CO2 emissions") ///
+>     note("Scope 1: diesel, petrol, coal, LPG. Scope 2: block 0 grid factor (2
+> 014 value after 2014)." ///
+>          "Dashed grey: adds the other fuels; from 2020 mostly natural gas.")
+
+. graph export "$B201_OUT/fig05_emissions.png", replace width(2000)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-01-has-decarb
+> onised/output/fig05_emissions.png written in PNG format
+
+. 
+. * ---- fig05_by_sector: sector shares of CO2, 2010 vs 2022 (line 5) ----
+. import excel using "$B201_XLSX", sheet("t05_by_kbli2") firstrow clear
+(19 vars, 288 obs)
+
+. keep if inlist(year, 2010, 2022)
+(240 observations deleted)
+
+. keep kbli2 year pct_of_all_co2
+
+. reshape wide pct_of_all_co2, i(kbli2) j(year)
+(j = 2010 2022)
+
+Data                               Long   ->   Wide
+-----------------------------------------------------------------------------
+Number of observations               48   ->   24          
+Number of variables                   3   ->   3           
+j variable (2 values)              year   ->   (dropped)
+xij variables:
+                         pct_of_all_co2   ->   pct_of_all_co22010 pct_of_all_co
+> 22022
+-----------------------------------------------------------------------------
+
+. rename (pct_of_all_co22010 pct_of_all_co22022) (pct_co2_2010 pct_co2_2022)
+
+. export excel using "$B201_XLSX", sheet("fig05s_data", replace) firstrow(varia
+> bles)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-01-has-decarb
+> onised/output/b2_01_tables.xlsx saved
+
+. graph hbar (asis) pct_co2_2010 pct_co2_2022, ///
+>     over(kbli2, sort(pct_co2_2022) descending label(labsize(vsmall))) ///
+>     legend(order(1 "2010" 2 "2022")) ytitle("% of manufacturing CO2") ///
+>     title("Share of total CO2 by sector", size(medium)) ///
+>     graphregion(color(white) margin(l+2 r+4)) xsize(8) ysize(9)
+
+. graph export "$B201_OUT/fig05_by_sector.png", replace width(2000)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-01-has-decarb
+> onised/output/fig05_by_sector.png written in PNG format
+
+. 
+. * ---- fig06-fig09: intensity and productivity (lines 6-9) ----
+. * one loop: sheet, the index variable(s), legend labels, title
+. foreach n in 06 07 08 09 {
+  2.     import excel using "$B201_XLSX", sheet("t`n'_total") firstrow clear
+  3.     drop if period == "pool"
+  4.     generate year = real(period)
+  5.     if "`n'" == "06" {
+  6.         keep year idx_gj_per_va idx_gj_per_out
+  7.         local plot "(connected idx_gj_per_va year) (connected idx_gj_per_o
+> ut year, lpattern(dash))"
+  8.         local leg  `"legend(order(1 "GJ / VA" 2 "GJ / output"))"'
+  9.         local ttl  "Energy intensity"
+ 10.         local file "fig06_energy_intensity"
+ 11.     }
+ 12.     if "`n'" == "07" {
+ 13.         keep year idx_co2_per_va idx_co2_per_out
+ 14.         local plot "(connected idx_co2_per_va year) (connected idx_co2_per
+> _out year, lpattern(dash))"
+ 15.         local leg  `"legend(order(1 "CO2 / VA" 2 "CO2 / output"))"'
+ 16.         local ttl  "Carbon intensity"
+ 17.         local file "fig07_carbon_intensity"
+ 18.     }
+ 19.     if "`n'" == "08" {
+ 20.         keep year idx_va_per_gj
+ 21.         local plot "(connected idx_va_per_gj year)"
+ 22.         local leg  "legend(off)"
+ 23.         local ttl  "Energy productivity (VA / GJ)"
+ 24.         local file "fig08_energy_productivity"
+ 25.     }
+ 26.     if "`n'" == "09" {
+ 27.         keep year idx_va_per_co2
+ 28.         local plot "(connected idx_va_per_co2 year)"
+ 29.         local leg  "legend(off)"
+ 30.         local ttl  "Carbon productivity (VA / CO2)"
+ 31.         local file "fig09_carbon_productivity"
+ 32.     }
+ 33.     order year
+ 34.     export excel using "$B201_XLSX", sheet("fig`n'_data", replace) firstro
+> w(variables)
+ 35.     twoway `plot', `brk' `look' yline(100, lcolor(gs12)) ytitle("Index, 20
+> 10 = 100") ///
+>         `leg' title("`ttl'") ///
+>         note("Ratio of totals over surveyed firms (clean records). VA and out
+> put are nominal," ///
+>              "so price inflation alone lowers intensity and raises productivi
+> ty." ///
+>              "Dashed line at 2016: questionnaire change, no 2016 survey.")
+ 36.     graph export "$B201_OUT/`file'.png", replace width(2000)
+ 37. }
+(11 vars, 13 obs)
+(1 observation deleted)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-01-has-decarb
+> onised/output/b2_01_tables.xlsx saved
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-01-has-decarb
+> onised/output/fig06_energy_intensity.png written in PNG format
+(11 vars, 13 obs)
+(1 observation deleted)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-01-has-decarb
+> onised/output/b2_01_tables.xlsx saved
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-01-has-decarb
+> onised/output/fig07_carbon_intensity.png written in PNG format
+(7 vars, 13 obs)
+(1 observation deleted)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-01-has-decarb
+> onised/output/b2_01_tables.xlsx saved
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-01-has-decarb
+> onised/output/fig08_energy_productivity.png written in PNG format
+(7 vars, 13 obs)
+(1 observation deleted)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-01-has-decarb
+> onised/output/b2_01_tables.xlsx saved
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-01-has-decarb
+> onised/output/fig09_carbon_productivity.png written in PNG format
+
+. 
+. * ---- fig10_12: scale vs intensity, step by step (lines 10-12) ----
+. import excel using "$B201_XLSX", sheet("t10_12_total") firstrow clear
+(14 vars, 14 obs)
+
+. keep if step != "window"
+(3 observations deleted)
+
+. sort year_from
+
+. generate x = _n
+
+. keep x period d_ln_co2 scale_effect intensity_effect
+
+. order x period
+
+. export excel using "$B201_XLSX", sheet("fig10_12_data", replace) firstrow(var
+> iables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-01-has-decarb
+> onised/output/b2_01_tables.xlsx saved
+
+. generate x1 = x - 0.18                // bars side by side
+
+. generate x2 = x + 0.18
+
+. * x-axis labels = the period of each step
+. capture label drop steps
+
+. forvalues i = 1/`=_N' {
+  2.     label define steps `i' "`=period[`i']'", add
+  3. }
+
+. label values x x1 steps
+
+. twoway (bar scale_effect x1, barwidth(0.36) color(navy%70)) ///
+>        (bar intensity_effect x2, barwidth(0.36) color(orange%80)) ///
+>        (scatter d_ln_co2 x, msymbol(D) mcolor(black)), ///
+>     yline(0, lcolor(gs8)) xlabel(1(1)`=_N', valuelabel angle(45) labsize(smal
+> l)) xtitle("") ///
+>     ytitle("Change in ln") ylabel(, angle(0)) ///
+>     legend(order(1 "Scale effect (VA)" 2 "Intensity effect (CO2/VA)" 3 "Total
+>  change in CO2") cols(1)) ///
+>     title("Change in CO2: scale vs intensity effect") ///
+>     note("Scale + intensity = total change in ln CO2. VA is nominal: inflatio
+> n sits in the scale effect." ///
+>          "2015-2017 is a two-year step across the questionnaire change.") ///
+>     graphregion(color(white))
+
+. graph export "$B201_OUT/fig10_12_scale_intensity.png", replace width(2000)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-01-has-decarb
+> onised/output/fig10_12_scale_intensity.png written in PNG format
+
+. 
+. * ---- fig10_12_by_sector: per sector, 2010-2022 (lines 10-12) ----
+. import excel using "$B201_XLSX", sheet("t10_12_by_kbli2") firstrow clear
+(15 vars, 72 obs)
+
+. keep if period == "2010-2022" & !missing(d_ln_co2)
+(48 observations deleted)
+
+. keep kbli2 d_ln_co2 scale_effect intensity_effect
+
+. export excel using "$B201_XLSX", sheet("fig10_12s_data", replace) firstrow(va
+> riables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-01-has-decarb
+> onised/output/b2_01_tables.xlsx saved
+
+. graph hbar (asis) scale_effect intensity_effect, ///
+>     over(kbli2, sort(d_ln_co2) descending label(labsize(vsmall))) ///
+>     legend(order(1 "Scale effect (VA)" 2 "Intensity effect (CO2/VA)") cols(1)
+> ) ///
+>     ytitle("Change in ln, 2010-2022") ///
+>     title("Scale vs intensity effect per sector, 2010-2022", size(medium)) //
+> /
+>     note("Sorted by the total change in ln CO2. VA is nominal." ///
+>          "Sectors with no CO2 in 2010 or 2022 are left out.") ///
+>     graphregion(color(white) margin(l+2 r+4)) xsize(8) ysize(9)
+
+. graph export "$B201_OUT/fig10_12_by_sector.png", replace width(2000)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-01-has-decarb
+> onised/output/fig10_12_by_sector.png written in PNG format
+
+. graph drop _all
+
+. 
+end of do-file
+
+. log close b201
+      name:  b201
+       log:  /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-01-ha
+> s-decarbonised/output/b2_01_log.log
+  log type:  text
+ closed on:   9 Oct 2026, 12:54:17
+-------------------------------------------------------------------------------

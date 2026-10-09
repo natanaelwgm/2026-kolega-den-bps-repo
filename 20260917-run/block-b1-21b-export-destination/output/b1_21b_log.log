@@ -1,0 +1,3657 @@
+-------------------------------------------------------------------------------
+      name:  b21b
+       log:  /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21b-e
+> xport-destination/output/b1_21b_log.log
+  log type:  text
+ opened on:   9 Oct 2026, 12:54:05
+
+. foreach f of local files {
+  2.     display _newline as result "######## B1-21b: `f' ########"
+  3.     do "$B21B/`f'.do"
+  4. }
+
+######## B1-21b: 01a_prep_si ########
+
+. /*==========================================================================
+>   Line 1 (part a)  Prepare Statistik Industri (SI) 2010-2022 for B1-21b
+>   Input : $SI_DATA  (analysis_ready_data.dta from block 0)
+>   Output: data/b21b_si.dta  -- 1 row = 1 firm x year
+>           (open with: use "$B21B_DATA/b21b_si.dta", clear  then browse)
+>   Used in: line 4 (characteristics of firms by export market). Only 2021
+>            and 2022 are used there, because the Proman roster covers only
+>            those two years. Same definitions as block-b1-18.
+> 
+>   Main variables created:
+>     importer       1 = imports raw materials, 0 = does not
+>     imp_share_mat  imports / raw materials (val_rtlvcu)        -- importers o
+> nly
+>     imp_share_int  imports / total intermediate inputs         -- importers o
+> nly
+>     exporter, fdi, large, kbli2, kbli5, prov, java
+>     va, output, capital, workers, *_pw (per worker), ln_*
+>     tfp_op tfp_lp tfp_acf tfp_wrdg
+>     co2_s1 co2_s2 co2_total gj_s1 gj_s2 gj_total, co2_per_va, gj_per_va
+>     clean          1 = not an extreme energy outlier
+> ==========================================================================*/
+. if "$B21B" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$SI_DATA", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+. * ---- identifiers ------------------------------------------------------
+. * year = survey year (there is no 2016 file)
+. generate kbli2 = real(substr(industry_code, 1, 2))
+
+. generate kbli5 = industry_code
+
+. generate prov  = real(province_code)
+
+. generate java  = inlist(prov, 31, 32, 33, 34, 35, 36) if !missing(prov)
+
+. label define java 0 "Outside Java" 1 "Java"
+
+. label values java java
+
+. 
+. * ---- firm size: medium vs large (100-worker threshold) ----------------
+. generate large = (workers > 100) if !missing(workers)
+
+. label define large 0 "Medium (<=100)" 1 "Large (>100)"
+
+. label values large large
+
+. 
+. * ---- imports ----------------------------------------------------------
+. * importer is only defined where the import question can be evaluated
+. generate importer = import_flag if import_observed == 1
+
+. label define importer 0 "Non-importer" 1 "Importer"
+
+. label values importer importer
+
+. 
+. generate imports   = import_value_nominal
+
+. generate materials = val_rtlvcu                     // raw materials value (R
+> TLVCU)
+
+. generate inputs    = intermediate_inputs_nominal    // total intermediate inp
+> uts
+
+. 
+. * shares among importers only (with non-importers included the median is 0)
+. generate imp_share_mat = imports / materials if importer == 1 & imports > 0 &
+>  materials > 0
+(20,843 missing values generated)
+
+. generate imp_share_int = imports / inputs    if importer == 1 & imports > 0 &
+>  inputs > 0
+(20,843 missing values generated)
+
+. 
+. * ---- exports & FDI ----------------------------------------------------
+. generate exporter = export_flag
+(15,321 missing values generated)
+
+. generate fdi      = fdi_10_flag                     // foreign ownership >= 1
+> 0%
+(311 missing values generated)
+
+. * 2022: the form only asks about DIRECT exports, a "no" is never recorded -> 
+> missing
+. replace exporter = . if year == 2022
+(344 real changes made, 344 to missing)
+
+. * 2020: foreign ownership is inconsistent (47% FDI vs 8-11% other years) -> m
+> issing
+. replace fdi = . if year == 2020
+(2,936 real changes made, 2,936 to missing)
+
+. label define exporter 0 "Non-exporter" 1 "Exporter"
+
+. label values exporter exporter
+
+. label define fdi 0 "Domestic" 1 "FDI"
+
+. label values fdi fdi
+
+. 
+. generate export_share = export_share_pct if export_share_valid == 1
+(31,079 missing values generated)
+
+. 
+. * ---- firm characteristics (nominal) -----------------------------------
+. generate va      = value_added_nominal
+
+. generate output  = gross_output_nominal
+
+. generate capital = capital_stock_nominal
+(1,125 missing values generated)
+
+. generate va_pw   = va / workers      if workers > 0
+(28 missing values generated)
+
+. generate out_pw  = output / workers  if workers > 0
+(28 missing values generated)
+
+. generate cap_pw  = capital / workers if workers > 0
+(1,153 missing values generated)
+
+. 
+. generate tfp_op   = dev_nominal_tfp_op
+(32,377 missing values generated)
+
+. generate tfp_lp   = dev_nominal_tfp_lp
+(22,765 missing values generated)
+
+. generate tfp_acf  = dev_nominal_tfp_acf
+(22,765 missing values generated)
+
+. generate tfp_wrdg = dev_nominal_tfp_wrdg
+(22,765 missing values generated)
+
+. 
+. * ---- energy & emissions -----------------------------------------------
+. * COAL 2017 CORRECTION: block 0 multiplies by 1000 (treats it as tonnes),
+. * but the price per unit shows the data are already in kg. Divide back.
+. generate co2_coal = co2_coal_s1
+
+. generate gj_coal2 = gj_coal
+
+. replace  co2_coal = co2_coal_s1 / 1000 if year == 2017
+(1,181 real changes made)
+
+. replace  gj_coal2 = gj_coal / 1000     if year == 2017
+(1,181 real changes made)
+
+. 
+. * scope 1 = the 4 fuels asked in every year: diesel, petrol, coal, LPG
+. egen co2_s1 = rowtotal(co2_diesel_s1 co2_petrol_s1 co2_coal co2_lpg_s1), miss
+> ing
+
+. egen gj_s1  = rowtotal(gj_diesel gj_petrol gj_coal2 gj_lpg), missing
+
+. * scope 2 = purchased electricity
+. generate co2_s2 = co2_scope2_s1
+
+. generate gj_s2  = gj_electricity
+
+. egen co2_total = rowtotal(co2_s1 co2_s2), missing
+
+. egen gj_total  = rowtotal(gj_s1 gj_s2), missing
+
+. 
+. generate co2_per_va  = co2_total / va      if va > 0
+
+. generate gj_per_va   = gj_total / va       if va > 0
+
+. generate co2_per_out = co2_total / output  if output > 0
+
+. generate co2_pw      = co2_total / workers if workers > 0
+(28 missing values generated)
+
+. generate gj_pw       = gj_total / workers  if workers > 0
+(28 missing values generated)
+
+. 
+. * ---- energy outlier flag (clean) --------------------------------------
+. * a record is left out of the analysis (clean = 0) if any of its energy
+. * quantities is above 100x that year's 99th percentile. Nothing is deleted.
+. generate coal_kg_fix = fuel_coal_kg
+
+. replace  coal_kg_fix = fuel_coal_kg / 1000 if year == 2017
+(1,181 real changes made)
+
+. generate clean = 1
+
+. levelsof year, local(years)
+2010 2011 2012 2013 2014 2015 2017 2018 2019 2020 2021 2022
+
+. foreach q in fuel_diesel_ltr fuel_petrol_ltr fuel_kerosene_ltr coal_kg_fix fu
+> el_lpg_kg ///
+>              fuel_citygas_m3 fuel_othergas_m3 fuel_coalbriq_kg fuel_coke_kg /
+> //
+>              elec_pln_kwh elec_nonpln_kwh elec_owngen_kwh fuel_dieseloil_ltr 
+> ///
+>              fuel_fueloil_ltr fuel_natgas_mmbtu fuel_biodiesel_ltr fuel_bioma
+> ss_kg {
+  2.     foreach y of local years {
+  3.         quietly count if year == `y' & `q' > 0 & !missing(`q')
+  4.         if r(N) > 2 {
+  5.             quietly summarize `q' if year == `y' & `q' > 0, detail
+  6.             quietly replace clean = 0 if year == `y' & `q' > 100 * r(p99) 
+> & !missing(`q')
+  7.         }
+  8.     }
+  9. }
+
+. replace clean = 0 if workers == 0 & co2_s1 > 0 & !missing(co2_s1)
+(20 real changes made)
+
+. count if clean == 0
+  30
+
+. display as result "Outlier records (clean = 0): " r(N)
+Outlier records (clean = 0): 30
+
+. 
+. * ---- ln versions ------------------------------------------------------
+. foreach v in imports materials va output capital workers va_pw out_pw cap_pw 
+> ///
+>              co2_s1 co2_s2 co2_total gj_s1 gj_s2 gj_total co2_per_va gj_per_v
+> a {
+  2.     generate ln_`v' = ln(`v') if `v' > 0
+  3. }
+(20,843 missing values generated)
+(1,154 missing values generated)
+(14,164 missing values generated)
+(28 missing values generated)
+(28 missing values generated)
+(28 missing values generated)
+(14,177 missing values generated)
+(3,826 missing values generated)
+(1,933 missing values generated)
+(547 missing values generated)
+(3,826 missing values generated)
+(1,933 missing values generated)
+(547 missing values generated)
+(547 missing values generated)
+(547 missing values generated)
+
+. 
+. * ---- save -------------------------------------------------------------
+. keep  firm_id year source_row kbli2 kbli5 prov java large importer imports ma
+> terials inputs ///
+>       imp_share_mat imp_share_int exporter export_share fdi va output capital
+>  ///
+>       workers va_pw out_pw cap_pw tfp_* co2_s1 co2_s2 co2_total gj_s1 gj_s2 /
+> //
+>       gj_total co2_per_va gj_per_va co2_per_out co2_pw gj_pw clean ln_*
+
+. order firm_id year source_row kbli2 kbli5 prov java large importer exporter f
+> di
+
+. label variable imp_share_mat "Imports / raw materials (RTLVCU), importers onl
+> y"
+
+. label variable imp_share_int "Imports / total intermediate inputs, importers 
+> only"
+
+. label variable clean "1 = not an energy outlier"
+
+. compress
+  variable kbli2 was float now byte
+  variable prov was float now byte
+  variable java was float now byte
+  variable large was float now byte
+  variable importer was float now byte
+  variable exporter was float now byte
+  variable fdi was float now byte
+  variable clean was float now byte
+  (793,176 bytes saved)
+
+. save "$B21B_DATA/b21b_si.dta", replace
+(file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21b-export-d
+    > estination/data/b21b_si.dta not found)
+file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21b-export-d
+    > estination/data/b21b_si.dta saved
+
+. display as result "01a done: $B21B_DATA/b21b_si.dta (" _N " rows)"
+01a done: /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21b-expo
+> rt-destination/data/b21b_si.dta (33049 rows)
+
+. 
+end of do-file
+
+######## B1-21b: 01b_prep_proman ########
+
+. /*==========================================================================
+>   Line 1 (part b)  "Export destination structure:"
+>                    Prepare the Proman (production) roster, 2021 & 2022,
+>                    and map each destination country to a region
+>   Input : $ROSTER/Proman2021_sampel.xlsx, Proman2022_sampel.xlsx
+>   Output: data/b21b_pm_rows.dta -- 1 row = 1 product x firm x year
+>           sheet t01_country_map -- every destination name in the data, its
+>                                    region and EU+EFTA flag, number of rows
+> 
+>   Main variables created:
+>     val_prod      production value of the product (nominal, masked)
+>     exp_share     % of the product exported (0-100; values > 100 set missing)
+>     dest_country  main destination country (blank = not exported / not given)
+>     exported      1 = product is exported (destination named or share > 0)
+>     exp_value     export value = val_prod x exp_share / 100
+>     region        EU, US, China, ASEAN, Japan, India, Others
+>     high_std      1 = EU-27 + EFTA (Iceland, Liechtenstein, Norway,
+>                   Switzerland) = "advanced / high environmental standard
+>                   market"; 0 = any other destination
+> 
+>   ABOUT THE DESTINATION: Proman gives ONE main destination country per
+>     product (Namaneg/Negara). A product sold to several countries shows
+>     only the main one, so a firm's number of destinations is a lower bound.
+>     2021 marks non-exporters with "NO". "INDONESIA" as destination is
+>     treated as not exported.
+> 
+>   ABOUT THE FIRM ID (Kipb): masked ("***") in the sample files, so a
+>     "firm" is a CELL = year x province x 5-digit KBLI of the firm (firm_key).
+>     With the real BPS data firm_key = Kipb automatically (key_type).
+> 
+>   TO CHANGE THE REGION OF A COUNTRY: edit the "replace region" lines below.
+>   If the column names/order differ in the real files, edit the "rename"
+>   lines only.
+> ==========================================================================*/
+. if "$B21B" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. 
+. * ---- 2021 -------------------------------------------------------------
+. * Kipb Prop Komoditi Kodkbki Kbli (firm KBLI) Nilai Prprex (% exported)
+. * Namaneg (destination name) Kodeneg (destination code) Flg21
+. import excel using "$ROSTER/Proman2021_sampel.xlsx", firstrow allstring clear
+(20 vars, 9,834 obs)
+
+. rename (Kipb Prop Komoditi Kodkbki Kbli Nilai Prprex Namaneg Kodeneg Flg21) /
+> //
+>        (kipb prov_s product kbki kbli5 val_prod exp_share dest_name dest_code
+>  flag)
+
+. generate year = 2021
+
+. keep year kipb prov_s product kbki kbli5 val_prod exp_share dest_name dest_co
+> de flag
+
+. tempfile pm21
+
+. save `pm21'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. 
+. * ---- 2022 -------------------------------------------------------------
+. * Kip Prop Komoditi Kodekbki Kbli522 Nilpro22 Ekspor (% exported)
+. * Negara (destination name) Kodeneg (destination code) Flagpr22
+. import excel using "$ROSTER/Proman2022_sampel.xlsx", firstrow allstring clear
+(17 vars, 9,545 obs)
+
+. rename (Kip Prop Komoditi Kodekbki Kbli522 Nilpro22 Ekspor Negara Kodeneg Fla
+> gpr22) ///
+>        (kipb prov_s product kbki kbli5 val_prod exp_share dest_name dest_code
+>  flag)
+
+. generate year = 2022
+
+. keep year kipb prov_s product kbki kbli5 val_prod exp_share dest_name dest_co
+> de flag
+
+. append using `pm21'
+
+. 
+. * ---- values -------------------------------------------------------------
+. destring val_prod exp_share, replace force
+val_prod: all characters numeric; replaced as double
+exp_share: all characters numeric; replaced as double
+(17858 missing values generated)
+
+. count if exp_share > 100 & !missing(exp_share)
+  4
+
+. display as result "Export shares above 100% (set missing): " r(N)
+Export shares above 100% (set missing): 4
+
+. replace exp_share = . if exp_share > 100 | exp_share < 0
+(4 real changes made, 4 to missing)
+
+. 
+. * ---- destination country --------------------------------------------------
+. replace dest_name = strtrim(upper(dest_name))
+(0 real changes made)
+
+. replace dest_code = strtrim(dest_code)
+(0 real changes made)
+
+. replace dest_name = "" if dest_name == "NO"          // 2021: "NO" = not expo
+> rted
+(3,419 real changes made)
+
+. * some rows have only the code -> take the name used with the same code elsew
+> here
+. bysort dest_code (dest_name): replace dest_name = dest_name[_N] if dest_name 
+> == "" & dest_code != ""
+(118 real changes made)
+
+. replace dest_name = "CODE " + dest_code if dest_name == "" & dest_code != ""
+(0 real changes made)
+
+. generate dest_country = dest_name
+(17,893 missing values generated)
+
+. replace  dest_country = "" if dest_country == "INDONESIA"   // not an export
+(8 real changes made)
+
+. 
+. generate exported  = (dest_country != "") | (exp_share > 0 & !missing(exp_sha
+> re))
+
+. generate exp_value = val_prod * exp_share / 100 if exp_share > 0 & !missing(e
+> xp_share)
+(17,903 missing values generated)
+
+. replace  exp_value = 0 if exported == 1 & exp_share == 0
+(0 real changes made)
+
+. 
+. * ---- country -> region ----------------------------------------------------
+> --
+. * region: 1 EU (EU-27), 2 US, 3 China, 4 ASEAN, 5 Japan, 6 India, 7 Others
+. * (inlist takes at most 9 names, so long lists are split over several lines)
+. generate region = 7 if dest_country != ""
+(17,901 missing values generated)
+
+. replace region = 1 if inlist(dest_country, "AUSTRIA", "BELGIA", "BULGARIA", "
+> KROASIA", "SIPRUS", "CEKO", "REPUBLIK CEKO", "DENMARK", "ESTONIA")
+(18 real changes made)
+
+. replace region = 1 if inlist(dest_country, "FINLANDIA", "PERANCIS", "JERMAN",
+>  "YUNANI", "HONGARIA", "IRLANDIA", "ITALIA", "LATVIA")
+(75 real changes made)
+
+. replace region = 1 if inlist(dest_country, "LITHUANIA", "LITUANIA", "LUKSEMBU
+> RG", "MALTA", "BELANDA", "POLANDIA", "PORTUGAL")
+(35 real changes made)
+
+. replace region = 1 if inlist(dest_country, "ROMANIA", "RUMANIA", "SLOWAKIA", 
+> "SLOVAKIA", "SLOVENIA", "SPANYOL", "SWEDIA", "SWEDEN")
+(20 real changes made)
+
+. replace region = 2 if inlist(dest_country, "AMERIKA SERIKAT", "GUAM", "KEPULA
+> UAN TERLUAR KECIL AMERIKA SERIKAT")   // US incl. its territories
+(271 real changes made)
+
+. replace region = 3 if inlist(dest_country, "CHINA", "TIONGKOK")      // Hong 
+> Kong and Taiwan stay in Others
+(123 real changes made)
+
+. replace region = 4 if inlist(dest_country, "SINGAPURA", "MALAYSIA", "THAILAND
+> ", "FILIPINA", "VIETNAM")
+(256 real changes made)
+
+. replace region = 4 if inlist(dest_country, "BRUNEI DARUSSALAM", "KAMBOJA", "M
+> YANMAR", "LAOS")
+(8 real changes made)
+
+. replace region = 5 if inlist(dest_country, "JEPANG")
+(183 real changes made)
+
+. replace region = 6 if inlist(dest_country, "INDIA")
+(36 real changes made)
+
+. label define region 1 "EU" 2 "US" 3 "China" 4 "ASEAN" 5 "Japan" 6 "India" 7 "
+> Others"
+
+. label values region region
+
+. 
+. * ---- EU + EFTA = "advanced / high environmental standard market" ----------
+> ---
+. * EU-27 (region 1) plus the 4 EFTA countries. The UK (INGGRIS) is not in it.
+. generate high_std = (region == 1) if dest_country != ""
+(17,901 missing values generated)
+
+. replace  high_std = 1 if inlist(dest_country, "ISLANDIA", "LIECHTENSTEIN", "N
+> ORWEGIA", "SWISS", "SWITZERLAND")
+(5 real changes made)
+
+. label define high_std 0 "Other markets" 1 "EU+EFTA"
+
+. label values high_std high_std
+
+. 
+. * names that could not be placed in a region (aggregates such as "EROPA BARAT
+. * LAINNYA" and codes without a name) are in Others; they are listed here
+. display as text "Destinations in Others (check this list):"
+Destinations in Others (check this list):
+
+. tab dest_country if region == 7, sort
+
+                           dest_country |      Freq.     Percent        Cum.
+----------------------------------------+-----------------------------------
+                              AUSTRALIA |         86       18.98       18.98
+                          KOREA SELATAN |         77       17.00       35.98
+                    EROPA BARAT LAINNYA |         43        9.49       45.47
+                                 TAIWAN |         42        9.27       54.75
+                                LAINNYA |         31        6.84       61.59
+                                INGGRIS |         24        5.30       66.89
+                             ARAB SAUDI |         18        3.97       70.86
+                        UNI EMIRAT ARAB |         16        3.53       74.39
+                               HONGKONG |         10        2.21       76.60
+                             BANGLADESH |          9        1.99       78.59
+                            KOREA UTARA |          8        1.77       80.35
+                         FEDERASI RUSIA |          7        1.55       81.90
+      ASIA SELATAN DAN TENGGARA LAINNYA |          6        1.32       83.22
+                               PAKISTAN |          5        1.10       84.33
+                          SELANDIA BARU |          5        1.10       85.43
+                     ASIA UTARA LAINNYA |          4        0.88       86.31
+                                  SWISS |          4        0.88       87.20
+                                  TURKI |          4        0.88       88.08
+                                UKRAINA |          4        0.88       88.96
+                                MEKSIKO |          3        0.66       89.62
+                              SRI LANKA |          3        0.66       90.29
+                            TIMOR TIMUR |          3        0.66       90.95
+                         AFRIKA LAINNYA |          2        0.44       91.39
+                         AFRIKA SELATAN |          2        0.44       91.83
+                                  GHANA |          2        0.44       92.27
+                                 KANADA |          2        0.44       92.72
+                               MALADEWA |          2        0.44       93.16
+                              MAURITIUS |          2        0.44       93.60
+                                   PERU |          2        0.44       94.04
+                     POLINESIA PERANCIS |          2        0.44       94.48
+                                SOMALIA |          2        0.44       94.92
+                                  YAMAN |          2        0.44       95.36
+                               YORDANIA |          2        0.44       95.81
+                            AFGHANISTAN |          1        0.22       96.03
+                                ALGERIA |          1        0.22       96.25
+     AMERIKA TENGAH DAN SELATAN LAINNYA |          1        0.22       96.47
+                  AMERIKA UTARA LAINNYA |          1        0.22       96.69
+                              ANTARTIKA |          1        0.22       96.91
+                     ASIA BARAT LAINNYA |          1        0.22       97.13
+                                BELARUS |          1        0.22       97.35
+                                 BRAZIL |          1        0.22       97.57
+                               ETHIOPIA |          1        0.22       97.79
+                                   FIJI |          1        0.22       98.01
+                                  MESIR |          1        0.22       98.23
+                               MOZAMBIK |          1        0.22       98.45
+                                NIGERIA |          1        0.22       98.68
+                               NORWEGIA |          1        0.22       98.90
+                                   OMAN |          1        0.22       99.12
+                           PAPUA NUGINI |          1        0.22       99.34
+                              SWAZILAND |          1        0.22       99.56
+                               TANZANIA |          1        0.22       99.78
+                                URUGUAY |          1        0.22      100.00
+----------------------------------------+-----------------------------------
+                                  Total |        453      100.00
+
+. 
+. * ---- identifiers ----------------------------------------------------------
+> --
+. generate prov  = real(prov_s)
+
+. generate kbli2 = real(substr(kbli5, 1, 2))
+
+. generate java  = inlist(prov, 31, 32, 33, 34, 35, 36) if !missing(prov)
+
+. 
+. * firm_key: Kipb if available, otherwise the cell
+. count if kipb != "***" & kipb != ""
+  0
+
+. if r(N) > 0 {
+.     generate firm_key = kipb
+.     generate key_type = "kipb"
+. }
+
+. else {
+.     generate firm_key = string(year) + "_" + prov_s + "_" + kbli5
+.     generate key_type = "cell"
+.     display as error "Kipb is masked -> firm_key = cell (year x province x KB
+> LI5)"
+Kipb is masked -> firm_key = cell (year x province x KBLI5)
+. }
+
+. 
+. * ---- the country map, for checking (sheet t01_country_map) ----------------
+> ----
+. preserve
+
+. keep if dest_country != ""
+(17,901 observations deleted)
+
+. generate n_rows = 1
+
+. collapse (sum) n_rows exp_value, by(dest_country region high_std)
+
+. gsort region -n_rows
+
+. order region dest_country high_std n_rows exp_value
+
+. export excel using "$B21B_XLSX", sheet("t01_country_map", replace) firstrow(v
+> ariables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21b-export-de
+> stination/output/b1_21b_tables.xlsx saved
+
+. restore
+
+. 
+. * ---- save ----------------------------------------------------------------
+. label variable exp_share    "% of the product exported (0-100)"
+
+. label variable dest_country "Main destination country"
+
+. label variable exported     "1 = product exported"
+
+. label variable exp_value    "Export value = val_prod x exp_share/100 (nominal
+> )"
+
+. label variable region       "Destination region"
+
+. label variable high_std     "1 = destination in EU-27 + EFTA"
+
+. order year firm_key key_type prov kbli5 kbli2 product kbki val_prod exp_share
+>  exported exp_value dest_country region high_std
+
+. compress
+  variable year was float now int
+  variable prov was float now byte
+  variable kbli2 was float now byte
+  variable exported was float now byte
+  variable region was float now byte
+  variable high_std was float now byte
+  variable java was float now byte
+  (387,580 bytes saved)
+
+. save "$B21B_DATA/b21b_pm_rows.dta", replace
+(file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21b-export-d
+    > estination/data/b21b_pm_rows.dta not found)
+file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21b-export-d
+    > estination/data/b21b_pm_rows.dta saved
+
+. display as result "Proman roster: " _N " rows -> $B21B_DATA/b21b_pm_rows.dta"
+Proman roster: 19379 rows -> /private/tmp/claude-501/sp/pr-worktree/20260917-ru
+> n/block-b1-21b-export-destination/data/b21b_pm_rows.dta
+
+. 
+end of do-file
+
+######## B1-21b: 02_main_destination ########
+
+. /*==========================================================================
+>   Line 2: "Tujuan utama ekspor by firms/sektor: EU, US, China, ASEAN, Japan,
+>            India, others?"
+>   Data  : Proman roster 2021-2022 (data/b21b_pm_rows.dta), exported products
+>   Output sheets:
+>     t02_coverage          per year: products, exported products, % with a
+>                           destination, export value, % of it with a destinati
+> on
+>     t02_region_share      per region: % of export value and % of exported
+>                           products, number of firms, pool + by year
+>     t02_firm_main_region  exporting firms by their MAIN region (the region wi
+> th
+>                           the largest export value), % of firms, pool + by ye
+> ar
+>     t02_firm_any_region   % of exporting firms that export to each region
+>                           (a firm can be in several), pool + by year
+>     t02_region_by_kbli2   region shares of export value within each KBLI
+>                           2-digit sector, pool + by year
+>   Chart: fig02 (drawn in 05_figures.do)
+> 
+>   NOTE: "firm" = cell (year x province x KBLI5) while Kipb is masked.
+>   Value shares use exported products with a destination AND a valid export
+>   share; product shares count every exported product with a destination.
+>   One main destination per product. In "pool", n_firms counts firm-years.
+> ==========================================================================*/
+. if "$B21B" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. 
+. * ---- coverage ----
+. use "$B21B_DATA/b21b_pm_rows.dta", clear
+
+. generate one = 1
+
+. generate with_dest = (dest_country != "") if exported == 1
+(17,839 missing values generated)
+
+. generate val_with_dest = exp_value * (dest_country != "")
+(17,903 missing values generated)
+
+. egen tag_exp_firm = tag(firm_key year) if exported == 1
+
+. expand 2, generate(copy)              // copy of every row with year = 0 for 
+> "pool"
+(19,379 observations created)
+
+. replace year = 0 if copy == 1
+(19,379 real changes made)
+
+. collapse (sum) n_products = one n_exported = exported n_with_dest = with_dest
+>  ///
+>          n_exp_firms = tag_exp_firm exp_value val_with_dest, by(year)
+
+. generate pct_exported_with_dest = 100 * n_with_dest / n_exported
+
+. generate pct_value_with_dest    = 100 * val_with_dest / exp_value
+
+. generate period = cond(year == 0, "pool", string(year))
+
+. order period
+
+. drop year
+
+. list, clean noobs
+
+    period   n_prod~s   n_expo~d   n_with~t   n_exp_~s   exp_va~e   val_wi~t   
+> pct_ex~t   pct_va~t  
+      pool      19379       1540       1478        728   1.70e+11   1.63e+11   
+> 95.97403   95.55581  
+      2021       9834        746        714        370   9.65e+10   9.01e+10   
+> 95.71046   93.37054  
+      2022       9545        794        764        358   7.37e+10   7.25e+10   
+> 96.22166   98.41598  
+
+. export excel using "$B21B_XLSX", sheet("t02_coverage", replace) firstrow(vari
+> ables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21b-export-de
+> stination/output/b1_21b_tables.xlsx saved
+
+. 
+. * from here on: exported products with a named destination
+. use "$B21B_DATA/b21b_pm_rows.dta", clear
+
+. keep if dest_country != ""
+(17,901 observations deleted)
+
+. generate one = 1
+
+. tempfile dest
+
+. save `dest'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. 
+. * ---- region shares, pool + by year ----
+. egen tag_firm = tag(firm_key year region)     // counts each firm once per re
+> gion
+
+. expand 2, generate(copy)
+(1,478 observations created)
+
+. replace year = 0 if copy == 1
+(1,478 real changes made)
+
+. collapse (sum) n_products = one n_firms = tag_firm exp_value, by(region year)
+
+. bysort year: egen total_value = total(exp_value)
+
+. bysort year: egen total_products = total(n_products)
+
+. generate share_value_pct    = 100 * exp_value / total_value
+
+. generate share_products_pct = 100 * n_products / total_products
+
+. generate period = cond(year == 0, "pool", string(year))
+
+. sort year region
+
+. order region period share_value_pct share_products_pct exp_value n_products n
+> _firms
+
+. drop year total_*
+
+. list if period == "pool", clean noobs
+
+    region   period   sh~e_pct   sh~s_pct   exp_va~e   n_prod~s   n_firms  
+        EU     pool   10.07918   10.01353   1.64e+10        148        87  
+        US     pool   14.06975   18.33559   2.29e+10        271       138  
+     China     pool   28.60905   8.322057   4.65e+10        123        98  
+     ASEAN     pool   16.30587   17.86197   2.65e+10        264       200  
+     Japan     pool   14.74153    12.3816   2.40e+10        183       138  
+     India     pool   3.149817   2.435724   5.12e+09         36        28  
+    Others     pool   13.04481   30.64953   2.12e+10        453       276  
+
+. export excel using "$B21B_XLSX", sheet("t02_region_share", replace) firstrow(
+> variables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21b-export-de
+> stination/output/b1_21b_tables.xlsx saved
+
+. 
+. * ---- firms: main region (largest export value; ties -> most products) ----
+. use `dest', clear
+
+. collapse (sum) exp_value n_products = one, by(firm_key year region)
+
+. gsort firm_key year -exp_value -n_products
+
+. by firm_key year: keep if _n == 1
+(264 observations deleted)
+
+. generate n_firms = 1
+
+. expand 2, generate(copy)
+(701 observations created)
+
+. replace year = 0 if copy == 1
+(701 real changes made)
+
+. collapse (sum) n_firms, by(region year)
+
+. rename region main_region
+
+. bysort year: egen total = total(n_firms)
+
+. generate pct_firms = 100 * n_firms / total
+
+. generate period = cond(year == 0, "pool", string(year))
+
+. sort year main_region
+
+. order main_region period n_firms pct_firms
+
+. drop year total
+
+. export excel using "$B21B_XLSX", sheet("t02_firm_main_region", replace) first
+> row(variables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21b-export-de
+> stination/output/b1_21b_tables.xlsx saved
+
+. 
+. * ---- firms: exports to region at all ----
+. use `dest', clear
+
+. keep firm_key year region
+
+. duplicates drop                                // 1 row = firm x region
+
+Duplicates in terms of all variables
+
+(513 observations deleted)
+
+. generate one = 1
+
+. egen tag_firm = tag(firm_key year)             // 1 per exporting firm
+
+. expand 2, generate(copy)
+(965 observations created)
+
+. replace year = 0 if copy == 1
+(965 real changes made)
+
+. bysort year: egen n_exp_firms = total(tag_firm)  // exporting firms with a de
+> stination
+
+. collapse (sum) n_firms = one (first) n_exp_firms, by(region year)
+
+. generate pct_of_exp_firms = 100 * n_firms / n_exp_firms
+
+. generate period = cond(year == 0, "pool", string(year))
+
+. sort year region
+
+. order region period n_firms n_exp_firms pct_of_exp_firms
+
+. drop year
+
+. export excel using "$B21B_XLSX", sheet("t02_firm_any_region", replace) firstr
+> ow(variables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21b-export-de
+> stination/output/b1_21b_tables.xlsx saved
+
+. 
+. * ---- by sector (KBLI 2-digit of the firm) ----
+. use `dest', clear
+
+. egen tag_firm = tag(firm_key year region)
+
+. expand 2, generate(copy)
+(1,478 observations created)
+
+. replace year = 0 if copy == 1
+(1,478 real changes made)
+
+. collapse (sum) exp_value n_products = one n_firms = tag_firm, by(kbli2 region
+>  year)
+
+. bysort kbli2 year: egen sector_value = total(exp_value)
+
+. generate share_in_sector_pct = 100 * exp_value / sector_value
+
+. generate period = cond(year == 0, "pool", string(year))
+
+. sort kbli2 year region
+
+. order kbli2 region period share_in_sector_pct exp_value n_products n_firms
+
+. drop year sector_value
+
+. export excel using "$B21B_XLSX", sheet("t02_region_by_kbli2", replace) firstr
+> ow(variables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21b-export-de
+> stination/output/b1_21b_tables.xlsx saved
+
+. 
+end of do-file
+
+######## B1-21b: 03_destination_concentration ########
+
+. /*==========================================================================
+>   Line 3: "Export concentration index/ diversification of destinations"
+>   Data  : Proman roster 2021-2022 (data/b21b_pm_rows.dta), exported products
+>           with a named destination
+>   Measures (1 row = firm x year, saved to data/b21b_firm_conc.dta):
+>     n_dest      number of distinct destination countries
+>     n_regions   number of distinct regions (EU, US, China, ASEAN, Japan, Indi
+> a, Others)
+>     hhi_dest    HHI of export value across destination countries (0-1;
+>                 1 = everything goes to one country). Only firms with a
+>                 positive export value.
+>     hhi_region  the same across regions
+>   Output sheets:
+>     t03_firm_conc      stats of n_dest, n_regions, hhi_dest, hhi_region, pool
+>  + by year
+>     t03_ndest_dist     % of exporting firms with 1, 2, 3, 4, 5+ destinations
+>     t03_sector_conc    per KBLI 2-digit: firms, mean destinations, median fir
+> m
+>                        HHI, and the sector's own HHI across countries
+>     t03_national_conc  all exports: number of countries, HHI, top-1/3/5
+>                        country shares, HHI across regions, pool + by year
+>   Chart: fig03 (drawn in 05_figures.do)
+> 
+>   NOTE: Proman gives ONE main destination per product, so a firm with one
+>   product always has 1 destination and HHI = 1. With cells instead of firms
+>   (Kipb masked) a "firm" can hold several plants, so n_dest is higher than
+>   for a single plant. Read the pattern, not the level.
+> ==========================================================================*/
+. if "$B21B" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B21B_DATA/b21b_pm_rows.dta", clear
+
+. keep if dest_country != ""
+(17,901 observations deleted)
+
+. tempfile dest
+
+. save `dest'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. 
+. * ---- firm level ----
+. * HHI across countries
+. collapse (sum) exp_value, by(firm_key year kbli2 dest_country)
+
+. bysort firm_key year: egen total = total(exp_value)
+
+. generate s2 = (exp_value / total)^2 if total > 0
+(27 missing values generated)
+
+. collapse (count) n_dest = exp_value (sum) hhi_dest = s2 (max) total, by(firm_
+> key year kbli2)
+
+. replace hhi_dest = . if !(total > 0)
+(22 real changes made, 22 to missing)
+
+. drop total
+
+. tempfile firm
+
+. save `firm'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+
+. * HHI across regions
+. use `dest', clear
+
+. collapse (sum) exp_value, by(firm_key year region)
+
+. bysort firm_key year: egen total = total(exp_value)
+
+. generate s2 = (exp_value / total)^2 if total > 0
+(25 missing values generated)
+
+. collapse (count) n_regions = exp_value (sum) hhi_region = s2 (max) total, by(
+> firm_key year)
+
+. replace hhi_region = . if !(total > 0)
+(22 real changes made, 22 to missing)
+
+. drop total
+
+. merge 1:1 firm_key year using `firm', nogenerate
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                               701  
+    -----------------------------------------
+
+. label variable n_dest     "Number of destination countries"
+
+. label variable n_regions  "Number of destination regions"
+
+. label variable hhi_dest   "HHI of export value across countries (0-1)"
+
+. label variable hhi_region "HHI of export value across regions (0-1)"
+
+. order firm_key year kbli2 n_dest n_regions hhi_dest hhi_region
+
+. save "$B21B_DATA/b21b_firm_conc.dta", replace
+(file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21b-export-d
+    > estination/data/b21b_firm_conc.dta not found)
+file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21b-export-d
+    > estination/data/b21b_firm_conc.dta saved
+
+. 
+. do "$B21B/_sumstats.do" "n_dest n_regions hhi_dest hhi_region" "" "t03_firm_c
+> onc"
+
+. /*==========================================================================
+>   _sumstats.do -- helper: descriptive statistics table, POOLED + BY YEAR
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B21B/_sumstats.do" "workers va_pw" "hs_market" "t04_si_char"
+> 
+>       argument 1 = list of variables
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b1_21b_tables.xlsx (max 31 characters
+> )
+> 
+>   Result: 1 row = variable x group x period (pool, 2010, 2011, ...)
+>           columns n mean sd p10 p25 p50 p75 p90 min max
+>   Rows with a missing group are not counted.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars grp sheet
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000004 saved
+    as .dta format
+
+. local first 1
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     local grp all
+. }
+
+. foreach v of local vars {
+  2.     foreach period in pool year {
+  3.         preserve
+  4.         keep `v' `grp' year
+  5.         keep if !missing(`v') & !missing(`grp')
+  6.         if _N > 0 {
+  7.             if "`period'" == "pool" replace year = 0
+  8.             collapse (count) n = `v' (mean) mean = `v' (sd) sd = `v' ///
+>                      (p10) p10 = `v' (p25) p25 = `v' (p50) p50 = `v' ///
+>                      (p75) p75 = `v' (p90) p90 = `v' (min) min = `v' (max) ma
+> x = `v', ///
+>                      by(`grp' year)
+  9.             generate str32 variable = "`v'"
+ 10.             if `first' == 0 append using `result'
+ 11.             save `result', replace
+ 12.             local first 0
+ 13.         }
+ 14.         restore
+ 15.     }
+ 16. }
+(0 observations deleted)
+(701 real changes made)
+(file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 not
+    found)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(701 real changes made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(22 observations deleted)
+(679 real changes made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(22 observations deleted)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(22 observations deleted)
+(679 real changes made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(22 observations deleted)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+
+. 
+. use `result', clear
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * the group is written as text using its value label (if it has one)
+. capture decode `grp', generate(group)
+
+. if _rc generate group = string(`grp')
+
+. * keep the variables in the order they were listed
+. generate variable_order = .
+(12 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(3 real changes made)
+(3 real changes made)
+(3 real changes made)
+(3 real changes made)
+
+. sort variable_order `grp' year
+
+. keep variable group period n mean sd p10 p25 p50 p75 p90 min max
+
+. export excel using "$B21B_XLSX", sheet("`sheet'", replace) firstrow(variables
+> )
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21b-export-de
+> stination/output/b1_21b_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t03_firm_conc (12 rows)
+
+. use `original', clear
+
+. 
+end of do-file
+
+. 
+. * ---- distribution of the number of destinations ----
+. use "$B21B_DATA/b21b_firm_conc.dta", clear
+
+. generate ndest_group = min(n_dest, 5)
+
+. label define ndest_group 1 "1" 2 "2" 3 "3" 4 "4" 5 "5+"
+
+. label values ndest_group ndest_group
+
+. generate n_firms = 1
+
+. expand 2, generate(copy)
+(701 observations created)
+
+. replace year = 0 if copy == 1
+(701 real changes made)
+
+. collapse (sum) n_firms, by(ndest_group year)
+
+. bysort year: egen total = total(n_firms)
+
+. generate pct_firms = 100 * n_firms / total
+
+. generate period = cond(year == 0, "pool", string(year))
+
+. sort year ndest_group
+
+. order ndest_group period n_firms pct_firms
+
+. drop year total
+
+. export excel using "$B21B_XLSX", sheet("t03_ndest_dist", replace) firstrow(va
+> riables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21b-export-de
+> stination/output/b1_21b_tables.xlsx saved
+
+. 
+. * ---- by sector: firm averages + the sector's own HHI ----
+. use "$B21B_DATA/b21b_firm_conc.dta", clear
+
+. generate n_firms = 1
+
+. expand 2, generate(copy)
+(701 observations created)
+
+. replace year = 0 if copy == 1
+(701 real changes made)
+
+. collapse (sum) n_firms (mean) mean_n_dest = n_dest (p50) med_hhi_firm = hhi_d
+> est, by(kbli2 year)
+
+. tempfile sec_firm
+
+. save `sec_firm'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+
+. use `dest', clear
+
+. expand 2, generate(copy)
+(1,478 observations created)
+
+. replace year = 0 if copy == 1
+(1,478 real changes made)
+
+. collapse (sum) exp_value, by(kbli2 year dest_country)
+
+. bysort kbli2 year: egen total = total(exp_value)
+
+. generate s2 = (exp_value / total)^2 if total > 0
+
+. collapse (count) n_countries = exp_value (sum) hhi_sector = s2, by(kbli2 year
+> )
+
+. merge 1:1 kbli2 year using `sec_firm', nogenerate
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                                70  
+    -----------------------------------------
+
+. generate period = cond(year == 0, "pool", string(year))
+
+. sort kbli2 year
+
+. order kbli2 period n_firms n_countries mean_n_dest med_hhi_firm hhi_sector
+
+. drop year
+
+. export excel using "$B21B_XLSX", sheet("t03_sector_conc", replace) firstrow(v
+> ariables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21b-export-de
+> stination/output/b1_21b_tables.xlsx saved
+
+. 
+. * ---- national: all exports together ----
+. use `dest', clear
+
+. expand 2, generate(copy)
+(1,478 observations created)
+
+. replace year = 0 if copy == 1
+(1,478 real changes made)
+
+. preserve
+
+. collapse (sum) exp_value, by(year region)
+
+. bysort year: egen total = total(exp_value)
+
+. generate s2 = (exp_value / total)^2
+
+. collapse (sum) hhi_region = s2, by(year)
+
+. tempfile reg
+
+. save `reg'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000005 saved
+    as .dta format
+
+. restore
+
+. collapse (sum) exp_value, by(year dest_country)
+
+. bysort year: egen total = total(exp_value)
+
+. generate share = exp_value / total
+
+. gsort year -share
+
+. by year: generate rank = _n                     // 1 = largest destination
+
+. generate s2   = share^2
+
+. generate top1 = share * (rank == 1)
+
+. generate top3 = share * (rank <= 3)
+
+. generate top5 = share * (rank <= 5)
+
+. collapse (count) n_countries = share (sum) hhi_country = s2 top1 top3 top5, b
+> y(year)
+
+. merge 1:1 year using `reg', nogenerate
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                                 3  
+    -----------------------------------------
+
+. generate period = cond(year == 0, "pool", string(year))
+
+. order period n_countries hhi_country top1 top3 top5 hhi_region
+
+. drop year
+
+. list, clean noobs
+
+    period   n_coun~s   hhi_co~y       top1       top3       top5   hhi_re~n  
+      pool         81   .1427615   .2860905   .5739318   .7327182   .1781308  
+      2021         61   .2239359   .4265156   .6770268   .7799946   .2475276  
+      2022         68   .1391444   .2684716   .5695912   .7418778   .1891726  
+
+. export excel using "$B21B_XLSX", sheet("t03_national_conc", replace) firstrow
+> (variables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21b-export-de
+> stination/output/b1_21b_tables.xlsx saved
+
+. 
+end of do-file
+
+######## B1-21b: 04_high_standard_markets ########
+
+. /*==========================================================================
+>   Line 4: "Compare characteristics firms exporting ke advanced/high
+>            environmental standard market vs to other market à untuk
+>            mengetahuin foreign climate pressure."
+>   Data  : Proman roster 2021-2022 (data/b21b_pm_rows.dta) for the market
+>           groups; SI 2021-2022 (data/b21b_si.dta), clean == 1, for the
+>           firm characteristics
+>   High-standard market = EU-27 + EFTA (Iceland, Liechtenstein, Norway,
+>   Switzerland), decided 9 Oct 2026. Everything else = other markets.
+> 
+>   Groups (exporting firms with a named destination):
+>     hs_market  1 "EU+EFTA"        exports at least one product to EU+EFTA
+>                0 "Other only"     exports, but none to EU+EFTA
+>     mkt3       EU+EFTA only / both / other only (shows the overlap)
+>     hs_share   % of the firm's export value going to EU+EFTA
+> 
+>   MERGE RULE (roster -> SI): the roster has no usable firm id (Kipb masked),
+>   so the group is set per CELL = year x province x KBLI5. Every SI firm
+>   (clean == 1) in a cell that exports gets that cell's group; SI firms in
+>   cells with no exports are left out. Cells mix exporters and
+>   non-exporters, so t04_si_char_exp repeats the comparison for SI firms
+>   that report exporting themselves (2021 only: the 2022 SI export flag is
+>   missing). With the real data, merge on Kipb instead.
+> 
+>   Output sheets:
+>     t04_groups        number of exporting firms per group, mean hs_share
+>     t04_roster_char   roster side: products, production & export value,
+>                       export intensity, destinations, by hs_market
+>     t04_si_match      cells per group and how many SI firms they hold
+>     t04_si_char       SI characteristics (size, productivity, TFP, energy,
+>                       CO2), level and ln, by hs_market, pool + by year
+>     t04_si_char_exp   the same, SI exporters only (2021)
+>     t04_si_shares     % FDI, importer, large, Java, SI exporter, by hs_market
+>   Chart: fig04 (drawn in 05_figures.do)
+> 
+>   NOTE: Proman gives ONE main destination per product, so "exports to
+>   EU+EFTA" means EU+EFTA is the main destination of at least one product.
+>   Values are nominal and masked.
+> ==========================================================================*/
+. if "$B21B" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. * ---- roster side: one row per firm x year ----
+. use "$B21B_DATA/b21b_pm_rows.dta", clear
+
+. label define hs_market 0 "Other only" 1 "EU+EFTA"
+
+. label define mkt3 1 "EU+EFTA only" 2 "Both" 3 "Other only"
+
+. generate one = 1
+
+. generate with_dest = (dest_country != "")
+
+. generate v_hs = exp_value * high_std
+(17,965 missing values generated)
+
+. collapse (sum) n_products = one val_prod exp_value v_hs n_exp_products = with
+> _dest ///
+>          (max) any_hs = high_std (min) min_hs = high_std, by(firm_key year)
+
+. keep if n_exp_products > 0                  // exporting firms with a destina
+> tion
+(3,146 observations deleted)
+
+. generate hs_market = any_hs
+
+. generate mkt3 = cond(min_hs == 1, 1, cond(any_hs == 1, 2, 3))
+
+. label values hs_market hs_market
+
+. label values mkt3 mkt3
+
+. generate hs_share      = 100 * v_hs / exp_value if exp_value > 0
+(22 missing values generated)
+
+. generate exp_intensity = 100 * exp_value / val_prod if val_prod > 0
+
+. generate ln_val_prod   = ln(val_prod)  if val_prod > 0
+
+. generate ln_exp_value  = ln(exp_value) if exp_value > 0
+(22 missing values generated)
+
+. merge 1:1 firm_key year using "$B21B_DATA/b21b_firm_conc.dta", keepusing(n_de
+> st) keep(master match) nogenerate
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                               701  
+    -----------------------------------------
+
+. label variable hs_share      "% of export value to EU+EFTA"
+
+. label variable exp_intensity "Export value / production value (%)"
+
+. 
+. * groups
+. preserve
+
+. generate n_firms = 1
+
+. expand 2, generate(copy)
+(701 observations created)
+
+. replace year = 0 if copy == 1
+(701 real changes made)
+
+. collapse (sum) n_firms (mean) mean_hs_share = hs_share, by(mkt3 year)
+
+. bysort year: egen total = total(n_firms)
+
+. generate pct_firms = 100 * n_firms / total
+
+. generate period = cond(year == 0, "pool", string(year))
+
+. sort year mkt3
+
+. order mkt3 period n_firms pct_firms mean_hs_share
+
+. drop year total
+
+. list if period == "pool", clean noobs
+
+            mkt3   period   n_firms   pct_fi~s   mean_h~e  
+    EU+EFTA only     pool        43   6.134094    97.5966  
+            Both     pool        46   6.562054   33.63268  
+      Other only     pool       612   87.30385          0  
+
+. export excel using "$B21B_XLSX", sheet("t04_groups", replace) firstrow(variab
+> les)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21b-export-de
+> stination/output/b1_21b_tables.xlsx saved
+
+. restore
+
+. 
+. do "$B21B/_sumstats.do" "n_products val_prod ln_val_prod exp_value ln_exp_val
+> ue exp_intensity n_dest hs_share" "hs_market" "t04_roster_char"
+
+. /*==========================================================================
+>   _sumstats.do -- helper: descriptive statistics table, POOLED + BY YEAR
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B21B/_sumstats.do" "workers va_pw" "hs_market" "t04_si_char"
+> 
+>       argument 1 = list of variables
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b1_21b_tables.xlsx (max 31 characters
+> )
+> 
+>   Result: 1 row = variable x group x period (pool, 2010, 2011, ...)
+>           columns n mean sd p10 p25 p50 p75 p90 min max
+>   Rows with a missing group are not counted.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars grp sheet
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+
+. local first 1
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     local grp all
+. }
+
+. foreach v of local vars {
+  2.     foreach period in pool year {
+  3.         preserve
+  4.         keep `v' `grp' year
+  5.         keep if !missing(`v') & !missing(`grp')
+  6.         if _N > 0 {
+  7.             if "`period'" == "pool" replace year = 0
+  8.             collapse (count) n = `v' (mean) mean = `v' (sd) sd = `v' ///
+>                      (p10) p10 = `v' (p25) p25 = `v' (p50) p50 = `v' ///
+>                      (p75) p75 = `v' (p90) p90 = `v' (min) min = `v' (max) ma
+> x = `v', ///
+>                      by(`grp' year)
+  9.             generate str32 variable = "`v'"
+ 10.             if `first' == 0 append using `result'
+ 11.             save `result', replace
+ 12.             local first 0
+ 13.         }
+ 14.         restore
+ 15.     }
+ 16. }
+(0 observations deleted)
+(701 real changes made)
+(file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 not
+    found)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(0 observations deleted)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(0 observations deleted)
+(701 real changes made)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(0 observations deleted)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(0 observations deleted)
+(701 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(0 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(0 observations deleted)
+(701 real changes made)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(0 observations deleted)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(22 observations deleted)
+(679 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(22 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(0 observations deleted)
+(701 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(0 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(0 observations deleted)
+(701 real changes made)
+(variable min was long, now double to accommodate using data's values)
+(variable max was long, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(0 observations deleted)
+(variable min was long, now double to accommodate using data's values)
+(variable max was long, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(22 observations deleted)
+(679 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(22 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+
+. 
+. use `result', clear
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * the group is written as text using its value label (if it has one)
+. capture decode `grp', generate(group)
+
+. if _rc generate group = string(`grp')
+
+. * keep the variables in the order they were listed
+. generate variable_order = .
+(48 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+
+. sort variable_order `grp' year
+
+. keep variable group period n mean sd p10 p25 p50 p75 p90 min max
+
+. export excel using "$B21B_XLSX", sheet("`sheet'", replace) firstrow(variables
+> )
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21b-export-de
+> stination/output/b1_21b_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t04_roster_char (48 rows)
+
+. use `original', clear
+
+. 
+end of do-file
+
+. 
+. * ---- the cell groups, for the merge with SI ----
+. use "$B21B_DATA/b21b_pm_rows.dta", clear
+
+. keep if dest_country != ""
+(17,901 observations deleted)
+
+. collapse (max) hs_market = high_std, by(year prov kbli5)
+
+. label define hs_market 0 "Other only" 1 "EU+EFTA", replace
+
+. label values hs_market hs_market
+
+. save "$B21B_DATA/b21b_cells.dta", replace
+(file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21b-export-d
+    > estination/data/b21b_cells.dta not found)
+file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21b-export-d
+    > estination/data/b21b_cells.dta saved
+
+. 
+. * ---- SI firms in those cells ----
+. use "$B21B_DATA/b21b_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if inlist(year, 2021, 2022) & clean == 1
+(26,818 observations deleted)
+
+. merge m:1 year prov kbli5 using "$B21B_DATA/b21b_cells.dta"
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                         4,385
+        from master                     4,135  (_merge==1)
+        from using                        250  (_merge==2)
+
+    Matched                             2,096  (_merge==3)
+    -----------------------------------------
+
+. * _merge: 1 = SI firm in a cell without exports, 2 = cell with no SI firm, 3 
+> = matched
+. preserve
+
+. keep if _merge != 1                         // exporting cells and their SI f
+> irms
+(4,135 observations deleted)
+
+. generate si_firm = (_merge == 3)
+
+. bysort year prov kbli5: egen n_si = total(si_firm)
+
+. egen tag_cell = tag(year prov kbli5)
+
+. generate cell_with_si = tag_cell * (n_si > 0)
+
+. expand 2, generate(copy)
+(2,346 observations created)
+
+. replace year = 0 if copy == 1
+(2,346 real changes made)
+
+. collapse (sum) n_cells = tag_cell n_cells_with_si = cell_with_si n_si_firms =
+>  si_firm, by(hs_market year)
+
+. generate pct_cells_with_si = 100 * n_cells_with_si / n_cells
+
+. generate period = cond(year == 0, "pool", string(year))
+
+. sort year hs_market
+
+. order hs_market period n_cells n_cells_with_si pct_cells_with_si n_si_firms
+
+. drop year
+
+. list, clean noobs
+
+     hs_market   period   n_cells   n_cell~i   pct_ce~i   n_si_f~s  
+    Other only     pool       612        388   63.39869       1615  
+       EU+EFTA     pool        89         63   70.78651        481  
+    Other only     2021       314        199    63.3758        802  
+       EU+EFTA     2021        42         30   71.42857        243  
+    Other only     2022       298        189   63.42282        813  
+       EU+EFTA     2022        47         33   70.21277        238  
+
+. export excel using "$B21B_XLSX", sheet("t04_si_match", replace) firstrow(vari
+> ables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21b-export-de
+> stination/output/b1_21b_tables.xlsx saved
+
+. restore
+
+. 
+. keep if _merge == 3
+(4,385 observations deleted)
+
+. drop _merge
+
+. save "$B21B_DATA/b21b_si_matched.dta", replace
+(file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21b-export-d
+    > estination/data/b21b_si_matched.dta not found)
+file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21b-export-d
+    > estination/data/b21b_si_matched.dta saved
+
+. 
+. local chars "workers ln_workers output ln_output va ln_va va_pw ln_va_pw cap_
+> pw ln_cap_pw tfp_lp tfp_acf tfp_wrdg tfp_op export_share co2_total ln_co2_tot
+> al gj_total ln_gj_total co2_per_va ln_co2_per_va gj_per_va ln_gj_per_va"
+
+. do "$B21B/_sumstats.do" "`chars'" "hs_market" "t04_si_char"
+
+. /*==========================================================================
+>   _sumstats.do -- helper: descriptive statistics table, POOLED + BY YEAR
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B21B/_sumstats.do" "workers va_pw" "hs_market" "t04_si_char"
+> 
+>       argument 1 = list of variables
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b1_21b_tables.xlsx (max 31 characters
+> )
+> 
+>   Result: 1 row = variable x group x period (pool, 2010, 2011, ...)
+>           columns n mean sd p10 p25 p50 p75 p90 min max
+>   Rows with a missing group are not counted.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars grp sheet
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000004 saved
+    as .dta format
+
+. local first 1
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     local grp all
+. }
+
+. foreach v of local vars {
+  2.     foreach period in pool year {
+  3.         preserve
+  4.         keep `v' `grp' year
+  5.         keep if !missing(`v') & !missing(`grp')
+  6.         if _N > 0 {
+  7.             if "`period'" == "pool" replace year = 0
+  8.             collapse (count) n = `v' (mean) mean = `v' (sd) sd = `v' ///
+>                      (p10) p10 = `v' (p25) p25 = `v' (p50) p50 = `v' ///
+>                      (p75) p75 = `v' (p90) p90 = `v' (min) min = `v' (max) ma
+> x = `v', ///
+>                      by(`grp' year)
+  9.             generate str32 variable = "`v'"
+ 10.             if `first' == 0 append using `result'
+ 11.             save `result', replace
+ 12.             local first 0
+ 13.         }
+ 14.         restore
+ 15.     }
+ 16. }
+(0 observations deleted)
+(2,096 real changes made)
+(file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 not
+    found)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(1 observation deleted)
+(2,095 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(1 observation deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(2,096 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(2,096 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(2,096 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(2,096 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(1 observation deleted)
+(2,095 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(1 observation deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(1 observation deleted)
+(2,095 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(1 observation deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(1 observation deleted)
+(2,095 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(1 observation deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(1,023 observations deleted)
+(1,073 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(1,023 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(1,361 observations deleted)
+(735 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(1,361 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(1,361 observations deleted)
+(735 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(1,361 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(1,361 observations deleted)
+(735 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(1,361 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(2,081 observations deleted)
+(15 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(2,081 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(2,071 observations deleted)
+(25 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(2,071 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(2,096 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(30 observations deleted)
+(2,066 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(30 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(2,096 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(30 observations deleted)
+(2,066 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(30 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(2,096 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(30 observations deleted)
+(2,066 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(30 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(2,096 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(30 observations deleted)
+(2,066 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(30 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+
+. 
+. use `result', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * the group is written as text using its value label (if it has one)
+. capture decode `grp', generate(group)
+
+. if _rc generate group = string(`grp')
+
+. * keep the variables in the order they were listed
+. generate variable_order = .
+(135 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(5 real changes made)
+(4 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+
+. sort variable_order `grp' year
+
+. keep variable group period n mean sd p10 p25 p50 p75 p90 min max
+
+. export excel using "$B21B_XLSX", sheet("`sheet'", replace) firstrow(variables
+> )
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21b-export-de
+> stination/output/b1_21b_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t04_si_char (135 rows)
+
+. use `original', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+end of do-file
+
+. 
+. * yes/no characteristics: % of SI firms
+. generate n_firms = 1
+
+. expand 2, generate(copy)
+(2,096 observations created)
+
+. replace year = 0 if copy == 1
+(2,096 real changes made)
+
+. collapse (sum) n_firms (mean) pct_fdi = fdi pct_importer = importer pct_large
+>  = large ///
+>          pct_java = java pct_si_exporter = exporter, by(hs_market year)
+
+. foreach v in pct_fdi pct_importer pct_large pct_java pct_si_exporter {
+  2.     replace `v' = 100 * `v'
+  3. }
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(4 real changes made)
+
+. generate period = cond(year == 0, "pool", string(year))
+
+. sort year hs_market
+
+. order hs_market period n_firms
+
+. drop year
+
+. list, clean noobs
+
+     hs_market   period   n_firms    pct_fdi   pct_impor~r       pct_large     
+>  pct_java   pct_si_ex~r  
+    Other only     pool      1615   12.89063   51.26935196   43.3436546326   90
+> .34055328   29.63855553  
+       EU+EFTA     pool       481   16.45022   34.92723465   40.1247406006    9
+> 0.6444931   45.88235474  
+    Other only     2021       802   11.61826   56.73316574   42.3940162659   87
+> .53117371   29.63855553  
+       EU+EFTA     2021       243   16.07143   44.03292084   37.8600845337   92
+> .59259033   45.88235474  
+    Other only     2022       813   14.02214   45.87945938   44.2804412842   93
+> .11193085             .  
+       EU+EFTA     2022       238   16.80672   25.63025284   42.4369735718   88
+> .65545654             .  
+
+. export excel using "$B21B_XLSX", sheet("t04_si_shares", replace) firstrow(var
+> iables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21b-export-de
+> stination/output/b1_21b_tables.xlsx saved
+
+. 
+. * SI firms that are exporters themselves (2021 only)
+. use "$B21B_DATA/b21b_si_matched.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if exporter == 1
+(1,895 observations deleted)
+
+. do "$B21B/_sumstats.do" "`chars'" "hs_market" "t04_si_char_exp"
+
+. /*==========================================================================
+>   _sumstats.do -- helper: descriptive statistics table, POOLED + BY YEAR
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B21B/_sumstats.do" "workers va_pw" "hs_market" "t04_si_char"
+> 
+>       argument 1 = list of variables
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b1_21b_tables.xlsx (max 31 characters
+> )
+> 
+>   Result: 1 row = variable x group x period (pool, 2010, 2011, ...)
+>           columns n mean sd p10 p25 p50 p75 p90 min max
+>   Rows with a missing group are not counted.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars grp sheet
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000004 saved
+    as .dta format
+
+. local first 1
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     local grp all
+. }
+
+. foreach v of local vars {
+  2.     foreach period in pool year {
+  3.         preserve
+  4.         keep `v' `grp' year
+  5.         keep if !missing(`v') & !missing(`grp')
+  6.         if _N > 0 {
+  7.             if "`period'" == "pool" replace year = 0
+  8.             collapse (count) n = `v' (mean) mean = `v' (sd) sd = `v' ///
+>                      (p10) p10 = `v' (p25) p25 = `v' (p50) p50 = `v' ///
+>                      (p75) p75 = `v' (p90) p90 = `v' (min) min = `v' (max) ma
+> x = `v', ///
+>                      by(`grp' year)
+  9.             generate str32 variable = "`v'"
+ 10.             if `first' == 0 append using `result'
+ 11.             save `result', replace
+ 12.             local first 0
+ 13.         }
+ 14.         restore
+ 15.     }
+ 16. }
+(0 observations deleted)
+(201 real changes made)
+(file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 not
+    found)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(201 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(201 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(201 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(201 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(201 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(201 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(201 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(201 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(56 observations deleted)
+(145 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(56 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(116 observations deleted)
+(85 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(116 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(116 observations deleted)
+(85 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(116 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(116 observations deleted)
+(85 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(116 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(199 observations deleted)
+(2 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(199 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(183 observations deleted)
+(18 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(183 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(201 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(4 observations deleted)
+(197 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(4 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(201 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(4 observations deleted)
+(197 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(4 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(201 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(4 observations deleted)
+(197 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(4 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(201 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(4 observations deleted)
+(197 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(4 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label hs_market already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+
+. 
+. use `result', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * the group is written as text using its value label (if it has one)
+. capture decode `grp', generate(group)
+
+. if _rc generate group = string(`grp')
+
+. * keep the variables in the order they were listed
+. generate variable_order = .
+(90 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(4 real changes made)
+(4 real changes made)
+(4 real changes made)
+(4 real changes made)
+(4 real changes made)
+(4 real changes made)
+(4 real changes made)
+(4 real changes made)
+(4 real changes made)
+(4 real changes made)
+(4 real changes made)
+(4 real changes made)
+(4 real changes made)
+(2 real changes made)
+(4 real changes made)
+(4 real changes made)
+(4 real changes made)
+(4 real changes made)
+(4 real changes made)
+(4 real changes made)
+(4 real changes made)
+(4 real changes made)
+(4 real changes made)
+
+. sort variable_order `grp' year
+
+. keep variable group period n mean sd p10 p25 p50 p75 p90 min max
+
+. export excel using "$B21B_XLSX", sheet("`sheet'", replace) firstrow(variables
+> )
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21b-export-de
+> stination/output/b1_21b_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t04_si_char_exp (90 rows)
+
+. use `original', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+end of do-file
+
+. 
+end of do-file
+
+######## B1-21b: 05_figures ########
+
+. /*==========================================================================
+>   Line 5 (added, the row has no figures line): charts for lines 2-4
+>   Every other file writes its tables to output/b1_21b_tables.xlsx. This file
+>   draws the charts FROM those tables, so a chart always matches its table.
+>   The exact points of every chart are also written to a sheet figNN_data
+>   (graph-ready, e.g. to redraw the chart in Excel or PowerPoint).
+>   Runs LAST in 00_run.do.
+> 
+>   Charts (output/):
+>     fig02_region_share.png      % of export value by destination region,
+>                                 pool / 2021 / 2022
+>     fig02_region_by_sector.png  region mix of export value per KBLI 2-digit
+>                                 (pool, sectors with 10+ exporting firms)
+>     fig03_n_destinations.png    % of exporting firms by number of destination
+> s
+>     fig04_eu_efta_vs_other.png  median size, VA per worker, CO2/VA and GJ/VA
+>                                 of SI firms, EU+EFTA vs other markets
+> ==========================================================================*/
+. if "$B21B" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. 
+. * ---- fig02: region shares (line 2) ----
+. import excel using "$B21B_XLSX", sheet("t02_region_share") firstrow clear
+(7 vars, 21 obs)
+
+. keep region period share_value_pct
+
+. replace period = "y" + period if period != "pool"
+variable period was str4 now str5
+(14 real changes made)
+
+. reshape wide share_value_pct, i(region) j(period) string
+(j = pool y2021 y2022)
+
+Data                               Long   ->   Wide
+-----------------------------------------------------------------------------
+Number of observations               21   ->   7           
+Number of variables                   3   ->   4           
+j variable (3 values)            period   ->   (dropped)
+xij variables:
+                        share_value_pct   ->   share_value_pctpool share_value_
+> pcty2021 share_value_pcty2022
+-----------------------------------------------------------------------------
+
+. rename share_value_pct* share_*
+
+. * keep the region order of the to-do line
+. generate order = 1
+
+. local i 0
+
+. foreach r in EU US China ASEAN Japan India Others {
+  2.     local ++i
+  3.     replace order = `i' if region == "`r'"
+  4. }
+(0 real changes made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+(1 real change made)
+
+. sort order
+
+. drop order
+
+. order region share_pool share_y2021 share_y2022
+
+. export excel using "$B21B_XLSX", sheet("fig02_data", replace) firstrow(variab
+> les)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21b-export-de
+> stination/output/b1_21b_tables.xlsx saved
+
+. generate order = _n
+
+. graph hbar (asis) share_pool share_y2021 share_y2022, over(region, sort(order
+> )) ///
+>     bar(1, color(navy)) bar(2, color(eltblue)) bar(3, color(orange)) ///
+>     ytitle("% of export value with a named destination") ///
+>     legend(order(1 "2021-2022 pooled" 2 "2021" 3 "2022") rows(1)) ///
+>     title("Where do exports go?") ///
+>     subtitle("Main destination of each exported product, Proman roster") ///
+>     note("Others includes Australia, Korea, Taiwan, UK, Middle East and the B
+> PS 'other' aggregates.") ///
+>     graphregion(color(white))
+
+. graph export "$B21B_OUT/fig02_region_share.png", replace width(2000)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21b-export-de
+> stination/output/fig02_region_share.png written in PNG format
+
+. 
+. * ---- fig02b: region mix by sector (line 2) ----
+. import excel using "$B21B_XLSX", sheet("t02_region_by_kbli2") firstrow clear
+(7 vars, 350 obs)
+
+. keep if period == "pool"
+(225 observations deleted)
+
+. bysort kbli2: egen sector_firms = total(n_firms)   // firm x region count; us
+> ed only to drop tiny sectors
+
+. keep kbli2 region share_in_sector_pct sector_firms
+
+. reshape wide share_in_sector_pct, i(kbli2 sector_firms) j(region) string
+(j = ASEAN China EU India Japan Others US)
+
+Data                               Long   ->   Wide
+-----------------------------------------------------------------------------
+Number of observations              125   ->   24          
+Number of variables                   4   ->   9           
+j variable (7 values)            region   ->   (dropped)
+xij variables:
+                    share_in_sector_pct   ->   share_in_sector_pctASEAN share_i
+> n_sector_pctChina ... share_in_sector_pctUS
+-----------------------------------------------------------------------------
+
+. rename share_in_sector_pct* *
+
+. foreach r in EU US China ASEAN Japan India Others {
+  2.     capture generate `r' = 0
+  3.     replace `r' = 0 if missing(`r')
+  4. }
+(6 real changes made)
+(8 real changes made)
+(6 real changes made)
+(1 real change made)
+(3 real changes made)
+(14 real changes made)
+(5 real changes made)
+
+. keep if sector_firms >= 10
+(5 observations deleted)
+
+. drop sector_firms
+
+. order kbli2 EU US China ASEAN Japan India Others
+
+. export excel using "$B21B_XLSX", sheet("fig02b_data", replace) firstrow(varia
+> bles)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21b-export-de
+> stination/output/b1_21b_tables.xlsx saved
+
+. graph hbar (asis) EU US China ASEAN Japan India Others, over(kbli2, label(lab
+> size(small))) stack ///
+>     bar(1, color(navy)) bar(2, color(maroon)) bar(3, color(red)) bar(4, color
+> (forest_green)) ///
+>     bar(5, color(orange)) bar(6, color(gold)) bar(7, color(gs11)) ///
+>     ytitle("% of the sector's export value") ///
+>     legend(order(1 "EU" 2 "US" 3 "China" 4 "ASEAN" 5 "Japan" 6 "India" 7 "Oth
+> ers") rows(2) size(small) symxsize(4)) ///
+>     title("Destination mix by sector (KBLI 2-digit)") ///
+>     subtitle("2021-2022 pooled; sectors with 10+ firm-region pairs") ///
+>     graphregion(color(white)) xsize(7) ysize(7)
+
+. graph export "$B21B_OUT/fig02_region_by_sector.png", replace width(2000)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21b-export-de
+> stination/output/fig02_region_by_sector.png written in PNG format
+
+. 
+. * ---- fig03: number of destinations (line 3) ----
+. import excel using "$B21B_XLSX", sheet("t03_ndest_dist") firstrow clear
+(4 vars, 15 obs)
+
+. keep ndest_group period pct_firms
+
+. replace period = "y" + period if period != "pool"
+variable period was str4 now str5
+(10 real changes made)
+
+. reshape wide pct_firms, i(ndest_group) j(period) string
+(j = pool y2021 y2022)
+
+Data                               Long   ->   Wide
+-----------------------------------------------------------------------------
+Number of observations               15   ->   5           
+Number of variables                   3   ->   4           
+j variable (3 values)            period   ->   (dropped)
+xij variables:
+                              pct_firms   ->   pct_firmspool pct_firmsy2021 pct
+> _firmsy2022
+-----------------------------------------------------------------------------
+
+. rename pct_firms* pct_*
+
+. generate order = real(substr(ndest_group, 1, 1))
+
+. sort order
+
+. drop order
+
+. order ndest_group pct_pool pct_y2021 pct_y2022
+
+. export excel using "$B21B_XLSX", sheet("fig03_data", replace) firstrow(variab
+> les)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21b-export-de
+> stination/output/b1_21b_tables.xlsx saved
+
+. graph bar (asis) pct_y2021 pct_y2022, over(ndest_group) ///
+>     bar(1, color(eltblue)) bar(2, color(orange)) ///
+>     b1title("Number of destination countries") ytitle("% of exporting firms")
+>  ///
+>     legend(order(1 "2021" 2 "2022") rows(1)) ///
+>     title("How many destinations does a firm export to?") ///
+>     note("Firm = year x province x KBLI5 cell (Kipb masked). One main destina
+> tion per product.") ///
+>     graphregion(color(white))
+
+. graph export "$B21B_OUT/fig03_n_destinations.png", replace width(2000)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21b-export-de
+> stination/output/fig03_n_destinations.png written in PNG format
+
+. 
+. * ---- fig04: EU+EFTA vs other markets (line 4) ----
+. import excel using "$B21B_XLSX", sheet("t04_si_char") firstrow clear
+(13 vars, 135 obs)
+
+. keep if period == "pool" & inlist(variable, "workers", "va_pw", "co2_per_va",
+>  "gj_per_va")
+(127 observations deleted)
+
+. keep variable group p50
+
+. * graph-ready sheet: 1 row per variable, 1 column per group
+. preserve
+
+. replace group = cond(group == "EU+EFTA", "eu_efta", "other")
+(8 real changes made)
+
+. reshape wide p50, i(variable) j(group) string
+(j = eu_efta other)
+
+Data                               Long   ->   Wide
+-----------------------------------------------------------------------------
+Number of observations                8   ->   4           
+Number of variables                   3   ->   3           
+j variable (2 values)             group   ->   (dropped)
+xij variables:
+                                    p50   ->   p50eu_efta p50other
+-----------------------------------------------------------------------------
+
+. rename p50* median_*
+
+. export excel using "$B21B_XLSX", sheet("fig04_data", replace) firstrow(variab
+> les)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21b-export-de
+> stination/output/b1_21b_tables.xlsx saved
+
+. restore
+
+. replace group = "Other only" if group != "EU+EFTA"
+(0 real changes made)
+
+. local n 0
+
+. foreach v in workers va_pw co2_per_va gj_per_va {
+  2.     local ++n
+  3.     if "`v'" == "workers"    local t "Workers"
+  4.     if "`v'" == "va_pw"      local t "VA per worker"
+  5.     if "`v'" == "co2_per_va" local t "CO2 per VA"
+  6.     if "`v'" == "gj_per_va"  local t "GJ per VA"
+  7.     graph bar (asis) p50 if variable == "`v'", over(group) ///
+>         bar(1, color(navy)) ylabel(, angle(0) labsize(small) format(%9.2g)) y
+> title("") ///
+>         title("`t'", size(medium)) graphregion(color(white)) name(g`n', repla
+> ce)
+  8. }
+
+. graph combine g1 g2 g3 g4, cols(2) ///
+>     title("Exporting to EU+EFTA vs other markets only") ///
+>     subtitle("SI firms in the exporting cells, medians, 2021-2022 pooled") //
+> /
+>     note("SI merged on year x province x KBLI5. Values nominal and masked.") 
+> ///
+>     graphregion(color(white)) xsize(8) ysize(7)
+
+. graph export "$B21B_OUT/fig04_eu_efta_vs_other.png", replace width(2000)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21b-export-de
+> stination/output/fig04_eu_efta_vs_other.png written in PNG format
+
+. graph drop _all
+
+. 
+end of do-file
+
+. log close b21b
+      name:  b21b
+       log:  /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21b-e
+> xport-destination/output/b1_21b_log.log
+  log type:  text
+ closed on:   9 Oct 2026, 12:54:09
+-------------------------------------------------------------------------------

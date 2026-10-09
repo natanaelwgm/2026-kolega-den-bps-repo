@@ -1,0 +1,1319 @@
+-------------------------------------------------------------------------------
+      name:  b207
+       log:  /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-07-gr
+> adient/output/b2_07_log.log
+  log type:  text
+ opened on:   9 Oct 2026, 12:54:48
+
+. foreach f of local files {
+  2.     display _newline as result "######## B2-07: `f' ########"
+  3.     do "$B207/`f'.do"
+  4. }
+
+######## B2-07: 01a_prep_si ########
+
+. /*==========================================================================
+>   Line 1: "Internationalisation gradient: kelompokkan firms berdasarkan:"
+>   Prepare Statistik Industri (SI) 2010-2022 for B2-07.
+>   (Copy of block-b1-18/01a_prep_si.do, plus energy and carbon productivity.)
+>   Input : $SI_DATA  (analysis_ready_data.dta from block 0)
+>   Output: data/b207_si.dta  -- 1 row = 1 firm x year
+>           (open with: use "$B207_DATA/b207_si.dta", clear  then browse)
+> 
+>   Main variables created:
+>     importer, exporter, fdi    the three flags the 7 groups are built from
+>                                (the groups themselves are built in 02-08)
+>     kbli2, prov, java, large
+>     va, output, capital, workers, va_pw
+>     tfp_op tfp_lp tfp_acf tfp_wrdg
+>     co2_s1 co2_s2 co2_total gj_s1 gj_s2 gj_total
+>     va_per_gj      energy productivity = VA / GJ
+>     va_per_co2     carbon productivity = VA / tonne CO2
+>     ln_*           ln versions
+>     clean          1 = not an extreme energy outlier
+> ==========================================================================*/
+. if "$B207" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$SI_DATA", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+. * ---- identifiers ------------------------------------------------------
+. * year = survey year (there is no 2016 file)
+. generate kbli2 = real(substr(industry_code, 1, 2))
+
+. generate kbli5 = industry_code
+
+. generate prov  = real(province_code)
+
+. generate java  = inlist(prov, 31, 32, 33, 34, 35, 36) if !missing(prov)
+
+. label define java 0 "Outside Java" 1 "Java"
+
+. label values java java
+
+. 
+. * ---- firm size: medium vs large (100-worker threshold) ----------------
+. generate large = (workers > 100) if !missing(workers)
+
+. label define large 0 "Medium (<=100)" 1 "Large (>100)"
+
+. label values large large
+
+. 
+. * ---- imports ----------------------------------------------------------
+. * importer is only defined where the import question can be evaluated
+. generate importer = import_flag if import_observed == 1
+
+. label define importer 0 "Non-importer" 1 "Importer"
+
+. label values importer importer
+
+. 
+. * ---- exports & FDI ----------------------------------------------------
+. generate exporter = export_flag
+(15,321 missing values generated)
+
+. generate fdi      = fdi_10_flag                     // foreign ownership >= 1
+> 0%
+(311 missing values generated)
+
+. * 2022: the form only asks about DIRECT exports, a "no" is never recorded -> 
+> missing
+. replace exporter = . if year == 2022
+(344 real changes made, 344 to missing)
+
+. * 2020: foreign ownership is inconsistent (47% FDI vs 8-11% other years) -> m
+> issing
+. replace fdi = . if year == 2020
+(2,936 real changes made, 2,936 to missing)
+
+. label define exporter 0 "Non-exporter" 1 "Exporter"
+
+. label values exporter exporter
+
+. label define fdi 0 "Domestic" 1 "FDI"
+
+. label values fdi fdi
+
+. 
+. * ---- firm characteristics (nominal) -----------------------------------
+. generate va      = value_added_nominal
+
+. generate output  = gross_output_nominal
+
+. generate capital = capital_stock_nominal
+(1,125 missing values generated)
+
+. generate va_pw   = va / workers      if workers > 0
+(28 missing values generated)
+
+. 
+. generate tfp_op   = dev_nominal_tfp_op
+(32,377 missing values generated)
+
+. generate tfp_lp   = dev_nominal_tfp_lp
+(22,765 missing values generated)
+
+. generate tfp_acf  = dev_nominal_tfp_acf
+(22,765 missing values generated)
+
+. generate tfp_wrdg = dev_nominal_tfp_wrdg
+(22,765 missing values generated)
+
+. 
+. * ---- energy & emissions -----------------------------------------------
+. * COAL 2017 CORRECTION: block 0 multiplies by 1000 (treats it as tonnes),
+. * but the price per unit shows the data are already in kg. Divide back.
+. generate co2_coal = co2_coal_s1
+
+. generate gj_coal2 = gj_coal
+
+. replace  co2_coal = co2_coal_s1 / 1000 if year == 2017
+(1,181 real changes made)
+
+. replace  gj_coal2 = gj_coal / 1000     if year == 2017
+(1,181 real changes made)
+
+. 
+. * scope 1 = the 4 fuels asked in every year: diesel, petrol, coal, LPG
+. egen co2_s1 = rowtotal(co2_diesel_s1 co2_petrol_s1 co2_coal co2_lpg_s1), miss
+> ing
+
+. egen gj_s1  = rowtotal(gj_diesel gj_petrol gj_coal2 gj_lpg), missing
+
+. * scope 2 = purchased electricity
+. generate co2_s2 = co2_scope2_s1
+
+. generate gj_s2  = gj_electricity
+
+. egen co2_total = rowtotal(co2_s1 co2_s2), missing
+
+. egen gj_total  = rowtotal(gj_s1 gj_s2), missing
+
+. 
+. * energy and carbon productivity (va_per_gj, va_per_co2)
+. generate va_per_gj  = va / gj_total  if gj_total > 0
+(547 missing values generated)
+
+. generate va_per_co2 = va / co2_total if co2_total > 0
+(547 missing values generated)
+
+. 
+. * ---- energy outlier flag (clean) --------------------------------------
+. * a record is left out of the analysis (clean = 0) if any of its energy
+. * quantities is above 100x that year's 99th percentile. Nothing is deleted.
+. generate coal_kg_fix = fuel_coal_kg
+
+. replace  coal_kg_fix = fuel_coal_kg / 1000 if year == 2017
+(1,181 real changes made)
+
+. generate clean = 1
+
+. levelsof year, local(years)
+2010 2011 2012 2013 2014 2015 2017 2018 2019 2020 2021 2022
+
+. foreach q in fuel_diesel_ltr fuel_petrol_ltr fuel_kerosene_ltr coal_kg_fix fu
+> el_lpg_kg ///
+>              fuel_citygas_m3 fuel_othergas_m3 fuel_coalbriq_kg fuel_coke_kg /
+> //
+>              elec_pln_kwh elec_nonpln_kwh elec_owngen_kwh fuel_dieseloil_ltr 
+> ///
+>              fuel_fueloil_ltr fuel_natgas_mmbtu fuel_biodiesel_ltr fuel_bioma
+> ss_kg {
+  2.     foreach y of local years {
+  3.         quietly count if year == `y' & `q' > 0 & !missing(`q')
+  4.         if r(N) > 2 {
+  5.             quietly summarize `q' if year == `y' & `q' > 0, detail
+  6.             quietly replace clean = 0 if year == `y' & `q' > 100 * r(p99) 
+> & !missing(`q')
+  7.         }
+  8.     }
+  9. }
+
+. replace clean = 0 if workers == 0 & co2_s1 > 0 & !missing(co2_s1)
+(20 real changes made)
+
+. count if clean == 0
+  30
+
+. display as result "Outlier records (clean = 0): " r(N)
+Outlier records (clean = 0): 30
+
+. 
+. * ---- ln versions ------------------------------------------------------
+. * (TFP is already a log residual, so it has no ln_ version)
+. foreach v in va output capital workers va_pw co2_total gj_total va_per_gj va_
+> per_co2 {
+  2.     generate ln_`v' = ln(`v') if `v' > 0
+  3. }
+(14,164 missing values generated)
+(28 missing values generated)
+(28 missing values generated)
+(547 missing values generated)
+(547 missing values generated)
+(547 missing values generated)
+(547 missing values generated)
+
+. 
+. * ---- save -------------------------------------------------------------
+. keep  firm_id year source_row kbli2 kbli5 prov java large importer exporter f
+> di ///
+>       va output capital workers va_pw tfp_* co2_s1 co2_s2 co2_total gj_s1 gj_
+> s2 ///
+>       gj_total va_per_gj va_per_co2 clean ln_*
+
+. order firm_id year source_row kbli2 kbli5 prov java large importer exporter f
+> di
+
+. label variable va_per_gj  "Energy productivity: VA (nominal) per GJ"
+
+. label variable va_per_co2 "Carbon productivity: VA (nominal) per tonne CO2"
+
+. label variable clean "1 = not an energy outlier"
+
+. compress
+  variable kbli2 was double now byte
+  variable prov was double now byte
+  variable java was double now byte
+  variable large was double now byte
+  variable importer was double now byte
+  variable exporter was double now byte
+  variable fdi was double now byte
+  variable clean was double now byte
+  (1,850,744 bytes saved)
+
+. save "$B207_DATA/b207_si.dta", replace
+(file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-07-gradient/
+    > data/b207_si.dta not found)
+file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-07-gradient/
+    > data/b207_si.dta saved
+
+. display as result "01a done: $B207_DATA/b207_si.dta (" _N " rows)"
+01a done: /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-07-gradi
+> ent/data/b207_si.dta (33049 rows)
+
+. 
+end of do-file
+
+######## B2-07: 02-08_gradient_groups ########
+
+. /*==========================================================================
+>   Lines 2-8: the 7 groups of the internationalisation gradient
+>      2 "Domestic only"
+>      3 "Exporter only"
+>      4 "Importer only"
+>      5 "Exporter + importer"
+>      6 "Fdi, dan domestic market oriented"
+>      7 "Fdi, dan exporter"
+>      8 "Fdi, dan exporter + importer"
+>   The 7 bullets are the categories of ONE variable, so they share one file.
+> 
+>   Data  : SI 2010-2022 (data/b207_si.dta), clean == 1
+>   Output: data/b207_groups.dta  (b207_si + group7), used by 09 and 10
+>   Output sheets:
+>     t02_definition     the rule behind each group (exporter / importer / FDI)
+>     t02_counts         n firms per group, pool + by year, incl. "Not classifi
+> ed"
+>     t02_not_classified per year: how many firms cannot be classified and whic
+> h
+>                        flag is missing
+> 
+>   Group definition (decided 9 Oct, follows the docx):
+>     1 Domestic only          non-FDI, no export, no import
+>     2 Exporter only          non-FDI, export, no import
+>     3 Importer only          non-FDI, no export, import
+>     4 Exporter + importer    non-FDI, export, import
+>     5 FDI, domestic market   FDI, no export (with OR without imports)
+>                              FDI firms that import but do not export are
+>                              in group 5, as the docx defines it.
+>     6 FDI, exporter          FDI, export, no import
+>     7 FDI, exporter+importer FDI, export, import
+>    99 Not classified         a flag the group needs is missing
+> 
+>   NOTE: 2020 (FDI set missing) and 2022 (export flag set missing) cannot be
+>         classified at all. In the other years, firms whose export or import
+>         question was not answered are also "Not classified". Group 5 does
+>         not need the import flag, so an FDI non-exporter is classified even
+>         when its import flag is missing.
+> ==========================================================================*/
+. if "$B207" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B207_DATA/b207_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+. * ---- build the 7 groups ----------------------------------------------
+. generate group7 = 99
+
+. replace group7 = 1 if fdi == 0 & exporter == 0 & importer == 0
+(10,808 real changes made)
+
+. replace group7 = 2 if fdi == 0 & exporter == 1 & importer == 0
+(1,642 real changes made)
+
+. replace group7 = 3 if fdi == 0 & exporter == 0 & importer == 1
+(1,006 real changes made)
+
+. replace group7 = 4 if fdi == 0 & exporter == 1 & importer == 1
+(601 real changes made)
+
+. replace group7 = 5 if fdi == 1 & exporter == 0             // imports or not
+(604 real changes made)
+
+. replace group7 = 6 if fdi == 1 & exporter == 1 & importer == 0
+(327 real changes made)
+
+. replace group7 = 7 if fdi == 1 & exporter == 1 & importer == 1
+(621 real changes made)
+
+. label define group7 1 "1 Domestic only" 2 "2 Exporter only" 3 "3 Importer onl
+> y" ///
+>     4 "4 Exporter + importer" 5 "5 FDI, domestic market" 6 "6 FDI, exporter" 
+> ///
+>     7 "7 FDI, exporter + importer" 99 "Not classified"
+
+. label values group7 group7
+
+. label variable group7 "Internationalisation gradient (7 groups, 99 = not clas
+> sified)"
+
+. generate classified = (group7 != 99)
+
+. tabulate year group7 if clean == 1
+
+  Calendar |
+     year: |
+ 2010-2015 |
+       and |
+2017-2022; |
+      2016 |   Internationalisation gradient (7 groups, 99 = not
+unavailabl |                      classified)
+         e | 1 Domesti  2 Exporte  3 Importe  4 Exporte  5 FDI, do |     Total
+-----------+-------------------------------------------------------+----------
+      2010 |     1,192        164        130         40         59 |     2,334 
+      2011 |     1,082        168         74         67         48 |     2,337 
+      2012 |     1,091        134        132         45         49 |     2,359 
+      2013 |     1,162        140        123         44         64 |     2,368 
+      2014 |     1,037        223         88         71         67 |     2,451 
+      2015 |       912        228         72         68         41 |     2,630 
+      2017 |     1,003        159         71         38         75 |     3,357 
+      2018 |     1,046        139        118         95         56 |     3,010 
+      2019 |     1,064        138        106         77         56 |     3,007 
+      2020 |         0          0          0          0          0 |     2,935 
+      2021 |     1,218        147         92         55         89 |     3,075 
+      2022 |         0          0          0          0          0 |     3,156 
+-----------+-------------------------------------------------------+----------
+     Total |    10,807      1,640      1,006        600        604 |    33,019 
+
+
+  Calendar |
+     year: |
+ 2010-2015 |
+       and |
+2017-2022; |
+      2016 | Internationalisation gradient (7
+unavailabl |   groups, 99 = not classified)
+         e | 6 FDI, ex  7 FDI, ex  Not class |     Total
+-----------+---------------------------------+----------
+      2010 |        29         45        675 |     2,334 
+      2011 |        33         69        796 |     2,337 
+      2012 |        28         32        848 |     2,359 
+      2013 |        22         37        776 |     2,368 
+      2014 |        48         83        834 |     2,451 
+      2015 |        48         88      1,173 |     2,630 
+      2017 |        35         50      1,926 |     3,357 
+      2018 |        32         74      1,450 |     3,010 
+      2019 |        30         79      1,457 |     3,007 
+      2020 |         0          0      2,935 |     2,935 
+      2021 |        21         63      1,390 |     3,075 
+      2022 |         0          0      3,156 |     3,156 
+-----------+---------------------------------+----------
+     Total |       326        620     17,416 |    33,019 
+
+. compress
+  variable group7 was double now byte
+  variable classified was double now byte
+  (462,686 bytes saved)
+
+. save "$B207_DATA/b207_groups.dta", replace
+(file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-07-gradient/
+    > data/b207_groups.dta not found)
+file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-07-gradient/
+    > data/b207_groups.dta saved
+
+. 
+. * ---- t02_definition: the rule behind each group -----------------------
+. clear
+
+. input byte group7 str12 fdi_rule str12 export_rule str16 import_rule
+
+       group7      fdi_rule   export_rule       import_rule
+  1.  1 "Non-FDI" "No export" "No import"
+  2.  2 "Non-FDI" "Export"    "No import"
+  3.  3 "Non-FDI" "No export" "Import"
+  4.  4 "Non-FDI" "Export"    "Import"
+  5.  5 "FDI"     "No export" "Import or not"
+  6.  6 "FDI"     "Export"    "No import"
+  7.  7 "FDI"     "Export"    "Import"
+  8. 99 "missing"  "missing"  "missing"
+  9. end
+
+. label values group7 group7
+
+. replace fdi_rule = "any flag the group needs is missing" if group7 == 99
+variable fdi_rule was str12 now str35
+(1 real change made)
+
+. replace export_rule = "" if group7 == 99
+(1 real change made)
+
+. replace import_rule = "" if group7 == 99
+(1 real change made)
+
+. export excel using "$B207_XLSX", sheet("t02_definition", replace) firstrow(va
+> riables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-07-gradient/o
+> utput/b2_07_tables.xlsx saved
+
+. 
+. * ---- t02_counts: n firms per group, pool + by year --------------------
+. use "$B207_DATA/b207_groups.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1
+(30 observations deleted)
+
+. generate n_firms = 1
+
+. expand 2, generate(copy)              // copy of every row with year = 0 for 
+> "pool"
+(33,019 observations created)
+
+. replace year = 0 if copy == 1
+(33,019 real changes made)
+
+. collapse (sum) n_firms, by(group7 year)
+
+. * % of all clean firms in that period, and % of the classified ones
+. bysort year: egen n_all = total(n_firms)
+
+. bysort year: egen n_classified = total(n_firms * (group7 != 99))
+
+. generate pct_of_all        = 100 * n_firms / n_all
+
+. generate pct_of_classified = 100 * n_firms / n_classified if group7 != 99
+(13 missing values generated)
+
+. generate period = cond(year == 0, "pool", string(year))
+
+. sort year group7
+
+. order group7 period n_firms pct_of_classified pct_of_all
+
+. drop year n_all n_classified
+
+. list if period == "pool", clean noobs
+
+                        group7   period   n_firms   pct_of_~d   pct_of_~l  
+               1 Domestic only     pool     10807   69.262321   32.729641  
+               2 Exporter only     pool      1640   10.510799   4.9668373  
+               3 Importer only     pool      1006    6.447478   3.0467307  
+         4 Exporter + importer     pool       600   3.8454143   1.8171356  
+        5 FDI, domestic market     pool       604   3.8710504   1.8292498  
+               6 FDI, exporter     pool       326   2.0893418   .98731034  
+    7 FDI, exporter + importer     pool       620   3.9735948   1.8777068  
+                Not classified     pool     17416           .   52.745389  
+
+. export excel using "$B207_XLSX", sheet("t02_counts", replace) firstrow(variab
+> les)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-07-gradient/o
+> utput/b2_07_tables.xlsx saved
+
+. 
+. * ---- t02_not_classified: which flag is missing, by year ---------------
+. use "$B207_DATA/b207_groups.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1
+(30 observations deleted)
+
+. generate n_firms          = 1
+
+. generate n_classified     = classified
+
+. generate n_not_classified = 1 - classified
+
+. generate n_missing_export = missing(exporter)
+
+. generate n_missing_import = missing(importer)
+
+. generate n_missing_fdi    = missing(fdi)
+
+. expand 2, generate(copy)
+(33,019 observations created)
+
+. replace year = 0 if copy == 1
+(33,019 real changes made)
+
+. collapse (sum) n_firms n_classified n_not_classified n_missing_export n_missi
+> ng_import n_missing_fdi, by(year)
+
+. generate pct_classified = 100 * n_classified / n_firms
+
+. generate period = cond(year == 0, "pool", string(year))
+
+. generate str60 reason = ""
+(13 missing values generated)
+
+. replace reason = "FDI set missing (47% FDI not credible)" if year == 2020
+(1 real change made)
+
+. replace reason = "Export flag set missing (direct exports only)" if year == 2
+> 022
+(1 real change made)
+
+. sort year
+
+. order period n_firms n_classified n_not_classified pct_classified
+
+. drop year
+
+. list, clean noobs
+
+    period   n_firms   n_clas~d   n_not_~d   pct_cla~d   n_~xport   n_~mport   
+> n_miss~i                                          reason  
+      pool     33019      15603      17416   47.254611      15642          0   
+>     3246                                                  
+      2010      2334       1659        675   71.079692        675          0   
+>        0                                                  
+      2011      2337       1541        796   65.939238        796          0   
+>        0                                                  
+      2012      2359       1511        848   64.052565        848          0   
+>        0                                                  
+      2013      2368       1592        776    67.22973        776          0   
+>        0                                                  
+      2014      2451       1617        834   65.973072        834          0   
+>        0                                                  
+      2015      2630       1457       1173    55.39924       1173          0   
+>        0                                                  
+      2017      3357       1431       1926   42.627346       1926          0   
+>        0                                                  
+      2018      3010       1560       1450   51.827243       1450          0   
+>        0                                                  
+      2019      3007       1550       1457   51.546392       1457          0   
+>        0                                                  
+      2020      2935          0       2935           0       1161          0   
+>     2935          FDI set missing (47% FDI not credible)  
+      2021      3075       1685       1390   54.796748       1390          0   
+>      311                                                  
+      2022      3156          0       3156           0       3156          0   
+>        0   Export flag set missing (direct exports only)  
+
+. export excel using "$B207_XLSX", sheet("t02_not_classified", replace) firstro
+> w(variables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-07-gradient/o
+> utput/b2_07_tables.xlsx saved
+
+. 
+end of do-file
+
+######## B2-07: 09_group_shares ########
+
+. /*==========================================================================
+>   Line 9: "Untuk setiap group, hitung share thd: firms, employment, VA,
+>            output, energy, emissions."
+>   Data  : data/b207_groups.dta, clean == 1, classified firms only (groups 1-7
+> )
+>   Output sheets:
+>     t09_shares   per group x period (pool + by year): the totals and each
+>                  group's share (%) of firms, workers, VA, output, energy (GJ)
+>                  and emissions (tCO2)
+> 
+>   Denominator: all CLASSIFIED clean firms in that period (groups 1-7), so the
+>   7 shares of each column add up to 100 within a period. A firm with a
+>   missing value adds 0 to that column's total.
+>   NOTE: 2020 and 2022 cannot be classified (see 02-08), so they have no rows
+>         and "pool" means the other 10 years. VA and output are nominal.
+> ==========================================================================*/
+. if "$B207" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B207_DATA/b207_groups.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1 & group7 != 99
+(17,446 observations deleted)
+
+. generate n_firms = 1
+
+. expand 2, generate(copy)              // copy of every row with year = 0 for 
+> "pool"
+(15,603 observations created)
+
+. replace year = 0 if copy == 1
+(15,603 real changes made)
+
+. collapse (sum) n_firms workers va output gj_total co2_total, by(group7 year)
+
+. 
+. foreach v in n_firms workers va output gj_total co2_total {
+  2.     bysort year: egen total = total(`v')
+  3.     generate sh_`v' = 100 * `v' / total
+  4.     drop total
+  5. }
+
+. rename sh_n_firms sh_firms
+
+. generate period = cond(year == 0, "pool", string(year))
+
+. sort year group7
+
+. order group7 period n_firms workers va output gj_total co2_total ///
+>       sh_firms sh_workers sh_va sh_output sh_gj_total sh_co2_total
+
+. drop year
+
+. list group7 sh_* if period == "pool", clean noobs
+
+                        group7    sh_firms   sh_work~s       sh_va   sh_output 
+>   sh_gj_t~l   sh_co2_~l  
+               1 Domestic only   69.262321    32.52934   23.643878   22.605721 
+>   16.521154   18.129435  
+               2 Exporter only   10.510799   14.393423   13.022386   12.261176 
+>   32.511864   27.156955  
+               3 Importer only    6.447478   8.1269429   11.237698   11.720848 
+>   7.8203285   9.8018332  
+         4 Exporter + importer   3.8454143   14.704231   14.868804   13.494232 
+>   28.396327   27.944617  
+        5 FDI, domestic market   3.8710504   8.4459914   10.481493   13.962566 
+>   3.6374789   4.3178038  
+               6 FDI, exporter   2.0893418   4.6333715   6.6820926   6.4454379 
+>   3.2257081   3.4811972  
+    7 FDI, exporter + importer   3.9735948     17.1667   20.063648   19.510021 
+>   7.8871401   9.1681594  
+
+. export excel using "$B207_XLSX", sheet("t09_shares", replace) firstrow(variab
+> les)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-07-gradient/o
+> utput/b2_07_tables.xlsx saved
+
+. 
+end of do-file
+
+######## B2-07: 10_compare_productivity ########
+
+. /*==========================================================================
+>   Line 10: "Compare productivity tfp, energy productivity dan carbon producti
+> vity"
+>   Data  : data/b207_groups.dta, clean == 1, classified firms only (groups 1-7
+> )
+>   Measures:
+>     TFP                  tfp_op tfp_lp tfp_acf tfp_wrdg (already log residual
+> s)
+>     energy productivity  va_per_gj   = VA / GJ          (+ ln)
+>     carbon productivity  va_per_co2  = VA / tonne CO2   (+ ln)
+>   Output sheets (n mean sd p10-p90 min max, by group, pool + by year):
+>     t10_tfp           the four TFP measures
+>     t10_energy_prod   va_per_gj, ln_va_per_gj
+>     t10_carbon_prod   va_per_co2, ln_va_per_co2
+>     t10_medians       compact table: n firms and the median of each measure,
+>                       by group, pool + by year
+> 
+>   NOTE: TFP = nominal development residuals; tfp_op has far fewer observation
+> s
+>         than the other three, and none in 2010. Compare groups within one TFP
+>         method, not levels across methods. VA is nominal (and masked in the
+>         development data), so compare groups within a year or the pool, not
+>         levels across years. Energy/carbon productivity only for firms with
+>         GJ > 0 / CO2 > 0. 2020 and 2022 cannot be classified (see 02-08).
+> ==========================================================================*/
+. if "$B207" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B207_DATA/b207_groups.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1 & group7 != 99
+(17,446 observations deleted)
+
+. 
+. do "$B207/_sumstats.do" "tfp_op tfp_lp tfp_acf tfp_wrdg" "group7" "t10_tfp"
+
+. /*==========================================================================
+>   _sumstats.do -- helper: descriptive statistics table, POOLED + BY YEAR
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B207/_sumstats.do" "va_per_gj ln_va_per_gj" "group7" "t10_energy_p
+> rod"
+> 
+>       argument 1 = list of variables
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b2_07_tables.xlsx (max 31 characters)
+> 
+>   Result: 1 row = variable x group x period (pool, 2010, 2011, ...)
+>           columns n mean sd p10 p25 p50 p75 p90 min max
+>   Rows with a missing group are not counted.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars grp sheet
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+
+. local first 1
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     local grp all
+. }
+
+. foreach v of local vars {
+  2.     foreach period in pool year {
+  3.         preserve
+  4.         keep `v' `grp' year
+  5.         keep if !missing(`v') & !missing(`grp')
+  6.         if _N > 0 {
+  7.             if "`period'" == "pool" replace year = 0
+  8.             collapse (count) n = `v' (mean) mean = `v' (sd) sd = `v' ///
+>                      (p10) p10 = `v' (p25) p25 = `v' (p50) p50 = `v' ///
+>                      (p75) p75 = `v' (p90) p90 = `v' (min) min = `v' (max) ma
+> x = `v', ///
+>                      by(`grp' year)
+  9.             generate str32 variable = "`v'"
+ 10.             if `first' == 0 append using `result'
+ 11.             save `result', replace
+ 12.             local first 0
+ 13.         }
+ 14.         restore
+ 15.     }
+ 16. }
+(15,145 observations deleted)
+(458 real changes made)
+(file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 not
+    found)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(15,145 observations deleted)
+(label group7 already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(10,068 observations deleted)
+(5,535 real changes made)
+(label group7 already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(10,068 observations deleted)
+(label group7 already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(10,068 observations deleted)
+(5,535 real changes made)
+(label group7 already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(10,068 observations deleted)
+(label group7 already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(10,068 observations deleted)
+(5,535 real changes made)
+(label group7 already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(10,068 observations deleted)
+(label group7 already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. 
+. use `result', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * the group is written as text using its value label (if it has one)
+. capture decode `grp', generate(group)
+
+. if _rc generate group = string(`grp')
+
+. * keep the variables in the order they were listed
+. generate variable_order = .
+(238 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(49 real changes made)
+(63 real changes made)
+(63 real changes made)
+(63 real changes made)
+
+. sort variable_order `grp' year
+
+. keep variable group period n mean sd p10 p25 p50 p75 p90 min max
+
+. export excel using "$B207_XLSX", sheet("`sheet'", replace) firstrow(variables
+> )
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-07-gradient/o
+> utput/b2_07_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t10_tfp (238 rows)
+
+. use `original', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+end of do-file
+
+. do "$B207/_sumstats.do" "va_per_gj ln_va_per_gj" "group7" "t10_energy_prod"
+
+. /*==========================================================================
+>   _sumstats.do -- helper: descriptive statistics table, POOLED + BY YEAR
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B207/_sumstats.do" "va_per_gj ln_va_per_gj" "group7" "t10_energy_p
+> rod"
+> 
+>       argument 1 = list of variables
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b2_07_tables.xlsx (max 31 characters)
+> 
+>   Result: 1 row = variable x group x period (pool, 2010, 2011, ...)
+>           columns n mean sd p10 p25 p50 p75 p90 min max
+>   Rows with a missing group are not counted.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars grp sheet
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+
+. local first 1
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     local grp all
+. }
+
+. foreach v of local vars {
+  2.     foreach period in pool year {
+  3.         preserve
+  4.         keep `v' `grp' year
+  5.         keep if !missing(`v') & !missing(`grp')
+  6.         if _N > 0 {
+  7.             if "`period'" == "pool" replace year = 0
+  8.             collapse (count) n = `v' (mean) mean = `v' (sd) sd = `v' ///
+>                      (p10) p10 = `v' (p25) p25 = `v' (p50) p50 = `v' ///
+>                      (p75) p75 = `v' (p90) p90 = `v' (min) min = `v' (max) ma
+> x = `v', ///
+>                      by(`grp' year)
+  9.             generate str32 variable = "`v'"
+ 10.             if `first' == 0 append using `result'
+ 11.             save `result', replace
+ 12.             local first 0
+ 13.         }
+ 14.         restore
+ 15.     }
+ 16. }
+(295 observations deleted)
+(15,308 real changes made)
+(file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 not
+    found)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(295 observations deleted)
+(label group7 already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(295 observations deleted)
+(15,308 real changes made)
+(label group7 already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(295 observations deleted)
+(label group7 already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. 
+. use `result', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * the group is written as text using its value label (if it has one)
+. capture decode `grp', generate(group)
+
+. if _rc generate group = string(`grp')
+
+. * keep the variables in the order they were listed
+. generate variable_order = .
+(154 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(77 real changes made)
+(77 real changes made)
+
+. sort variable_order `grp' year
+
+. keep variable group period n mean sd p10 p25 p50 p75 p90 min max
+
+. export excel using "$B207_XLSX", sheet("`sheet'", replace) firstrow(variables
+> )
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-07-gradient/o
+> utput/b2_07_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t10_energy_prod (154 rows)
+
+. use `original', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+end of do-file
+
+. do "$B207/_sumstats.do" "va_per_co2 ln_va_per_co2" "group7" "t10_carbon_prod"
+
+. /*==========================================================================
+>   _sumstats.do -- helper: descriptive statistics table, POOLED + BY YEAR
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B207/_sumstats.do" "va_per_gj ln_va_per_gj" "group7" "t10_energy_p
+> rod"
+> 
+>       argument 1 = list of variables
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b2_07_tables.xlsx (max 31 characters)
+> 
+>   Result: 1 row = variable x group x period (pool, 2010, 2011, ...)
+>           columns n mean sd p10 p25 p50 p75 p90 min max
+>   Rows with a missing group are not counted.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars grp sheet
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+
+. local first 1
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     local grp all
+. }
+
+. foreach v of local vars {
+  2.     foreach period in pool year {
+  3.         preserve
+  4.         keep `v' `grp' year
+  5.         keep if !missing(`v') & !missing(`grp')
+  6.         if _N > 0 {
+  7.             if "`period'" == "pool" replace year = 0
+  8.             collapse (count) n = `v' (mean) mean = `v' (sd) sd = `v' ///
+>                      (p10) p10 = `v' (p25) p25 = `v' (p50) p50 = `v' ///
+>                      (p75) p75 = `v' (p90) p90 = `v' (min) min = `v' (max) ma
+> x = `v', ///
+>                      by(`grp' year)
+  9.             generate str32 variable = "`v'"
+ 10.             if `first' == 0 append using `result'
+ 11.             save `result', replace
+ 12.             local first 0
+ 13.         }
+ 14.         restore
+ 15.     }
+ 16. }
+(295 observations deleted)
+(15,308 real changes made)
+(file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 not
+    found)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(295 observations deleted)
+(label group7 already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(295 observations deleted)
+(15,308 real changes made)
+(label group7 already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(295 observations deleted)
+(label group7 already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. 
+. use `result', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * the group is written as text using its value label (if it has one)
+. capture decode `grp', generate(group)
+
+. if _rc generate group = string(`grp')
+
+. * keep the variables in the order they were listed
+. generate variable_order = .
+(154 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(77 real changes made)
+(77 real changes made)
+
+. sort variable_order `grp' year
+
+. keep variable group period n mean sd p10 p25 p50 p75 p90 min max
+
+. export excel using "$B207_XLSX", sheet("`sheet'", replace) firstrow(variables
+> )
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-07-gradient/o
+> utput/b2_07_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t10_carbon_prod (154 rows)
+
+. use `original', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+end of do-file
+
+. 
+. * ---- t10_medians: one compact comparison table ------------------------
+. generate n_firms = 1
+
+. expand 2, generate(copy)              // copy of every row with year = 0 for 
+> "pool"
+(15,603 observations created)
+
+. replace year = 0 if copy == 1
+(15,603 real changes made)
+
+. collapse (sum) n_firms (p50) med_tfp_op = tfp_op med_tfp_lp = tfp_lp ///
+>          med_tfp_acf = tfp_acf med_tfp_wrdg = tfp_wrdg ///
+>          med_va_per_gj = va_per_gj med_va_per_co2 = va_per_co2, by(group7 yea
+> r)
+
+. generate period = cond(year == 0, "pool", string(year))
+
+. sort year group7
+
+. order group7 period n_firms
+
+. drop year
+
+. list if period == "pool", clean noobs
+
+                        group7   period   n_firms   med_tf~op   med_tf~lp   med
+> _tfp~f   med_tfp~g   med_va_~j   med_va_~2  
+               1 Domestic only     pool     10807   7.0894326   11.246735   8.0
+> 385847    10.96022   5664.1385   46113.027  
+               2 Exporter only     pool      1640   7.2757937   12.304093   9.1
+> 803392   11.990496   6621.1264    48640.08  
+               3 Importer only     pool      1006   7.5827775   12.850565   8.9
+> 850429   12.579163   7355.8067   50870.043  
+         4 Exporter + importer     pool       600   8.2602459   13.877255   9.6
+> 710804   13.544945   8435.3357   54214.272  
+        5 FDI, domestic market     pool       604   8.5193655   13.308674   9.3
+> 084881   12.866839    8802.495   54514.083  
+               6 FDI, exporter     pool       326   8.0617026    12.59808   9.5
+> 792732   12.178533   8269.7314   59299.233  
+    7 FDI, exporter + importer     pool       620   8.6680517    13.98199   9.9
+> 430958   13.551541   12536.379   73089.447  
+
+. export excel using "$B207_XLSX", sheet("t10_medians", replace) firstrow(varia
+> bles)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-07-gradient/o
+> utput/b2_07_tables.xlsx saved
+
+. 
+end of do-file
+
+######## B2-07: 11_figures ########
+
+. /*==========================================================================
+>   Line 11 (no figures line in the to-do; added for every block)
+>   Every other file writes its tables to output/b2_07_tables.xlsx. This file
+>   draws the charts FROM those tables, so a chart always matches its table.
+>   The exact points of every chart are also written to a sheet figNN_data
+>   (graph-ready, e.g. to redraw the chart in Excel or PowerPoint).
+>   Runs LAST in 00_run.do.
+> 
+>   Charts (output/):
+>     fig02_groups_by_year.png     clean firms per group by year, incl. not cla
+> ssified
+>     fig09_shares.png             each group's share of firms, workers, VA,
+>                                  output, energy and CO2 (pooled)
+>     fig10_productivity.png       median TFP (LP), energy productivity and
+>                                  carbon productivity by group (pooled)
+> ==========================================================================*/
+. if "$B207" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. 
+. * ---- fig02: firms per group, by year (lines 2-8) ----
+. import excel using "$B207_XLSX", sheet("t02_counts") firstrow clear
+(5 vars, 90 obs)
+
+. drop if period == "pool"
+(8 observations deleted)
+
+. generate year = real(period)
+
+. generate code = real(substr(group7, 1, 1))
+(12 missing values generated)
+
+. replace  code = 0 if group7 == "Not classified"
+(12 real changes made)
+
+. keep year code n_firms
+
+. reshape wide n_firms, i(year) j(code)
+(j = 0 1 2 3 4 5 6 7)
+
+Data                               Long   ->   Wide
+-----------------------------------------------------------------------------
+Number of observations               82   ->   12          
+Number of variables                   3   ->   9           
+j variable (8 values)              code   ->   (dropped)
+xij variables:
+                                n_firms   ->   n_firms0 n_firms1 ... n_firms7
+-----------------------------------------------------------------------------
+
+. rename n_firms0 n_not_classified
+
+. forvalues g = 1/7 {
+  2.     capture generate n_firms`g' = 0          // a group with no firm that 
+> year
+  3.     replace n_firms`g' = 0 if missing(n_firms`g')
+  4.     rename n_firms`g' n_g`g'
+  5. }
+(2 real changes made)
+(2 real changes made)
+(2 real changes made)
+(2 real changes made)
+(2 real changes made)
+(2 real changes made)
+(2 real changes made)
+
+. replace n_not_classified = 0 if missing(n_not_classified)
+(0 real changes made)
+
+. order year n_g1 n_g2 n_g3 n_g4 n_g5 n_g6 n_g7 n_not_classified
+
+. export excel using "$B207_XLSX", sheet("fig02_data", replace) firstrow(variab
+> les)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-07-gradient/o
+> utput/b2_07_tables.xlsx saved
+
+. graph bar (asis) n_g1 n_g2 n_g3 n_g4 n_g5 n_g6 n_g7 n_not_classified, ///
+>     over(year, label(labsize(small))) stack ///
+>     bar(8, color(gs13)) ytitle("Number of firms (clean)", size(small) margin(
+> r=4)) ylabel(, angle(0) format(%9.0fc) labsize(small)) ///
+>     legend(order(1 "1 Domestic only" 2 "2 Exporter only" 3 "3 Importer only" 
+> ///
+>                  4 "4 Exporter + importer" 5 "5 FDI, domestic market" 6 "6 FD
+> I, exporter" ///
+>                  7 "7 FDI, exporter + importer" 8 "Not classified") cols(2) s
+> ize(small)) ///
+>     title("Internationalisation gradient: firms per group") ///
+>     note("2020: FDI missing; 2022: export flag missing, so no firm can be cla
+> ssified." ///
+>          "Other years: firms with a missing export or import answer are not c
+> lassified." ///
+>          "There is no 2016 survey; the import question changes between 2015 a
+> nd 2017.", size(small)) graphregion(color(white))
+
+. graph export "$B207_OUT/fig02_groups_by_year.png", replace width(2000)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-07-gradient/o
+> utput/fig02_groups_by_year.png written in PNG format
+
+. 
+. * ---- fig09: shares by group, pooled (line 9) ----
+. import excel using "$B207_XLSX", sheet("t09_shares") firstrow clear
+(14 vars, 77 obs)
+
+. keep if period == "pool"
+(70 observations deleted)
+
+. keep group7 sh_firms sh_workers sh_va sh_output sh_gj_total sh_co2_total
+
+. export excel using "$B207_XLSX", sheet("fig09_data", replace) firstrow(variab
+> les)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-07-gradient/o
+> utput/b2_07_tables.xlsx saved
+
+. graph hbar (asis) sh_firms sh_workers sh_va sh_output sh_gj_total sh_co2_tota
+> l, ///
+>     over(group7, label(labsize(small))) ///
+>     ytitle("% of the classified firms' total") ///
+>     legend(order(1 "Firms" 2 "Workers" 3 "Value added" 4 "Output" 5 "Energy (
+> GJ)" 6 "CO2") ///
+>            rows(2) size(small)) ///
+>     title("Share of each group (pooled)", size(medium)) ///
+>     subtitle("Pooled: 2010-2015, 2017-2019, 2021 (the years that can be class
+> ified)", size(small)) ///
+>     note("Denominator: clean, classified firms (groups 1-7). VA and output no
+> minal.", size(small)) ///
+>     graphregion(color(white)) xsize(9) ysize(7)
+
+. graph export "$B207_OUT/fig09_shares.png", replace width(2000)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-07-gradient/o
+> utput/fig09_shares.png written in PNG format
+
+. 
+. * ---- fig10: productivity by group, pooled (line 10) ----
+. import excel using "$B207_XLSX", sheet("t10_medians") firstrow clear
+(9 vars, 77 obs)
+
+. keep if period == "pool"
+(70 observations deleted)
+
+. keep group7 n_firms med_tfp_lp med_va_per_gj med_va_per_co2
+
+. export excel using "$B207_XLSX", sheet("fig10_data", replace) firstrow(variab
+> les)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-07-gradient/o
+> utput/b2_07_tables.xlsx saved
+
+. graph hbar (asis) med_tfp_lp, over(group7, label(labsize(small))) ///
+>     ytitle("Median TFP (LP, log residual)") title("TFP (LP)") ///
+>     graphregion(color(white)) name(g1, replace)
+
+. graph hbar (asis) med_va_per_gj, over(group7, label(labsize(small))) ///
+>     ytitle("Median VA per GJ") title("Energy productivity") ///
+>     graphregion(color(white)) name(g2, replace)
+
+. graph hbar (asis) med_va_per_co2, over(group7, label(labsize(small))) ///
+>     ytitle("Median VA per tonne CO2") title("Carbon productivity") ///
+>     graphregion(color(white)) name(g3, replace)
+
+. graph combine g1 g2 g3, cols(3) ///
+>     title("Productivity along the internationalisation gradient (pooled media
+> ns)") ///
+>     note("Clean, classified firms; 2020 and 2022 cannot be classified. VA nom
+> inal." ///
+>          "Other TFP methods (OP, ACF, Wooldridge): see sheet t10_medians.") /
+> //
+>     graphregion(color(white)) xsize(12) ysize(4.5)
+
+. graph export "$B207_OUT/fig10_productivity.png", replace width(2400)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-07-gradient/o
+> utput/fig10_productivity.png written in PNG format
+
+. graph drop _all
+
+. 
+end of do-file
+
+. log close b207
+      name:  b207
+       log:  /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-07-gr
+> adient/output/b2_07_log.log
+  log type:  text
+ closed on:   9 Oct 2026, 12:54:51
+-------------------------------------------------------------------------------

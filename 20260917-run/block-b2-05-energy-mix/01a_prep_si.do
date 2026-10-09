@@ -1,0 +1,142 @@
+/*==========================================================================
+  Line 1: "Energy transition and carbon lock in at plant level"
+  (the row's subject -> data preparation)
+  Prepare Statistik Industri (SI) 2010-2022 for B2-05
+  Input : $SI_DATA  (analysis_ready_data.dta from block 0)
+  Output: data/b205_si.dta  -- 1 row = 1 firm x year
+          (open with: use "$B205_DATA/b205_si.dta", clear  then browse)
+
+  Copied from block-b1-18's 01a_prep_si.do (same corrections), plus the
+  energy-by-source variables this row needs:
+    gj_coal2 gj_coalbriq gj_coke                     coal family (GJ)
+    gj_diesel gj_petrol gj_kerosene gj_dieseloil gj_fueloil   oil family
+    gj_lpg gj_citygas gj_othergas gj_natgas          gas family
+    gj_biodiesel                                     biofuel (asked 2020+, reported 2021+)
+    gj_elec_pln gj_elec_nonpln gj_elec_owngen        electricity by source
+    biomass_qty    biomass quantity in block 0's column (unit NOT settled)
+  Other variables: exporter, importer, fdi, large, kbli2, kbli5, prov, java,
+    va, workers, co2_s1 co2_s2 co2_total gj_s1 gj_s2 gj_total, clean
+
+  NOTE: the 2020+ fuels (diesel oil, fuel oil, natural gas, biodiesel) have no
+  GJ column in block 0. GJ per unit: IPCC 2006 default net calorific values
+  (Vol 2 Ch 1, Table 1.2). Biomass gets no GJ: block 0 calls the column kg,
+  the 2020 form says tonne, and nothing settles which.
+==========================================================================*/
+if "$B205" == "" {
+    display as error "Run 00_run.do first (it sets the paths)."
+    exit 198
+}
+use "$SI_DATA", clear
+
+* ---- identifiers ------------------------------------------------------
+* year = survey year (there is no 2016 file)
+generate kbli2 = real(substr(industry_code, 1, 2))
+generate kbli5 = industry_code
+generate prov  = real(province_code)
+generate java  = inlist(prov, 31, 32, 33, 34, 35, 36) if !missing(prov)
+label define java 0 "Outside Java" 1 "Java"
+label values java java
+
+* ---- firm size: medium vs large (100-worker threshold) ----------------
+generate large = (workers > 100) if !missing(workers)
+label define large 0 "Medium (<=100)" 1 "Large (>100)"
+label values large large
+
+* ---- imports, exports & FDI -------------------------------------------
+* importer is only defined where the import question can be evaluated
+generate importer = import_flag if import_observed == 1
+label define importer 0 "Non-importer" 1 "Importer"
+label values importer importer
+
+generate exporter = export_flag
+generate fdi      = fdi_10_flag                     // foreign ownership >= 10%
+* 2022: the form only asks about DIRECT exports, a "no" is never recorded -> missing
+replace exporter = . if year == 2022
+* 2020: foreign ownership is inconsistent (47% FDI vs 8-11% other years) -> missing
+replace fdi = . if year == 2020
+label define exporter 0 "Non-exporter" 1 "Exporter"
+label values exporter exporter
+label define fdi 0 "Domestic" 1 "FDI"
+label values fdi fdi
+
+* ---- firm characteristics (nominal) -----------------------------------
+generate va      = value_added_nominal
+generate output  = gross_output_nominal
+generate va_pw   = va / workers      if workers > 0
+
+* ---- energy & emissions -----------------------------------------------
+* COAL 2017 CORRECTION: block 0 multiplies by 1000 (treats it as tonnes),
+* but the price per unit shows the data are already in kg. Divide back.
+generate co2_coal = co2_coal_s1
+generate gj_coal2 = gj_coal
+replace  co2_coal = co2_coal_s1 / 1000 if year == 2017
+replace  gj_coal2 = gj_coal / 1000     if year == 2017
+
+* scope 1 = the 4 fuels asked in every year: diesel, petrol, coal, LPG
+egen co2_s1 = rowtotal(co2_diesel_s1 co2_petrol_s1 co2_coal co2_lpg_s1), missing
+egen gj_s1  = rowtotal(gj_diesel gj_petrol gj_coal2 gj_lpg), missing
+* scope 2 = purchased electricity
+generate co2_s2 = co2_scope2_s1
+generate gj_s2  = gj_electricity
+egen co2_total = rowtotal(co2_s1 co2_s2), missing
+egen gj_total  = rowtotal(gj_s1 gj_s2), missing
+
+* ---- energy (GJ) per source, for the energy mix (line 2) --------------
+* block 0 publishes GJ for the legacy fuels; coal uses the corrected gj_coal2.
+* The fuels the 2020 form added have no GJ column in block 0: GJ per unit
+* from the IPCC 2006 default net calorific values (Vol 2 Ch 1, Table 1.2),
+* one plain line each.
+generate gj_dieseloil = fuel_dieseloil_ltr * 0.03655 if fuel_dieseloil_ltr >= 0   // per litre
+generate gj_fueloil   = fuel_fueloil_ltr   * 0.03838 if fuel_fueloil_ltr >= 0     // per litre
+generate gj_natgas    = fuel_natgas_mmbtu  * 1.05506 if fuel_natgas_mmbtu >= 0    // per MMBTU
+generate gj_biodiesel = fuel_biodiesel_ltr * 0.02376 if fuel_biodiesel_ltr >= 0   // per litre
+* electricity by source: 1 kWh = 3.6 MJ = 0.0036 GJ
+generate gj_elec_pln    = elec_pln_kwh    * 0.0036     // purchased from PLN
+generate gj_elec_nonpln = elec_nonpln_kwh * 0.0036     // purchased from others
+generate gj_elec_owngen = elec_owngen_kwh * 0.0036     // generated by the firm itself
+* biomass: quantity only, in block 0's own column (kg or tonne: not settled)
+generate biomass_qty = fuel_biomass_kg if fuel_biomass_kg >= 0
+
+* ---- energy outlier flag (clean) --------------------------------------
+* a record is left out of the analysis (clean = 0) if any of its energy
+* quantities is above 100x that year's 99th percentile. Nothing is deleted.
+generate coal_kg_fix = fuel_coal_kg
+replace  coal_kg_fix = fuel_coal_kg / 1000 if year == 2017
+generate clean = 1
+levelsof year, local(years)
+foreach q in fuel_diesel_ltr fuel_petrol_ltr fuel_kerosene_ltr coal_kg_fix fuel_lpg_kg ///
+             fuel_citygas_m3 fuel_othergas_m3 fuel_coalbriq_kg fuel_coke_kg ///
+             elec_pln_kwh elec_nonpln_kwh elec_owngen_kwh fuel_dieseloil_ltr ///
+             fuel_fueloil_ltr fuel_natgas_mmbtu fuel_biodiesel_ltr fuel_biomass_kg {
+    foreach y of local years {
+        quietly count if year == `y' & `q' > 0 & !missing(`q')
+        if r(N) > 2 {
+            quietly summarize `q' if year == `y' & `q' > 0, detail
+            quietly replace clean = 0 if year == `y' & `q' > 100 * r(p99) & !missing(`q')
+        }
+    }
+}
+replace clean = 0 if workers == 0 & co2_s1 > 0 & !missing(co2_s1)
+count if clean == 0
+display as result "Outlier records (clean = 0): " r(N)
+
+* ---- save -------------------------------------------------------------
+keep  firm_id year source_row kbli2 kbli5 prov java large importer exporter fdi ///
+      va output va_pw workers co2_s1 co2_s2 co2_total gj_s1 gj_s2 gj_total ///
+      gj_coal2 gj_coalbriq gj_coke gj_diesel gj_petrol gj_kerosene gj_dieseloil gj_fueloil ///
+      gj_lpg gj_citygas gj_othergas gj_natgas gj_biodiesel ///
+      gj_elec_pln gj_elec_nonpln gj_elec_owngen biomass_qty clean
+order firm_id year source_row kbli2 kbli5 prov java large importer exporter fdi
+label variable gj_coal2       "Coal energy (GJ), 2017 divided by 1000"
+label variable gj_dieseloil   "Diesel oil energy (GJ), 2020+ only"
+label variable gj_fueloil     "Fuel oil energy (GJ), 2020+ only"
+label variable gj_natgas      "Natural gas energy (GJ), 2020+ only"
+label variable gj_biodiesel   "Biodiesel energy (GJ), asked from 2020 (reported from 2021)"
+label variable gj_elec_pln    "Electricity bought from PLN (GJ)"
+label variable gj_elec_nonpln "Electricity bought from non-PLN (GJ)"
+label variable gj_elec_owngen "Electricity generated by the firm itself (GJ)"
+label variable biomass_qty    "Biomass quantity, unit NOT settled (kg or tonne), 2020+ only"
+label variable clean "1 = not an energy outlier"
+compress
+save "$B205_DATA/b205_si.dta", replace
+display as result "01a done: $B205_DATA/b205_si.dta (" _N " rows)"

@@ -1,0 +1,3742 @@
+-------------------------------------------------------------------------------
+      name:  b21
+       log:  /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21-pr
+> oduct-scope/output/b1_21_log.log
+  log type:  text
+ opened on:   9 Oct 2026, 12:54:01
+
+. foreach f of local files {
+  2.     display _newline as result "######## B1-21: `f' ########"
+  3.     do "$B21/`f'.do"
+  4. }
+
+######## B1-21: 01a_prep_si ########
+
+. /*==========================================================================
+>   Line 1 (part a)  Prepare Statistik Industri (SI) 2010-2022 for B1-21
+>   Input : $SI_DATA  (analysis_ready_data.dta from block 0)
+>   Output: data/b21_si.dta  -- 1 row = 1 firm x year
+>           (open with: use "$B21_DATA/b21_si.dta", clear  then browse)
+> 
+>   Copied from b1-18's 01a (same corrections). B1-21
+>   uses the SI panel for:
+>     importer, fdi   firm status, merged onto the Proman roster cell in 01b
+>                     (year x province x KBLI5) for the line 8 comparison
+>     exporter        kept for reference (the roster has its own export data)
+>     prod_innov      block 0's product-innovation question (2017-2018 only),
+>                     the one product question in SI; used in line 8
+>     clean           1 = not an extreme energy outlier
+> ==========================================================================*/
+. if "$B21" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$SI_DATA", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+. * ---- identifiers ------------------------------------------------------
+. * year = survey year (there is no 2016 file)
+. generate kbli2 = real(substr(industry_code, 1, 2))
+
+. generate kbli5 = industry_code
+
+. generate prov  = real(province_code)
+
+. generate prov_s = province_code
+
+. generate java  = inlist(prov, 31, 32, 33, 34, 35, 36) if !missing(prov)
+
+. label define java 0 "Outside Java" 1 "Java"
+
+. label values java java
+
+. 
+. * ---- imports ----------------------------------------------------------
+. * importer is only defined where the import question can be evaluated
+. generate importer = import_flag if import_observed == 1
+
+. label define importer 0 "Non-importer" 1 "Importer"
+
+. label values importer importer
+
+. 
+. * ---- exports & FDI ----------------------------------------------------
+. generate exporter = export_flag
+(15,321 missing values generated)
+
+. generate fdi      = fdi_10_flag                     // foreign ownership >= 1
+> 0%
+(311 missing values generated)
+
+. * 2022: the form only asks about DIRECT exports, a "no" is never recorded -> 
+> missing
+. replace exporter = . if year == 2022
+(344 real changes made, 344 to missing)
+
+. * 2020: foreign ownership is inconsistent (47% FDI vs 8-11% other years) -> m
+> issing
+. replace fdi = . if year == 2020
+(2,936 real changes made, 2,936 to missing)
+
+. label define exporter 0 "Non-exporter" 1 "Exporter"
+
+. label values exporter exporter
+
+. label define fdi 0 "Domestic" 1 "FDI"
+
+. label values fdi fdi
+
+. 
+. generate export_share = export_share_pct if export_share_valid == 1
+(31,079 missing values generated)
+
+. 
+. * ---- product innovation (asked in 2017 and 2018 only) -----------------
+. generate prod_innov = innovation_product_flag if inlist(innovation_product_fl
+> ag, 0, 1)
+(29,916 missing values generated)
+
+. label define prod_innov 0 "No product innovation" 1 "Product innovation"
+
+. label values prod_innov prod_innov
+
+. 
+. * ---- firm characteristics (nominal) -----------------------------------
+. generate va      = value_added_nominal
+
+. generate output  = gross_output_nominal
+
+. 
+. * ---- energy (only needed for the outlier flag) ------------------------
+. * COAL 2017 CORRECTION: block 0 multiplies by 1000 (treats it as tonnes),
+. * but the price per unit shows the data are already in kg. Divide back.
+. generate co2_coal = co2_coal_s1
+
+. replace  co2_coal = co2_coal_s1 / 1000 if year == 2017
+(1,181 real changes made)
+
+. * scope 1 = the 4 fuels asked in every year: diesel, petrol, coal, LPG
+. egen co2_s1 = rowtotal(co2_diesel_s1 co2_petrol_s1 co2_coal co2_lpg_s1), miss
+> ing
+
+. 
+. * ---- energy outlier flag (clean) --------------------------------------
+. * a record is left out of the analysis (clean = 0) if any of its energy
+. * quantities is above 100x that year's 99th percentile. Nothing is deleted.
+. generate coal_kg_fix = fuel_coal_kg
+
+. replace  coal_kg_fix = fuel_coal_kg / 1000 if year == 2017
+(1,181 real changes made)
+
+. generate clean = 1
+
+. levelsof year, local(years)
+2010 2011 2012 2013 2014 2015 2017 2018 2019 2020 2021 2022
+
+. foreach q in fuel_diesel_ltr fuel_petrol_ltr fuel_kerosene_ltr coal_kg_fix fu
+> el_lpg_kg ///
+>              fuel_citygas_m3 fuel_othergas_m3 fuel_coalbriq_kg fuel_coke_kg /
+> //
+>              elec_pln_kwh elec_nonpln_kwh elec_owngen_kwh fuel_dieseloil_ltr 
+> ///
+>              fuel_fueloil_ltr fuel_natgas_mmbtu fuel_biodiesel_ltr fuel_bioma
+> ss_kg {
+  2.     foreach y of local years {
+  3.         quietly count if year == `y' & `q' > 0 & !missing(`q')
+  4.         if r(N) > 2 {
+  5.             quietly summarize `q' if year == `y' & `q' > 0, detail
+  6.             quietly replace clean = 0 if year == `y' & `q' > 100 * r(p99) 
+> & !missing(`q')
+  7.         }
+  8.     }
+  9. }
+
+. replace clean = 0 if workers == 0 & co2_s1 > 0 & !missing(co2_s1)
+(20 real changes made)
+
+. count if clean == 0
+  30
+
+. display as result "Outlier records (clean = 0): " r(N)
+Outlier records (clean = 0): 30
+
+. 
+. * ---- save -------------------------------------------------------------
+. keep  firm_id year source_row kbli2 kbli5 prov prov_s java importer exporter 
+> fdi ///
+>       export_share prod_innov va output workers clean
+
+. order firm_id year source_row kbli2 kbli5 prov prov_s java importer exporter 
+> fdi
+
+. label variable prod_innov "1 = introduced a new or improved product (2017-201
+> 8 only)"
+
+. label variable clean "1 = not an energy outlier"
+
+. compress
+  variable kbli2 was float now byte
+  variable prov was float now byte
+  variable java was float now byte
+  variable importer was float now byte
+  variable exporter was float now byte
+  variable fdi was float now byte
+  variable prod_innov was float now byte
+  variable clean was float now byte
+  (793,176 bytes saved)
+
+. save "$B21_DATA/b21_si.dta", replace
+(file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21-product-s
+    > cope/data/b21_si.dta not found)
+file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21-product-s
+    > cope/data/b21_si.dta saved
+
+. display as result "01a done: $B21_DATA/b21_si.dta (" _N " rows)"
+01a done: /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21-produ
+> ct-scope/data/b21_si.dta (33049 rows)
+
+. 
+end of do-file
+
+######## B1-21: 01b_prep_proman ########
+
+. /*==========================================================================
+>   Line 1 (part b)  Prepare the Proman (production) roster, 2021 & 2022
+>   Input : $ROSTER/Proman2021_sampel.xlsx, Proman2022_sampel.xlsx
+>           data/b21_si.dta (from 01a) for importer / FDI status
+>   Output: data/b21_pm_rows.dta -- 1 row = 1 product line x firm x year
+>           data/b21_pm_firm.dta -- 1 row = 1 firm x year, with
+>             n_products    number of distinct products            (line 2)
+>             hhi           product HHI of production value, 0-1   (line 3)
+>             core_share    largest product's share of value       (line 5)
+>             exp_intensity exported value / production value, %   (line 6)
+>             n_dest        number of export destinations          (line 7)
+>             exporter importer fdi   the three splits of line 8
+> 
+>   WHAT IS A PRODUCT: the 10-digit KBKI code; if the code is blank, the
+>     product name (upper case). Rows of the same product are added up.
+> 
+>   ABOUT THE FIRM ID (Kipb):
+>     In the sample files Kipb is masked ("***"). For now a "firm" is a CELL
+>     = province x 5-digit KBLI of the firm (firm_key, key_type = "cell").
+>     Unlike b1-18, the year is NOT part of firm_key, so the same cell can be
+>     followed from 2021 to 2022 (line 4, product entry/exit). A cell is a
+>     weak stand-in for a firm: it mixes all plants of that province and
+>     KBLI5, and plants enter or leave it. In the real BPS data Kipb is
+>     present and firm_key = Kipb automatically (key_type = "kipb").
+> 
+>   EXPORTS: 2021 export share = Prprex, destination = Namaneg ("NO" = not
+>     exported); 2022 export share = Ekspor, destination = Negara. A blank
+>     export share means not exported. Only ONE (main) destination per
+>     product line is recorded (the "other countries" column is empty).
+> 
+>   IMPORTER / FDI (line 8) come from the SI panel, merged on the cell
+>     year x province x KBLI5. RULE: a roster firm is an importer (FDI) if at
+>     least half of the clean SI plants in its cell import (are FDI).
+>     Roster firms with no SI plant in their cell get a missing status.
+>     SI has no Kipb, so this stays a cell merge even on the real data
+>     (unless BPS supplies a Kipb-PSID crosswalk).
+>   EXPORTER (line 8) comes from the roster itself: the firm exports at
+>     least one product. (The SI export flag is missing in 2022.)
+> 
+>   If the column names differ in the real files, edit the "rename" lines.
+> ==========================================================================*/
+. if "$B21" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. 
+. * ---- 2021 -------------------------------------------------------------
+. * Kipb Prop Komoditi Kodkbki Kbli Nilai Prprex Namaneg Kodeneg
+. import excel using "$ROSTER/Proman2021_sampel.xlsx", firstrow allstring clear
+(20 vars, 9,834 obs)
+
+. rename (Kipb Prop Komoditi Kodkbki Kbli Nilai Prprex Namaneg Kodeneg) ///
+>        (kipb prov_s product kbki kbli5 val_prod exp_share dest_name dest_code
+> )
+
+. generate year = 2021
+
+. keep year kipb prov_s product kbki kbli5 val_prod exp_share dest_name dest_co
+> de
+
+. tempfile pm21
+
+. save `pm21'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. 
+. * ---- 2022 -------------------------------------------------------------
+. * Kip Prop Komoditi Kodekbki Kbli522 Nilpro22 Ekspor Negara Kodeneg
+. import excel using "$ROSTER/Proman2022_sampel.xlsx", firstrow allstring clear
+(17 vars, 9,545 obs)
+
+. rename (Kip Prop Komoditi Kodekbki Kbli522 Nilpro22 Ekspor Negara Kodeneg) //
+> /
+>        (kipb prov_s product kbki kbli5 val_prod exp_share dest_name dest_code
+> )
+
+. generate year = 2022
+
+. keep year kipb prov_s product kbki kbli5 val_prod exp_share dest_name dest_co
+> de
+
+. append using `pm21'
+
+. 
+. * ---- clean ------------------------------------------------------------
+. destring val_prod exp_share, replace force
+val_prod: all characters numeric; replaced as double
+exp_share: all characters numeric; replaced as double
+(17858 missing values generated)
+
+. count if val_prod <= 0 | missing(val_prod)
+  0
+
+. display as result "Rows with no production value (dropped): " r(N)
+Rows with no production value (dropped): 0
+
+. drop if val_prod <= 0 | missing(val_prod)
+(0 observations deleted)
+
+. 
+. replace prov_s = strtrim(prov_s)
+(0 real changes made)
+
+. replace kbli5  = strtrim(kbli5)
+(0 real changes made)
+
+. generate prov  = real(prov_s)
+
+. generate kbli2 = real(substr(kbli5, 1, 2))
+
+. 
+. * product = KBKI code, or the name when the code is blank
+. replace kbki = strtrim(kbki)
+(0 real changes made)
+
+. generate item = kbki
+(1,938 missing values generated)
+
+. replace  item = "NAME " + upper(strtrim(product)) if item == "" | item == "00
+> 00000000"
+variable item was str10 now str87
+(1,948 real changes made)
+
+. 
+. * destination country: "NO" (2021) = not exported
+. replace dest_name = strtrim(upper(dest_name))
+(0 real changes made)
+
+. replace dest_code = strtrim(dest_code)
+(0 real changes made)
+
+. replace dest_name = "" if dest_name == "NO"
+(3,419 real changes made)
+
+. * export share: blank = not exported; values above 100 are capped
+. replace exp_share = 0   if missing(exp_share)
+(17,858 real changes made)
+
+. replace exp_share = 100 if exp_share > 100
+(4 real changes made)
+
+. generate exported = (exp_share > 0)
+
+. count if exported == 0 & dest_name != ""
+  59
+
+. display as result "Rows with a destination but no export share (kept as not e
+> xported): " r(N)
+Rows with a destination but no export share (kept as not exported): 59
+
+. generate val_export = val_prod * exp_share / 100
+
+. 
+. * country name: fill from rows with the same code, else "CODE xxx"
+. bysort dest_code (dest_name): replace dest_name = dest_name[_N] if dest_name 
+> == "" & dest_code != "" & exported == 1
+(113 real changes made)
+
+. replace dest_name = "CODE " + dest_code if dest_name == "" & dest_code != "" 
+> & exported == 1
+(0 real changes made)
+
+. replace dest_name = "(not reported)" if dest_name == "" & exported == 1
+(58 real changes made)
+
+. replace dest_name = "" if exported == 0
+(59 real changes made)
+
+. 
+. * ---- firm_key: Kipb if available, otherwise the cell (no year) --------
+. count if kipb != "***" & kipb != ""
+  0
+
+. if r(N) > 0 {
+.     generate firm_key = kipb
+.     generate key_type = "kipb"
+. }
+
+. else {
+.     generate firm_key = prov_s + "_" + kbli5
+.     generate key_type = "cell"
+.     display as error "Kipb is masked -> firm_key = cell (province x KBLI5)"
+Kipb is masked -> firm_key = cell (province x KBLI5)
+. }
+
+. 
+. order year firm_key key_type prov_s prov kbli5 kbli2 item kbki product val_pr
+> od exp_share exported val_export dest_name
+
+. label variable item       "Product: KBKI code, or the name when the code is b
+> lank"
+
+. label variable exp_share  "Export share of the product line, % (0 = not expor
+> ted)"
+
+. label variable val_export "Exported value = val_prod x exp_share / 100"
+
+. label variable dest_name  "Main export destination"
+
+. compress
+  variable year was float now int
+  variable prov was float now byte
+  variable kbli2 was float now byte
+  variable exported was float now byte
+  (213,169 bytes saved)
+
+. save "$B21_DATA/b21_pm_rows.dta", replace
+(file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21-product-s
+    > cope/data/b21_pm_rows.dta not found)
+file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21-product-s
+    > cope/data/b21_pm_rows.dta saved
+
+. display as result "Proman rows: " _N " -> $B21_DATA/b21_pm_rows.dta"
+Proman rows: 19379 -> /private/tmp/claude-501/sp/pr-worktree/20260917-run/block
+> -b1-21-product-scope/data/b21_pm_rows.dta
+
+. 
+. * ======================================================================
+. * Firm-level file
+. * ======================================================================
+. 
+. * ---- number of destinations per firm (reported destinations only) ----
+. use "$B21_DATA/b21_pm_rows.dta", clear
+
+. keep if exported == 1 & dest_name != "(not reported)"
+(17,957 observations deleted)
+
+. egen tag_dest = tag(firm_key year dest_name)
+
+. collapse (sum) n_dest = tag_dest, by(firm_key year)
+
+. tempfile dest
+
+. save `dest'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+
+. 
+. * ---- products per firm: value by product, then shares ----
+. use "$B21_DATA/b21_pm_rows.dta", clear
+
+. collapse (sum) val_prod val_export (max) exported (first) prov_s prov kbli5 k
+> bli2 key_type, ///
+>          by(firm_key year item)
+
+. bysort firm_key year: egen val_total = total(val_prod)
+
+. generate share = val_prod / val_total
+
+. generate s2 = share^2
+
+. * province and KBLI5 are the same on every row of a firm (they define the cel
+> l)
+. collapse (count) n_products = share (sum) hhi = s2 val_prod val_export ///
+>          n_prod_exported = exported (max) core_share = share exporter = expor
+> ted ///
+>          (first) prov_s prov kbli5 kbli2 key_type, by(firm_key year)
+
+. merge 1:1 firm_key year using `dest', nogenerate
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                         3,163
+        from master                     3,163  
+        from using                          0  
+
+    Matched                               684  
+    -----------------------------------------
+
+. replace n_dest = 0 if missing(n_dest)
+(3,163 real changes made)
+
+. 
+. generate eff_n_products = 1 / hhi
+
+. generate exp_intensity  = 100 * val_export / val_prod
+
+. generate pct_prod_exported = 100 * n_prod_exported / n_products
+
+. generate ln_n_products  = ln(n_products)
+
+. generate ln_val_prod    = ln(val_prod)
+
+. label define exporter 0 "Non-exporter" 1 "Exporter"
+
+. label values exporter exporter
+
+. 
+. * ---- importer / FDI from SI, merged on the cell ----
+. preserve
+
+. use "$B21_DATA/b21_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1 & inlist(year, 2021, 2022)
+(26,818 observations deleted)
+
+. generate n_si = 1
+
+. collapse (sum) n_si (mean) pct_importer = importer pct_fdi = fdi, by(year pro
+> v_s kbli5)
+
+. tempfile sicell
+
+. save `sicell'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000004 saved
+    as .dta format
+
+. restore
+
+. merge m:1 year prov_s kbli5 using `sicell', keep(master match)
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                         1,953
+        from master                     1,953  (_merge==1)
+        from using                          0  (_merge==2)
+
+    Matched                             1,894  (_merge==3)
+    -----------------------------------------
+
+. tabulate year _merge
+
+           | Matching result from
+           |         merge
+      year | Master on  Matched ( |     Total
+-----------+----------------------+----------
+      2021 |       974        940 |     1,914 
+      2022 |       979        954 |     1,933 
+-----------+----------------------+----------
+     Total |     1,953      1,894 |     3,847 
+
+. drop _merge
+
+. replace n_si = 0 if missing(n_si)
+(1,953 real changes made)
+
+. generate importer = (pct_importer >= 0.5) if !missing(pct_importer)
+(1,953 missing values generated)
+
+. generate fdi      = (pct_fdi >= 0.5)      if !missing(pct_fdi)
+(2,004 missing values generated)
+
+. label define importer 0 "Non-importer" 1 "Importer"
+
+. label values importer importer
+
+. label define fdi 0 "Domestic" 1 "FDI"
+
+. label values fdi fdi
+
+. 
+. label variable n_products        "Number of distinct products"
+
+. label variable hhi               "Product HHI of production value (0-1)"
+
+. label variable eff_n_products    "1 / HHI (effective number of products)"
+
+. label variable core_share        "Largest product's share of production value
+> "
+
+. label variable exp_intensity     "Exported / production value, %"
+
+. label variable pct_prod_exported "% of the firm's products that are exported"
+
+. label variable n_dest            "Number of export destinations (reported)"
+
+. label variable exporter          "1 = exports at least one product (roster)"
+
+. label variable n_si              "Clean SI plants in the cell (year x prov x 
+> KBLI5)"
+
+. label variable pct_importer      "Share of SI plants in the cell that import"
+
+. label variable pct_fdi           "Share of SI plants in the cell that are FDI
+> "
+
+. label variable importer          "1 = at least half of the cell's SI plants i
+> mport"
+
+. label variable fdi               "1 = at least half of the cell's SI plants a
+> re FDI"
+
+. order firm_key year key_type prov_s kbli5 kbli2 n_products eff_n_products hhi
+>  core_share ///
+>       exporter exp_intensity pct_prod_exported n_dest importer fdi
+
+. compress
+  variable n_products was long now byte
+  variable importer was float now byte
+  variable fdi was float now byte
+  variable n_dest was double now byte
+  variable n_prod_exported was double now byte
+  variable n_si was double now byte
+  (115,410 bytes saved)
+
+. save "$B21_DATA/b21_pm_firm.dta", replace
+(file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21-product-s
+    > cope/data/b21_pm_firm.dta not found)
+file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21-product-s
+    > cope/data/b21_pm_firm.dta saved
+
+. display as result "Proman by firm: " _N " firm-years -> $B21_DATA/b21_pm_firm
+> .dta"
+Proman by firm: 3847 firm-years -> /private/tmp/claude-501/sp/pr-worktree/20260
+> 917-run/block-b1-21-product-scope/data/b21_pm_firm.dta
+
+. 
+end of do-file
+
+######## B1-21: 02_n_products ########
+
+. /*==========================================================================
+>   Line 2: "Construct n-number of product per firms"
+>   Data  : Proman roster 2021-2022 (data/b21_pm_firm.dta, built in 01b)
+>           n_products = number of distinct products (KBKI code, or the name
+>           when the code is blank) a firm produces in a year
+>   Output sheets:
+>     t02_n_products  n / mean / sd / percentiles of n_products and its ln,
+>                     pool + 2021 + 2022
+>     t02_dist        % of firms with 1, 2, 3, 4-5, 6-10, 11+ products
+>   NOTE: Kipb is masked, so a "firm" is a cell (province x KBLI5). A cell
+>         holds several plants, so n_products is too high compared with real
+>         firms. With the real data (Kipb) this becomes a firm count.
+> ==========================================================================*/
+. if "$B21" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B21_DATA/b21_pm_firm.dta", clear
+
+. do "$B21/_sumstats.do" "n_products ln_n_products" "" "t02_n_products"
+
+. /*==========================================================================
+>   _sumstats.do -- helper: descriptive statistics table, POOLED + BY YEAR
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B21/_sumstats.do" "n_products ln_n_products" "exporter" "t08_by_ex
+> porter"
+> 
+>       argument 1 = list of variables
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b1_21_tables.xlsx (max 31 characters)
+> 
+>   Result: 1 row = variable x group x period (pool, 2010, 2011, ...)
+>           columns n mean sd p10 p25 p50 p75 p90 min max
+>   Rows with a missing group are not counted.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars grp sheet
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+
+. local first 1
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     local grp all
+. }
+
+. foreach v of local vars {
+  2.     foreach period in pool year {
+  3.         preserve
+  4.         keep `v' `grp' year
+  5.         keep if !missing(`v') & !missing(`grp')
+  6.         if _N > 0 {
+  7.             if "`period'" == "pool" replace year = 0
+  8.             collapse (count) n = `v' (mean) mean = `v' (sd) sd = `v' ///
+>                      (p10) p10 = `v' (p25) p25 = `v' (p50) p50 = `v' ///
+>                      (p75) p75 = `v' (p90) p90 = `v' (min) min = `v' (max) ma
+> x = `v', ///
+>                      by(`grp' year)
+  9.             generate str32 variable = "`v'"
+ 10.             if `first' == 0 append using `result'
+ 11.             save `result', replace
+ 12.             local first 0
+ 13.         }
+ 14.         restore
+ 15.     }
+ 16. }
+(0 observations deleted)
+(3,847 real changes made)
+(file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 not
+    found)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+(3,847 real changes made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. 
+. use `result', clear
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * the group is written as text using its value label (if it has one)
+. capture decode `grp', generate(group)
+
+. if _rc generate group = string(`grp')
+
+. * keep the variables in the order they were listed
+. generate variable_order = .
+(6 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(3 real changes made)
+(3 real changes made)
+
+. sort variable_order `grp' year
+
+. keep variable group period n mean sd p10 p25 p50 p75 p90 min max
+
+. export excel using "$B21_XLSX", sheet("`sheet'", replace) firstrow(variables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21-product-sc
+> ope/output/b1_21_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t02_n_products (6 rows)
+
+. use `original', clear
+
+. 
+end of do-file
+
+. 
+. * ---- distribution in bins ----
+. generate nbin = n_products
+
+. replace  nbin = 4 if inrange(n_products, 4, 5)
+(178 real changes made)
+
+. replace  nbin = 6 if inrange(n_products, 6, 10)
+(265 real changes made)
+
+. replace  nbin = 11 if n_products >= 11
+(127 real changes made)
+
+. label define nbin 1 "1" 2 "2" 3 "3" 4 "4-5" 6 "6-10" 11 "11+"
+
+. label values nbin nbin
+
+. generate n_firms = 1
+
+. expand 2, generate(copy)              // copy of every row with year = 0 for 
+> "pool"
+(3,847 observations created)
+
+. replace year = 0 if copy == 1
+(3,847 real changes made)
+
+. collapse (sum) n_firms, by(nbin year)
+
+. bysort year: egen total = total(n_firms)
+
+. generate pct_firms = 100 * n_firms / total
+
+. generate period = cond(year == 0, "pool", string(year))
+
+. sort year nbin
+
+. decode nbin, generate(n_products)
+
+. keep period n_products n_firms pct_firms
+
+. order period n_products n_firms pct_firms
+
+. list, clean noobs
+
+    period   n_prod~s   n_firms   pct_fi~s  
+      pool          1      1676   43.56641  
+      pool          2       729   18.94983  
+      pool          3       454    11.8014  
+      pool        4-5       438    11.3855  
+      pool       6-10       389   10.11178  
+      pool        11+       161   4.185079  
+      2021          1       824    43.0512  
+      2021          2       363   18.96552  
+      2021          3       222   11.59875  
+      2021        4-5       224   11.70324  
+      2021       6-10       205   10.71055  
+      2021        11+        76   3.970742  
+      2022          1       852   44.07656  
+      2022          2       366    18.9343  
+      2022          3       232   12.00207  
+      2022        4-5       214   11.07087  
+      2022       6-10       184   9.518883  
+      2022        11+        85    4.39731  
+
+. export excel using "$B21_XLSX", sheet("t02_dist", replace) firstrow(variables
+> )
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21-product-sc
+> ope/output/b1_21_tables.xlsx saved
+
+. 
+end of do-file
+
+######## B1-21: 03_product_hhi ########
+
+. /*==========================================================================
+>   Line 3: "Product concentration/HHI"
+>   Data  : Proman roster 2021-2022 (data/b21_pm_firm.dta)
+>           hhi = sum over the firm's products of (product value / firm's
+>           production value)^2. 1 = single product; near 0 = many products of
+>           similar size. eff_n_products = 1 / hhi.
+>   Output sheets:
+>     t03_hhi          stats of hhi and eff_n_products, pool + by year
+>     t03_single       % single-product firms (hhi = 1) and % diversified
+>                      firms (hhi < 0.5), pool + by year
+>   NOTE: firm = cell (province x KBLI5) until Kipb is available.
+> ==========================================================================*/
+. if "$B21" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B21_DATA/b21_pm_firm.dta", clear
+
+. do "$B21/_sumstats.do" "hhi eff_n_products" "" "t03_hhi"
+
+. /*==========================================================================
+>   _sumstats.do -- helper: descriptive statistics table, POOLED + BY YEAR
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B21/_sumstats.do" "n_products ln_n_products" "exporter" "t08_by_ex
+> porter"
+> 
+>       argument 1 = list of variables
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b1_21_tables.xlsx (max 31 characters)
+> 
+>   Result: 1 row = variable x group x period (pool, 2010, 2011, ...)
+>           columns n mean sd p10 p25 p50 p75 p90 min max
+>   Rows with a missing group are not counted.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars grp sheet
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+
+. local first 1
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     local grp all
+. }
+
+. foreach v of local vars {
+  2.     foreach period in pool year {
+  3.         preserve
+  4.         keep `v' `grp' year
+  5.         keep if !missing(`v') & !missing(`grp')
+  6.         if _N > 0 {
+  7.             if "`period'" == "pool" replace year = 0
+  8.             collapse (count) n = `v' (mean) mean = `v' (sd) sd = `v' ///
+>                      (p10) p10 = `v' (p25) p25 = `v' (p50) p50 = `v' ///
+>                      (p75) p75 = `v' (p90) p90 = `v' (min) min = `v' (max) ma
+> x = `v', ///
+>                      by(`grp' year)
+  9.             generate str32 variable = "`v'"
+ 10.             if `first' == 0 append using `result'
+ 11.             save `result', replace
+ 12.             local first 0
+ 13.         }
+ 14.         restore
+ 15.     }
+ 16. }
+(0 observations deleted)
+(3,847 real changes made)
+(file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 not
+    found)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+(3,847 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. 
+. use `result', clear
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * the group is written as text using its value label (if it has one)
+. capture decode `grp', generate(group)
+
+. if _rc generate group = string(`grp')
+
+. * keep the variables in the order they were listed
+. generate variable_order = .
+(6 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(3 real changes made)
+(3 real changes made)
+
+. sort variable_order `grp' year
+
+. keep variable group period n mean sd p10 p25 p50 p75 p90 min max
+
+. export excel using "$B21_XLSX", sheet("`sheet'", replace) firstrow(variables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21-product-sc
+> ope/output/b1_21_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t03_hhi (6 rows)
+
+. use `original', clear
+
+. 
+end of do-file
+
+. 
+. generate single      = (n_products == 1)
+
+. generate diversified = (hhi < 0.5)
+
+. generate n_firms = 1
+
+. expand 2, generate(copy)              // copy of every row with year = 0 for 
+> "pool"
+(3,847 observations created)
+
+. replace year = 0 if copy == 1
+(3,847 real changes made)
+
+. collapse (sum) n_firms (mean) pct_single = single pct_diversified = diversifi
+> ed ///
+>          (p50) med_hhi = hhi, by(year)
+
+. replace pct_single      = 100 * pct_single
+(3 real changes made)
+
+. replace pct_diversified = 100 * pct_diversified
+(3 real changes made)
+
+. generate period = cond(year == 0, "pool", string(year))
+
+. order period n_firms pct_single pct_diversified med_hhi
+
+. drop year
+
+. list, clean noobs
+
+    period   n_firms   pct_si~e   pct_di~d    med_hhi  
+      pool      3847   43.56641   20.06758   .9221545  
+      2021      1914    43.0512   21.21212   .8878275  
+      2022      1933   44.07656    18.9343   .9416576  
+
+. export excel using "$B21_XLSX", sheet("t03_single", replace) firstrow(variabl
+> es)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21-product-sc
+> ope/output/b1_21_tables.xlsx saved
+
+. 
+end of do-file
+
+######## B1-21: 04_product_entry_exit ########
+
+. /*==========================================================================
+>   Line 4: "Product entry and exit"
+>   Data  : Proman roster rows (data/b21_pm_rows.dta), 2021 -> 2022
+>   A product of a firm is
+>      kept     produced in 2021 and in 2022
+>      added    (entry) produced in 2022 but not in 2021
+>      dropped  (exit)  produced in 2021 but not in 2022
+>   Only products with a KBKI code are used (a product name can be spelled
+>   differently in the two years, which would look like entry/exit).
+>   Only firms present in both years ("continuing firms") are compared;
+>   continuing firms whose products all lack a KBKI code drop out, so
+>   t04_entry_exit has fewer firms than the "both years" row of t04_coverage.
+>   Output sheets:
+>     t04_coverage     firms in 2021 only, 2022 only, both years
+>     t04_entry_exit   continuing firms: mean products 2021/2022, mean added /
+>                      dropped, % firms adding / dropping, value share of new
+>                      and dropped products
+>     t04_status       % of continuing firms: no change / added only /
+>                      dropped only / added and dropped
+>   Dataset: data/b21_entry_exit.dta (1 row = 1 continuing firm), used in line 
+> 8
+> 
+>   !! KIPB CAVEAT: Kipb is masked, so firm_key is a CELL (province x KBLI5).
+>      A cell is a weak stand-in for a firm: its product set also changes when
+>      plants enter or leave the cell or the sample, so entry/exit here mixes
+>      firm-level product switching with sample turnover. This table only
+>      becomes a real product entry/exit table with the real Kipb.
+> ==========================================================================*/
+. if "$B21" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. 
+. * ---- 1. which firms are in which year ----
+. use "$B21_DATA/b21_pm_firm.dta", clear
+
+. keep firm_key year
+
+. generate here = 1
+
+. reshape wide here, i(firm_key) j(year)
+(j = 2021 2022)
+
+Data                               Long   ->   Wide
+-----------------------------------------------------------------------------
+Number of observations            3,847   ->   2,457       
+Number of variables                   3   ->   3           
+j variable (2 values)              year   ->   (dropped)
+xij variables:
+                                   here   ->   here2021 here2022
+-----------------------------------------------------------------------------
+
+. generate presence = 1 if here2021 == 1 & missing(here2022)
+(1,933 missing values generated)
+
+. replace  presence = 2 if missing(here2021) & here2022 == 1
+(543 real changes made)
+
+. replace  presence = 3 if here2021 == 1 & here2022 == 1
+(1,390 real changes made)
+
+. label define presence 1 "2021 only (firm exit)" 2 "2022 only (firm entry)" 3 
+> "Both years (continuing)"
+
+. label values presence presence
+
+. generate n_firms = 1
+
+. collapse (sum) n_firms, by(presence)
+
+. egen total = total(n_firms)
+
+. generate pct_firms = 100 * n_firms / total
+
+. drop total
+
+. list, clean noobs
+
+                   presence   n_firms   pct_fi~s  
+      2021 only (firm exit)       524   21.32682  
+     2022 only (firm entry)       543   22.10012  
+    Both years (continuing)      1390   56.57306  
+
+. export excel using "$B21_XLSX", sheet("t04_coverage", replace) firstrow(varia
+> bles)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21-product-sc
+> ope/output/b1_21_tables.xlsx saved
+
+. 
+. * ---- 2. product x firm, value in each year ----
+. use "$B21_DATA/b21_pm_rows.dta", clear
+
+. keep if substr(item, 1, 5) != "NAME "
+(1,948 observations deleted)
+
+. collapse (sum) val_prod, by(firm_key item year)
+
+. reshape wide val_prod, i(firm_key item) j(year)
+(j = 2021 2022)
+
+Data                               Long   ->   Wide
+-----------------------------------------------------------------------------
+Number of observations           10,264   ->   8,581       
+Number of variables                   4   ->   4           
+j variable (2 values)              year   ->   (dropped)
+xij variables:
+                               val_prod   ->   val_prod2021 val_prod2022
+-----------------------------------------------------------------------------
+
+. * continuing firms only
+. bysort firm_key: egen any21 = max(!missing(val_prod2021))
+
+. bysort firm_key: egen any22 = max(!missing(val_prod2022))
+
+. keep if any21 == 1 & any22 == 1
+(1,460 observations deleted)
+
+. 
+. generate in21    = !missing(val_prod2021)
+
+. generate in22    = !missing(val_prod2022)
+
+. generate kept    = in21 & in22
+
+. generate added   = !in21 & in22
+
+. generate dropped = in21 & !in22
+
+. generate val_added   = val_prod2022 * added
+(2,495 missing values generated)
+
+. generate val_dropped = val_prod2021 * dropped
+(2,943 missing values generated)
+
+. collapse (sum) n_2021 = in21 n_2022 = in22 n_kept = kept n_added = added ///
+>          n_dropped = dropped val_2021 = val_prod2021 val_2022 = val_prod2022 
+> ///
+>          val_added val_dropped, by(firm_key)
+
+. generate share_val_new     = 100 * val_added / val_2022     // % of 2022 valu
+> e from new products
+
+. generate share_val_dropped = 100 * val_dropped / val_2021   // % of 2021 valu
+> e in dropped products
+
+. generate any_added   = (n_added > 0)
+
+. generate any_dropped = (n_dropped > 0)
+
+. generate status = 1 if n_added == 0 & n_dropped == 0
+(1,189 missing values generated)
+
+. replace  status = 2 if n_added > 0  & n_dropped == 0
+(124 real changes made)
+
+. replace  status = 3 if n_added == 0 & n_dropped > 0
+(92 real changes made)
+
+. replace  status = 4 if n_added > 0  & n_dropped > 0
+(973 real changes made)
+
+. label define status 1 "No change" 2 "Added only" 3 "Dropped only" 4 "Added an
+> d dropped"
+
+. label values status status
+
+. 
+. * 2021 status of the firm, for line 8
+. generate year = 2021
+
+. merge 1:1 firm_key year using "$B21_DATA/b21_pm_firm.dta", keepusing(exporter
+>  importer fdi kbli2) ///
+>       keep(master match) nogenerate
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                             1,271  
+    -----------------------------------------
+
+. drop year
+
+. label variable n_added  "Products added 2021->2022 (entry)"
+
+. label variable n_dropped "Products dropped 2021->2022 (exit)"
+
+. label variable share_val_new "% of 2022 production value from added products"
+
+. label variable share_val_dropped "% of 2021 production value in dropped produ
+> cts"
+
+. label variable exporter "Exporter in 2021 (roster)"
+
+. label variable importer "Importer in 2021 (SI cell)"
+
+. label variable fdi      "FDI in 2021 (SI cell)"
+
+. compress
+  variable any_added was float now byte
+  variable any_dropped was float now byte
+  variable status was float now byte
+  variable n_2021 was double now byte
+  variable n_2022 was double now byte
+  variable n_kept was double now byte
+  variable n_added was double now byte
+  variable n_dropped was double now byte
+  (55,924 bytes saved)
+
+. save "$B21_DATA/b21_entry_exit.dta", replace
+(file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21-product-s
+    > cope/data/b21_entry_exit.dta not found)
+file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21-product-s
+    > cope/data/b21_entry_exit.dta saved
+
+. 
+. * ---- 3. summary table ----
+. generate n_firms = 1
+
+. collapse (sum) n_firms (mean) mean_n_2021 = n_2021 mean_n_2022 = n_2022 ///
+>          mean_n_added = n_added mean_n_dropped = n_dropped ///
+>          pct_adding = any_added pct_dropping = any_dropped ///
+>          mean_share_val_new = share_val_new mean_share_val_dropped = share_va
+> l_dropped ///
+>          (sum) tot_kept = n_kept tot_added = n_added tot_dropped = n_dropped
+
+. replace pct_adding   = 100 * pct_adding
+(1 real change made)
+
+. replace pct_dropping = 100 * pct_dropping
+(1 real change made)
+
+. generate period = "2021->2022"
+
+. order period
+
+. list, clean noobs
+
+        period   n_firms   mea~2021   mea~2022   mean~ded   mean_n..   pct_ad~g
+>    pct_dr~g   mean_s~w   mean_s~d   tot_kept   tot_ad~d   tot_dr~d  
+    2021->2022      1271   3.287175   3.639654     2.3155   1.963021   86.30999
+>    83.79229   60.62098   58.42337       1683       2943       2495  
+
+. export excel using "$B21_XLSX", sheet("t04_entry_exit", replace) firstrow(var
+> iables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21-product-sc
+> ope/output/b1_21_tables.xlsx saved
+
+. 
+. * ---- 4. firms by entry/exit status ----
+. use "$B21_DATA/b21_entry_exit.dta", clear
+
+. generate n_firms = 1
+
+. collapse (sum) n_firms, by(status)
+
+. egen total = total(n_firms)
+
+. generate pct_firms = 100 * n_firms / total
+
+. drop total
+
+. list, clean noobs
+
+               status   n_firms   pct_fi~s  
+            No change        82   6.451613  
+           Added only       124   9.756098  
+         Dropped only        92   7.238395  
+    Added and dropped       973   76.55389  
+
+. export excel using "$B21_XLSX", sheet("t04_status", replace) firstrow(variabl
+> es)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21-product-sc
+> ope/output/b1_21_tables.xlsx saved
+
+. 
+end of do-file
+
+######## B1-21: 05_core_product_share ########
+
+. /*==========================================================================
+>   Line 5: "Main/core product share"
+>   Data  : Proman roster 2021-2022 (data/b21_pm_firm.dta)
+>           core_share = value of the firm's largest product / the firm's
+>           total production value (0-1)
+>   Output sheets:
+>     t05_core_share   stats of core_share, pool + by year, for all firms and
+>                      for multi-product firms only (single-product firms have
+>                      core_share = 1 by definition)
+>     t05_core_bins    % of firms whose core product is <50%, 50-75%, 75-90%,
+>                      90-99% and 100% of production value
+>   NOTE: firm = cell (province x KBLI5) until Kipb is available.
+> ==========================================================================*/
+. if "$B21" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B21_DATA/b21_pm_firm.dta", clear
+
+. generate firms = 1 + (n_products > 1)
+
+. label define firms 1 "Single-product" 2 "Multi-product"
+
+. label values firms firms
+
+. * the same firms twice: once as "All firms", once in their own group
+. expand 2, generate(copy_all)
+(3,847 observations created)
+
+. replace firms = 0 if copy_all == 1
+(3,847 real changes made)
+
+. label define firms 0 "All firms", add
+
+. do "$B21/_sumstats.do" "core_share" "firms" "t05_core_share"
+
+. /*==========================================================================
+>   _sumstats.do -- helper: descriptive statistics table, POOLED + BY YEAR
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B21/_sumstats.do" "n_products ln_n_products" "exporter" "t08_by_ex
+> porter"
+> 
+>       argument 1 = list of variables
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b1_21_tables.xlsx (max 31 characters)
+> 
+>   Result: 1 row = variable x group x period (pool, 2010, 2011, ...)
+>           columns n mean sd p10 p25 p50 p75 p90 min max
+>   Rows with a missing group are not counted.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars grp sheet
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+
+. local first 1
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     local grp all
+. }
+
+. foreach v of local vars {
+  2.     foreach period in pool year {
+  3.         preserve
+  4.         keep `v' `grp' year
+  5.         keep if !missing(`v') & !missing(`grp')
+  6.         if _N > 0 {
+  7.             if "`period'" == "pool" replace year = 0
+  8.             collapse (count) n = `v' (mean) mean = `v' (sd) sd = `v' ///
+>                      (p10) p10 = `v' (p25) p25 = `v' (p50) p50 = `v' ///
+>                      (p75) p75 = `v' (p90) p90 = `v' (min) min = `v' (max) ma
+> x = `v', ///
+>                      by(`grp' year)
+  9.             generate str32 variable = "`v'"
+ 10.             if `first' == 0 append using `result'
+ 11.             save `result', replace
+ 12.             local first 0
+ 13.         }
+ 14.         restore
+ 15.     }
+ 16. }
+(0 observations deleted)
+(7,694 real changes made)
+(file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 not
+    found)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+(label firms already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. 
+. use `result', clear
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * the group is written as text using its value label (if it has one)
+. capture decode `grp', generate(group)
+
+. if _rc generate group = string(`grp')
+
+. * keep the variables in the order they were listed
+. generate variable_order = .
+(9 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(9 real changes made)
+
+. sort variable_order `grp' year
+
+. keep variable group period n mean sd p10 p25 p50 p75 p90 min max
+
+. export excel using "$B21_XLSX", sheet("`sheet'", replace) firstrow(variables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21-product-sc
+> ope/output/b1_21_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t05_core_share (9 rows)
+
+. use `original', clear
+
+. 
+end of do-file
+
+. 
+. use "$B21_DATA/b21_pm_firm.dta", clear
+
+. generate core_bin = 1 if core_share < 0.5
+(3,424 missing values generated)
+
+. replace  core_bin = 2 if core_share >= 0.5  & core_share < 0.75
+(817 real changes made)
+
+. replace  core_bin = 3 if core_share >= 0.75 & core_share < 0.9
+(485 real changes made)
+
+. replace  core_bin = 4 if core_share >= 0.9  & core_share < 0.99999
+(444 real changes made)
+
+. replace  core_bin = 5 if core_share >= 0.99999
+(1,678 real changes made)
+
+. label define core_bin 1 "<50%" 2 "50-75%" 3 "75-90%" 4 "90-99%" 5 "100%"
+
+. label values core_bin core_bin
+
+. generate n_firms = 1
+
+. expand 2, generate(copy)              // copy of every row with year = 0 for 
+> "pool"
+(3,847 observations created)
+
+. replace year = 0 if copy == 1
+(3,847 real changes made)
+
+. collapse (sum) n_firms, by(core_bin year)
+
+. bysort year: egen total = total(n_firms)
+
+. generate pct_firms = 100 * n_firms / total
+
+. generate period = cond(year == 0, "pool", string(year))
+
+. sort year core_bin
+
+. keep period core_bin n_firms pct_firms
+
+. order period core_bin
+
+. list if period == "pool", clean noobs
+
+    period   core_bin   n_firms   pct_fi~s  
+      pool       <50%       423   10.99558  
+      pool     50-75%       817   21.23733  
+      pool     75-90%       485   12.60723  
+      pool     90-99%       444   11.54146  
+      pool       100%      1678    43.6184  
+
+. export excel using "$B21_XLSX", sheet("t05_core_bins", replace) firstrow(vari
+> ables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21-product-sc
+> ope/output/b1_21_tables.xlsx saved
+
+. 
+end of do-file
+
+######## B1-21: 06_export_share_per_product ########
+
+. /*==========================================================================
+>   Line 6: "Export share per product"
+>   Data  : Proman roster rows 2021-2022 (data/b21_pm_rows.dta)
+>           exp_share = % of the product line's production that is exported
+>           (2021 Prprex, 2022 Ekspor; blank = not exported, >100 capped)
+>   Output sheets:
+>     t06_exported     % of product lines exported and % of production value
+>                      exported, pool + by year
+>     t06_share_stats  stats of exp_share AMONG EXPORTED PRODUCT LINES only
+>                      (with all lines included the median is 0)
+>     t06_share_bins   exported product lines by export share: <10, 10-25,
+>                      25-50, 50-75, 75-<100, 100%
+>     t06_firm         firm level, exporters only: exported / production
+>                      value (%) and % of the firm's products exported
+>     t06_top_products top 20 products (KBKI) by export value, pooled, with
+>                      their export share
+>   NOTE: lines that name a destination but have no export share are
+>         counted as not exported (01b prints how many: 59 in the sample).
+> ==========================================================================*/
+. if "$B21" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. 
+. * ---- A. how much is exported ----
+. use "$B21_DATA/b21_pm_rows.dta", clear
+
+. generate n_lines = 1
+
+. expand 2, generate(copy)              // copy of every row with year = 0 for 
+> "pool"
+(19,379 observations created)
+
+. replace year = 0 if copy == 1
+(19,379 real changes made)
+
+. collapse (sum) n_lines val_prod val_export (mean) pct_lines_exported = export
+> ed, by(year)
+
+. replace pct_lines_exported = 100 * pct_lines_exported
+(3 real changes made)
+
+. generate pct_value_exported = 100 * val_export / val_prod
+
+. generate period = cond(year == 0, "pool", string(year))
+
+. keep period n_lines pct_lines_exported pct_value_exported
+
+. order period
+
+. list, clean noobs
+
+    period   n_lines   pct_li~d   pct_va~d  
+      pool     19379   7.637133   10.86951  
+      2021      9834   7.260524    11.3854  
+      2022      9545   8.025144   10.26029  
+
+. export excel using "$B21_XLSX", sheet("t06_exported", replace) firstrow(varia
+> bles)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21-product-sc
+> ope/output/b1_21_tables.xlsx saved
+
+. 
+. * ---- B. distribution among exported product lines ----
+. use "$B21_DATA/b21_pm_rows.dta", clear
+
+. keep if exported == 1
+(17,899 observations deleted)
+
+. do "$B21/_sumstats.do" "exp_share" "" "t06_share_stats"
+
+. /*==========================================================================
+>   _sumstats.do -- helper: descriptive statistics table, POOLED + BY YEAR
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B21/_sumstats.do" "n_products ln_n_products" "exporter" "t08_by_ex
+> porter"
+> 
+>       argument 1 = list of variables
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b1_21_tables.xlsx (max 31 characters)
+> 
+>   Result: 1 row = variable x group x period (pool, 2010, 2011, ...)
+>           columns n mean sd p10 p25 p50 p75 p90 min max
+>   Rows with a missing group are not counted.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars grp sheet
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+
+. local first 1
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     local grp all
+. }
+
+. foreach v of local vars {
+  2.     foreach period in pool year {
+  3.         preserve
+  4.         keep `v' `grp' year
+  5.         keep if !missing(`v') & !missing(`grp')
+  6.         if _N > 0 {
+  7.             if "`period'" == "pool" replace year = 0
+  8.             collapse (count) n = `v' (mean) mean = `v' (sd) sd = `v' ///
+>                      (p10) p10 = `v' (p25) p25 = `v' (p50) p50 = `v' ///
+>                      (p75) p75 = `v' (p90) p90 = `v' (min) min = `v' (max) ma
+> x = `v', ///
+>                      by(`grp' year)
+  9.             generate str32 variable = "`v'"
+ 10.             if `first' == 0 append using `result'
+ 11.             save `result', replace
+ 12.             local first 0
+ 13.         }
+ 14.         restore
+ 15.     }
+ 16. }
+(0 observations deleted)
+(1,480 real changes made)
+(file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 not
+    found)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. 
+. use `result', clear
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * the group is written as text using its value label (if it has one)
+. capture decode `grp', generate(group)
+
+. if _rc generate group = string(`grp')
+
+. * keep the variables in the order they were listed
+. generate variable_order = .
+(3 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(3 real changes made)
+
+. sort variable_order `grp' year
+
+. keep variable group period n mean sd p10 p25 p50 p75 p90 min max
+
+. export excel using "$B21_XLSX", sheet("`sheet'", replace) firstrow(variables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21-product-sc
+> ope/output/b1_21_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t06_share_stats (3 rows)
+
+. use `original', clear
+
+. 
+end of do-file
+
+. 
+. generate share_bin = 1 if exp_share < 10
+(1,314 missing values generated)
+
+. replace  share_bin = 2 if exp_share >= 10 & exp_share < 25
+(119 real changes made)
+
+. replace  share_bin = 3 if exp_share >= 25 & exp_share < 50
+(110 real changes made)
+
+. replace  share_bin = 4 if exp_share >= 50 & exp_share < 75
+(133 real changes made)
+
+. replace  share_bin = 5 if exp_share >= 75 & exp_share < 100
+(198 real changes made)
+
+. replace  share_bin = 6 if exp_share == 100
+(754 real changes made)
+
+. label define share_bin 1 "<10%" 2 "10-25%" 3 "25-50%" 4 "50-75%" 5 "75-<100%"
+>  6 "100%"
+
+. label values share_bin share_bin
+
+. generate n_lines = 1
+
+. expand 2, generate(copy)
+(1,480 observations created)
+
+. replace year = 0 if copy == 1
+(1,480 real changes made)
+
+. collapse (sum) n_lines, by(share_bin year)
+
+. bysort year: egen total = total(n_lines)
+
+. generate pct_lines = 100 * n_lines / total
+
+. generate period = cond(year == 0, "pool", string(year))
+
+. sort year share_bin
+
+. keep period share_bin n_lines pct_lines
+
+. order period share_bin
+
+. export excel using "$B21_XLSX", sheet("t06_share_bins", replace) firstrow(var
+> iables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21-product-sc
+> ope/output/b1_21_tables.xlsx saved
+
+. 
+. * ---- C. firm level, exporters only ----
+. use "$B21_DATA/b21_pm_firm.dta", clear
+
+. keep if exporter == 1
+(3,138 observations deleted)
+
+. do "$B21/_sumstats.do" "exp_intensity pct_prod_exported" "" "t06_firm"
+
+. /*==========================================================================
+>   _sumstats.do -- helper: descriptive statistics table, POOLED + BY YEAR
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B21/_sumstats.do" "n_products ln_n_products" "exporter" "t08_by_ex
+> porter"
+> 
+>       argument 1 = list of variables
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b1_21_tables.xlsx (max 31 characters)
+> 
+>   Result: 1 row = variable x group x period (pool, 2010, 2011, ...)
+>           columns n mean sd p10 p25 p50 p75 p90 min max
+>   Rows with a missing group are not counted.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars grp sheet
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+
+. local first 1
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     local grp all
+. }
+
+. foreach v of local vars {
+  2.     foreach period in pool year {
+  3.         preserve
+  4.         keep `v' `grp' year
+  5.         keep if !missing(`v') & !missing(`grp')
+  6.         if _N > 0 {
+  7.             if "`period'" == "pool" replace year = 0
+  8.             collapse (count) n = `v' (mean) mean = `v' (sd) sd = `v' ///
+>                      (p10) p10 = `v' (p25) p25 = `v' (p50) p50 = `v' ///
+>                      (p75) p75 = `v' (p90) p90 = `v' (min) min = `v' (max) ma
+> x = `v', ///
+>                      by(`grp' year)
+  9.             generate str32 variable = "`v'"
+ 10.             if `first' == 0 append using `result'
+ 11.             save `result', replace
+ 12.             local first 0
+ 13.         }
+ 14.         restore
+ 15.     }
+ 16. }
+(0 observations deleted)
+(709 real changes made)
+(file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 not
+    found)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+(709 real changes made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. 
+. use `result', clear
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * the group is written as text using its value label (if it has one)
+. capture decode `grp', generate(group)
+
+. if _rc generate group = string(`grp')
+
+. * keep the variables in the order they were listed
+. generate variable_order = .
+(6 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(3 real changes made)
+(3 real changes made)
+
+. sort variable_order `grp' year
+
+. keep variable group period n mean sd p10 p25 p50 p75 p90 min max
+
+. export excel using "$B21_XLSX", sheet("`sheet'", replace) firstrow(variables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21-product-sc
+> ope/output/b1_21_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t06_firm (6 rows)
+
+. use `original', clear
+
+. 
+end of do-file
+
+. 
+. * ---- D. top exported products ----
+. use "$B21_DATA/b21_pm_rows.dta", clear
+
+. keep if substr(item, 1, 5) != "NAME "
+(1,948 observations deleted)
+
+. collapse (sum) val_prod val_export (mean) pct_lines_exported = exported ///
+>          (first) product, by(item)
+
+. generate export_share = 100 * val_export / val_prod
+
+. replace  pct_lines_exported = 100 * pct_lines_exported
+(579 real changes made)
+
+. egen total_export = total(val_export)
+
+. generate pct_of_all_exports = 100 * val_export / total_export
+
+. gsort -val_export
+
+. keep in 1/20
+(2,607 observations deleted)
+
+. rename (item product) (kbki example_name)
+
+. keep kbki example_name val_export export_share pct_lines_exported pct_of_all_
+> exports
+
+. order kbki example_name val_export export_share pct_lines_exported pct_of_all
+> _exports
+
+. list kbki example_name export_share pct_of_all_exports, clean noobs
+
+          kbki                                                                 
+>                                                                      example_
+> name   export~e   pct_of~s  
+    3791097999                                                                 
+>                                                                            AD
+> P 1A   99.98926   17.14016  
+    2154905003                                                                 
+>                                                    Olein kemel kelapa sawit (
+> RBD)   14.62542   8.169779  
+    4299999999                                                                 
+>                                                         Barang logam lainnya 
+> ytdl   97.30252    7.17258  
+    0195001052                                                                 
+>                                                                            SI
+> R 20   59.14383   4.852399  
+    2823199999                                                                 
+>                                                              Pakaian jadi lai
+> nnya   21.07069   3.639632  
+    2153500000                                                                 
+>                                                                              
+> CPKO   4.613577    2.95183  
+    3465101000                                                                 
+>                                                        Amoniak Tidak Berair (
+> nh3)   61.43819   2.093868  
+    4121301001   Lembaran dan pelat dari baja stainless, tidak dikerjakan lebih
+>  lanjut selain dicanai panas, dengan lebar 600 mm atau lebih dalam gulungan d
+> enga   15.99936   1.998845  
+    2823701001                                                                 
+>                                                                         ALL B
+> RIEF   89.41786   1.922992  
+    4828101005                                                                 
+>                                                                 PERALATAN PER
+> ELAM   94.68626   1.847683  
+    2153600000                                                                 
+>                                                                        VIRGIN
+>  OIL   75.33868   1.745207  
+    2154905004                                                                 
+>                                                                            KE
+> RNEL   15.60247   1.502978  
+    4791000000                                                                 
+>                                                       Kartu dengan jalur magn
+> etik   79.32864    1.42559  
+    2149903003                                                                 
+>                                                                      NANAS KA
+> LENG      99.39   1.421085  
+    4112101001                                                                 
+>                                     Ingot baja bukan paduan dengan karbon < 0
+> .6 %   4.279063   1.276795  
+    2125001015                                                                 
+>                                                                 UDANG MENTAH 
+> BEKU   79.43854   1.232832  
+    2949001000                                                                 
+>                                                                   SEPATU OLAH
+> RAGA   46.95612   1.154299  
+    3632005000                                                                 
+>                                                                            SE
+> LANG   37.53112   1.133569  
+    3649001008                                                                 
+>                                                                    BOTOL LEM 
+> CAIR   44.80505   1.117359  
+    2155000003                                                                 
+>                                                                      RBDPO L3
+> MCPD    81.0737   1.109236  
+
+. export excel using "$B21_XLSX", sheet("t06_top_products", replace) firstrow(v
+> ariables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21-product-sc
+> ope/output/b1_21_tables.xlsx saved
+
+. 
+end of do-file
+
+######## B1-21: 07_export_destination ########
+
+. /*==========================================================================
+>   Line 7: "Export destination."
+>   Data  : Proman roster rows 2021-2022 (data/b21_pm_rows.dta)
+>           one (main) destination country per exported product line
+>   Export value of a line = production value x export share / 100.
+>   Output sheets:
+>     t07_coverage     exported lines and % with a reported destination
+>     t07_dest         export value and % of export value by destination,
+>                      pool + by year (only lines with a reported destination)
+>     t07_n_dest       firm level, exporters only: number of destinations
+>     t07_dest_kbli2   top 3 destinations of each KBLI 2-digit sector, pooled
+>   NOTE: only the MAIN destination of each product line is recorded, so a
+>         firm's number of destinations is a lower bound. The destination
+>         structure itself is analysed in block B1-21b.
+> ==========================================================================*/
+. if "$B21" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. 
+. * ---- A. coverage ----
+. use "$B21_DATA/b21_pm_rows.dta", clear
+
+. keep if exported == 1
+(17,899 observations deleted)
+
+. generate n_exported_lines = 1
+
+. generate reported = (dest_name != "(not reported)")
+
+. expand 2, generate(copy)
+(1,480 observations created)
+
+. replace year = 0 if copy == 1
+(1,480 real changes made)
+
+. collapse (sum) n_exported_lines (mean) pct_dest_reported = reported, by(year)
+
+. replace pct_dest_reported = 100 * pct_dest_reported
+(3 real changes made)
+
+. generate period = cond(year == 0, "pool", string(year))
+
+. keep period n_exported_lines pct_dest_reported
+
+. order period
+
+. list, clean noobs
+
+    period   n_expo~s   pct_de~d  
+      pool       1480   96.08109  
+      2021        714   96.07843  
+      2022        766   96.08355  
+
+. export excel using "$B21_XLSX", sheet("t07_coverage", replace) firstrow(varia
+> bles)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21-product-sc
+> ope/output/b1_21_tables.xlsx saved
+
+. 
+. * ---- B. destinations ----
+. use "$B21_DATA/b21_pm_rows.dta", clear
+
+. keep if exported == 1 & dest_name != "(not reported)"
+(17,957 observations deleted)
+
+. generate n_lines = 1
+
+. expand 2, generate(copy)
+(1,422 observations created)
+
+. replace year = 0 if copy == 1
+(1,422 real changes made)
+
+. collapse (sum) n_lines val_export, by(dest_name year)
+
+. bysort year: egen total = total(val_export)
+
+. generate share_pct = 100 * val_export / total
+
+. generate period = cond(year == 0, "pool", string(year))
+
+. gsort year -val_export
+
+. keep period dest_name n_lines val_export share_pct
+
+. order period dest_name
+
+. list if period == "pool" in 1/10, clean noobs
+
+    period             dest_name   n_lines   val_ex~t   share_~t  
+      pool                 CHINA       117   4.65e+10    28.5324  
+      pool                JEPANG       176   2.40e+10   14.70203  
+      pool       AMERIKA SERIKAT       257   2.28e+10   14.00498  
+      pool              MALAYSIA        66   1.41e+10    8.66644  
+      pool               BELANDA        31   1.17e+10   7.169655  
+      pool             SINGAPURA       124   8.15e+09   5.000312  
+      pool         KOREA SELATAN        74   7.05e+09    4.32503  
+      pool                 INDIA        35   5.12e+09   3.141378  
+      pool   EROPA BARAT LAINNYA        42   3.14e+09   1.923684  
+      pool                JERMAN        29   2.55e+09    1.56623  
+
+. export excel using "$B21_XLSX", sheet("t07_dest", replace) firstrow(variables
+> )
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21-product-sc
+> ope/output/b1_21_tables.xlsx saved
+
+. 
+. * ---- C. number of destinations per exporting firm ----
+. use "$B21_DATA/b21_pm_firm.dta", clear
+
+. keep if exporter == 1
+(3,138 observations deleted)
+
+. do "$B21/_sumstats.do" "n_dest" "" "t07_n_dest"
+
+. /*==========================================================================
+>   _sumstats.do -- helper: descriptive statistics table, POOLED + BY YEAR
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B21/_sumstats.do" "n_products ln_n_products" "exporter" "t08_by_ex
+> porter"
+> 
+>       argument 1 = list of variables
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b1_21_tables.xlsx (max 31 characters)
+> 
+>   Result: 1 row = variable x group x period (pool, 2010, 2011, ...)
+>           columns n mean sd p10 p25 p50 p75 p90 min max
+>   Rows with a missing group are not counted.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars grp sheet
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+
+. local first 1
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     local grp all
+. }
+
+. foreach v of local vars {
+  2.     foreach period in pool year {
+  3.         preserve
+  4.         keep `v' `grp' year
+  5.         keep if !missing(`v') & !missing(`grp')
+  6.         if _N > 0 {
+  7.             if "`period'" == "pool" replace year = 0
+  8.             collapse (count) n = `v' (mean) mean = `v' (sd) sd = `v' ///
+>                      (p10) p10 = `v' (p25) p25 = `v' (p50) p50 = `v' ///
+>                      (p75) p75 = `v' (p90) p90 = `v' (min) min = `v' (max) ma
+> x = `v', ///
+>                      by(`grp' year)
+  9.             generate str32 variable = "`v'"
+ 10.             if `first' == 0 append using `result'
+ 11.             save `result', replace
+ 12.             local first 0
+ 13.         }
+ 14.         restore
+ 15.     }
+ 16. }
+(0 observations deleted)
+(709 real changes made)
+(file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 not
+    found)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. 
+. use `result', clear
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * the group is written as text using its value label (if it has one)
+. capture decode `grp', generate(group)
+
+. if _rc generate group = string(`grp')
+
+. * keep the variables in the order they were listed
+. generate variable_order = .
+(3 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(3 real changes made)
+
+. sort variable_order `grp' year
+
+. keep variable group period n mean sd p10 p25 p50 p75 p90 min max
+
+. export excel using "$B21_XLSX", sheet("`sheet'", replace) firstrow(variables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21-product-sc
+> ope/output/b1_21_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t07_n_dest (3 rows)
+
+. use `original', clear
+
+. 
+end of do-file
+
+. 
+. * ---- D. main destinations by sector (pooled) ----
+. use "$B21_DATA/b21_pm_rows.dta", clear
+
+. keep if exported == 1 & dest_name != "(not reported)"
+(17,957 observations deleted)
+
+. collapse (sum) val_export, by(kbli2 dest_name)
+
+. bysort kbli2: egen total = total(val_export)
+
+. generate share_pct = 100 * val_export / total
+
+. gsort kbli2 -val_export
+
+. by kbli2: generate rank = _n
+
+. keep if rank <= 3
+(307 observations deleted)
+
+. keep kbli2 rank dest_name share_pct val_export
+
+. export excel using "$B21_XLSX", sheet("t07_dest_kbli2", replace) firstrow(var
+> iables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21-product-sc
+> ope/output/b1_21_tables.xlsx saved
+
+. 
+end of do-file
+
+######## B1-21: 08_compare_groups ########
+
+. /*==========================================================================
+>   Line 8: "Compare exporter vs non exporters, importers/non importers,
+>            domestic/fdi."
+>   Data  : Proman firm file (data/b21_pm_firm.dta) for lines 2, 3, 5, 6, 7
+>           Entry/exit file (data/b21_entry_exit.dta) for line 4
+>           SI 2017-2018 (data/b21_si.dta) for the product-innovation question
+>   The three splits:
+>     exporter  firm exports at least one product (roster)
+>     importer  at least half of the clean SI plants in the firm's cell
+>               (year x province x KBLI5) import raw materials
+>     fdi       at least half of the clean SI plants in the cell are FDI
+>   Roster firms whose cell has no SI plant have no importer / FDI status
+>   and drop out of those two comparisons (see t08_coverage).
+>   Output sheets:
+>     t08_coverage       roster firms with an SI importer / FDI status
+>     t08_by_exporter    lines 2, 3, 5 measures, exporters vs non-exporters
+>     t08_by_importer    lines 2, 3, 5, 6, 7 measures + % exporters
+>     t08_by_fdi         same, domestic vs FDI
+>     t08_entry_exit     line 4 (adding / dropping products 2021->2022) by
+>                        the firm's 2021 status, continuing firms only
+>     t08_si_prod_innov  extra evidence from SI (all plants, 2017-2018): % of
+>                        plants that introduced a new or improved product, by
+>                        exporter / importer / FDI
+>   NOTE: firm = cell (province x KBLI5) until Kipb is available.
+> ==========================================================================*/
+. if "$B21" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. 
+. * ---- coverage of the SI status ----
+. use "$B21_DATA/b21_pm_firm.dta", clear
+
+. generate n_firms = 1
+
+. generate has_importer = !missing(importer)
+
+. generate has_fdi      = !missing(fdi)
+
+. expand 2, generate(copy)
+(3,847 observations created)
+
+. replace year = 0 if copy == 1
+(3,847 real changes made)
+
+. collapse (sum) n_firms (mean) pct_with_importer = has_importer pct_with_fdi =
+>  has_fdi ///
+>          pct_exporter = exporter, by(year)
+
+. foreach v in pct_with_importer pct_with_fdi pct_exporter {
+  2.     replace `v' = 100 * `v'
+  3. }
+(3 real changes made)
+(3 real changes made)
+(3 real changes made)
+
+. generate period = cond(year == 0, "pool", string(year))
+
+. drop year
+
+. order period
+
+. list, clean noobs
+
+    period   n_firms   pct_wi~r   pct_wi~i   pct_expor~r  
+      pool      3847   49.23317   47.90746   18.42994499  
+      2021      1914   49.11181   46.44723   18.75653076  
+      2022      1933   49.35334   49.35334    18.1065712  
+
+. export excel using "$B21_XLSX", sheet("t08_coverage", replace) firstrow(varia
+> bles)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21-product-sc
+> ope/output/b1_21_tables.xlsx saved
+
+. 
+. * ---- lines 2, 3, 5, 6, 7 by group ----
+. use "$B21_DATA/b21_pm_firm.dta", clear
+
+. local PRODUCT "n_products ln_n_products hhi eff_n_products core_share"
+
+. local EXPORT  "exporter exp_intensity n_dest"
+
+. do "$B21/_sumstats.do" "`PRODUCT'"         "exporter" "t08_by_exporter"
+
+. /*==========================================================================
+>   _sumstats.do -- helper: descriptive statistics table, POOLED + BY YEAR
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B21/_sumstats.do" "n_products ln_n_products" "exporter" "t08_by_ex
+> porter"
+> 
+>       argument 1 = list of variables
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b1_21_tables.xlsx (max 31 characters)
+> 
+>   Result: 1 row = variable x group x period (pool, 2010, 2011, ...)
+>           columns n mean sd p10 p25 p50 p75 p90 min max
+>   Rows with a missing group are not counted.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars grp sheet
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+
+. local first 1
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     local grp all
+. }
+
+. foreach v of local vars {
+  2.     foreach period in pool year {
+  3.         preserve
+  4.         keep `v' `grp' year
+  5.         keep if !missing(`v') & !missing(`grp')
+  6.         if _N > 0 {
+  7.             if "`period'" == "pool" replace year = 0
+  8.             collapse (count) n = `v' (mean) mean = `v' (sd) sd = `v' ///
+>                      (p10) p10 = `v' (p25) p25 = `v' (p50) p50 = `v' ///
+>                      (p75) p75 = `v' (p90) p90 = `v' (min) min = `v' (max) ma
+> x = `v', ///
+>                      by(`grp' year)
+  9.             generate str32 variable = "`v'"
+ 10.             if `first' == 0 append using `result'
+ 11.             save `result', replace
+ 12.             local first 0
+ 13.         }
+ 14.         restore
+ 15.     }
+ 16. }
+(0 observations deleted)
+(3,847 real changes made)
+(file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 not
+    found)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+(label exporter already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+(3,847 real changes made)
+(label exporter already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+(label exporter already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+(3,847 real changes made)
+(label exporter already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+(label exporter already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+(3,847 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label exporter already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label exporter already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+(3,847 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label exporter already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label exporter already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. 
+. use `result', clear
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * the group is written as text using its value label (if it has one)
+. capture decode `grp', generate(group)
+
+. if _rc generate group = string(`grp')
+
+. * keep the variables in the order they were listed
+. generate variable_order = .
+(30 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+
+. sort variable_order `grp' year
+
+. keep variable group period n mean sd p10 p25 p50 p75 p90 min max
+
+. export excel using "$B21_XLSX", sheet("`sheet'", replace) firstrow(variables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21-product-sc
+> ope/output/b1_21_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t08_by_exporter (30 rows)
+
+. use `original', clear
+
+. 
+end of do-file
+
+. do "$B21/_sumstats.do" "`PRODUCT' `EXPORT'" "importer" "t08_by_importer"
+
+. /*==========================================================================
+>   _sumstats.do -- helper: descriptive statistics table, POOLED + BY YEAR
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B21/_sumstats.do" "n_products ln_n_products" "exporter" "t08_by_ex
+> porter"
+> 
+>       argument 1 = list of variables
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b1_21_tables.xlsx (max 31 characters)
+> 
+>   Result: 1 row = variable x group x period (pool, 2010, 2011, ...)
+>           columns n mean sd p10 p25 p50 p75 p90 min max
+>   Rows with a missing group are not counted.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars grp sheet
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+
+. local first 1
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     local grp all
+. }
+
+. foreach v of local vars {
+  2.     foreach period in pool year {
+  3.         preserve
+  4.         keep `v' `grp' year
+  5.         keep if !missing(`v') & !missing(`grp')
+  6.         if _N > 0 {
+  7.             if "`period'" == "pool" replace year = 0
+  8.             collapse (count) n = `v' (mean) mean = `v' (sd) sd = `v' ///
+>                      (p10) p10 = `v' (p25) p25 = `v' (p50) p50 = `v' ///
+>                      (p75) p75 = `v' (p90) p90 = `v' (min) min = `v' (max) ma
+> x = `v', ///
+>                      by(`grp' year)
+  9.             generate str32 variable = "`v'"
+ 10.             if `first' == 0 append using `result'
+ 11.             save `result', replace
+ 12.             local first 0
+ 13.         }
+ 14.         restore
+ 15.     }
+ 16. }
+(1,953 observations deleted)
+(1,894 real changes made)
+(file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 not
+    found)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(1,953 observations deleted)
+(label importer already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(1,953 observations deleted)
+(1,894 real changes made)
+(label importer already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(1,953 observations deleted)
+(label importer already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(1,953 observations deleted)
+(1,894 real changes made)
+(label importer already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(1,953 observations deleted)
+(label importer already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(1,953 observations deleted)
+(1,894 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label importer already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(1,953 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label importer already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(1,953 observations deleted)
+(1,894 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label importer already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(1,953 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label importer already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(1,953 observations deleted)
+(1,894 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was byte, now double to accommodate using data's values)
+(variable max was byte, now double to accommodate using data's values)
+(label importer already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(1,953 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was byte, now double to accommodate using data's values)
+(variable max was byte, now double to accommodate using data's values)
+(label importer already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(1,953 observations deleted)
+(1,894 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label importer already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(1,953 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label importer already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(1,953 observations deleted)
+(1,894 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was byte, now double to accommodate using data's values)
+(variable max was byte, now double to accommodate using data's values)
+(label importer already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(1,953 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was byte, now double to accommodate using data's values)
+(variable max was byte, now double to accommodate using data's values)
+(label importer already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. 
+. use `result', clear
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * the group is written as text using its value label (if it has one)
+. capture decode `grp', generate(group)
+
+. if _rc generate group = string(`grp')
+
+. * keep the variables in the order they were listed
+. generate variable_order = .
+(48 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+
+. sort variable_order `grp' year
+
+. keep variable group period n mean sd p10 p25 p50 p75 p90 min max
+
+. export excel using "$B21_XLSX", sheet("`sheet'", replace) firstrow(variables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21-product-sc
+> ope/output/b1_21_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t08_by_importer (48 rows)
+
+. use `original', clear
+
+. 
+end of do-file
+
+. do "$B21/_sumstats.do" "`PRODUCT' `EXPORT'" "fdi"      "t08_by_fdi"
+
+. /*==========================================================================
+>   _sumstats.do -- helper: descriptive statistics table, POOLED + BY YEAR
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B21/_sumstats.do" "n_products ln_n_products" "exporter" "t08_by_ex
+> porter"
+> 
+>       argument 1 = list of variables
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b1_21_tables.xlsx (max 31 characters)
+> 
+>   Result: 1 row = variable x group x period (pool, 2010, 2011, ...)
+>           columns n mean sd p10 p25 p50 p75 p90 min max
+>   Rows with a missing group are not counted.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars grp sheet
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+
+. local first 1
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     local grp all
+. }
+
+. foreach v of local vars {
+  2.     foreach period in pool year {
+  3.         preserve
+  4.         keep `v' `grp' year
+  5.         keep if !missing(`v') & !missing(`grp')
+  6.         if _N > 0 {
+  7.             if "`period'" == "pool" replace year = 0
+  8.             collapse (count) n = `v' (mean) mean = `v' (sd) sd = `v' ///
+>                      (p10) p10 = `v' (p25) p25 = `v' (p50) p50 = `v' ///
+>                      (p75) p75 = `v' (p90) p90 = `v' (min) min = `v' (max) ma
+> x = `v', ///
+>                      by(`grp' year)
+  9.             generate str32 variable = "`v'"
+ 10.             if `first' == 0 append using `result'
+ 11.             save `result', replace
+ 12.             local first 0
+ 13.         }
+ 14.         restore
+ 15.     }
+ 16. }
+(2,004 observations deleted)
+(1,843 real changes made)
+(file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 not
+    found)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(2,004 observations deleted)
+(label fdi already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(2,004 observations deleted)
+(1,843 real changes made)
+(label fdi already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(2,004 observations deleted)
+(label fdi already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(2,004 observations deleted)
+(1,843 real changes made)
+(label fdi already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(2,004 observations deleted)
+(label fdi already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(2,004 observations deleted)
+(1,843 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label fdi already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(2,004 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label fdi already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(2,004 observations deleted)
+(1,843 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label fdi already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(2,004 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label fdi already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(2,004 observations deleted)
+(1,843 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was byte, now double to accommodate using data's values)
+(variable max was byte, now double to accommodate using data's values)
+(label fdi already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(2,004 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was byte, now double to accommodate using data's values)
+(variable max was byte, now double to accommodate using data's values)
+(label fdi already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(2,004 observations deleted)
+(1,843 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label fdi already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(2,004 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label fdi already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(2,004 observations deleted)
+(1,843 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was byte, now double to accommodate using data's values)
+(variable max was byte, now double to accommodate using data's values)
+(label fdi already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(2,004 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was byte, now double to accommodate using data's values)
+(variable max was byte, now double to accommodate using data's values)
+(label fdi already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. 
+. use `result', clear
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * the group is written as text using its value label (if it has one)
+. capture decode `grp', generate(group)
+
+. if _rc generate group = string(`grp')
+
+. * keep the variables in the order they were listed
+. generate variable_order = .
+(48 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+
+. sort variable_order `grp' year
+
+. keep variable group period n mean sd p10 p25 p50 p75 p90 min max
+
+. export excel using "$B21_XLSX", sheet("`sheet'", replace) firstrow(variables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21-product-sc
+> ope/output/b1_21_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t08_by_fdi (48 rows)
+
+. use `original', clear
+
+. 
+end of do-file
+
+. 
+. * ---- line 4 by 2021 status ----
+. tempfile stack
+
+. clear
+
+. save `stack', emptyok
+(dataset contains 0 observations)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. foreach s in exporter importer fdi {
+  2.     use "$B21_DATA/b21_entry_exit.dta", clear
+  3.     keep if !missing(`s')
+  4.     generate n_firms = 1
+  5.     collapse (sum) n_firms (mean) pct_adding = any_added pct_dropping = an
+> y_dropped ///
+>              mean_n_added = n_added mean_n_dropped = n_dropped ///
+>              mean_share_val_new = share_val_new mean_share_val_dropped = shar
+> e_val_dropped, by(`s')
+  6.     replace pct_adding   = 100 * pct_adding
+  7.     replace pct_dropping = 100 * pct_dropping
+  8.     decode `s', generate(group)
+  9.     generate split = "`s'"
+ 10.     generate g = `s'
+ 11.     drop `s'
+ 12.     append using `stack'
+ 13.     save `stack', replace
+ 14. }
+(0 observations deleted)
+(2 real changes made)
+(2 real changes made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(490 observations deleted)
+(2 real changes made)
+(2 real changes made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(528 observations deleted)
+(2 real changes made)
+(2 real changes made)
+(variable group was str8, now str12 to accommodate using data's values)
+(variable split was str3, now str8 to accommodate using data's values)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. order split group
+
+. sort split g
+
+. drop g
+
+. list, clean noobs
+
+       split          group   n_firms   pct_ad~g   pct_dr~g   mean~ded   mean_n
+> ..   mean_s~w   mean_s~d  
+    exporter   Non-exporter      1010   85.44555   82.07921   1.967327   1.7118
+> 81   61.14749    59.2169  
+    exporter       Exporter       261   89.65517   90.42146   3.662835   2.9348
+> 66   58.58351   55.35265  
+         fdi       Domestic       678    89.9705   87.16814     3.0059   2.5176
+> 99    55.6174   52.61123  
+         fdi            FDI        65   87.69231   84.61539   2.230769   1.8615
+> 38   54.35479   56.41541  
+    importer   Non-importer       319   86.20689    84.6395   2.689655   2.3761
+> 76   56.96665   54.97823  
+    importer       Importer       462   91.99134   88.31169   3.025974   2.4480
+> 52   55.59965   52.37083  
+
+. export excel using "$B21_XLSX", sheet("t08_entry_exit", replace) firstrow(var
+> iables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21-product-sc
+> ope/output/b1_21_tables.xlsx saved
+
+. 
+. * ---- SI: product innovation (2017-2018) by group ----
+. clear
+
+. save `stack', emptyok replace
+(dataset contains 0 observations)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. foreach s in exporter importer fdi {
+  2.     use "$B21_DATA/b21_si.dta", clear
+  3.     keep if clean == 1 & !missing(prod_innov) & !missing(`s')
+  4.     generate n_firms = 1
+  5.     expand 2, generate(copy)
+  6.     replace year = 0 if copy == 1
+  7.     collapse (sum) n_firms (mean) pct_prod_innov = prod_innov, by(`s' year
+> )
+  8.     replace pct_prod_innov = 100 * pct_prod_innov
+  9.     decode `s', generate(group)
+ 10.     generate split = "`s'"
+ 11.     generate g = `s'
+ 12.     drop `s'
+ 13.     append using `stack'
+ 14.     save `stack', replace
+ 15. }
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(30,212 observations deleted)
+(2,837 observations created)
+(2,837 real changes made)
+(6 real changes made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(29,917 observations deleted)
+(3,132 observations created)
+(3,132 real changes made)
+(6 real changes made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(29,917 observations deleted)
+(3,132 observations created)
+(3,132 real changes made)
+(6 real changes made)
+(variable group was str8, now str12 to accommodate using data's values)
+(variable split was str3, now str8 to accommodate using data's values)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. generate period = cond(year == 0, "pool", string(year))
+
+. sort split year g
+
+. order split group period
+
+. drop g year
+
+. list if period == "pool", clean noobs
+
+       split          group   period   n_firms         pct_prod_innov  
+    exporter   Non-exporter     pool      2296   35.49651336669921875  
+    exporter       Exporter     pool       541   50.64694976806640625  
+         fdi       Domestic     pool      2811   37.67342376708984375  
+         fdi            FDI     pool       321   44.54828643798828125  
+    importer   Non-importer     pool      2740       36.6788330078125  
+    importer       Importer     pool       392   50.25510025024414062  
+
+. export excel using "$B21_XLSX", sheet("t08_si_prod_innov", replace) firstrow(
+> variables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21-product-sc
+> ope/output/b1_21_tables.xlsx saved
+
+. 
+end of do-file
+
+######## B1-21: 09_synthesis ########
+
+. /*==========================================================================
+>   Line 9: "Questions: apakah internationalisation mengubah what firms
+>            produce?"
+>   No new computation: collects the pooled evidence of lines 4 and 8 into
+>   one sheet, internationalised group (exporter / importer / FDI) next to
+>   the comparison group.
+>   Output sheet:
+>     t09_synthesis   1 row = split x measure:
+>                     mean_0 / mean_1 (comparison / internationalised group),
+>                     gap = mean_1 - mean_0, medians, number of firms
+>   HOW TO READ IT:
+>     - Lines 2/3/5/6/7 rows compare DIFFERENT firms (between-firm); they say
+>       whether internationalised firms produce differently, not that
+>       internationalisation changed what they produce.
+>     - Line 4 rows (entry/exit 2021->2022 by 2021 status) are the only
+>       within-firm evidence: do internationalised firms add or drop more
+>       products? With firm = cell (Kipb masked) this is weak; and one year
+>       is short. A real answer needs the real Kipb and more roster years.
+>     - The SI product-innovation rows (2017-2018) are self-reported.
+> ==========================================================================*/
+. if "$B21" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. tempfile stack
+
+. clear
+
+. save `stack', emptyok
+(dataset contains 0 observations)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. 
+. * ---- lines 2, 3, 5, 6, 7 (between firms) ----
+. foreach s in exporter importer fdi {
+  2.     import excel using "$B21_XLSX", sheet("t08_by_`s'") firstrow clear
+  3.     keep if period == "pool"
+  4.     generate g = inlist(group, "Exporter", "Importer", "FDI")
+  5.     keep variable g n mean p50
+  6.     reshape wide n mean p50, i(variable) j(g)
+  7.     generate split = "`s'"
+  8.     generate evidence = "Lines 2-7: between firms, roster 2021-2022 pooled
+> "
+  9.     append using `stack'
+ 10.     save `stack', replace
+ 11. }
+(13 vars, 30 obs)
+(20 observations deleted)
+(j = 0 1)
+
+Data                               Long   ->   Wide
+-----------------------------------------------------------------------------
+Number of observations               10   ->   5           
+Number of variables                   5   ->   7           
+j variable (2 values)                 g   ->   (dropped)
+xij variables:
+                                      n   ->   n0 n1
+                                   mean   ->   mean0 mean1
+                                    p50   ->   p500 p501
+-----------------------------------------------------------------------------
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(13 vars, 48 obs)
+(32 observations deleted)
+(j = 0 1)
+
+Data                               Long   ->   Wide
+-----------------------------------------------------------------------------
+Number of observations               16   ->   8           
+Number of variables                   5   ->   7           
+j variable (2 values)                 g   ->   (dropped)
+xij variables:
+                                      n   ->   n0 n1
+                                   mean   ->   mean0 mean1
+                                    p50   ->   p500 p501
+-----------------------------------------------------------------------------
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(13 vars, 48 obs)
+(32 observations deleted)
+(j = 0 1)
+
+Data                               Long   ->   Wide
+-----------------------------------------------------------------------------
+Number of observations               16   ->   8           
+Number of variables                   5   ->   7           
+j variable (2 values)                 g   ->   (dropped)
+xij variables:
+                                      n   ->   n0 n1
+                                   mean   ->   mean0 mean1
+                                    p50   ->   p500 p501
+-----------------------------------------------------------------------------
+(variable split was str3, now str8 to accommodate using data's values)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. 
+. * ---- line 4 (within firm, 2021 -> 2022) ----
+. import excel using "$B21_XLSX", sheet("t08_entry_exit") firstrow clear
+(9 vars, 6 obs)
+
+. generate g = inlist(group, "Exporter", "Importer", "FDI")
+
+. rename n_firms n
+
+. foreach v in pct_adding pct_dropping mean_n_added mean_n_dropped mean_share_v
+> al_new mean_share_val_dropped {
+  2.     rename `v' m_`v'
+  3. }
+
+. keep split g n m_*
+
+. reshape long m_, i(split g) j(variable) string
+(j = mean_n_added mean_n_dropped mean_share_val_dropped mean_share_val_new pct_
+> adding pct_dropping)
+
+Data                               Wide   ->   Long
+-----------------------------------------------------------------------------
+Number of observations                6   ->   36          
+Number of variables                   9   ->   5           
+j variable (6 values)                     ->   variable
+xij variables:
+m_mean_n_added m_mean_n_dropped ... m_pct_dropping->m_
+-----------------------------------------------------------------------------
+
+. rename m_ mean
+
+. reshape wide n mean, i(split variable) j(g)
+(j = 0 1)
+
+Data                               Long   ->   Wide
+-----------------------------------------------------------------------------
+Number of observations               36   ->   18          
+Number of variables                   5   ->   6           
+j variable (2 values)                 g   ->   (dropped)
+xij variables:
+                                      n   ->   n0 n1
+                                   mean   ->   mean0 mean1
+-----------------------------------------------------------------------------
+
+. generate evidence = "Line 4: product entry/exit 2021->2022 by 2021 status"
+
+. append using `stack'
+
+. save `stack', replace
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. 
+. * ---- SI product innovation (2017-2018 pooled) ----
+. import excel using "$B21_XLSX", sheet("t08_si_prod_innov") firstrow clear
+(5 vars, 18 obs)
+
+. keep if period == "pool"
+(12 observations deleted)
+
+. generate g = inlist(group, "Exporter", "Importer", "FDI")
+
+. rename (n_firms pct_prod_innov) (n mean)
+
+. generate variable = "pct_prod_innov"
+
+. keep split g variable n mean
+
+. reshape wide n mean, i(split variable) j(g)
+(j = 0 1)
+
+Data                               Long   ->   Wide
+-----------------------------------------------------------------------------
+Number of observations                6   ->   3           
+Number of variables                   5   ->   6           
+j variable (2 values)                 g   ->   (dropped)
+xij variables:
+                                      n   ->   n0 n1
+                                   mean   ->   mean0 mean1
+-----------------------------------------------------------------------------
+
+. generate evidence = "SI 2017-2018: % plants with product innovation"
+
+. append using `stack'
+(variable variable was str14, now str22 to accommodate using data's values)
+(variable evidence was str46, now str52 to accommodate using data's values)
+
+. 
+. * ---- tidy ----
+. generate comparison = "Exporter vs non-exporter" if split == "exporter"
+(30 missing values generated)
+
+. replace  comparison = "Importer vs non-importer" if split == "importer"
+(15 real changes made)
+
+. replace  comparison = "FDI vs domestic"          if split == "fdi"
+(15 real changes made)
+
+. generate gap = mean1 - mean0
+
+. rename (mean0 mean1 p500 p501 n0 n1) (mean_0 mean_1 median_0 median_1 n_0 n_1
+> )
+
+. generate order_ev = 1 if substr(evidence, 1, 7) == "Lines 2"
+(21 missing values generated)
+
+. replace  order_ev = 2 if substr(evidence, 1, 6) == "Line 4"
+(18 real changes made)
+
+. replace  order_ev = 3 if substr(evidence, 1, 2) == "SI"
+(3 real changes made)
+
+. sort order_ev split variable
+
+. keep evidence comparison variable mean_0 mean_1 gap median_0 median_1 n_0 n_1
+
+. order evidence comparison variable mean_0 mean_1 gap median_0 median_1 n_0 n_
+> 1
+
+. list evidence comparison variable mean_0 mean_1 gap, clean noobs
+
+                                                evidence                 compar
+> ison                 variable      mean_0      mean_1         gap  
+       Lines 2-7: between firms, roster 2021-2022 pooled   Exporter vs non-expo
+> rter               core_share   .84353048   .75055486   -.0929756  
+       Lines 2-7: between firms, roster 2021-2022 pooled   Exporter vs non-expo
+> rter           eff_n_products   1.5124214   1.9777437    .4653224  
+       Lines 2-7: between firms, roster 2021-2022 pooled   Exporter vs non-expo
+> rter                      hhi   .79071529    .6687422   -.1219731  
+       Lines 2-7: between firms, roster 2021-2022 pooled   Exporter vs non-expo
+> rter            ln_n_products   .64233691   1.2092088    .5668719  
+       Lines 2-7: between firms, roster 2021-2022 pooled   Exporter vs non-expo
+> rter               n_products   2.6357553   5.4047956     2.76904  
+       Lines 2-7: between firms, roster 2021-2022 pooled            FDI vs dome
+> stic               core_share    .7444213   .74944812    .0050268  
+       Lines 2-7: between firms, roster 2021-2022 pooled            FDI vs dome
+> stic           eff_n_products   1.9622248   1.8976587   -.0645661  
+       Lines 2-7: between firms, roster 2021-2022 pooled            FDI vs dome
+> stic            exp_intensity    6.850421   18.031134    11.18071  
+       Lines 2-7: between firms, roster 2021-2022 pooled            FDI vs dome
+> stic                 exporter   .23311016        .345    .1118898  
+       Lines 2-7: between firms, roster 2021-2022 pooled            FDI vs dome
+> stic                      hhi   .65964931   .67207761    .0124283  
+       Lines 2-7: between firms, roster 2021-2022 pooled            FDI vs dome
+> stic            ln_n_products   1.1683701   1.0115358   -.1568344  
+       Lines 2-7: between firms, roster 2021-2022 pooled            FDI vs dome
+> stic                   n_dest    .4029215   .52999997    .1270785  
+       Lines 2-7: between firms, roster 2021-2022 pooled            FDI vs dome
+> stic               n_products   4.8149724   3.7950001   -1.019972  
+       Lines 2-7: between firms, roster 2021-2022 pooled   Importer vs non-impo
+> rter               core_share   .78158885   .70935655   -.0722323  
+       Lines 2-7: between firms, roster 2021-2022 pooled   Importer vs non-impo
+> rter           eff_n_products   1.7868023   2.1148071    .3280048  
+       Lines 2-7: between firms, roster 2021-2022 pooled   Importer vs non-impo
+> rter            exp_intensity   8.9300928   6.7625804   -2.167512  
+       Lines 2-7: between firms, roster 2021-2022 pooled   Importer vs non-impo
+> rter                 exporter   .23921971    .2423913    .0031716  
+       Lines 2-7: between firms, roster 2021-2022 pooled   Importer vs non-impo
+> rter                      hhi   .70787579   .61574954   -.0921262  
+       Lines 2-7: between firms, roster 2021-2022 pooled   Importer vs non-impo
+> rter            ln_n_products   1.0087383   1.2773496    .2686113  
+       Lines 2-7: between firms, roster 2021-2022 pooled   Importer vs non-impo
+> rter                   n_dest    .4640657   .34891304   -.1151527  
+       Lines 2-7: between firms, roster 2021-2022 pooled   Importer vs non-impo
+> rter               n_products   4.1745381   5.1413045    .9667664  
+    Line 4: product entry/exit 2021->2022 by 2021 status   Exporter vs non-expo
+> rter             mean_n_added   1.9673268   3.6628354    1.695509  
+    Line 4: product entry/exit 2021->2022 by 2021 status   Exporter vs non-expo
+> rter           mean_n_dropped   1.7118812    2.934866    1.222985  
+    Line 4: product entry/exit 2021->2022 by 2021 status   Exporter vs non-expo
+> rter   mean_share_val_dropped   59.216896   55.352654   -3.864243  
+    Line 4: product entry/exit 2021->2022 by 2021 status   Exporter vs non-expo
+> rter       mean_share_val_new   61.147488   58.583508    -2.56398  
+    Line 4: product entry/exit 2021->2022 by 2021 status   Exporter vs non-expo
+> rter               pct_adding   85.445549   89.655174    4.209625  
+    Line 4: product entry/exit 2021->2022 by 2021 status   Exporter vs non-expo
+> rter             pct_dropping   82.079208   90.421455    8.342247  
+    Line 4: product entry/exit 2021->2022 by 2021 status            FDI vs dome
+> stic             mean_n_added   3.0058997   2.2307692   -.7751305  
+    Line 4: product entry/exit 2021->2022 by 2021 status            FDI vs dome
+> stic           mean_n_dropped    2.517699   1.8615384   -.6561606  
+    Line 4: product entry/exit 2021->2022 by 2021 status            FDI vs dome
+> stic   mean_share_val_dropped   52.611225   56.415409    3.804184  
+    Line 4: product entry/exit 2021->2022 by 2021 status            FDI vs dome
+> stic       mean_share_val_new   55.617405   54.354794   -1.262611  
+    Line 4: product entry/exit 2021->2022 by 2021 status            FDI vs dome
+> stic               pct_adding   89.970497   87.692307   -2.278191  
+    Line 4: product entry/exit 2021->2022 by 2021 status            FDI vs dome
+> stic             pct_dropping   87.168137   84.615387    -2.55275  
+    Line 4: product entry/exit 2021->2022 by 2021 status   Importer vs non-impo
+> rter             mean_n_added   2.6896551    3.025974     .336319  
+    Line 4: product entry/exit 2021->2022 by 2021 status   Importer vs non-impo
+> rter           mean_n_dropped   2.3761756   2.4480519    .0718763  
+    Line 4: product entry/exit 2021->2022 by 2021 status   Importer vs non-impo
+> rter   mean_share_val_dropped   54.978233   52.370834   -2.607399  
+    Line 4: product entry/exit 2021->2022 by 2021 status   Importer vs non-impo
+> rter       mean_share_val_new   56.966652   55.599648   -1.367004  
+    Line 4: product entry/exit 2021->2022 by 2021 status   Importer vs non-impo
+> rter               pct_adding   86.206894   91.991341    5.784447  
+    Line 4: product entry/exit 2021->2022 by 2021 status   Importer vs non-impo
+> rter             pct_dropping   84.639496   88.311691    3.672195  
+          SI 2017-2018: % plants with product innovation   Exporter vs non-expo
+> rter           pct_prod_innov   35.496513    50.64695    15.15044  
+          SI 2017-2018: % plants with product innovation            FDI vs dome
+> stic           pct_prod_innov   37.673424   44.548286    6.874863  
+          SI 2017-2018: % plants with product innovation   Importer vs non-impo
+> rter           pct_prod_innov   36.678833     50.2551    13.57627  
+
+. export excel using "$B21_XLSX", sheet("t09_synthesis", replace) firstrow(vari
+> ables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21-product-sc
+> ope/output/b1_21_tables.xlsx saved
+
+. 
+end of do-file
+
+######## B1-21: 10_figures ########
+
+. /*==========================================================================
+>   Figures (no figures line in this row; added as the line after the last)
+>   Every other file writes its tables to output/b1_21_tables.xlsx. This file
+>   draws the charts FROM those tables, so a chart always matches its table.
+>   The exact points of every chart are also written to a sheet figNN_data
+>   (graph-ready, e.g. to redraw the chart in Excel or PowerPoint).
+>   Runs LAST in 00_run.do.
+> 
+>   Charts (output/):
+>     fig02_n_products.png    % of firms by number of products, 2021 vs 2022
+>     fig04_entry_exit.png    continuing firms by product entry/exit status
+>     fig05_core_share.png    % of firms by core-product share, 2021 vs 2022
+>     fig06_export_share.png  exported product lines by export share
+>     fig07_destinations.png  top 10 destinations by export value
+>     fig08_compare.png       n products, HHI, core share: internationalised
+>                             vs comparison firms
+>   Roster data: 2021-2022 only, firm = cell (province x KBLI5) while Kipb
+>   is masked.
+> ==========================================================================*/
+. if "$B21" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. 
+. * ---- fig02: number of products (line 2) ----
+. import excel using "$B21_XLSX", sheet("t02_dist") firstrow clear
+(4 vars, 18 obs)
+
+. keep if period != "pool"
+(6 observations deleted)
+
+. keep period n_products pct_firms
+
+. generate ord = _n
+
+. bysort n_products (ord): replace ord = ord[1]
+(6 real changes made)
+
+. reshape wide pct_firms, i(n_products ord) j(period) string
+(j = 2021 2022)
+
+Data                               Long   ->   Wide
+-----------------------------------------------------------------------------
+Number of observations               12   ->   6           
+Number of variables                   4   ->   4           
+j variable (2 values)            period   ->   (dropped)
+xij variables:
+                              pct_firms   ->   pct_firms2021 pct_firms2022
+-----------------------------------------------------------------------------
+
+. sort ord
+
+. rename pct_firms* pct_firms_*
+
+. export excel using "$B21_XLSX", sheet("fig02_data", replace) firstrow(variabl
+> es)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21-product-sc
+> ope/output/b1_21_tables.xlsx saved
+
+. graph bar (asis) pct_firms_2021 pct_firms_2022, over(n_products, sort(ord)) /
+> //
+>     legend(order(1 "2021" 2 "2022")) ytitle("% of firms") b1title("Number of 
+> products") ///
+>     title("How many products does a firm make?") ///
+>     note("Proman roster. Firm = province x KBLI5 cell while Kipb is masked.")
+>  ///
+>     graphregion(color(white))
+
+. graph export "$B21_OUT/fig02_n_products.png", replace width(2000)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21-product-sc
+> ope/output/fig02_n_products.png written in PNG format
+
+. 
+. * ---- fig04: product entry and exit (line 4) ----
+. import excel using "$B21_XLSX", sheet("t04_status") firstrow clear
+(3 vars, 4 obs)
+
+. keep status n_firms pct_firms
+
+. generate ord = _n
+
+. export excel using "$B21_XLSX", sheet("fig04_data", replace) firstrow(variabl
+> es)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21-product-sc
+> ope/output/b1_21_tables.xlsx saved
+
+. graph hbar (asis) pct_firms, over(status, sort(ord)) ///
+>     ytitle("% of continuing firms") ///
+>     title("Product entry and exit, 2021 to 2022") ///
+>     note("Products by KBKI code. Firm = province x KBLI5 cell while Kipb is m
+> asked:" ///
+>          "plants entering or leaving a cell also count as entry/exit.") ///
+>     graphregion(color(white))
+
+. graph export "$B21_OUT/fig04_entry_exit.png", replace width(2000)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21-product-sc
+> ope/output/fig04_entry_exit.png written in PNG format
+
+. 
+. * ---- fig05: core product share (line 5) ----
+. import excel using "$B21_XLSX", sheet("t05_core_bins") firstrow clear
+(4 vars, 15 obs)
+
+. keep if period != "pool"
+(5 observations deleted)
+
+. keep period core_bin pct_firms
+
+. generate ord = _n
+
+. bysort core_bin (ord): replace ord = ord[1]
+(5 real changes made)
+
+. reshape wide pct_firms, i(core_bin ord) j(period) string
+(j = 2021 2022)
+
+Data                               Long   ->   Wide
+-----------------------------------------------------------------------------
+Number of observations               10   ->   5           
+Number of variables                   4   ->   4           
+j variable (2 values)            period   ->   (dropped)
+xij variables:
+                              pct_firms   ->   pct_firms2021 pct_firms2022
+-----------------------------------------------------------------------------
+
+. sort ord
+
+. rename pct_firms* pct_firms_*
+
+. export excel using "$B21_XLSX", sheet("fig05_data", replace) firstrow(variabl
+> es)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21-product-sc
+> ope/output/b1_21_tables.xlsx saved
+
+. graph bar (asis) pct_firms_2021 pct_firms_2022, over(core_bin, sort(ord)) ///
+>     legend(order(1 "2021" 2 "2022")) ytitle("% of firms") ///
+>     b1title("Largest product's share of production value") ///
+>     title("How important is the core product?") ///
+>     note("Proman roster. Firm = province x KBLI5 cell while Kipb is masked.")
+>  ///
+>     graphregion(color(white))
+
+. graph export "$B21_OUT/fig05_core_share.png", replace width(2000)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21-product-sc
+> ope/output/fig05_core_share.png written in PNG format
+
+. 
+. * ---- fig06: export share per product (line 6) ----
+. import excel using "$B21_XLSX", sheet("t06_share_bins") firstrow clear
+(4 vars, 18 obs)
+
+. keep if period != "pool"
+(6 observations deleted)
+
+. keep period share_bin pct_lines
+
+. generate ord = _n
+
+. bysort share_bin (ord): replace ord = ord[1]
+(6 real changes made)
+
+. reshape wide pct_lines, i(share_bin ord) j(period) string
+(j = 2021 2022)
+
+Data                               Long   ->   Wide
+-----------------------------------------------------------------------------
+Number of observations               12   ->   6           
+Number of variables                   4   ->   4           
+j variable (2 values)            period   ->   (dropped)
+xij variables:
+                              pct_lines   ->   pct_lines2021 pct_lines2022
+-----------------------------------------------------------------------------
+
+. sort ord
+
+. rename pct_lines* pct_lines_*
+
+. export excel using "$B21_XLSX", sheet("fig06_data", replace) firstrow(variabl
+> es)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21-product-sc
+> ope/output/b1_21_tables.xlsx saved
+
+. graph bar (asis) pct_lines_2021 pct_lines_2022, over(share_bin, sort(ord)) //
+> /
+>     legend(order(1 "2021" 2 "2022")) ytitle("% of exported product lines") //
+> /
+>     b1title("Share of the product's production that is exported") ///
+>     title("Export share per product (exported products only)") ///
+>     graphregion(color(white))
+
+. graph export "$B21_OUT/fig06_export_share.png", replace width(2000)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21-product-sc
+> ope/output/fig06_export_share.png written in PNG format
+
+. 
+. * ---- fig07: export destinations (line 7) ----
+. import excel using "$B21_XLSX", sheet("t07_dest") firstrow clear
+(5 vars, 207 obs)
+
+. keep if period == "pool"
+(126 observations deleted)
+
+. gsort -share_pct
+
+. keep in 1/10
+(71 observations deleted)
+
+. keep dest_name share_pct val_export n_lines
+
+. export excel using "$B21_XLSX", sheet("fig07_data", replace) firstrow(variabl
+> es)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21-product-sc
+> ope/output/b1_21_tables.xlsx saved
+
+. graph hbar (asis) share_pct, over(dest_name, sort(1) descending label(labsize
+> (small))) ///
+>     ytitle("% of export value (2021-2022)") ///
+>     title("Main export destinations") ///
+>     note("Main destination of each exported product line." ///
+>          "Lines without a destination are left out.") ///
+>     graphregion(color(white))
+
+. graph export "$B21_OUT/fig07_destinations.png", replace width(2000)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21-product-sc
+> ope/output/fig07_destinations.png written in PNG format
+
+. 
+. * ---- fig08: internationalised vs other firms (lines 8-9) ----
+. import excel using "$B21_XLSX", sheet("t09_synthesis") firstrow clear
+(10 vars, 42 obs)
+
+. keep if substr(evidence, 1, 7) == "Lines 2" & inlist(variable, "n_products", 
+> "hhi", "core_share")
+(33 observations deleted)
+
+. keep comparison variable mean_0 mean_1
+
+. sort variable comparison
+
+. export excel using "$B21_XLSX", sheet("fig08_data", replace) firstrow(variabl
+> es)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21-product-sc
+> ope/output/b1_21_tables.xlsx saved
+
+. local i 0
+
+. foreach v in n_products hhi core_share {
+  2.     local ++i
+  3.     if "`v'" == "n_products" local t "Number of products"
+  4.     if "`v'" == "hhi"        local t "Product HHI (0-1)"
+  5.     if "`v'" == "core_share" local t "Core product share (0-1)"
+  6.     graph hbar (asis) mean_0 mean_1 if variable == "`v'", over(comparison)
+>  ///
+>         bar(1, color(gs11)) bar(2, color(navy)) legend(off) ///
+>         ytitle("Mean, 2021-2022 pooled") title("`t'") graphregion(color(white
+> )) name(g`i', replace)
+  7. }
+
+. graph combine g1 g2 g3, cols(3) ///
+>     title("Do internationalised firms produce differently?") ///
+>     note("Grey bar = non-exporter / non-importer / domestic; blue bar = expor
+> ter / importer / FDI." ///
+>          "Proman roster; importer and FDI status from the SI plants in the sa
+> me province x KBLI5 cell.") ///
+>     graphregion(color(white)) xsize(12) ysize(4.5)
+
+. graph export "$B21_OUT/fig08_compare.png", replace width(2400)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21-product-sc
+> ope/output/fig08_compare.png written in PNG format
+
+. graph drop _all
+
+. 
+end of do-file
+
+. log close b21
+      name:  b21
+       log:  /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-21-pr
+> oduct-scope/output/b1_21_log.log
+  log type:  text
+ closed on:   9 Oct 2026, 12:54:05
+-------------------------------------------------------------------------------
