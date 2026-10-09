@@ -1,0 +1,1581 @@
+-------------------------------------------------------------------------------
+      name:  b203
+       log:  /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-03-em
+> ission-concentration/output/b2_03_log.log
+  log type:  text
+ opened on:   9 Oct 2026, 12:54:21
+
+. foreach f of local files {
+  2.     display _newline as result "######## B2-03: `f' ########"
+  3.     do "$B203/`f'.do"
+  4. }
+
+######## B2-03: 01a_prep_si ########
+
+. /*==========================================================================
+>   Line 1: "How concentrated are industrial emissions?"
+>   Prepare Statistik Industri (SI) 2010-2022 for B2-03
+>   (copied from block-b1-18-bahan-baku/01a_prep_si.do, kept what this row
+>    needs, added the B2-03 variables as plain generate lines)
+>   Input : $SI_DATA  (analysis_ready_data.dta from block 0)
+>   Output: data/b203_si.dta  -- 1 row = 1 plant x year
+>           (open with: use "$B203_DATA/b203_si.dta", clear  then browse)
+> 
+>   Main variables:
+>     co2_s1 co2_s2 co2_total   CO2 (tonnes): scope 1 (4 fuels) + scope 2
+>     gj_s1 gj_s2 gj_total      energy (GJ), same scope
+>     co2_per_va gj_per_va      carbon / energy intensity per value added
+>     co2_per_out gj_per_out    carbon / energy intensity per output
+>     co2_pw gj_pw              CO2 / GJ per worker
+>     va output workers         nominal value added, gross output, workers
+>     exporter                  1 = exports (2022 set missing)
+>     export_val                estimated export value = export share x output
+>                               (only where the export share is valid)
+>     kbli2 kbli5 prov
+>     clean                     1 = not an extreme energy outlier
+> ==========================================================================*/
+. if "$B203" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$SI_DATA", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+. * ---- identifiers ------------------------------------------------------
+. * year = survey year (there is no 2016 file)
+. generate kbli2 = real(substr(industry_code, 1, 2))
+
+. generate kbli5 = industry_code
+
+. generate prov  = real(province_code)
+
+. 
+. * ---- exports ----------------------------------------------------------
+. generate exporter = export_flag
+(15,321 missing values generated)
+
+. * 2022: the form only asks about DIRECT exports, a "no" is never recorded -> 
+> missing
+. replace exporter = . if year == 2022
+(344 real changes made, 344 to missing)
+
+. label define exporter 0 "Non-exporter" 1 "Exporter"
+
+. label values exporter exporter
+
+. 
+. generate export_share = export_share_pct if export_share_valid == 1
+(31,079 missing values generated)
+
+. 
+. * ---- firm size (nominal) ----------------------------------------------
+. generate va      = value_added_nominal
+
+. generate output  = gross_output_nominal
+
+. * block 0 has no export VALUE column: estimate it from the reported export
+. * share (valid on only ~6% of records, none in 2015, 2017 and 2022)
+. generate export_val = export_share / 100 * output if !missing(export_share) &
+>  output >= 0
+(31,079 missing values generated)
+
+. 
+. * ---- energy & emissions -----------------------------------------------
+. * COAL 2017 CORRECTION: block 0 multiplies by 1000 (treats it as tonnes),
+. * but the price per unit shows the data are already in kg. Divide back.
+. generate co2_coal = co2_coal_s1
+
+. generate gj_coal2 = gj_coal
+
+. replace  co2_coal = co2_coal_s1 / 1000 if year == 2017
+(1,181 real changes made)
+
+. replace  gj_coal2 = gj_coal / 1000     if year == 2017
+(1,181 real changes made)
+
+. 
+. * scope 1 = the 4 fuels asked in every year: diesel, petrol, coal, LPG
+. egen co2_s1 = rowtotal(co2_diesel_s1 co2_petrol_s1 co2_coal co2_lpg_s1), miss
+> ing
+
+. egen gj_s1  = rowtotal(gj_diesel gj_petrol gj_coal2 gj_lpg), missing
+
+. * scope 2 = purchased electricity
+. generate co2_s2 = co2_scope2_s1
+
+. generate gj_s2  = gj_electricity
+
+. egen co2_total = rowtotal(co2_s1 co2_s2), missing
+
+. egen gj_total  = rowtotal(gj_s1 gj_s2), missing
+
+. 
+. * intensities
+. generate co2_per_va  = co2_total / va      if va > 0
+
+. generate gj_per_va   = gj_total / va       if va > 0
+
+. generate co2_per_out = co2_total / output  if output > 0
+
+. generate gj_per_out  = gj_total / output   if output > 0
+
+. generate co2_pw      = co2_total / workers if workers > 0
+(28 missing values generated)
+
+. generate gj_pw       = gj_total / workers  if workers > 0
+(28 missing values generated)
+
+. 
+. * ---- energy outlier flag (clean) --------------------------------------
+. * a record is left out of the analysis (clean = 0) if any of its energy
+. * quantities is above 100x that year's 99th percentile. Nothing is deleted.
+. generate coal_kg_fix = fuel_coal_kg
+
+. replace  coal_kg_fix = fuel_coal_kg / 1000 if year == 2017
+(1,181 real changes made)
+
+. generate clean = 1
+
+. levelsof year, local(years)
+2010 2011 2012 2013 2014 2015 2017 2018 2019 2020 2021 2022
+
+. foreach q in fuel_diesel_ltr fuel_petrol_ltr fuel_kerosene_ltr coal_kg_fix fu
+> el_lpg_kg ///
+>              fuel_citygas_m3 fuel_othergas_m3 fuel_coalbriq_kg fuel_coke_kg /
+> //
+>              elec_pln_kwh elec_nonpln_kwh elec_owngen_kwh fuel_dieseloil_ltr 
+> ///
+>              fuel_fueloil_ltr fuel_natgas_mmbtu fuel_biodiesel_ltr fuel_bioma
+> ss_kg {
+  2.     foreach y of local years {
+  3.         quietly count if year == `y' & `q' > 0 & !missing(`q')
+  4.         if r(N) > 2 {
+  5.             quietly summarize `q' if year == `y' & `q' > 0, detail
+  6.             quietly replace clean = 0 if year == `y' & `q' > 100 * r(p99) 
+> & !missing(`q')
+  7.         }
+  8.     }
+  9. }
+
+. replace clean = 0 if workers == 0 & co2_s1 > 0 & !missing(co2_s1)
+(20 real changes made)
+
+. count if clean == 0
+  30
+
+. display as result "Outlier records (clean = 0): " r(N)
+Outlier records (clean = 0): 30
+
+. 
+. * ---- ln versions ------------------------------------------------------
+. foreach v in va output workers co2_total gj_total co2_per_va gj_per_va {
+  2.     generate ln_`v' = ln(`v') if `v' > 0
+  3. }
+(28 missing values generated)
+(547 missing values generated)
+(547 missing values generated)
+(547 missing values generated)
+(547 missing values generated)
+
+. 
+. * ---- save -------------------------------------------------------------
+. keep  firm_id year source_row kbli2 kbli5 prov exporter export_share export_v
+> al ///
+>       va output workers co2_s1 co2_s2 co2_total gj_s1 gj_s2 gj_total ///
+>       co2_per_va gj_per_va co2_per_out gj_per_out co2_pw gj_pw clean ln_*
+
+. order firm_id year source_row kbli2 kbli5 prov exporter clean co2_total gj_to
+> tal
+
+. label variable co2_total  "CO2 (t), scope 1 (diesel, petrol, coal, LPG) + sco
+> pe 2"
+
+. label variable gj_total   "Energy (GJ), same scope as co2_total"
+
+. label variable co2_per_va "Carbon intensity: CO2 (t) per value added (nominal
+> )"
+
+. label variable gj_per_va  "Energy intensity: GJ per value added (nominal)"
+
+. label variable co2_per_out "CO2 (t) per gross output (nominal)"
+
+. label variable gj_per_out "GJ per gross output (nominal)"
+
+. label variable export_val "Estimated export value = export share x output (va
+> lid share only)"
+
+. label variable clean "1 = not an energy outlier"
+
+. compress
+  variable kbli2 was double now byte
+  variable prov was double now byte
+  variable exporter was double now byte
+  variable clean was double now byte
+  (925,372 bytes saved)
+
+. save "$B203_DATA/b203_si.dta", replace
+(file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-03-emission-
+    > concentration/data/b203_si.dta not found)
+file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-03-emission-
+    > concentration/data/b203_si.dta saved
+
+. display as result "01a done: $B203_DATA/b203_si.dta (" _N " rows)"
+01a done: /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-03-emiss
+> ion-concentration/data/b203_si.dta (33049 rows)
+
+. 
+end of do-file
+
+######## B2-03: 02-06_top_emitter_shares ########
+
+. /*==========================================================================
+>   Lines 2-6: "Hitung share total emissions dari:"
+>              "Top 1% firms" / "Top 5% firms" / "Top 10% firms" / "Top 20% fir
+> ms"
+>   Data  : SI 2010-2022 (data/b203_si.dta), clean == 1
+>   Method: within each year, plants with CO2 > 0 are ranked from largest to
+>           smallest emitter. The top p% = the first ceil(n x p / 100) plants.
+>           Share = CO2 of the top p% / CO2 of all plants with CO2 > 0, in %.
+>           Pool = the yearly top groups added up over all years.
+>   Output sheets:
+>     t02_06_top_shares   n plants, size of each top group and its % of total
+>                         CO2, pool + by year (clean sample)
+>     t02_06_all_records  the same without the outlier filter (clean 0 and 1),
+>                         to show how much the 30 outlier records change it
+>   Output data:
+>     data/b203_ranked.dta  every clean plant-year with its emission rank and
+>                           top-group flags (used by lines 7 and 10)
+> 
+>   NOTE: the unit is the plant-year (firm links in the development data are
+>   fictional). CO2 = scope 1 (diesel, petrol, coal, LPG) + scope 2.
+> ==========================================================================*/
+. if "$B203" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. 
+. * ---- the ranking, saved for lines 7 and 10 ----
+. use "$B203_DATA/b203_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1
+(30 observations deleted)
+
+. generate emitter = (co2_total > 0 & !missing(co2_total))
+
+. * largest emitter first; plants with no CO2 come after the emitters
+. gsort year -emitter -co2_total
+
+. by year: generate rank = _n if emitter == 1
+(547 missing values generated)
+
+. bysort year: egen n_emitters = total(emitter)
+
+. foreach p in 1 5 10 20 {
+  2.     generate top`p' = (rank <= ceil(n_emitters * `p' / 100)) if emitter ==
+>  1
+  3.     replace  top`p' = 0 if emitter == 0
+  4. }
+(547 missing values generated)
+(547 real changes made)
+(547 missing values generated)
+(547 real changes made)
+(547 missing values generated)
+(547 real changes made)
+(547 missing values generated)
+(547 real changes made)
+
+. label variable rank       "Emission rank within the year (1 = largest emitter
+> )"
+
+. label variable n_emitters "Plants with CO2 > 0 in the year"
+
+. label variable top1       "1 = in the top 1% of emitters of the year"
+
+. save "$B203_DATA/b203_ranked.dta", replace
+(file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-03-emission-
+    > concentration/data/b203_ranked.dta not found)
+file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-03-emission-
+    > concentration/data/b203_ranked.dta saved
+
+. 
+. * ---- shares: clean sample, then all records ----
+. foreach sample in clean all {
+  2.     use "$B203_DATA/b203_si.dta", clear
+  3.     if "`sample'" == "clean" keep if clean == 1
+  4.     keep if co2_total > 0 & !missing(co2_total)
+  5.     gsort year -co2_total
+  6.     by year: generate rank = _n
+  7.     by year: generate n = _N
+  8.     generate n_plants = 1
+  9.     foreach p in 1 5 10 20 {
+ 10.         generate n_top`p'   = (rank <= ceil(n * `p' / 100))
+ 11.         generate co2_top`p' = co2_total * n_top`p'
+ 12.     }
+ 13.     expand 2, generate(copy)              // copy of every row with year =
+>  0 for "pool"
+ 14.     replace year = 0 if copy == 1
+ 15.     collapse (sum) n_plants n_top1 n_top5 n_top10 n_top20 co2_total ///
+>              co2_top1 co2_top5 co2_top10 co2_top20, by(year)
+ 16.     foreach p in 1 5 10 20 {
+ 17.         generate share_top`p' = 100 * co2_top`p' / co2_total
+ 18.     }
+ 19.     generate period = cond(year == 0, "pool", string(year))
+ 20.     order period n_plants n_top1 n_top5 n_top10 n_top20 share_top1 share_t
+> op5 share_top10 share_top20 co2_total
+ 21.     keep  period n_plants n_top1 n_top5 n_top10 n_top20 share_top1 share_t
+> op5 share_top10 share_top20 co2_total
+ 22.     if "`sample'" == "clean" {
+ 23.         list period n_plants n_top1 share_top1 share_top5 share_top10 shar
+> e_top20, clean noobs
+ 24.         export excel using "$B203_XLSX", sheet("t02_06_top_shares", replac
+> e) firstrow(variables)
+ 25.     }
+ 26.     else export excel using "$B203_XLSX", sheet("t02_06_all_records", repl
+> ace) firstrow(variables)
+ 27. }
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(30 observations deleted)
+(547 observations deleted)
+(32,472 observations created)
+(32,472 real changes made)
+
+    period   n_plants   n_top1   share_t~1   share_t~5   share_~10   share_~20 
+>  
+      pool      32472      330   67.363546    85.79928   92.070687   96.450538 
+>  
+      2010       2269       23   49.307814   79.750586    89.14263   95.590746 
+>  
+      2011       2301       24   59.249917   82.225342   90.629743   96.375479 
+>  
+      2012       2314       24    60.70008   82.002525   90.578765   96.080897 
+>  
+      2013       2329       24   79.307918   91.631088   95.472482   97.998316 
+>  
+      2014       2400       24   70.401529   87.254523   92.956663   96.866696 
+>  
+      2015       2581       26    62.69634    85.73784   92.845853   97.022963 
+>  
+      2017       3303       34    46.81175    74.37155   84.146559    92.06398 
+>  
+      2018       2965       30    55.67732   78.741666    86.99379   93.833276 
+>  
+      2019       2992       30   58.075599   81.140638   88.968896   94.862066 
+>  
+      2020       2886       29   82.893761   92.441784   95.842041   98.136701 
+>  
+      2021       3039       31   60.584778    83.72083    90.96875    96.03275 
+>  
+      2022       3093       31   70.659065   87.034622   92.833048   96.760471 
+>  
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-03-emission-c
+> oncentration/output/b2_03_tables.xlsx saved
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(547 observations deleted)
+(32,502 observations created)
+(32,502 real changes made)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-03-emission-c
+> oncentration/output/b2_03_tables.xlsx saved
+
+. 
+end of do-file
+
+######## B2-03: 07_top_emitter_other_shares ########
+
+. /*==========================================================================
+>   Line 7: "Bandingkan share mereka thd output, VA, employment dan export."
+>   Data  : data/b203_ranked.dta (from 02-06): clean == 1, plants ranked by CO2
+>           within each year
+>   Output sheets:
+>     t07_other_shares   % of the year's total CO2, output, value added,
+>                        workers, exporters and export value held by the top
+>                        1/5/10/20% of emitters, pool + by year
+>     t07_exporter_rate  % exporters within each emitter band, pool + by year
+>   Denominator: ALL clean plants of the year, including plants with no CO2
+>   (they are never in a top group). CO2 is therefore the same as in
+>   t02_06_top_shares.
+> 
+>   NOTE (export): block 0 has no export value column.
+>     - "Exporters (count)": share of the year's exporters (export_flag == 1)
+>       that are top emitters. 2022 is missing: the 2022 form asks only about
+>       direct exports, so the flag is set missing in 01a.
+>     - "Export value (est.)": export share x output, only where the reported
+>       export share is valid: about 6% of records, none in 2015, 2017, 2022.
+>       Read it as indicative only.
+>   Output and value added are nominal; shares within a year are not affected.
+> ==========================================================================*/
+. if "$B203" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. 
+. * ---- A. share of each total held by the top emitters ----
+. tempfile stack
+
+. local i 0
+
+. foreach m in co2_total output va workers exporter export_val {
+  2.     local ++i
+  3.     use "$B203_DATA/b203_ranked.dta", clear
+  4.     keep if !missing(`m')
+  5.     foreach p in 1 5 10 20 {
+  6.         generate top`p'_m = `m' * top`p'
+  7.     }
+  8.     generate n_obs = 1
+  9.     expand 2, generate(copy)              // copy of every row with year =
+>  0 for "pool"
+ 10.     replace year = 0 if copy == 1
+ 11.     collapse (sum) n_obs total = `m' top1_m top5_m top10_m top20_m, by(yea
+> r)
+ 12.     foreach p in 1 5 10 20 {
+ 13.         generate share_top`p' = 100 * top`p'_m / total
+ 14.     }
+ 15.     generate m_order = `i'
+ 16.     generate variable = "`m'"
+ 17.     if `i' > 1 append using `stack'
+ 18.     save `stack', replace
+ 19. }
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(0 observations deleted)
+(33,019 observations created)
+(33,019 real changes made)
+(file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 not
+    found)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(0 observations deleted)
+(33,019 observations created)
+(33,019 real changes made)
+(variable variable was str6, now str9 to accommodate using data's values)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(0 observations deleted)
+(33,019 observations created)
+(33,019 real changes made)
+(variable variable was str2, now str9 to accommodate using data's values)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(0 observations deleted)
+(33,019 observations created)
+(33,019 real changes made)
+(variable variable was str7, now str9 to accommodate using data's values)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(15,642 observations deleted)
+(17,377 observations created)
+(17,377 real changes made)
+(variable variable was str8, now str9 to accommodate using data's values)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(31,049 observations deleted)
+(1,970 observations created)
+(1,970 real changes made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. generate measure = ""
+(74 missing values generated)
+
+. replace measure = "CO2"                 if variable == "co2_total"
+variable measure was str1 now str3
+(13 real changes made)
+
+. replace measure = "Output"              if variable == "output"
+variable measure was str3 now str6
+(13 real changes made)
+
+. replace measure = "Value added"         if variable == "va"
+variable measure was str6 now str11
+(13 real changes made)
+
+. replace measure = "Workers"             if variable == "workers"
+(13 real changes made)
+
+. replace measure = "Exporters (count)"   if variable == "exporter"
+variable measure was str11 now str17
+(12 real changes made)
+
+. replace measure = "Export value (est.)" if variable == "export_val"
+variable measure was str17 now str19
+(10 real changes made)
+
+. generate period = cond(year == 0, "pool", string(year))
+
+. sort m_order year
+
+. order measure variable period n_obs share_top1 share_top5 share_top10 share_t
+> op20 total
+
+. keep  measure variable period n_obs share_top1 share_top5 share_top10 share_t
+> op20 total
+
+. label variable n_obs "Plants with this measure observed"
+
+. label variable total "Year total of the measure (count for Exporters)"
+
+. list measure period share_top1 share_top5 share_top10 share_top20 if period =
+> = "pool" | period == "2022", clean noobs
+
+                measure   period   share_t~1   share_t~5   share_~10   share_~2
+> 0  
+                    CO2     pool   67.363546    85.79928   92.070687   96.45053
+> 8  
+                    CO2     2022   70.659065   87.034622   92.833048   96.76047
+> 1  
+                 Output     pool   20.034234    44.08595   58.552234    74.6880
+> 8  
+                 Output     2022   25.574338   43.291173   53.563813   74.56441
+> 8  
+            Value added     pool   18.592837    40.53125   55.320892   72.63686
+> 1  
+            Value added     2022    20.74301   37.843668   48.188468   71.25405
+> 2  
+                Workers     pool   8.4829745    27.01476   40.454267   58.58701
+> 3  
+                Workers     2022   6.2366349   23.420447   35.198483   55.78881
+> 1  
+      Exporters (count)     pool   3.2230462   14.004564   24.158585   39.84597
+> 8  
+    Export value (est.)     pool   21.587624   50.381504   65.982106    85.7085
+> 7  
+
+. export excel using "$B203_XLSX", sheet("t07_other_shares", replace) firstrow(
+> variables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-03-emission-c
+> oncentration/output/b2_03_tables.xlsx saved
+
+. 
+. * ---- B. exporter rate within each emitter band ----
+. use "$B203_DATA/b203_ranked.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if !missing(exporter)
+(15,642 observations deleted)
+
+. generate band = 5
+
+. replace  band = 4 if top20 == 1
+(3,375 real changes made)
+
+. replace  band = 3 if top10 == 1
+(1,780 real changes made)
+
+. replace  band = 2 if top5 == 1
+(915 real changes made)
+
+. replace  band = 1 if top1 == 1
+(194 real changes made)
+
+. replace  band = 6 if emitter == 0
+(343 real changes made)
+
+. label define band 1 "Top 1%" 2 "Top 1-5%" 3 "Top 5-10%" 4 "Top 10-20%" ///
+>                   5 "Bottom 80%" 6 "No CO2 reported"
+
+. label values band band
+
+. generate n_plants = 1
+
+. expand 2, generate(copy)
+(17,377 observations created)
+
+. replace year = 0 if copy == 1
+(17,377 real changes made)
+
+. collapse (sum) n_plants (mean) pct_exporter = exporter, by(band year)
+
+. replace pct_exporter = 100 * pct_exporter
+(72 real changes made)
+
+. generate period = cond(year == 0, "pool", string(year))
+
+. sort band year
+
+. order band period n_plants pct_exporter
+
+. drop year
+
+. list if period == "pool", clean noobs
+
+               band   period   n_plants   pct_expor~r  
+             Top 1%     pool        194   58.24742268  
+           Top 1-5%     pool        721   52.42718447  
+          Top 5-10%     pool        865   41.15606936  
+         Top 10-20%     pool       1595   34.48275862  
+         Bottom 80%     pool      13659   15.01574054  
+    No CO2 reported     pool        343   16.90962099  
+
+. export excel using "$B203_XLSX", sheet("t07_exporter_rate", replace) firstrow
+> (variables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-03-emission-c
+> oncentration/output/b2_03_tables.xlsx saved
+
+. 
+end of do-file
+
+######## B2-03: 08_within_kbli5_distribution ########
+
+. /*==========================================================================
+>   Line 8: "Within KBLI 5 digit, hitung distribusi dari carbon intensity dan
+>            energy intensity (P10, P25, median, P75, P90, P95)"
+>   Data  : SI 2010-2022 (data/b203_si.dta), clean == 1
+>   Measures:
+>     co2_per_va   carbon intensity = CO2 (t) / value added      (main)
+>     gj_per_va    energy intensity = GJ / value added           (main)
+>     co2_per_out  CO2 (t) / gross output   (output never < 0, so no plant
+>     gj_per_out   GJ / gross output         drops out for negative VA)
+>   Output sheets:
+>     t08_kbli5_pool     1 row = KBLI5 x measure, pooled 2010-2022:
+>                        n, P10 P25 P50 P75 P90 P95, P90/P10
+>     t08_kbli5_year     the same by year
+>     t08_spread_summary across KBLI5 sectors with n >= 20 (pooled): median
+>                        and quartiles of the within-sector P90/P10
+>     t08_all_firms      all plants together (no KBLI5 split), pool + by year
+> 
+>   NOTE: plants that report zero energy have intensity 0 and are included;
+>   P90/P10 is missing when P10 = 0. A KBLI5 cell with few plants (column
+>   few_obs = 1 when n < 20) gives unreliable percentiles. Value added and
+>   output are nominal and masked: compare plants within a sector and year,
+>   not levels across years.
+> ==========================================================================*/
+. if "$B203" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. 
+. * ---- A. percentiles per KBLI5, pool + by year ----
+. tempfile stack
+
+. local i 0
+
+. foreach m in co2_per_va gj_per_va co2_per_out gj_per_out {
+  2.     local ++i
+  3.     use "$B203_DATA/b203_si.dta", clear
+  4.     keep if clean == 1 & !missing(`m') & kbli5 != ""
+  5.     expand 2, generate(copy)              // copy of every row with year =
+>  0 for "pool"
+  6.     replace year = 0 if copy == 1
+  7.     collapse (count) n = `m' (p10) p10 = `m' (p25) p25 = `m' (p50) p50 = `
+> m' ///
+>              (p75) p75 = `m' (p90) p90 = `m' (p95) p95 = `m', by(kbli5 year)
+  8.     generate m_order = `i'
+  9.     generate measure = "`m'"
+ 10.     if `i' > 1 append using `stack'
+ 11.     save `stack', replace
+ 12. }
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(30 observations deleted)
+(33,019 observations created)
+(33,019 real changes made)
+(file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 not
+    found)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(30 observations deleted)
+(33,019 observations created)
+(33,019 real changes made)
+(variable measure was str9, now str10 to accommodate using data's values)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(30 observations deleted)
+(33,019 observations created)
+(33,019 real changes made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(30 observations deleted)
+(33,019 observations created)
+(33,019 real changes made)
+(variable measure was str10, now str11 to accommodate using data's values)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. generate p90_p10 = p90 / p10 if p10 > 0
+(872 missing values generated)
+
+. generate few_obs = (n < 20)
+
+. generate period  = cond(year == 0, "pool", string(year))
+
+. sort m_order kbli5 year
+
+. order kbli5 measure period n p10 p25 p50 p75 p90 p95 p90_p10 few_obs
+
+. save "$B203_DATA/b203_kbli5_pct.dta", replace
+(file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-03-emission-
+    > concentration/data/b203_kbli5_pct.dta not found)
+file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-03-emission-
+    > concentration/data/b203_kbli5_pct.dta saved
+
+. 
+. preserve
+
+. keep if period == "pool"
+(15,532 observations deleted)
+
+. keep kbli5 measure period n p10 p25 p50 p75 p90 p95 p90_p10 few_obs
+
+. export excel using "$B203_XLSX", sheet("t08_kbli5_pool", replace) firstrow(va
+> riables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-03-emission-c
+> oncentration/output/b2_03_tables.xlsx saved
+
+. restore
+
+. keep if period != "pool"
+(1,804 observations deleted)
+
+. keep kbli5 measure period n p10 p25 p50 p75 p90 p95 p90_p10 few_obs
+
+. export excel using "$B203_XLSX", sheet("t08_kbli5_year", replace) firstrow(va
+> riables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-03-emission-c
+> oncentration/output/b2_03_tables.xlsx saved
+
+. 
+. * ---- B. how wide is the within-sector spread? (pooled, n >= 20) ----
+. use "$B203_DATA/b203_kbli5_pct.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if period == "pool" & few_obs == 0
+(16,340 observations deleted)
+
+. generate n_sectors = 1
+
+. collapse (sum) n_sectors (count) n_with_ratio = p90_p10 ///
+>          (p25) ratio_p25 = p90_p10 (p50) ratio_median = p90_p10 (p75) ratio_p
+> 75 = p90_p10, ///
+>          by(m_order measure)
+
+. sort m_order
+
+. drop m_order
+
+. label variable ratio_median "Median across KBLI5 sectors of the within-sector
+>  P90/P10"
+
+. list, clean noobs
+
+        measure   n_sect~s   n_with~o   ratio_p25   ratio_m~n   ratio_p75  
+     co2_per_va        249        245   37.250507   68.322239   151.03986  
+      gj_per_va        249        245   43.920435   78.988998   171.85005  
+    co2_per_out        249        245   30.805309   52.317092    99.36481  
+     gj_per_out        249        245    33.38392   57.990149   132.86119  
+
+. export excel using "$B203_XLSX", sheet("t08_spread_summary", replace) firstro
+> w(variables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-03-emission-c
+> oncentration/output/b2_03_tables.xlsx saved
+
+. 
+. * ---- C. the national distribution, for reference ----
+. use "$B203_DATA/b203_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1
+(30 observations deleted)
+
+. do "$B203/_sumstats.do" "co2_per_va gj_per_va co2_per_out gj_per_out" "" "t08
+> _all_firms"
+
+. /*==========================================================================
+>   _sumstats.do -- helper: descriptive statistics table, POOLED + BY YEAR
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B203/_sumstats.do" "co2_per_va gj_per_va" "" "t08_all_firms"
+> 
+>       argument 1 = list of variables
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b2_03_tables.xlsx (max 31 characters)
+> 
+>   Result: 1 row = variable x group x period (pool, 2010, 2011, ...)
+>           columns n mean sd p10 p25 p50 p75 p90 min max
+>   Rows with a missing group are not counted.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars grp sheet
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000004 saved
+    as .dta format
+
+. local first 1
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     local grp all
+. }
+
+. foreach v of local vars {
+  2.     foreach period in pool year {
+  3.         preserve
+  4.         keep `v' `grp' year
+  5.         keep if !missing(`v') & !missing(`grp')
+  6.         if _N > 0 {
+  7.             if "`period'" == "pool" replace year = 0
+  8.             collapse (count) n = `v' (mean) mean = `v' (sd) sd = `v' ///
+>                      (p10) p10 = `v' (p25) p25 = `v' (p50) p50 = `v' ///
+>                      (p75) p75 = `v' (p90) p90 = `v' (min) min = `v' (max) ma
+> x = `v', ///
+>                      by(`grp' year)
+  9.             generate str32 variable = "`v'"
+ 10.             if `first' == 0 append using `result'
+ 11.             save `result', replace
+ 12.             local first 0
+ 13.         }
+ 14.         restore
+ 15.     }
+ 16. }
+(0 observations deleted)
+(33,019 real changes made)
+(file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 not
+    found)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(33,019 real changes made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(33,019 real changes made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(33,019 real changes made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+
+. 
+. use `result', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * the group is written as text using its value label (if it has one)
+. capture decode `grp', generate(group)
+
+. if _rc generate group = string(`grp')
+
+. * keep the variables in the order they were listed
+. generate variable_order = .
+(52 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+
+. sort variable_order `grp' year
+
+. keep variable group period n mean sd p10 p25 p50 p75 p90 min max
+
+. export excel using "$B203_XLSX", sheet("`sheet'", replace) firstrow(variables
+> )
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-03-emission-c
+> oncentration/output/b2_03_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t08_all_firms (52 rows)
+
+. use `original', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+end of do-file
+
+. 
+end of do-file
+
+######## B2-03: 09_gini_lorenz ########
+
+. /*==========================================================================
+>   Line 9: "Create gini/Lorenz curve untuk emission"
+>   Data  : SI 2010-2022 (data/b203_si.dta), clean == 1 and CO2 > 0
+>   Method (no user-written package; sort, sum and generate only):
+>     - sort plants from smallest to largest emitter within the year,
+>       i = rank (1 = smallest), n = plants, x = CO2
+>     - Lorenz curve: cumulative share of CO2 held by the smallest p% of plants
+>     - Gini = 2 x sum(i x x_i) / (n x sum x) - (n + 1) / n
+>       (0 = every plant emits the same, 1 = one plant emits everything)
+>     Pool = all plant-years 2010-2022 treated as one distribution.
+>   Output sheets:
+>     t09_gini      Gini by year + pool, with n plants and total CO2
+>     t09_lorenz    Lorenz points: period, pct_plants (0, 1, ..., 100),
+>                   cum_share_co2 (%)
+>   Chart: fig09_lorenz and fig09_gini (drawn in 11_figures.do)
+> 
+>   NOTE: masking adds noise to each plant's value, which tends to push a Gini
+>   up a little. The unit is the plant-year.
+> ==========================================================================*/
+. if "$B203" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. 
+. use "$B203_DATA/b203_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1 & co2_total > 0 & !missing(co2_total)
+(577 observations deleted)
+
+. keep year co2_total
+
+. expand 2, generate(copy)              // copy of every row with year = 0 for 
+> "pool"
+(32,472 observations created)
+
+. replace year = 0 if copy == 1
+(32,472 real changes made)
+
+. 
+. * smallest emitter first
+. sort year co2_total
+
+. by year: generate i = _n
+
+. by year: generate n = _N
+
+. by year: egen total = total(co2_total)
+
+. by year: generate cum_share = 100 * sum(co2_total) / total
+
+. generate ix = i * co2_total
+
+. by year: egen sum_ix = total(ix)
+
+. generate gini = 2 * sum_ix / (n * total) - (n + 1) / n
+
+. save "$B203_DATA/b203_lorenz_rows.dta", replace
+(file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-03-emission-
+    > concentration/data/b203_lorenz_rows.dta not found)
+file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-03-emission-
+    > concentration/data/b203_lorenz_rows.dta saved
+
+. 
+. * ---- Gini table ----
+. collapse (first) n total gini, by(year)
+
+. generate period = cond(year == 0, "pool", string(year))
+
+. order period n gini total
+
+. keep  period n gini total
+
+. label variable n     "Plants with CO2 > 0"
+
+. label variable total "Total CO2 (t)"
+
+. list period n gini, clean noobs
+
+    period       n        gini  
+      pool   32472   .94367556  
+      2010    2269   .92046522  
+      2011    2301   .93250658  
+      2012    2314   .93166883  
+      2013    2329   .96591931  
+      2014    2400   .94887082  
+      2015    2581   .94373655  
+      2017    3303   .88999767  
+      2018    2965   .90937213  
+      2019    2992   .92104336  
+      2020    2886   .96871928  
+      2021    3039   .93353353  
+      2022    3093    .9478173  
+
+. export excel using "$B203_XLSX", sheet("t09_gini", replace) firstrow(variable
+> s)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-03-emission-c
+> oncentration/output/b2_03_tables.xlsx saved
+
+. 
+. * ---- Lorenz points at every percentile of plants ----
+. use "$B203_DATA/b203_lorenz_rows.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. * the plant at position ceil(n x p / 100) closes the first p% of plants
+. generate pct_plants = .
+(64,944 missing values generated)
+
+. forvalues p = 1/100 {
+  2.     quietly replace pct_plants = `p' if i == ceil(n * `p' / 100)
+  3. }
+
+. keep if !missing(pct_plants)
+(63,644 observations deleted)
+
+. keep year pct_plants cum_share
+
+. * add the origin (0% of plants hold 0% of CO2)
+. by year: generate first = (_n == 1)
+
+. expand 2 if first == 1, generate(origin)
+(13 observations created)
+
+. replace pct_plants = 0 if origin == 1
+(13 real changes made)
+
+. replace cum_share  = 0 if origin == 1
+(13 real changes made)
+
+. generate period = cond(year == 0, "pool", string(year))
+
+. sort year pct_plants
+
+. rename cum_share cum_share_co2
+
+. order period pct_plants cum_share_co2
+
+. keep  period pct_plants cum_share_co2
+
+. export excel using "$B203_XLSX", sheet("t09_lorenz", replace) firstrow(variab
+> les)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-03-emission-c
+> oncentration/output/b2_03_tables.xlsx saved
+
+. 
+end of do-file
+
+######## B2-03: 10_synthesis ########
+
+. /*==========================================================================
+>   Line 10: "Question: Apakah Indonesia sebenernya hanya perlu menarget
+>             relatively small number of highly polluting plants?"
+>   Data  : data/b203_ranked.dta (from 02-06) + the sheets of lines 2-9
+>   Output sheets:
+>     t10_plants_needed  how many plants (and what % of emitting plants)
+>                        together hold 50%, 75% and 90% of the year's CO2,
+>                        by year
+>     t10_evidence       one row per period: what the top 1% and top 10% of
+>                        emitters hold of CO2, output, VA and workers, plus
+>                        the Gini (collected from t02_06, t07 and t09)
+> 
+>   How to read it: if a few hundred plants hold most of the CO2 but a much
+>   smaller share of output, VA and jobs, targeting them covers most emissions
+>   at a limited cost to the economy. Caveats: development data (masked
+>   values, fictional firm links); the unit is the plant-year.
+> ==========================================================================*/
+. if "$B203" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. 
+. * ---- A. plants needed for 50 / 75 / 90% of CO2 ----
+. use "$B203_DATA/b203_ranked.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if emitter == 1
+(547 observations deleted)
+
+. * rank is 1 = largest emitter (from 02-06)
+. sort year rank
+
+. by year: egen total = total(co2_total)
+
+. by year: generate cum_share = 100 * sum(co2_total) / total
+
+. foreach s in 50 75 90 {
+  2.     by year: egen n_for_`s' = min(cond(cum_share >= `s', rank, .))
+  3. }
+
+. collapse (first) n_emitters n_for_50 n_for_75 n_for_90, by(year)
+
+. foreach s in 50 75 90 {
+  2.     generate pct_for_`s' = 100 * n_for_`s' / n_emitters
+  3. }
+
+. generate period = string(year)
+
+. order period n_emitters n_for_50 pct_for_50 n_for_75 pct_for_75 n_for_90 pct_
+> for_90
+
+. keep  period n_emitters n_for_50 pct_for_50 n_for_75 pct_for_75 n_for_90 pct_
+> for_90
+
+. label variable n_for_50  "Fewest plants that together hold 50% of the year's 
+> CO2"
+
+. label variable pct_for_50 "Same, as % of plants with CO2 > 0"
+
+. list, clean noobs
+
+    period   n_emit~s   n_for_50   pct_fo~50   n_for_75   pct_fo~75   n_for_90 
+>   pct_fo~90  
+      2010       2269         24   1.0577347         87   3.8342882        245 
+>   10.797708  
+      2011       2301         12   .52151239         71    3.085615        218 
+>   9.4741417  
+      2012       2314         11   .47536733         72   3.1114952        220 
+>   9.5073466  
+      2013       2329          1   .04293688         14   .60111636         92 
+>   3.9501932  
+      2014       2400          4   .16666667         37   1.5416667        165 
+>       6.875  
+      2015       2581         12   .46493607         58    2.247191        190 
+>   7.3614878  
+      2017       3303         41   1.2412958        174   5.2679382        544 
+>   16.469876  
+      2018       2965         21   .70826307        114   3.8448567        394 
+>   13.288364  
+      2019       2992         19   .63502674         97   3.2419786        334 
+>   11.163102  
+      2020       2886          3    .1039501          8   .27720028         96 
+>   3.3264033  
+      2021       3039         18    .5923001         77   2.5337282        274 
+>   9.0161237  
+      2022       3093          5   .16165535         46   1.4872292        219 
+>   7.0805044  
+
+. export excel using "$B203_XLSX", sheet("t10_plants_needed", replace) firstrow
+> (variables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-03-emission-c
+> oncentration/output/b2_03_tables.xlsx saved
+
+. 
+. * ---- B. the evidence in one table ----
+. * top 1% / top 10%: size and CO2 share (lines 2-6)
+. import excel using "$B203_XLSX", sheet("t02_06_top_shares") firstrow clear
+(11 vars, 13 obs)
+
+. keep period n_plants n_top1 n_top10 share_top1 share_top10
+
+. rename (share_top1 share_top10) (co2_top1 co2_top10)
+
+. tempfile ev
+
+. save `ev'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. 
+. * their share of output, VA and workers (line 7)
+. foreach m in output va workers {
+  2.     import excel using "$B203_XLSX", sheet("t07_other_shares") firstrow cl
+> ear
+  3.     keep if variable == "`m'"
+  4.     rename (share_top1 share_top10) (`m'_top1 `m'_top10)
+  5.     keep period `m'_top1 `m'_top10
+  6.     merge 1:1 period using `ev', nogenerate
+  7.     save `ev', replace
+  8. }
+(9 vars, 74 obs)
+(61 observations deleted)
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                                13  
+    -----------------------------------------
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(9 vars, 74 obs)
+(61 observations deleted)
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                                13  
+    -----------------------------------------
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(9 vars, 74 obs)
+(61 observations deleted)
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                                13  
+    -----------------------------------------
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. 
+. * Gini (line 9)
+. import excel using "$B203_XLSX", sheet("t09_gini") firstrow clear
+(4 vars, 13 obs)
+
+. keep period gini
+
+. merge 1:1 period using `ev', nogenerate
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                                13  
+    -----------------------------------------
+
+. 
+. generate sort_year = cond(period == "pool", 0, real(period))
+
+. sort sort_year
+
+. order period n_plants n_top1 co2_top1 output_top1 va_top1 workers_top1 ///
+>       n_top10 co2_top10 output_top10 va_top10 workers_top10 gini
+
+. drop sort_year
+
+. list period n_top1 co2_top1 output_top1 va_top1 workers_top1 gini, clean noob
+> s
+
+    period   n_top1    co2_top1   output_~1     va_top1   workers~1        gini
+>   
+      pool      330   67.363546   20.034234   18.592837   8.4829745   .94367556
+>   
+      2010       23   49.307814   7.2847592   7.2513852   8.7724028   .92046522
+>   
+      2011       24   59.249917   37.668276   38.635777   10.113377   .93250658
+>   
+      2012       24    60.70008    13.18342   14.680039   8.5983089   .93166883
+>   
+      2013       24   79.307918   18.466441   18.532822   12.761444   .96591931
+>   
+      2014       24   70.401529   24.177139   18.245999    9.637599   .94887082
+>   
+      2015       26    62.69634   25.229616   27.028301    12.45268   .94373655
+>   
+      2017       34    46.81175   14.264797   13.568631   6.8628589   .88999767
+>   
+      2018       30    55.67732   23.249156   20.036127   8.2072991   .90937213
+>   
+      2019       30   58.075599   12.581293   12.425247    6.286106   .92104336
+>   
+      2020       29   82.893761   15.919312    18.15963   3.3392252   .96871928
+>   
+      2021       31   60.584778   22.065541   17.498371   10.056793   .93353353
+>   
+      2022       31   70.659065   25.574338    20.74301   6.2366349    .9478173
+>   
+
+. export excel using "$B203_XLSX", sheet("t10_evidence", replace) firstrow(vari
+> ables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-03-emission-c
+> oncentration/output/b2_03_tables.xlsx saved
+
+. 
+end of do-file
+
+######## B2-03: 11_figures ########
+
+. /*==========================================================================
+>   Line 11 (added; the row has no figures line): charts for B2-03
+>   Every other file writes its tables to output/b2_03_tables.xlsx. This file
+>   draws the charts FROM those tables, so a chart always matches its table.
+>   The exact points of every chart are also written to a sheet figNN_data
+>   (graph-ready, e.g. to redraw the chart in Excel or PowerPoint).
+>   Runs LAST in 00_run.do.
+> 
+>   Charts (output/):
+>     fig02_06_top_shares.png    % of CO2 held by the top 1/5/10/20%, by year
+>     fig07_other_shares.png     what the top 1% / 10% hold of CO2, output,
+>                                VA, workers (pooled)
+>     fig08_kbli5_spread.png     P10-P90 of CO2 per VA in the 15 largest KBLI5
+>     fig09_lorenz.png           Lorenz curve of CO2, 2010 / 2022 / pool
+>     fig09_gini.png             Gini of CO2 by year
+>     fig10_plants_needed.png    % of plants that hold 50/75/90% of CO2
+> ==========================================================================*/
+. if "$B203" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. 
+. * ---- fig02_06: top emitter shares by year (lines 2-6) ----
+. import excel using "$B203_XLSX", sheet("t02_06_top_shares") firstrow clear
+(11 vars, 13 obs)
+
+. drop if period == "pool"
+(1 observation deleted)
+
+. generate year = real(period)
+
+. keep year share_top1 share_top5 share_top10 share_top20
+
+. order year
+
+. export excel using "$B203_XLSX", sheet("fig02_06_data", replace) firstrow(var
+> iables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-03-emission-c
+> oncentration/output/b2_03_tables.xlsx saved
+
+. twoway (connected share_top1 year) (connected share_top5 year) ///
+>        (connected share_top10 year) (connected share_top20 year), ///
+>     xline(2016, lpattern(dash) lcolor(gs10)) xlabel(2010(2)2022) xtitle("") /
+> //
+>     ylabel(0(20)100, angle(0)) ytitle("% of total CO2") ///
+>     legend(order(1 "Top 1%" 2 "Top 5%" 3 "Top 10%" 4 "Top 20%") rows(1)) ///
+>     title("Share of CO2 held by the largest emitters") ///
+>     note("Plants with CO2 > 0, ranked within each year. Dashed line: no 2016 
+> survey.") ///
+>     graphregion(color(white))
+
+. graph export "$B203_OUT/fig02_06_top_shares.png", replace width(2000)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-03-emission-c
+> oncentration/output/fig02_06_top_shares.png written in PNG format
+
+. 
+. * ---- fig07: top emitters' share of other totals (line 7) ----
+. import excel using "$B203_XLSX", sheet("t07_other_shares") firstrow clear
+(9 vars, 74 obs)
+
+. keep if period == "pool" & inlist(variable, "co2_total", "output", "va", "wor
+> kers")
+(70 observations deleted)
+
+. generate m_order = 1
+
+. replace  m_order = 2 if variable == "output"
+(1 real change made)
+
+. replace  m_order = 3 if variable == "va"
+(1 real change made)
+
+. replace  m_order = 4 if variable == "workers"
+(1 real change made)
+
+. sort m_order
+
+. keep m_order measure share_top1 share_top10
+
+. export excel using "$B203_XLSX", sheet("fig07_data", replace) firstrow(variab
+> les)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-03-emission-c
+> oncentration/output/b2_03_tables.xlsx saved
+
+. graph bar (asis) share_top1 share_top10, over(measure, sort(m_order)) ///
+>     bar(1, color(cranberry)) bar(2, color(navy)) blabel(bar, format(%4.1f)) /
+> //
+>     ytitle("% of the total (pooled 2010-2022)") ylabel(0(20)100, angle(0)) //
+> /
+>     legend(order(1 "Top 1% of emitters" 2 "Top 10% of emitters") rows(1)) ///
+>     title("What the largest emitters hold") ///
+>     note("Denominator: all clean plants of the year. Exports: see t07_other_s
+> hares (weak coverage).") ///
+>     graphregion(color(white))
+
+. graph export "$B203_OUT/fig07_other_shares.png", replace width(2000)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-03-emission-c
+> oncentration/output/fig07_other_shares.png written in PNG format
+
+. 
+. * ---- fig08: within-KBLI5 spread of carbon intensity (line 8) ----
+. import excel using "$B203_XLSX", sheet("t08_kbli5_pool") firstrow clear
+(12 vars, 1,804 obs)
+
+. keep if measure == "co2_per_va" & p10 > 0
+(1,382 observations deleted)
+
+. gsort -n
+
+. keep in 1/15
+(407 observations deleted)
+
+. keep kbli5 n p10 p25 p50 p75 p90 p95
+
+. export excel using "$B203_XLSX", sheet("fig08_data", replace) firstrow(variab
+> les)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-03-emission-c
+> oncentration/output/b2_03_tables.xlsx saved
+
+. * one row per sector, largest sector at the top; the KBLI5 code is the label
+. generate pos = 16 - _n
+
+. capture label drop pos
+
+. forvalues i = 1/15 {
+  2.     local code = kbli5[`i']
+  3.     label define pos `=16 - `i'' "`code'", add
+  4. }
+
+. label values pos pos
+
+. twoway (rcap p10 p90 pos, horizontal lcolor(gs8)) ///
+>        (rbar p25 p75 pos, horizontal barwidth(0.5) color(navy%40)) ///
+>        (scatter pos p50, mcolor(cranberry) msymbol(D)), ///
+>     xscale(log) xlabel(1e-7 1e-6 1e-5 1e-4 1e-3, format(%6.0e) labsize(small)
+> ) ///
+>     ylabel(1(1)15, valuelabel angle(0) labsize(small)) ytitle("KBLI 5-digit")
+>  ///
+>     xtitle("CO2 (t) per value added, log scale") ///
+>     legend(order(1 "P10 to P90" 2 "P25 to P75" 3 "Median") rows(1)) ///
+>     title("Carbon intensity within KBLI 5-digit sectors") ///
+>     subtitle("The 15 sectors with the most plant-years, pooled 2010-2022") //
+> /
+>     note("Value added is nominal and masked. All percentiles are in t08_kbli5
+> _pool.") ///
+>     graphregion(color(white))
+
+. graph export "$B203_OUT/fig08_kbli5_spread.png", replace width(2000)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-03-emission-c
+> oncentration/output/fig08_kbli5_spread.png written in PNG format
+
+. 
+. * ---- fig09: Lorenz curve (line 9) ----
+. import excel using "$B203_XLSX", sheet("t09_lorenz") firstrow clear
+(3 vars, 1,313 obs)
+
+. keep if inlist(period, "2010", "2022", "pool")
+(1,010 observations deleted)
+
+. replace period = "all" if period == "pool"
+(101 real changes made)
+
+. reshape wide cum_share_co2, i(pct_plants) j(period) string
+(j = 2010 2022 all)
+
+Data                               Long   ->   Wide
+-----------------------------------------------------------------------------
+Number of observations              303   ->   101         
+Number of variables                   3   ->   4           
+j variable (3 values)            period   ->   (dropped)
+xij variables:
+                          cum_share_co2   ->   cum_share_co22010 cum_share_co22
+> 022 cum_share_co2all
+-----------------------------------------------------------------------------
+
+. rename cum_share_co2* lorenz_*
+
+. generate equality = pct_plants
+
+. order pct_plants lorenz_2010 lorenz_2022 lorenz_all equality
+
+. export excel using "$B203_XLSX", sheet("fig09_data", replace) firstrow(variab
+> les)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-03-emission-c
+> oncentration/output/b2_03_tables.xlsx saved
+
+. twoway (line lorenz_2010 pct_plants, lcolor(gs8)) ///
+>        (line lorenz_2022 pct_plants, lcolor(cranberry)) ///
+>        (line lorenz_all pct_plants, lcolor(navy) lpattern(dash)) ///
+>        (line equality pct_plants, lcolor(gs12) lpattern(shortdash)), ///
+>     xlabel(0(10)100) ylabel(0(20)100, angle(0)) aspectratio(1) ///
+>     xtitle("Cumulative % of plants (smallest emitter first)") ///
+>     ytitle("Cumulative % of CO2") ///
+>     legend(order(1 "2010" 2 "2022" 3 "Pooled 2010-2022" 4 "Equal shares") row
+> s(2)) ///
+>     title("Lorenz curve of CO2 emissions") ///
+>     note("Plants with CO2 > 0, clean sample. Gini by year: t09_gini.") ///
+>     graphregion(color(white))
+
+. graph export "$B203_OUT/fig09_lorenz.png", replace width(2000)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-03-emission-c
+> oncentration/output/fig09_lorenz.png written in PNG format
+
+. 
+. * ---- fig09: Gini by year (line 9) ----
+. import excel using "$B203_XLSX", sheet("t09_gini") firstrow clear
+(4 vars, 13 obs)
+
+. drop if period == "pool"
+(1 observation deleted)
+
+. generate year = real(period)
+
+. keep year gini
+
+. order year
+
+. export excel using "$B203_XLSX", sheet("fig09_gini_data", replace) firstrow(v
+> ariables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-03-emission-c
+> oncentration/output/b2_03_tables.xlsx saved
+
+. twoway connected gini year, ///
+>     xline(2016, lpattern(dash) lcolor(gs10)) xlabel(2010(2)2022) xtitle("") /
+> //
+>     ylabel(0.80(0.05)1, format(%4.2f) angle(0)) ytitle("Gini of plant CO2") /
+> //
+>     title("Gini of CO2 emissions across plants") ///
+>     note("0 = every plant emits the same, 1 = one plant emits everything. Das
+> hed line: no 2016 survey.") ///
+>     graphregion(color(white))
+
+. graph export "$B203_OUT/fig09_gini.png", replace width(2000)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-03-emission-c
+> oncentration/output/fig09_gini.png written in PNG format
+
+. 
+. * ---- fig10: how many plants hold most of the CO2? (line 10) ----
+. import excel using "$B203_XLSX", sheet("t10_plants_needed") firstrow clear
+(8 vars, 12 obs)
+
+. generate year = real(period)
+
+. keep year n_emitters n_for_50 pct_for_50 n_for_75 pct_for_75 n_for_90 pct_for
+> _90
+
+. order year
+
+. export excel using "$B203_XLSX", sheet("fig10_data", replace) firstrow(variab
+> les)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-03-emission-c
+> oncentration/output/b2_03_tables.xlsx saved
+
+. twoway (connected pct_for_50 year) (connected pct_for_75 year) (connected pct
+> _for_90 year), ///
+>     xline(2016, lpattern(dash) lcolor(gs10)) xlabel(2010(2)2022) xtitle("") /
+> //
+>     ylabel(, angle(0)) ytitle("% of plants with CO2 > 0") ///
+>     legend(order(1 "50% of CO2" 2 "75% of CO2" 3 "90% of CO2") rows(1)) ///
+>     title("Smallest share of plants that holds 50 / 75 / 90% of CO2") ///
+>     note("Number of plants: t10_plants_needed. Dashed line: no 2016 survey.")
+>  ///
+>     graphregion(color(white))
+
+. graph export "$B203_OUT/fig10_plants_needed.png", replace width(2000)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-03-emission-c
+> oncentration/output/fig10_plants_needed.png written in PNG format
+
+. graph drop _all
+
+. 
+end of do-file
+
+. log close b203
+      name:  b203
+       log:  /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-03-em
+> ission-concentration/output/b2_03_log.log
+  log type:  text
+ closed on:   9 Oct 2026, 12:54:36
+-------------------------------------------------------------------------------

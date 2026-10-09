@@ -1,0 +1,3731 @@
+-------------------------------------------------------------------------------
+      name:  b20
+       log:  /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-20-co
+> vid/output/b1_20_log.log
+  log type:  text
+ opened on:   9 Oct 2026, 12:53:55
+
+. foreach f of local files {
+  2.     display _newline as result "######## B1-20: `f' ########"
+  3.     do "$B20/`f'.do"
+  4. }
+
+######## B1-20: 01a_prep_si ########
+
+. /*==========================================================================
+>   Line 1 (part a): "What happened during covid:"
+>   Prepare Statistik Industri (SI) 2010-2022 for B1-20
+>   Input : $SI_DATA  (analysis_ready_data.dta from block 0)
+>   Output: data/b20_si.dta  -- 1 row = 1 firm x year
+>           (open with: use "$B20_DATA/b20_si.dta", clear  then browse)
+> 
+>   Main variables created:
+>     period         COVID period: 1 Pre 2017-19, 2 Covid 2020, 3 Recovery 2021
+> -22
+>     prev_year      the survey year before this one  (2017 -> 2015: no 2016 wa
+> ve)
+>     next_year      the survey year after this one   (2015 -> 2017)
+>     importer, exporter, fdi, large, kbli2, kbli5, prov, java
+>     va, output, capital, workers, *_pw (per worker), ln_*
+>     tfp_op tfp_lp tfp_acf tfp_wrdg
+>     co2_s1 co2_s2 co2_total gj_s1 gj_s2 gj_total, co2_per_va, gj_per_va
+>     has_owngen     1 = generates some of its own electricity (self generation
+> )
+>     owngen_share   own-generated kWh / (own + purchased kWh)
+>     clean          1 = not an extreme energy outlier
+> 
+>   NOTE: there is no 2016 wave. "Previous / next year" always means the
+>         previous / next SURVEY year, so 2015 and 2017 count as consecutive.
+> ==========================================================================*/
+. if "$B20" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$SI_DATA", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+. * ---- identifiers ------------------------------------------------------
+. * year = survey year (there is no 2016 file)
+. generate kbli2 = real(substr(industry_code, 1, 2))
+
+. generate kbli5 = industry_code
+
+. generate prov  = real(province_code)
+
+. generate java  = inlist(prov, 31, 32, 33, 34, 35, 36) if !missing(prov)
+
+. label define java 0 "Outside Java" 1 "Java"
+
+. label values java java
+
+. 
+. * ---- COVID period -------------------------------------------------------
+. generate period = 1 if inrange(year, 2017, 2019)
+(23,674 missing values generated)
+
+. replace  period = 2 if year == 2020
+(2,936 real changes made)
+
+. replace  period = 3 if inrange(year, 2021, 2022)
+(6,255 real changes made)
+
+. label define period 1 "Pre 2017-19" 2 "Covid 2020" 3 "Recovery 2021-22"
+
+. label values period period
+
+. 
+. * ---- previous / next survey year (2016 is missing) --------------------
+. generate prev_year = year - 1 if year > 2010
+(2,334 missing values generated)
+
+. replace  prev_year = 2015 if year == 2017
+(3,357 real changes made)
+
+. generate next_year = year + 1 if year < 2022
+(3,177 missing values generated)
+
+. replace  next_year = 2017 if year == 2015
+(2,632 real changes made)
+
+. 
+. * ---- firm size: medium vs large (100-worker threshold) ----------------
+. generate large = (workers > 100) if !missing(workers)
+
+. label define large 0 "Medium (<=100)" 1 "Large (>100)"
+
+. label values large large
+
+. 
+. * ---- imports, exports & FDI -------------------------------------------
+. * importer is only defined where the import question can be evaluated
+. generate importer = import_flag if import_observed == 1
+
+. label define importer 0 "Non-importer" 1 "Importer"
+
+. label values importer importer
+
+. 
+. generate exporter = export_flag
+(15,321 missing values generated)
+
+. generate fdi      = fdi_10_flag                     // foreign ownership >= 1
+> 0%
+(311 missing values generated)
+
+. * 2022: the form only asks about DIRECT exports, a "no" is never recorded -> 
+> missing
+. replace exporter = . if year == 2022
+(344 real changes made, 344 to missing)
+
+. * 2020: foreign ownership is inconsistent (47% FDI vs 8-11% other years) -> m
+> issing
+. replace fdi = . if year == 2020
+(2,936 real changes made, 2,936 to missing)
+
+. label define exporter 0 "Non-exporter" 1 "Exporter"
+
+. label values exporter exporter
+
+. label define fdi 0 "Domestic" 1 "FDI"
+
+. label values fdi fdi
+
+. 
+. * ---- firm characteristics (nominal) -----------------------------------
+. generate va      = value_added_nominal
+
+. generate output  = gross_output_nominal
+
+. generate capital = capital_stock_nominal
+(1,125 missing values generated)
+
+. generate va_pw   = va / workers      if workers > 0
+(28 missing values generated)
+
+. generate out_pw  = output / workers  if workers > 0
+(28 missing values generated)
+
+. generate cap_pw  = capital / workers if workers > 0
+(1,153 missing values generated)
+
+. 
+. generate tfp_op   = dev_nominal_tfp_op
+(32,377 missing values generated)
+
+. generate tfp_lp   = dev_nominal_tfp_lp
+(22,765 missing values generated)
+
+. generate tfp_acf  = dev_nominal_tfp_acf
+(22,765 missing values generated)
+
+. generate tfp_wrdg = dev_nominal_tfp_wrdg
+(22,765 missing values generated)
+
+. 
+. * ---- energy & emissions -----------------------------------------------
+. * COAL 2017 CORRECTION: block 0 multiplies by 1000 (treats it as tonnes),
+. * but the price per unit shows the data are already in kg. Divide back.
+. generate co2_coal = co2_coal_s1
+
+. generate gj_coal2 = gj_coal
+
+. replace  co2_coal = co2_coal_s1 / 1000 if year == 2017
+(1,181 real changes made)
+
+. replace  gj_coal2 = gj_coal / 1000     if year == 2017
+(1,181 real changes made)
+
+. 
+. * scope 1 = the 4 fuels asked in every year: diesel, petrol, coal, LPG
+. egen co2_s1 = rowtotal(co2_diesel_s1 co2_petrol_s1 co2_coal co2_lpg_s1), miss
+> ing
+
+. egen gj_s1  = rowtotal(gj_diesel gj_petrol gj_coal2 gj_lpg), missing
+
+. * scope 2 = purchased electricity
+. generate co2_s2 = co2_scope2_s1
+
+. generate gj_s2  = gj_electricity
+
+. egen co2_total = rowtotal(co2_s1 co2_s2), missing
+
+. egen gj_total  = rowtotal(gj_s1 gj_s2), missing
+
+. 
+. generate co2_per_va  = co2_total / va      if va > 0
+
+. generate gj_per_va   = gj_total / va       if va > 0
+
+. generate gj_per_out  = gj_total / output   if output > 0
+
+. generate co2_pw      = co2_total / workers if workers > 0
+(28 missing values generated)
+
+. 
+. * ---- self generation --------------------------------------------------
+. generate has_owngen = (elec_owngen_kwh > 0) if !missing(elec_owngen_kwh)
+(2,125 missing values generated)
+
+. generate owngen_share = elec_owngen_kwh / (elec_owngen_kwh + elec_purchased_k
+> wh) ///
+>     if (elec_owngen_kwh + elec_purchased_kwh) > 0
+(3,362 missing values generated)
+
+. label define has_owngen 0 "No own generation" 1 "Own generation"
+
+. label values has_owngen has_owngen
+
+. 
+. * ---- energy outlier flag (clean) --------------------------------------
+. * a record is left out of the analysis (clean = 0) if any of its energy
+. * quantities is above 100x that year's 99th percentile. Nothing is deleted.
+. generate coal_kg_fix = fuel_coal_kg
+
+. replace  coal_kg_fix = fuel_coal_kg / 1000 if year == 2017
+(1,181 real changes made)
+
+. generate clean = 1
+
+. levelsof year, local(years)
+2010 2011 2012 2013 2014 2015 2017 2018 2019 2020 2021 2022
+
+. foreach q in fuel_diesel_ltr fuel_petrol_ltr fuel_kerosene_ltr coal_kg_fix fu
+> el_lpg_kg ///
+>              fuel_citygas_m3 fuel_othergas_m3 fuel_coalbriq_kg fuel_coke_kg /
+> //
+>              elec_pln_kwh elec_nonpln_kwh elec_owngen_kwh fuel_dieseloil_ltr 
+> ///
+>              fuel_fueloil_ltr fuel_natgas_mmbtu fuel_biodiesel_ltr fuel_bioma
+> ss_kg {
+  2.     foreach y of local years {
+  3.         quietly count if year == `y' & `q' > 0 & !missing(`q')
+  4.         if r(N) > 2 {
+  5.             quietly summarize `q' if year == `y' & `q' > 0, detail
+  6.             quietly replace clean = 0 if year == `y' & `q' > 100 * r(p99) 
+> & !missing(`q')
+  7.         }
+  8.     }
+  9. }
+
+. replace clean = 0 if workers == 0 & co2_s1 > 0 & !missing(co2_s1)
+(20 real changes made)
+
+. count if clean == 0
+  30
+
+. display as result "Outlier records (clean = 0): " r(N)
+Outlier records (clean = 0): 30
+
+. 
+. * ---- ln versions ------------------------------------------------------
+. foreach v in va output capital workers va_pw out_pw cap_pw ///
+>              co2_total gj_total co2_per_va gj_per_va {
+  2.     generate ln_`v' = ln(`v') if `v' > 0
+  3. }
+(14,164 missing values generated)
+(28 missing values generated)
+(28 missing values generated)
+(28 missing values generated)
+(14,177 missing values generated)
+(547 missing values generated)
+(547 missing values generated)
+(547 missing values generated)
+(547 missing values generated)
+
+. 
+. * ---- save -------------------------------------------------------------
+. keep  firm_id year source_row period prev_year next_year kbli2 kbli5 prov jav
+> a large ///
+>       importer exporter fdi va output capital workers va_pw out_pw cap_pw tfp
+> _* ///
+>       co2_s1 co2_s2 co2_total gj_s1 gj_s2 gj_total co2_per_va gj_per_va gj_pe
+> r_out ///
+>       co2_pw has_owngen owngen_share clean ln_*
+
+. order firm_id year source_row period prev_year next_year kbli2 kbli5 prov jav
+> a large ///
+>       importer exporter fdi
+
+. label variable period       "COVID period"
+
+. label variable prev_year    "Previous survey year (2017 -> 2015, no 2016 wave
+> )"
+
+. label variable next_year    "Next survey year (2015 -> 2017, no 2016 wave)"
+
+. label variable has_owngen   "1 = some own-generated electricity"
+
+. label variable owngen_share "Own-generated / (own + purchased) electricity, k
+> Wh"
+
+. label variable clean        "1 = not an energy outlier"
+
+. compress
+  variable period was float now byte
+  variable prev_year was float now int
+  variable next_year was float now int
+  variable kbli2 was float now byte
+  variable prov was float now byte
+  variable java was float now byte
+  variable large was float now byte
+  variable importer was float now byte
+  variable exporter was float now byte
+  variable fdi was float now byte
+  variable has_owngen was float now byte
+  variable clean was float now byte
+  (1,123,666 bytes saved)
+
+. save "$B20_DATA/b20_si.dta", replace
+(file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-20-covid/dat
+    > a/b20_si.dta not found)
+file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-20-covid/dat
+    > a/b20_si.dta saved
+
+. display as result "01a done: $B20_DATA/b20_si.dta (" _N " rows)"
+01a done: /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-20-covid
+> /data/b20_si.dta (33049 rows)
+
+. 
+end of do-file
+
+######## B1-20: 01b_firm_panel ########
+
+. /*==========================================================================
+>   Line 1 (part b): "What happened during covid:"
+>   Firm panel: one row per firm_id, with the survey years it is present in.
+>   Lines 4-7 and 9-16 use these links.
+>   Input : data/b20_si.dta (ALL rows: a firm flagged clean == 0 still existed
+>           that year, so presence is counted on every record)
+>   Output: data/b20_firm.dta  -- 1 row = 1 firm_id
+>             in2010 ... in2022   1 = firm present in that survey year
+>             first_year last_year n_years
+>             n_missing          survey years missing between first and last
+>                                (> 0 = the firm disappeared and came back)
+>   Output sheet:
+>     t01_firm_panel   firms by number of years present, and how many of them
+>                      have a gap (missing in a year between first and last)
+> 
+>   FIRM LINKS ARE FICTIONAL IN THE DEVELOPMENT DATA. Block 0 simulated the
+>   firm_id links: every firm is present in an unbroken run of survey years,
+>   so no firm ever has a gap (n_missing = 0 for all). That is why "disappear
+>   temporarily then return" (line 12) is empty in the development data. It is
+>   a property of the simulated links, not a finding. On the real BPS data the
+>   same code counts real gaps.
+>   NOTE: 2016 has no wave, so 2015 -> 2017 is NOT counted as a gap.
+> ==========================================================================*/
+. if "$B20" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B20_DATA/b20_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep firm_id year
+
+. isid firm_id year                     // 1 row per firm per year, or stop
+
+. 
+. * ---- presence in each survey year -------------------------------------
+. foreach y in 2010 2011 2012 2013 2014 2015 2017 2018 2019 2020 2021 2022 {
+  2.     generate in`y' = (year == `y')
+  3. }
+
+. generate first_year = year
+
+. generate last_year  = year
+
+. generate n_years    = 1
+
+. collapse (max) in2010-in2022 last_year (min) first_year (sum) n_years, by(fir
+> m_id)
+
+. 
+. * survey years between first and last (2016 is not a survey year)
+. generate span = last_year - first_year + 1
+
+. replace  span = span - 1 if first_year <= 2015 & last_year >= 2017
+(2,049 real changes made)
+
+. generate n_missing = span - n_years
+
+. drop span
+
+. label variable n_missing "Survey years missing between first and last year pr
+> esent"
+
+. compress
+  variable in2010 was float now byte
+  variable in2011 was float now byte
+  variable in2012 was float now byte
+  variable in2013 was float now byte
+  variable in2014 was float now byte
+  variable in2015 was float now byte
+  variable in2017 was float now byte
+  variable in2018 was float now byte
+  variable in2019 was float now byte
+  variable in2020 was float now byte
+  variable in2021 was float now byte
+  variable in2022 was float now byte
+  variable last_year was float now int
+  variable first_year was float now int
+  variable n_missing was float now byte
+  variable n_years was double now byte
+  (523,150 bytes saved)
+
+. save "$B20_DATA/b20_firm.dta", replace
+(file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-20-covid/dat
+    > a/b20_firm.dta not found)
+file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-20-covid/dat
+    > a/b20_firm.dta saved
+
+. 
+. count
+  10,463
+
+. display as result "Firms (firm_id): " r(N)
+Firms (firm_id): 10463
+
+. count if n_missing > 0
+  0
+
+. display as result "Firms with a gap (gone, then back): " r(N)
+Firms with a gap (gone, then back): 0
+
+. 
+. * ---- table: years present and gaps ------------------------------------
+. generate n_firms = 1
+
+. generate with_gap = (n_missing > 0)
+
+. collapse (sum) n_firms with_gap, by(n_years)
+
+. egen total = total(n_firms)
+
+. generate pct_firms = 100 * n_firms / total
+
+. drop total
+
+. order n_years n_firms pct_firms with_gap
+
+. list, clean noobs
+
+    n_years   n_firms   pct_fi~s   with_gap  
+          1      4994   47.73009          0  
+          2      1579   15.09127          0  
+          3       889   8.496607          0  
+          4       601   5.744051          0  
+          5       387   3.698748          0  
+          6       500   4.778744          0  
+          7       326   3.115741          0  
+          8       201   1.921055          0  
+          9       168   1.605658          0  
+         10       113   1.079996          0  
+         11       101   .9653063          0  
+         12       604   5.772723          0  
+
+. export excel using "$B20_XLSX", sheet("t01_firm_panel", replace) firstrow(var
+> iables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-20-covid/outp
+> ut/b1_20_tables.xlsx saved
+
+. 
+end of do-file
+
+######## B1-20: 02_before_after ########
+
+. /*==========================================================================
+>   Line 2: "Cek data before after covid… compared stats."
+>   Data  : SI 2017-2022 (data/b20_si.dta), clean == 1
+>   Periods: Pre 2017-19 | Covid 2020 | Recovery 2021-22
+>   Output sheets:
+>     t02_by_period   per period and per year: n firms, % FDI, % importer,
+>                     % exporter, % large, % Java, % own generation, and the
+>                     median of workers, VA, output, capital, VA per worker,
+>                     energy and CO2 per VA
+>     t02_stats       n mean sd p10-p90 min max by period (+ each year),
+>                     level and ln
+>                     (group = COVID period; column period "pool" = the whole C
+> OVID period)
+>   NOTE: these are all firms in each year (cross-sections), no firm links.
+>         All money values are nominal (and masked in the development data):
+>         read direction, not levels. FDI is missing in 2020 and the export
+>         flag in 2022 (see 01a).
+> ==========================================================================*/
+. if "$B20" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. 
+. * ---- A. shares and medians, by period and by year ----
+. use "$B20_DATA/b20_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1 & !missing(period)
+(14,509 observations deleted)
+
+. generate n_firms = 1
+
+. * one copy per period ("pool" of the period) and one per single year
+. expand 2, generate(copy)
+(18,540 observations created)
+
+. generate str16 when = string(year)
+
+. replace when = "period" if copy == 1
+(18,540 real changes made)
+
+. collapse (sum) n_firms (mean) pct_fdi = fdi pct_importer = importer pct_expor
+> ter = exporter ///
+>          pct_large = large pct_java = java pct_owngen = has_owngen ///
+>          (p50) med_workers = workers med_va = va med_output = output med_capi
+> tal = capital ///
+>          med_va_pw = va_pw med_gj_per_va = gj_per_va med_co2_per_va = co2_per
+> _va, by(period when)
+
+. foreach v in pct_fdi pct_importer pct_exporter pct_large pct_java pct_owngen 
+> {
+  2.     replace `v' = 100 * `v'
+  3. }
+(7 real changes made)
+(9 real changes made)
+(8 real changes made)
+(9 real changes made)
+(9 real changes made)
+(9 real changes made)
+
+. * period rows first, then its years
+. generate sortkey = cond(when == "period", 0, real(when))
+
+. sort period sortkey
+
+. drop sortkey
+
+. rename when year
+
+. list period year n_firms pct_fdi pct_exporter med_workers med_va, clean noobs
+
+              period     year   n_firms    pct_fdi   pct_expor~r   med_wo~s    
+> med_va  
+         Pre 2017-19   period      9374   8.854278   20.83241653         54   8
+> 597242  
+         Pre 2017-19     2017      3357   8.668454    19.7064991         52   7
+> 859263  
+         Pre 2017-19     2018      3010   8.438538   21.79487228         53   8
+> 557146  
+         Pre 2017-19     2019      3007   9.477885   20.90322495         60   9
+> 465325  
+          Covid 2020   period      2935          .   18.03833008         53   7
+> 501036  
+          Covid 2020     2020      2935          .   18.03833008         53   7
+> 501036  
+    Recovery 2021-22   period      6231   10.47297   16.97329521         54   7
+> 900526  
+    Recovery 2021-22     2021      3075   10.09407   16.97329521         55   8
+> 762052  
+    Recovery 2021-22     2022      3156   10.80482             .         52   7
+> 287910  
+
+. export excel using "$B20_XLSX", sheet("t02_by_period", replace) firstrow(vari
+> ables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-20-covid/outp
+> ut/b1_20_tables.xlsx saved
+
+. 
+. * ---- B. full distribution, level and ln ----
+. use "$B20_DATA/b20_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1 & !missing(period)
+(14,509 observations deleted)
+
+. rename period covid_period          // _sumstats writes its own "period" colu
+> mn
+
+. do "$B20/_sumstats.do" "workers va output capital va_pw cap_pw gj_per_va co2_
+> per_va ln_workers ln_va ln_output ln_capital ln_va_pw" "covid_period" "t02_st
+> ats"
+
+. /*==========================================================================
+>   _sumstats.do -- helper: descriptive statistics table, POOLED + BY YEAR
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B20/_sumstats.do" "va workers ln_va" "group" "t07_stats"
+> 
+>       argument 1 = list of variables
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b1_20_tables.xlsx (max 31 characters)
+> 
+>   Result: 1 row = variable x group x period (pool, 2010, 2011, ...)
+>           columns n mean sd p10 p25 p50 p75 p90 min max
+>   Rows with a missing group are not counted.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars grp sheet
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+
+. local first 1
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     local grp all
+. }
+
+. foreach v of local vars {
+  2.     foreach period in pool year {
+  3.         preserve
+  4.         keep `v' `grp' year
+  5.         keep if !missing(`v') & !missing(`grp')
+  6.         if _N > 0 {
+  7.             if "`period'" == "pool" replace year = 0
+  8.             collapse (count) n = `v' (mean) mean = `v' (sd) sd = `v' ///
+>                      (p10) p10 = `v' (p25) p25 = `v' (p50) p50 = `v' ///
+>                      (p75) p75 = `v' (p90) p90 = `v' (min) min = `v' (max) ma
+> x = `v', ///
+>                      by(`grp' year)
+  9.             generate str32 variable = "`v'"
+ 10.             if `first' == 0 append using `result'
+ 11.             save `result', replace
+ 12.             local first 0
+ 13.         }
+ 14.         restore
+ 15.     }
+ 16. }
+(0 observations deleted)
+(18,540 real changes made)
+(file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 not
+    found)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+(label period already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+(18,540 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label period already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label period already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+(18,540 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label period already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label period already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+(18,540 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label period already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label period already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(8 observations deleted)
+(18,532 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label period already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(8 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label period already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(8 observations deleted)
+(18,532 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label period already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(8 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label period already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+(18,540 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label period already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label period already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+(18,540 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label period already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label period already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(8 observations deleted)
+(18,532 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label period already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(8 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label period already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+(18,540 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label period already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label period already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+(18,540 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label period already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label period already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(8,920 observations deleted)
+(9,620 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label period already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(8,920 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label period already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(8 observations deleted)
+(18,532 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label period already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(8 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label period already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. 
+. use `result', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * the group is written as text using its value label (if it has one)
+. capture decode `grp', generate(group)
+
+. if _rc generate group = string(`grp')
+
+. * keep the variables in the order they were listed
+. generate variable_order = .
+(117 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(9 real changes made)
+(9 real changes made)
+(9 real changes made)
+(9 real changes made)
+(9 real changes made)
+(9 real changes made)
+(9 real changes made)
+(9 real changes made)
+(9 real changes made)
+(9 real changes made)
+(9 real changes made)
+(9 real changes made)
+(9 real changes made)
+
+. sort variable_order `grp' year
+
+. keep variable group period n mean sd p10 p25 p50 p75 p90 min max
+
+. export excel using "$B20_XLSX", sheet("`sheet'", replace) firstrow(variables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-20-covid/outp
+> ut/b1_20_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t02_stats (117 rows)
+
+. use `original', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+end of do-file
+
+. 
+end of do-file
+
+######## B1-20: 03_firms_by_sector ########
+
+. /*==========================================================================
+>   Line 3: "Number of firms by sectors"
+>   Data  : SI 2010-2022 (data/b20_si.dta), ALL rows (a count of firms, so the
+>           energy-outlier flag is not applied; clean == 0 firms still existed)
+>   Output sheets:
+>     t03_by_sector_year   n firms per KBLI 2-digit x year, and the sector's
+>                          share of the year's firms (%). period "pool" = all
+>                          firm-years 2010-2022 added up
+>     t03_covid_change     per KBLI 2-digit: average firms per year in
+>                          2017-19, firms in 2020, average per year in 2021-22,
+>                          and the % change vs 2017-19
+>   NOTE: this is the number of firms in the survey (cross-sections), no firm
+>         links. A change can be a sample change, not firms closing.
+> ==========================================================================*/
+. if "$B20" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. 
+. * ---- A. firms per sector and year ----
+. use "$B20_DATA/b20_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. generate n_firms = 1
+
+. expand 2, generate(copy)              // copy of every row with year = 0 for 
+> "pool"
+(33,049 observations created)
+
+. replace year = 0 if copy == 1
+(33,049 real changes made)
+
+. collapse (sum) n_firms, by(kbli2 year)
+
+. bysort year: egen year_total = total(n_firms)
+
+. generate pct_of_year = 100 * n_firms / year_total
+
+. drop year_total
+
+. generate period = cond(year == 0, "pool", string(year))
+
+. sort kbli2 year
+
+. order kbli2 period n_firms pct_of_year
+
+. drop year
+
+. export excel using "$B20_XLSX", sheet("t03_by_sector_year", replace) firstrow
+> (variables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-20-covid/outp
+> ut/b1_20_tables.xlsx saved
+
+. 
+. * ---- B. covid change per sector ----
+. use "$B20_DATA/b20_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if !missing(period)
+(14,483 observations deleted)
+
+. generate n_firms = 1
+
+. collapse (sum) n_firms, by(kbli2 period)
+
+. reshape wide n_firms, i(kbli2) j(period)
+(j = 1 2 3)
+
+Data                               Long   ->   Wide
+-----------------------------------------------------------------------------
+Number of observations               72   ->   24          
+Number of variables                   3   ->   4           
+j variable (3 values)            period   ->   (dropped)
+xij variables:
+                                n_firms   ->   n_firms1 n_firms2 n_firms3
+-----------------------------------------------------------------------------
+
+. * a sector with no firm in a period has 0 firms there
+. foreach p in 1 2 3 {
+  2.     replace n_firms`p' = 0 if missing(n_firms`p')
+  3. }
+(0 real changes made)
+(0 real changes made)
+(0 real changes made)
+
+. generate firms_pre_avg   = n_firms1 / 3       // 2017, 2018, 2019
+
+. generate firms_2020      = n_firms2
+
+. generate firms_rec_avg   = n_firms3 / 2       // 2021, 2022
+
+. generate pct_chg_2020    = 100 * (firms_2020 / firms_pre_avg - 1)    if firms
+> _pre_avg > 0
+
+. generate pct_chg_rec     = 100 * (firms_rec_avg / firms_pre_avg - 1) if firms
+> _pre_avg > 0
+
+. drop n_firms1 n_firms2 n_firms3
+
+. * add a total row (kbli2 = 0 = all sectors)
+. set obs `=_N + 1'
+Number of observations (_N) was 24, now 25.
+
+. replace kbli2 = 0 in L
+(1 real change made)
+
+. foreach v in firms_pre_avg firms_2020 firms_rec_avg {
+  2.     quietly summarize `v'
+  3.     replace `v' = r(sum) in L
+  4. }
+(1 real change made)
+(1 real change made)
+(1 real change made)
+
+. replace pct_chg_2020 = 100 * (firms_2020 / firms_pre_avg - 1)    in L
+(1 real change made)
+
+. replace pct_chg_rec  = 100 * (firms_rec_avg / firms_pre_avg - 1) in L
+(1 real change made)
+
+. label define kbli2_all 0 "All sectors"
+
+. label values kbli2 kbli2_all
+
+. sort kbli2
+
+. list, clean noobs
+
+          kbli2   fi~e_avg   fir~2020   fi~c_avg   pct_~2020   pct_chg~c  
+    All sectors       3125       2936     3127.5      -6.048         .08  
+             10        702        628      747.5   -10.54131    6.481482  
+             11   63.33333         69         67    8.947371    5.789476  
+             12         72         64       71.5   -11.11111   -.6944444  
+             13   265.6667        226        220   -14.93099   -17.18946  
+             14   262.3333        237      209.5   -9.656928   -20.13977  
+             15         97         93         79   -4.123711    -18.5567  
+             16        120        130      114.5    8.333333   -4.583333  
+             17   71.66666         74         90    3.255818     25.5814  
+             18   98.66666         82       98.5   -16.89189   -.1689163  
+             19         14          9       18.5   -35.71429    32.14286  
+             20        146        169        180    15.75342    23.28767  
+             21         32         47       34.5      46.875      7.8125  
+             22   254.6667        257      275.5    .9162284    8.180626  
+             23   175.3333        173      175.5   -1.330796    .0950599  
+             24   53.33333         48         62   -9.999998       16.25  
+             25   150.6667        148      160.5   -1.769915    6.526545  
+             26         43         30         34   -30.23256   -20.93023  
+             27   49.66667         55       60.5    10.73825    21.81208  
+             28   65.66666         65       77.5   -1.015225    18.02031  
+             29   69.33334         63         69   -9.134619   -.4807729  
+             30         53         48       45.5   -9.433962   -14.15094  
+             31        153        126        128   -17.64706   -16.33987  
+             32   83.66666         70         80   -16.33466   -4.382467  
+             33         29         25         29    -13.7931           0  
+
+. export excel using "$B20_XLSX", sheet("t03_covid_change", replace) firstrow(v
+> ariables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-20-covid/outp
+> ut/b1_20_tables.xlsx saved
+
+. 
+end of do-file
+
+######## B1-20: 04-06_entry_exit_survival ########
+
+. /*==========================================================================
+>   Lines 4-6: "Siapa yg baru??" / "Siapa yg mati??" / "Siapa yg bertahan?"
+>   Data  : SI 2010-2022 (data/b20_si.dta), ALL rows (presence is not a
+>           measurement: a firm with clean == 0 still existed that year)
+> 
+>   Definitions, for a firm present in survey year Y (on firm_id x year):
+>     NEW (baru)        not present in the previous survey year
+>                       (of which RETURNING = was present in some earlier year)
+>     SURVIVOR          also present in the previous survey year
+>       (bertahan)      -> every firm in Y is either NEW or SURVIVOR
+>     EXIT (mati)       never present again in any later survey year
+>                       (Y = 2019 exits = gone from 2020 onward: the covid exit
+> s)
+>     TEMPORARY EXIT    absent in the next survey year but back later
+>   "Previous / next survey year": 2016 has no wave, so 2015 and 2017 are
+>   treated as consecutive.
+>   Window edges: NEW/SURVIVOR is not defined in 2010 (no earlier year) and
+>   EXIT is not defined in 2022 (no later year); those cells are left empty.
+> 
+>   Output: data/b20_flows.dta  firm_id year status exit_status (used by line 7
+> )
+>   Output sheet:
+>     t04_flows_by_year   per year: n firms, n and % new (of which returning),
+>                         survivor, exit, temporary exit. "pool" = 2011-2021
+>                         firm-years added up
+> 
+>   FIRM LINKS ARE FICTIONAL IN THE DEVELOPMENT DATA: these counts only mean
+>   something on the real BPS data. In the development data no firm ever
+>   comes back after a gap, so "returning" and "temporary exit" are 0 (see 01b)
+> .
+> ==========================================================================*/
+. if "$B20" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B20_DATA/b20_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep firm_id year prev_year next_year
+
+. sort firm_id year
+
+. 
+. * year this firm was seen before / after this one (missing = never)
+. by firm_id: generate seen_before = year[_n-1]
+(10,463 missing values generated)
+
+. by firm_id: generate seen_after  = year[_n+1]
+(10,463 missing values generated)
+
+. 
+. * ---- new vs survivor --------------------------------------------------
+. generate status = .
+(33,049 missing values generated)
+
+. replace  status = 1 if year > 2010 & seen_before != prev_year & missing(seen_
+> before)
+(8,129 real changes made)
+
+. replace  status = 2 if year > 2010 & seen_before != prev_year & !missing(seen
+> _before)
+(0 real changes made)
+
+. replace  status = 3 if year > 2010 & seen_before == prev_year
+(22,586 real changes made)
+
+. label define status 1 "New (first time seen)" 2 "New (returning after a gap)"
+>  3 "Survivor (also in previous year)"
+
+. label values status status
+
+. 
+. * ---- exit -------------------------------------------------------------
+. generate exit_status = .
+(33,049 missing values generated)
+
+. replace  exit_status = 1 if year < 2022 & missing(seen_after)
+(7,286 real changes made)
+
+. replace  exit_status = 2 if year < 2022 & !missing(seen_after) & seen_after !
+> = next_year
+(0 real changes made)
+
+. replace  exit_status = 3 if year < 2022 & seen_after == next_year
+(22,586 real changes made)
+
+. label define exit_status 1 "Exit (never seen again)" 2 "Temporary exit (back 
+> later)" 3 "Stays (in next year)"
+
+. label values exit_status exit_status
+
+. 
+. keep firm_id year status exit_status
+
+. compress
+  variable status was float now byte
+  variable exit_status was float now byte
+  (198,294 bytes saved)
+
+. save "$B20_DATA/b20_flows.dta", replace
+(file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-20-covid/dat
+    > a/b20_flows.dta not found)
+file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-20-covid/dat
+    > a/b20_flows.dta saved
+
+. 
+. * ---- counts by year ---------------------------------------------------
+. generate n_firms   = 1
+
+. generate new       = inlist(status, 1, 2) if !missing(status)
+(2,334 missing values generated)
+
+. generate returning = (status == 2)        if !missing(status)
+(2,334 missing values generated)
+
+. generate survivor  = (status == 3)        if !missing(status)
+(2,334 missing values generated)
+
+. generate exit      = (exit_status == 1)   if !missing(exit_status)
+(3,177 missing values generated)
+
+. generate temp_exit = (exit_status == 2)   if !missing(exit_status)
+(3,177 missing values generated)
+
+. foreach v in new returning survivor exit temp_exit {
+  2.     generate pct_`v' = `v'
+  3. }
+(2,334 missing values generated)
+(2,334 missing values generated)
+(2,334 missing values generated)
+(3,177 missing values generated)
+(3,177 missing values generated)
+
+. expand 2, generate(copy)              // copy with year = 0 for "pool"
+(33,049 observations created)
+
+. replace year = 0 if copy == 1
+(33,049 real changes made)
+
+. * the pool only uses 2011-2021, where both new and exit are defined
+. drop if copy == 1 & (missing(status) | missing(exit_status))
+(5,511 observations deleted)
+
+. collapse (sum) n_firms new returning survivor exit temp_exit ///
+>          (mean) pct_new pct_returning pct_survivor pct_exit pct_temp_exit, by
+> (year)
+
+. foreach v in new returning survivor exit temp_exit {
+  2.     replace pct_`v' = 100 * pct_`v'
+  3.     * not defined at the window edges
+.     replace `v' = . if missing(pct_`v')
+  4. }
+(12 real changes made)
+(1 real change made, 1 to missing)
+(0 real changes made)
+(1 real change made, 1 to missing)
+(12 real changes made)
+(1 real change made, 1 to missing)
+(12 real changes made)
+(1 real change made, 1 to missing)
+(0 real changes made)
+(1 real change made, 1 to missing)
+
+. generate period = cond(year == 0, "pool", string(year))
+
+. sort year
+
+. order period n_firms new pct_new returning survivor pct_survivor exit pct_exi
+> t temp_exit pct_temp_exit
+
+. drop year pct_returning
+
+. list, clean noobs
+
+    period   n_firms    new    pct_new   return~g   survivor   pct_su~r   exit 
+>   pct_exit   temp_e~t   pct_te~t  
+      pool     27538   7317   26.57055          0      20221   73.42944   6735 
+>   24.45711          0          0  
+      2010      2334      .          .          .          .          .    551 
+>   23.60754          0          0  
+      2011      2337    554   23.70561          0       1783    76.2944    541 
+>   23.14934          0          0  
+      2012      2359    563   23.86604          0       1796   76.13396    574 
+>   24.33234          0          0  
+      2013      2369    584   24.65175          0       1785   75.34824    579 
+>   24.44069          0          0  
+      2014      2452    662   26.99837          0       1790   73.00163    562 
+>   22.92006          0          0  
+      2015      2632    742   28.19149          0       1890   71.80851    583 
+>   22.15046          0          0  
+      2017      3357   1308   38.96336          0       2049   61.03664    983 
+>    29.2821          0          0  
+      2018      3011    637   21.15576          0       2374   78.84424    745 
+>   24.74261          0          0  
+      2019      3007    741    24.6425          0       2266    75.3575    808 
+>   26.87064          0          0  
+      2020      2936    737   25.10218          0       2199   74.89782    647 
+>   22.03679          0          0  
+      2021      3078    789   25.63353          0       2289   74.36647    713 
+>   23.16439          0          0  
+      2022      3177    812    25.5587          0       2365    74.4413      . 
+>          .          .          .  
+
+. export excel using "$B20_XLSX", sheet("t04_flows_by_year", replace) firstrow(
+> variables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-20-covid/outp
+> ut/b1_20_tables.xlsx saved
+
+. 
+end of do-file
+
+######## B1-20: 07_characteristics ########
+
+. /*==========================================================================
+>   Line 7: "Cek karakteristiknya: fdi, import, export, medium vs large,
+>            Lokasi, all firms characteristics"
+>   Data  : data/b20_si.dta (clean == 1) + data/b20_flows.dta (from 04-06)
+>   Groups (definitions in 04-06), measured in the firm's own year Y:
+>     New        not in the previous survey year (incl. returning)
+>     Survivor   also in the previous survey year
+>     Exit       never seen again after Y (measured in its last year)
+>     All firms  everyone in Y (for comparison)
+>   A firm in Y is New or Survivor, and can also be an Exit, so the groups
+>   overlap: compare each group with "All firms", do not add them up.
+>   Output sheets:
+>     t07_profile    by group (firm_group) x period (pool + by year): n firms, 
+> % FDI,
+>                    % importer, % exporter, % large, % Java, % own generation,
+>                    median workers, VA per worker, TFP (LP), energy per VA
+>     t07_province   share of each group's firms by province, pool + by year
+>     t07_stats      n mean sd p10-p90 min max of the firm characteristics
+>                    (level and ln) by group, pool + by year
+>   Years: New/Survivor 2011-2022, Exit 2010-2021 (window edges, see 04-06).
+>   FIRM LINKS ARE FICTIONAL IN THE DEVELOPMENT DATA: the group labels only
+>   mean something on the real BPS data. FDI is missing in 2020 and the
+>   export flag in 2022 (see 01a). Values are nominal.
+> ==========================================================================*/
+. if "$B20" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. 
+. * ---- build the stacked group data (1 row = firm x year x group) ----
+. use "$B20_DATA/b20_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1
+(30 observations deleted)
+
+. merge 1:1 firm_id year using "$B20_DATA/b20_flows.dta", nogenerate keep(match
+> )
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                            33,019  
+    -----------------------------------------
+
+. tempfile base stack
+
+. save `base'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. 
+. generate firm_group = 1 if inlist(status, 1, 2)
+(24,911 missing values generated)
+
+. replace  firm_group = 2 if status == 3
+(22,577 real changes made)
+
+. keep if !missing(firm_group)
+(2,334 observations deleted)
+
+. save `stack'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+
+. 
+. use `base', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if exit_status == 1
+(25,737 observations deleted)
+
+. generate firm_group = 3
+
+. append using `stack'
+(label status already defined)
+(label exit_status already defined)
+(label java already defined)
+(label period already defined)
+(label large already defined)
+(label importer already defined)
+(label exporter already defined)
+(label fdi already defined)
+(label has_owngen already defined)
+
+. save `stack', replace
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+
+. 
+. use `base', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. generate firm_group = 4
+
+. append using `stack'
+(label has_owngen already defined)
+(label fdi already defined)
+(label exporter already defined)
+(label importer already defined)
+(label large already defined)
+(label period already defined)
+(label java already defined)
+(label exit_status already defined)
+(label status already defined)
+
+. label define firm_group 1 "New" 2 "Survivor" 3 "Exit" 4 "All firms"
+
+. label values firm_group firm_group
+
+. save `stack', replace
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+
+. 
+. * ---- A. profile ----
+. generate n_firms = 1
+
+. expand 2, generate(copy)              // copy of every row with year = 0 for 
+> "pool"
+(70,986 observations created)
+
+. replace year = 0 if copy == 1
+(70,986 real changes made)
+
+. collapse (sum) n_firms (mean) pct_fdi = fdi pct_importer = importer pct_expor
+> ter = exporter ///
+>          pct_large = large pct_java = java pct_owngen = has_owngen ///
+>          (p50) med_workers = workers med_va_pw = va_pw med_tfp_lp = tfp_lp //
+> /
+>          med_gj_per_va = gj_per_va, by(firm_group year)
+
+. foreach v in pct_fdi pct_importer pct_exporter pct_large pct_java pct_owngen 
+> {
+  2.     replace `v' = 100 * `v'
+  3. }
+(45 real changes made)
+(49 real changes made)
+(46 real changes made)
+(49 real changes made)
+(49 real changes made)
+(49 real changes made)
+
+. generate period = cond(year == 0, "pool", string(year))
+
+. sort firm_group year
+
+. order firm_group period n_firms
+
+. drop year
+
+. list if period == "pool", clean noobs
+
+    firm_gr~p   period   n_firms    pct_fdi   pct_impor~r   pct_expor~r       p
+> ct_large      pct_java         pct_owngen   med_wo~s   med_va~w   med_tf~p   
+> med_gj~a  
+          New     pool      8108   13.00233   36.13714981   23.64002609   36.77
+> 84919739   64.72619629   33.6707496643066         62   110171.6          .   
+>  .000097  
+     Survivor     pool     22577   8.080207   39.27005386   19.30495071   29.45
+> 03250122    87.8504715   32.6683769226074         47   84037.48   12.13715   
+> .0000941  
+         Exit     pool      7282   13.37289   34.41362381   23.90019798   37.37
+> 98408508   64.33672333   32.5933532714844         61   99213.11   12.52034   
+> .0000998  
+    All firms     pool     33019   9.354113   36.93630981   20.17609406    31.1
+> 27532959   81.91950226   31.6869506835938         50   84219.53   12.13715   
+> .0000996  
+
+. export excel using "$B20_XLSX", sheet("t07_profile", replace) firstrow(variab
+> les)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-20-covid/outp
+> ut/b1_20_tables.xlsx saved
+
+. 
+. * ---- B. location: province mix of each group ----
+. use `stack', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if !missing(prov)
+(0 observations deleted)
+
+. generate n_firms = 1
+
+. expand 2, generate(copy)
+(70,986 observations created)
+
+. replace year = 0 if copy == 1
+(70,986 real changes made)
+
+. collapse (sum) n_firms, by(firm_group year prov)
+
+. bysort firm_group year: egen group_total = total(n_firms)
+
+. generate pct_of_group = 100 * n_firms / group_total
+
+. drop group_total
+
+. generate period = cond(year == 0, "pool", string(year))
+
+. sort firm_group year prov
+
+. order firm_group period prov n_firms pct_of_group
+
+. drop year
+
+. export excel using "$B20_XLSX", sheet("t07_province", replace) firstrow(varia
+> bles)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-20-covid/outp
+> ut/b1_20_tables.xlsx saved
+
+. 
+. * ---- C. all firm characteristics: full distribution ----
+. use `stack', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. do "$B20/_sumstats.do" "workers va output capital va_pw cap_pw tfp_op tfp_lp 
+> tfp_acf tfp_wrdg gj_per_va co2_per_va owngen_share ln_workers ln_va ln_output
+>  ln_capital ln_va_pw" "firm_group" "t07_stats"
+
+. /*==========================================================================
+>   _sumstats.do -- helper: descriptive statistics table, POOLED + BY YEAR
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B20/_sumstats.do" "va workers ln_va" "group" "t07_stats"
+> 
+>       argument 1 = list of variables
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b1_20_tables.xlsx (max 31 characters)
+> 
+>   Result: 1 row = variable x group x period (pool, 2010, 2011, ...)
+>           columns n mean sd p10 p25 p50 p75 p90 min max
+>   Rows with a missing group are not counted.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars grp sheet
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000004 saved
+    as .dta format
+
+. local first 1
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     local grp all
+. }
+
+. foreach v of local vars {
+  2.     foreach period in pool year {
+  3.         preserve
+  4.         keep `v' `grp' year
+  5.         keep if !missing(`v') & !missing(`grp')
+  6.         if _N > 0 {
+  7.             if "`period'" == "pool" replace year = 0
+  8.             collapse (count) n = `v' (mean) mean = `v' (sd) sd = `v' ///
+>                      (p10) p10 = `v' (p25) p25 = `v' (p50) p50 = `v' ///
+>                      (p75) p75 = `v' (p90) p90 = `v' (min) min = `v' (max) ma
+> x = `v', ///
+>                      by(`grp' year)
+  9.             generate str32 variable = "`v'"
+ 10.             if `first' == 0 append using `result'
+ 11.             save `result', replace
+ 12.             local first 0
+ 13.         }
+ 14.         restore
+ 15.     }
+ 16. }
+(0 observations deleted)
+(70,986 real changes made)
+(file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 not
+    found)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(label firm_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(70,986 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label firm_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label firm_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(70,986 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label firm_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label firm_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(2,391 observations deleted)
+(68,595 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label firm_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(2,391 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label firm_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(16 observations deleted)
+(70,970 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label firm_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(16 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label firm_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(2,407 observations deleted)
+(68,579 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label firm_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(2,407 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label firm_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(69,576 observations deleted)
+(1,410 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label firm_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(69,576 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label firm_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(49,231 observations deleted)
+(21,755 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label firm_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(49,231 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label firm_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(49,231 observations deleted)
+(21,755 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label firm_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(49,231 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label firm_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(49,231 observations deleted)
+(21,755 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label firm_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(49,231 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label firm_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(70,986 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label firm_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label firm_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(70,986 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label firm_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label firm_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(7,526 observations deleted)
+(63,460 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label firm_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(7,526 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label firm_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(16 observations deleted)
+(70,970 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label firm_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(16 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label firm_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(70,986 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label firm_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label firm_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(70,986 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label firm_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(0 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label firm_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(30,588 observations deleted)
+(40,398 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label firm_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(30,588 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label firm_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(16 observations deleted)
+(70,970 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label firm_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(16 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label firm_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+
+. 
+. use `result', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * the group is written as text using its value label (if it has one)
+. capture decode `grp', generate(group)
+
+. if _rc generate group = string(`grp')
+
+. * keep the variables in the order they were listed
+. generate variable_order = .
+(811 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(49 real changes made)
+(49 real changes made)
+(49 real changes made)
+(49 real changes made)
+(49 real changes made)
+(49 real changes made)
+(29 real changes made)
+(32 real changes made)
+(32 real changes made)
+(32 real changes made)
+(49 real changes made)
+(49 real changes made)
+(49 real changes made)
+(49 real changes made)
+(49 real changes made)
+(49 real changes made)
+(49 real changes made)
+(49 real changes made)
+
+. sort variable_order `grp' year
+
+. keep variable group period n mean sd p10 p25 p50 p75 p90 min max
+
+. export excel using "$B20_XLSX", sheet("`sheet'", replace) firstrow(variables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-20-covid/outp
+> ut/b1_20_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t07_stats (811 rows)
+
+. use `original', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+end of do-file
+
+. 
+end of do-file
+
+######## B1-20: 09-14_recovery_trajectories ########
+
+. /*==========================================================================
+>   Lines 9-14: "Resilience and recovery trajectories:" / "Classify firms menja
+> di:"
+>               "Disappear in 2020 and never return" / "Disappear temporarily t
+> hen return"
+>               "Survive but shrink" / "Survive and grow"
+>   Data  : data/b20_firm.dta (presence, ALL rows) + data/b20_si.dta (size)
+>   Cohort: every firm_id present in 2019 (the last year before covid).
+> 
+>   Classification (every cohort firm gets exactly one):
+>     1 Disappear in 2020, never return  in 2019; absent in 2020, 2021 and 2022
+>     2 Disappear temporarily, return    in 2019; absent in 2020; back in 2021 
+> or 2022
+>     3 Survive but shrink               in 2019, 2020 and 2022; workers 2022 <
+>   2019
+>     4 Survive and grow                 in 2019, 2020 and 2022; workers 2022 >
+> = 2019
+>     5 Survived 2020, gone by 2022      in 2019 and 2020; absent in 2022
+>     6 Survived, size not comparable    in 2019, 2020 and 2022; workers missin
+> g
+>                                        in 2019 or 2022
+>   Groups 5 and 6 are not in the to-do list but are needed so that every
+>   cohort firm is counted.
+>   Size measure: workers (main). The same split on value added and on gross
+>   output (nominal) is in t09_traj_by_measure.
+> 
+>   Output: data/b20_traj.dta  firm_id traj traj_va traj_output (used by 15, 16
+> )
+>   Output sheets:
+>     t09_trajectories      n firms and % of the 2019 cohort per group, with
+>                           median workers 2019 and 2022
+>     t09_traj_by_measure   the same split with workers / VA / output as size
+>     t09_cohort_presence   % of the 2019 cohort present in 2020, 2021, 2022
+> 
+>   FIRM LINKS ARE FICTIONAL IN THE DEVELOPMENT DATA: these groups only mean
+>   something on the real BPS data. Group 2 is EMPTY in the development data
+>   because block 0 simulated every firm as present in an unbroken run of
+>   years (no gaps, see 01b). It is not a finding; the real data will fill it.
+> ==========================================================================*/
+. if "$B20" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. 
+. * ---- size in 2019 and 2022, one row per firm ----
+. use "$B20_DATA/b20_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if inlist(year, 2019, 2022)
+(26,865 observations deleted)
+
+. keep firm_id year workers va output
+
+. rename (workers va output) (workers_ va_ output_)
+
+. reshape wide workers_ va_ output_, i(firm_id) j(year)
+(j = 2019 2022)
+
+Data                               Long   ->   Wide
+-----------------------------------------------------------------------------
+Number of observations            6,184   ->   4,506       
+Number of variables                   5   ->   7           
+j variable (2 values)              year   ->   (dropped)
+xij variables:
+                               workers_   ->   workers_2019 workers_2022
+                                    va_   ->   va_2019 va_2022
+                                output_   ->   output_2019 output_2022
+-----------------------------------------------------------------------------
+
+. tempfile size
+
+. save `size'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. 
+. * ---- the 2019 cohort ----
+. use "$B20_DATA/b20_firm.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if in2019 == 1
+(7,456 observations deleted)
+
+. merge 1:1 firm_id using `size', nogenerate keep(master match)
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                             3,007  
+    -----------------------------------------
+
+. 
+. * loop: workers (main), va, output as the size measure
+. foreach m in workers va output {
+  2.     generate traj_`m' = .
+  3.     replace traj_`m' = 1 if in2020 == 0 & in2021 == 0 & in2022 == 0
+  4.     replace traj_`m' = 2 if in2020 == 0 & (in2021 == 1 | in2022 == 1)
+  5.     replace traj_`m' = 3 if in2020 == 1 & in2022 == 1 & `m'_2022 <  `m'_20
+> 19 & !missing(`m'_2019, `m'_2022)
+  6.     replace traj_`m' = 4 if in2020 == 1 & in2022 == 1 & `m'_2022 >= `m'_20
+> 19 & !missing(`m'_2019, `m'_2022)
+  7.     replace traj_`m' = 5 if in2020 == 1 & in2022 == 0
+  8.     replace traj_`m' = 6 if in2020 == 1 & in2022 == 1 & missing(`m'_2019, 
+> `m'_2022)
+  9.     assert !missing(traj_`m')         // every cohort firm is in one group
+ 10. }
+(3,007 missing values generated)
+(808 real changes made)
+(0 real changes made)
+(1,034 real changes made)
+(644 real changes made)
+(521 real changes made)
+(0 real changes made)
+(3,007 missing values generated)
+(808 real changes made)
+(0 real changes made)
+(976 real changes made)
+(702 real changes made)
+(521 real changes made)
+(0 real changes made)
+(3,007 missing values generated)
+(808 real changes made)
+(0 real changes made)
+(1,040 real changes made)
+(638 real changes made)
+(521 real changes made)
+(0 real changes made)
+
+. rename traj_workers traj
+
+. label define traj 1 "Disappear in 2020, never return" 2 "Disappear temporaril
+> y, return" ///
+>                   3 "Survive but shrink" 4 "Survive and grow" ///
+>                   5 "Survived 2020, gone by 2022" 6 "Survived, size not compa
+> rable"
+
+. label values traj traj_va traj_output traj
+
+. label variable traj "Covid trajectory of the 2019 cohort (size = workers)"
+
+. compress
+  variable workers_2022 was long now int
+  variable traj was float now byte
+  variable traj_va was float now byte
+  variable traj_output was float now byte
+  (33,077 bytes saved)
+
+. save "$B20_DATA/b20_traj.dta", replace
+(file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-20-covid/dat
+    > a/b20_traj.dta not found)
+file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-20-covid/dat
+    > a/b20_traj.dta saved
+
+. 
+. * ---- A. counts per group ----
+. * a group with no firms still gets a row (0), so the table always has all 6
+. generate n_firms = 1
+
+. collapse (sum) n_firms (p50) med_workers_2019 = workers_2019 med_workers_2022
+>  = workers_2022, by(traj)
+
+. tempfile counts
+
+. save `counts'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+
+. clear
+
+. set obs 6
+Number of observations (_N) was 0, now 6.
+
+. generate traj = _n
+
+. label values traj traj
+
+. merge 1:1 traj using `counts', nogenerate
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             2
+        from master                         2  
+        from using                          0  
+
+    Matched                                 4  
+    -----------------------------------------
+
+. replace n_firms = 0 if missing(n_firms)
+(2 real changes made)
+
+. egen cohort = total(n_firms)
+
+. generate pct_of_cohort = 100 * n_firms / cohort
+
+. drop cohort
+
+. order traj n_firms pct_of_cohort
+
+. list, clean noobs
+
+         traj   n_firms   pct_of~t   med~2019   med~2022  
+    Disappear       808   26.87064         65          .  
+    Disappear         0          0          .          .  
+    Survive b      1034   34.38643         60       34.5  
+    Survive a       644   21.41669       48.5       80.5  
+     Survived       521   17.32624         61          .  
+    Survived,         0          0          .          .  
+
+. export excel using "$B20_XLSX", sheet("t09_trajectories", replace) firstrow(v
+> ariables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-20-covid/outp
+> ut/b1_20_tables.xlsx saved
+
+. 
+. * ---- B. the same split with VA and output as the size measure ----
+. use "$B20_DATA/b20_traj.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. generate measure = "workers"
+
+. generate group = traj
+
+. tempfile long
+
+. save `long'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+
+. foreach m in va output {
+  2.     use "$B20_DATA/b20_traj.dta", clear
+  3.     generate measure = "`m'"
+  4.     generate group = traj_`m'
+  5.     append using `long'
+  6.     save `long', replace
+  7. }
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(variable measure was str2, now str7 to accommodate using data's values)
+(label traj already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(variable measure was str6, now str7 to accommodate using data's values)
+(label traj already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+
+. label values group traj
+
+. generate n_firms = 1
+
+. collapse (sum) n_firms, by(measure group)
+
+. bysort measure: egen cohort = total(n_firms)
+
+. generate pct_of_cohort = 100 * n_firms / cohort
+
+. drop cohort
+
+. sort measure group
+
+. list, clean noobs sepby(measure)
+
+    measure                             group   n_firms   pct_of~t  
+     output   Disappear in 2020, never return       808   26.87064  
+     output                Survive but shrink      1040   34.58596  
+     output                  Survive and grow       638   21.21716  
+     output       Survived 2020, gone by 2022       521   17.32624  
+         va   Disappear in 2020, never return       808   26.87064  
+         va                Survive but shrink       976    32.4576  
+         va                  Survive and grow       702   23.34553  
+         va       Survived 2020, gone by 2022       521   17.32624  
+    workers   Disappear in 2020, never return       808   26.87064  
+    workers                Survive but shrink      1034   34.38643  
+    workers                  Survive and grow       644   21.41669  
+    workers       Survived 2020, gone by 2022       521   17.32624  
+
+. export excel using "$B20_XLSX", sheet("t09_traj_by_measure", replace) firstro
+> w(variables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-20-covid/outp
+> ut/b1_20_tables.xlsx saved
+
+. 
+. * ---- C. how much of the 2019 cohort is still there ----
+. use "$B20_DATA/b20_traj.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. generate cohort_2019 = 1
+
+. collapse (sum) cohort_2019 in2020 in2021 in2022
+
+. foreach y in 2020 2021 2022 {
+  2.     generate pct_in`y' = 100 * in`y' / cohort_2019
+  3. }
+
+. list, clean noobs
+
+    coh~2019   in2020   in2021   in2022   pct~2020   pct~2021   pct~2022  
+        3007     2199     1912     1678   73.12936   63.58497   55.80313  
+
+. export excel using "$B20_XLSX", sheet("t09_cohort_presence", replace) firstro
+> w(variables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-20-covid/outp
+> ut/b1_20_tables.xlsx saved
+
+. 
+end of do-file
+
+######## B1-20: 15_pre_covid_characteristics ########
+
+. /*==========================================================================
+>   Line 15: "Compare pre covid characteristics: TFP, export import, fdi size,
+>             energy intensity, self generation, location"
+>   Data  : each 2019 cohort firm's 2019 record (data/b20_si.dta, clean == 1)
+>           + its trajectory (data/b20_traj.dta, from 09-14)
+>   Output sheets:
+>     t15_profile    per trajectory: n firms, % exporter, % importer, % FDI,
+>                    % large, % Java, % own generation, medians of workers, VA,
+>                    VA per worker, TFP (op, lp, acf, wrdg), energy per VA and
+>                    per output, CO2 per VA, own-generation share
+>     t15_stats      n mean sd p10-p90 min max of the same (level and ln) per
+>                    trajectory (only 2019, so "pool" = 2019)
+>     t15_province   share of each trajectory's firms by province
+>   Self generation: has_owngen = some own-generated electricity;
+>                    owngen_share = own / (own + purchased) kWh.
+>   FIRM LINKS ARE FICTIONAL IN THE DEVELOPMENT DATA: the trajectory groups
+>   only mean something on the real BPS data. In the development data block 0
+>   matched firms across years within province x industry cells, so location
+>   and sector differences between groups here reflect the simulation.
+>   TFP: development residuals; tfp_op has far fewer observations.
+> ==========================================================================*/
+. if "$B20" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B20_DATA/b20_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if year == 2019 & clean == 1
+(30,042 observations deleted)
+
+. merge 1:1 firm_id using "$B20_DATA/b20_traj.dta", nogenerate keep(match) keep
+> using(traj)
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                             3,007  
+    -----------------------------------------
+
+. tempfile pre
+
+. save `pre'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. 
+. * ---- A. profile per trajectory ----
+. generate n_firms = 1
+
+. collapse (sum) n_firms (mean) pct_exporter = exporter pct_importer = importer
+>  pct_fdi = fdi ///
+>          pct_large = large pct_java = java pct_owngen = has_owngen ///
+>          (p50) med_workers = workers med_va = va med_va_pw = va_pw ///
+>          med_tfp_op = tfp_op med_tfp_lp = tfp_lp med_tfp_acf = tfp_acf med_tf
+> p_wrdg = tfp_wrdg ///
+>          med_gj_per_va = gj_per_va med_gj_per_out = gj_per_out med_co2_per_va
+>  = co2_per_va ///
+>          med_owngen_share = owngen_share, by(traj)
+
+. foreach v in pct_exporter pct_importer pct_fdi pct_large pct_java pct_owngen 
+> {
+  2.     replace `v' = 100 * `v'
+  3. }
+(4 real changes made)
+(4 real changes made)
+(4 real changes made)
+(4 real changes made)
+(4 real changes made)
+(4 real changes made)
+
+. list traj n_firms pct_exporter pct_importer pct_fdi pct_large pct_java med_wo
+> rkers, clean noobs
+
+                               traj   n_firms   pct_expor~r   pct_impor~r    pc
+> t_fdi       pct_large      pct_java   med_wo~s  
+    Disappear in 2020, never return       808   27.07423592   49.75247192    11
+> .5099   39.6039619446   65.71781921         65  
+                 Survive but shrink      1034   13.79962254   52.03094482   8.3
+> 17215   35.2998085022   90.71566772         60  
+                   Survive and grow       644   23.77850151   57.45341873   9.0
+> 06211   29.3478240967   89.13043976       48.5  
+        Survived 2020, gone by 2022       521      21.09375   54.89443588   9.2
+> 13052   32.6295585632   75.62379456         61  
+
+. export excel using "$B20_XLSX", sheet("t15_profile", replace) firstrow(variab
+> les)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-20-covid/outp
+> ut/b1_20_tables.xlsx saved
+
+. 
+. * ---- B. full distribution ----
+. use `pre', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. do "$B20/_sumstats.do" "workers va output capital va_pw cap_pw tfp_op tfp_lp 
+> tfp_acf tfp_wrdg gj_per_va gj_per_out co2_per_va owngen_share ln_workers ln_v
+> a ln_output ln_va_pw ln_gj_per_va" "traj" "t15_stats"
+
+. /*==========================================================================
+>   _sumstats.do -- helper: descriptive statistics table, POOLED + BY YEAR
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B20/_sumstats.do" "va workers ln_va" "group" "t07_stats"
+> 
+>       argument 1 = list of variables
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b1_20_tables.xlsx (max 31 characters)
+> 
+>   Result: 1 row = variable x group x period (pool, 2010, 2011, ...)
+>           columns n mean sd p10 p25 p50 p75 p90 min max
+>   Rows with a missing group are not counted.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars grp sheet
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+
+. local first 1
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     local grp all
+. }
+
+. foreach v of local vars {
+  2.     foreach period in pool year {
+  3.         preserve
+  4.         keep `v' `grp' year
+  5.         keep if !missing(`v') & !missing(`grp')
+  6.         if _N > 0 {
+  7.             if "`period'" == "pool" replace year = 0
+  8.             collapse (count) n = `v' (mean) mean = `v' (sd) sd = `v' ///
+>                      (p10) p10 = `v' (p25) p25 = `v' (p50) p50 = `v' ///
+>                      (p75) p75 = `v' (p90) p90 = `v' (min) min = `v' (max) ma
+> x = `v', ///
+>                      by(`grp' year)
+  9.             generate str32 variable = "`v'"
+ 10.             if `first' == 0 append using `result'
+ 11.             save `result', replace
+ 12.             local first 0
+ 13.         }
+ 14.         restore
+ 15.     }
+ 16. }
+(0 observations deleted)
+(3,007 real changes made)
+(file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 not
+    found)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(0 observations deleted)
+(label traj already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(0 observations deleted)
+(3,007 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label traj already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(0 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label traj already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(0 observations deleted)
+(3,007 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label traj already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(0 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label traj already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(0 observations deleted)
+(3,007 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label traj already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(0 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label traj already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(0 observations deleted)
+(3,007 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label traj already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(0 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label traj already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(0 observations deleted)
+(3,007 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label traj already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(0 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label traj already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(2,925 observations deleted)
+(82 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label traj already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(2,925 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label traj already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(1,938 observations deleted)
+(1,069 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label traj already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(1,938 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label traj already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(1,938 observations deleted)
+(1,069 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label traj already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(1,938 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label traj already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(1,938 observations deleted)
+(1,069 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label traj already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(1,938 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label traj already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(0 observations deleted)
+(3,007 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label traj already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(0 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label traj already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(0 observations deleted)
+(3,007 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label traj already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(0 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label traj already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(0 observations deleted)
+(3,007 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label traj already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(0 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label traj already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(47 observations deleted)
+(2,960 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label traj already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(47 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label traj already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(0 observations deleted)
+(3,007 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label traj already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(0 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label traj already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(0 observations deleted)
+(3,007 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label traj already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(0 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label traj already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(0 observations deleted)
+(3,007 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label traj already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(0 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label traj already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(0 observations deleted)
+(3,007 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label traj already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(0 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label traj already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(15 observations deleted)
+(2,992 real changes made)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label traj already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(15 observations deleted)
+(variable mean was float, now double to accommodate using data's values)
+(variable sd was float, now double to accommodate using data's values)
+(variable p10 was float, now double to accommodate using data's values)
+(variable p25 was float, now double to accommodate using data's values)
+(variable p50 was float, now double to accommodate using data's values)
+(variable p75 was float, now double to accommodate using data's values)
+(variable p90 was float, now double to accommodate using data's values)
+(variable min was float, now double to accommodate using data's values)
+(variable max was float, now double to accommodate using data's values)
+(label traj already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+
+. 
+. use `result', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * the group is written as text using its value label (if it has one)
+. capture decode `grp', generate(group)
+
+. if _rc generate group = string(`grp')
+
+. * keep the variables in the order they were listed
+. generate variable_order = .
+(152 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(8 real changes made)
+(8 real changes made)
+(8 real changes made)
+(8 real changes made)
+(8 real changes made)
+(8 real changes made)
+(8 real changes made)
+(8 real changes made)
+(8 real changes made)
+(8 real changes made)
+(8 real changes made)
+(8 real changes made)
+(8 real changes made)
+(8 real changes made)
+(8 real changes made)
+(8 real changes made)
+(8 real changes made)
+(8 real changes made)
+(8 real changes made)
+
+. sort variable_order `grp' year
+
+. keep variable group period n mean sd p10 p25 p50 p75 p90 min max
+
+. export excel using "$B20_XLSX", sheet("`sheet'", replace) firstrow(variables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-20-covid/outp
+> ut/b1_20_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t15_stats (152 rows)
+
+. use `original', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+end of do-file
+
+. 
+. * ---- C. location: province mix per trajectory ----
+. use `pre', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if !missing(prov)
+(0 observations deleted)
+
+. generate n_firms = 1
+
+. collapse (sum) n_firms, by(traj prov)
+
+. bysort traj: egen traj_total = total(n_firms)
+
+. generate pct_of_traj = 100 * n_firms / traj_total
+
+. drop traj_total
+
+. sort traj prov
+
+. export excel using "$B20_XLSX", sheet("t15_province", replace) firstrow(varia
+> bles)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-20-covid/outp
+> ut/b1_20_tables.xlsx saved
+
+. 
+end of do-file
+
+######## B1-20: 16_follow_recovery ########
+
+. /*==========================================================================
+>   Line 16: "Follow recovery sampai 2022"
+>   Data  : data/b20_si.dta (clean == 1) + data/b20_traj.dta (from 09-14)
+>   Follows the 2019 cohort, per trajectory and all together, from 2017 to
+>   2022 (2017-18 show the pre-covid trend).
+>   Output sheet:
+>     t16_index   per trajectory x year: n firms present, total and median of
+>                 workers, VA and output, and each as an index (2019 = 100)
+>   Read with care:
+>     - firms that are gone add nothing, so a group's total falls when its
+>       firms leave (e.g. "Disappear in 2020" has nothing after 2019). Use the
+>       medians, or groups 3 and 4 (present in 2019, 2020 and 2022), to see
+>       how the firms that stayed recovered.
+>     - VA and output are nominal (and masked in the development data):
+>       part of any rise to 2022 is prices.
+>   FIRM LINKS ARE FICTIONAL IN THE DEVELOPMENT DATA: following the cohort
+>   only means something on the real BPS data.
+> ==========================================================================*/
+. if "$B20" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B20_DATA/b20_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1 & inrange(year, 2017, 2022)
+(14,509 observations deleted)
+
+. merge m:1 firm_id using "$B20_DATA/b20_traj.dta", nogenerate keep(match) keep
+> using(traj)
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                            13,034  
+    -----------------------------------------
+
+. 
+. * copy every row as group 0 = all 2019 cohort firms
+. expand 2, generate(copy)
+(13,034 observations created)
+
+. replace traj = 0 if copy == 1
+(13,034 real changes made)
+
+. label define traj 0 "All 2019 cohort", add
+
+. 
+. generate n_firms = 1
+
+. collapse (sum) n_firms tot_workers = workers tot_va = va tot_output = output 
+> ///
+>          (p50) med_workers = workers med_va = va med_output = output, by(traj
+>  year)
+
+. 
+. * index: 2019 = 100, within each trajectory
+. foreach v in n_firms tot_workers tot_va tot_output med_workers med_va med_out
+> put {
+  2.     generate base = `v' if year == 2019
+  3.     bysort traj: egen base_`v' = max(base)
+  4.     generate idx_`v' = 100 * `v' / base_`v'
+  5.     drop base base_`v'
+  6. }
+(21 missing values generated)
+(21 missing values generated)
+(21 missing values generated)
+(21 missing values generated)
+(21 missing values generated)
+(21 missing values generated)
+(21 missing values generated)
+
+. sort traj year
+
+. order traj year n_firms idx_n_firms
+
+. list traj year n_firms idx_n_firms idx_tot_workers idx_med_workers, clean noo
+> bs sepby(traj)
+
+                               traj   year   n_firms   idx_n_~s   idx_to~s   id
+> x_me~s  
+                    All 2019 cohort   2017      1978   65.77985   51.10492   81
+> .66666  
+                    All 2019 cohort   2018      2265   75.32424    64.5796     
+>     85  
+                    All 2019 cohort   2019      3007        100        100     
+>    100  
+                    All 2019 cohort   2020      2198   73.09611   57.01914   83
+> .33334  
+                    All 2019 cohort   2021      1911   63.55171    59.6283   86
+> .66666  
+                    All 2019 cohort   2022      1675   55.70336   44.57759   81
+> .66666  
+    Disappear in 2020, never return   2017       296   36.63366    20.4707   85
+> .38461  
+    Disappear in 2020, never return   2018       394   48.76237   39.04218   96
+> .92308  
+    Disappear in 2020, never return   2019       808        100        100     
+>    100  
+                 Survive but shrink   2017       827   79.98066   67.78358   78
+> .33334  
+                 Survive but shrink   2018       914   88.39458   76.07664     
+>     80  
+                 Survive but shrink   2019      1034        100        100     
+>    100  
+                 Survive but shrink   2020      1033   99.90329   86.39641   78
+> .33334  
+                 Survive but shrink   2021      1034        100   83.70842   71
+> .66666  
+                 Survive but shrink   2022      1031   99.70986    50.4707   58
+> .33333  
+                   Survive and grow   2017       523   81.21118   102.8322   94
+> .84536  
+                   Survive and grow   2018       570   88.50932   111.5177     
+>    100  
+                   Survive and grow   2019       644        100        100     
+>    100  
+                   Survive and grow   2020       644        100    118.643   11
+> 1.3402  
+                   Survive and grow   2021       643   99.84472   180.4614   13
+> 1.9588  
+                   Survive and grow   2022       644        100   232.7423   16
+> 5.9794  
+        Survived 2020, gone by 2022   2017       332   63.72361   55.85223   81
+> .96722  
+        Survived 2020, gone by 2022   2018       387   74.28023   70.26318   81
+> .96722  
+        Survived 2020, gone by 2022   2019       521        100        100     
+>    100  
+        Survived 2020, gone by 2022   2020       521        100   95.85055    8
+> 5.2459  
+        Survived 2020, gone by 2022   2021       234   44.91363   69.59216   10
+> 0.8197  
+
+. export excel using "$B20_XLSX", sheet("t16_index", replace) firstrow(variable
+> s)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-20-covid/outp
+> ut/b1_20_tables.xlsx saved
+
+. 
+end of do-file
+
+######## B1-20: 08_figures ########
+
+. /*==========================================================================
+>   Line 8: "Elaborate bs dengan output stats/stylish facts dalam bentuk table
+>            atau dengan graph, atau table yg ready untuk dibuat graph"
+>   Every other file writes its tables to output/b1_20_tables.xlsx. This file
+>   draws the charts FROM those tables, so a chart always matches its table.
+>   The exact points of every chart are also written to a sheet figNN_data
+>   (graph-ready, e.g. to redraw the chart in Excel or PowerPoint).
+>   Runs LAST in 00_run.do.
+> 
+>   Charts (output/):
+>     fig02_before_after.png     median workers / VA / output, 2017-2022, 2019 
+> = 100
+>     fig03_sector_change.png    % change in firms per sector, 2020 and 2021-22
+>  vs 2017-19
+>     fig04_entry_exit.png       % new and % exit firms by year
+>     fig07_group_profile.png    FDI / import / export / large / Java: new, sur
+> vivor, exit
+>     fig09_trajectories.png     the 2019 cohort by covid trajectory
+>     fig15_pre_covid.png        2019 characteristics by trajectory
+>     fig16_recovery.png         median workers and VA of the 2019 cohort, 2019
+>  = 100
+>   Charts 04, 07, 09, 15 and 16 use FICTIONAL firm links in the development
+>   data: they only mean something on the real BPS data.
+> ==========================================================================*/
+. if "$B20" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. 
+. * ---- fig02: before / after covid (line 2) ----
+. import excel using "$B20_XLSX", sheet("t02_by_period") firstrow clear
+(16 vars, 9 obs)
+
+. drop if year == "period"
+(3 observations deleted)
+
+. destring year, replace
+year: all characters numeric; replaced as int
+
+. keep year med_workers med_va med_output
+
+. foreach v in med_workers med_va med_output {
+  2.     summarize `v' if year == 2019, meanonly
+  3.     generate idx_`v' = 100 * `v' / r(mean)
+  4. }
+
+. keep year idx_*
+
+. sort year
+
+. export excel using "$B20_XLSX", sheet("fig02_data", replace) firstrow(variabl
+> es)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-20-covid/outp
+> ut/b1_20_tables.xlsx saved
+
+. twoway (connected idx_med_workers year) ///
+>        (connected idx_med_va year, lpattern(dash)) ///
+>        (connected idx_med_output year, lpattern(shortdash)), ///
+>     xline(2019.5, lpattern(dash) lcolor(gs10)) yline(100, lcolor(gs12)) ///
+>     xlabel(2017(1)2022) xtitle("") ytitle("Median, 2019 = 100") ///
+>     legend(order(1 "Workers" 2 "Value added" 3 "Output") rows(1)) ///
+>     title("The median firm before and after covid") ///
+>     note("All firms in each year (no firm links). VA and output are nominal."
+> ) ///
+>     graphregion(color(white))
+
+. graph export "$B20_OUT/fig02_before_after.png", replace width(2000)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-20-covid/outp
+> ut/fig02_before_after.png written in PNG format
+
+. 
+. * ---- fig03: firms per sector (line 3) ----
+. import excel using "$B20_XLSX", sheet("t03_covid_change") firstrow clear
+(6 vars, 25 obs)
+
+. tostring kbli2, replace
+kbli2 already string; no replace
+
+. * sectors with at least 20 firms a year before covid (small sectors swing a l
+> ot)
+. keep if firms_pre_avg >= 20
+(1 observation deleted)
+
+. keep kbli2 firms_pre_avg pct_chg_2020 pct_chg_rec
+
+. export excel using "$B20_XLSX", sheet("fig03_data", replace) firstrow(variabl
+> es)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-20-covid/outp
+> ut/b1_20_tables.xlsx saved
+
+. graph hbar (asis) pct_chg_2020 pct_chg_rec, over(kbli2, sort(1) label(labsize
+> (small))) ///
+>     ytitle("% change in number of firms vs 2017-19 average") ///
+>     legend(order(1 "2020" 2 "2021-22 average") rows(1)) ///
+>     title("Number of firms by sector (KBLI 2-digit)") ///
+>     note("Sectors with 20+ firms a year in 2017-19." "Survey counts, not clos
+> ures.") ///
+>     graphregion(color(white)) ysize(6)
+
+. graph export "$B20_OUT/fig03_sector_change.png", replace width(2000)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-20-covid/outp
+> ut/fig03_sector_change.png written in PNG format
+
+. 
+. * ---- fig04: entry and exit (lines 4-6) ----
+. import excel using "$B20_XLSX", sheet("t04_flows_by_year") firstrow clear
+(11 vars, 13 obs)
+
+. drop if period == "pool"
+(1 observation deleted)
+
+. generate year = real(period)
+
+. keep year pct_new pct_survivor pct_exit
+
+. order year
+
+. export excel using "$B20_XLSX", sheet("fig04_data", replace) firstrow(variabl
+> es)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-20-covid/outp
+> ut/b1_20_tables.xlsx saved
+
+. twoway (connected pct_new year) (connected pct_exit year, lpattern(dash)), //
+> /
+>     xline(2016, lpattern(dash) lcolor(gs10)) xline(2019.5, lcolor(cranberry))
+>  ///
+>     xlabel(2010(2)2022) xtitle("") ytitle("% of the year's firms") ///
+>     legend(order(1 "New (not in previous year)" 2 "Exit (never seen again)") 
+> rows(1)) ///
+>     title("New and exiting firms by year") ///
+>     note("FICTIONAL firm links in the development data: only meaningful on th
+> e real data." ///
+>          "No 2016 wave (dashed line): 2017 new firms include any 2016 entrant
+> s.") ///
+>     graphregion(color(white))
+
+. graph export "$B20_OUT/fig04_entry_exit.png", replace width(2000)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-20-covid/outp
+> ut/fig04_entry_exit.png written in PNG format
+
+. 
+. * ---- fig07: who are the new, survivor and exit firms (line 7) ----
+. import excel using "$B20_XLSX", sheet("t07_profile") firstrow clear
+(13 vars, 49 obs)
+
+. keep if period == "pool"
+(45 observations deleted)
+
+. keep firm_group pct_fdi pct_importer pct_exporter pct_large pct_java
+
+. generate order = _n
+
+. export excel using "$B20_XLSX", sheet("fig07_data", replace) firstrow(variabl
+> es)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-20-covid/outp
+> ut/b1_20_tables.xlsx saved
+
+. graph bar (asis) pct_fdi pct_importer pct_exporter pct_large pct_java, ///
+>     over(firm_group, sort(order)) ///
+>     ytitle("% of firms") ylabel(, angle(horizontal)) ///
+>     legend(order(1 "FDI" 2 "Importer" 3 "Exporter" 4 "Large (>100)" 5 "Java")
+>  rows(1) size(small)) ///
+>     title("Characteristics of new, survivor and exit firms") ///
+>     note("Pooled 2010-2022, each firm in its own year. FICTIONAL firm links i
+> n the development data.") ///
+>     graphregion(color(white))
+
+. graph export "$B20_OUT/fig07_group_profile.png", replace width(2000)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-20-covid/outp
+> ut/fig07_group_profile.png written in PNG format
+
+. 
+. * ---- fig09: trajectories (lines 9-14) ----
+. import excel using "$B20_XLSX", sheet("t09_trajectories") firstrow clear
+(5 vars, 6 obs)
+
+. keep traj n_firms pct_of_cohort
+
+. generate order = _n
+
+. export excel using "$B20_XLSX", sheet("fig09_data", replace) firstrow(variabl
+> es)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-20-covid/outp
+> ut/b1_20_tables.xlsx saved
+
+. graph hbar (asis) pct_of_cohort, over(traj, sort(order) label(labsize(small))
+> ) ///
+>     blabel(bar, format(%4.1f)) ytitle("% of firms present in 2019") ///
+>     title("What happened to the 2019 firms?") ///
+>     note("Size = workers, 2019 vs 2022." "FICTIONAL firm links in the develop
+> ment data. The group 'disappear temporarily'" "is empty because the simulated
+>  links have no gaps.", size(small)) ///
+>     graphregion(color(white)) xsize(9) ysize(6)
+
+. graph export "$B20_OUT/fig09_trajectories.png", replace width(2000)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-20-covid/outp
+> ut/fig09_trajectories.png written in PNG format
+
+. 
+. * ---- fig15: pre-covid characteristics by trajectory (line 15) ----
+. import excel using "$B20_XLSX", sheet("t15_profile") firstrow clear
+(19 vars, 4 obs)
+
+. keep traj pct_exporter pct_importer pct_fdi pct_large pct_java pct_owngen
+
+. generate order = _n
+
+. export excel using "$B20_XLSX", sheet("fig15_data", replace) firstrow(variabl
+> es)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-20-covid/outp
+> ut/b1_20_tables.xlsx saved
+
+. graph hbar (asis) pct_exporter pct_importer pct_fdi pct_large pct_owngen, ///
+>     over(traj, sort(order) label(labsize(small))) ///
+>     ytitle("% of the group's firms, in 2019") ///
+>     legend(order(1 "Exporter" 2 "Importer" 3 "FDI" 4 "Large (>100)" 5 "Own ge
+> neration") ///
+>            rows(2) size(small)) ///
+>     title("Pre-covid (2019) characteristics", size(medium)) ///
+>     note("FICTIONAL firm links in the development data:" "only meaningful on 
+> the real data.", size(small)) ///
+>     graphregion(color(white) margin(l+4 r+4)) xsize(11) ysize(7)
+
+. graph export "$B20_OUT/fig15_pre_covid.png", replace width(2000)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-20-covid/outp
+> ut/fig15_pre_covid.png written in PNG format
+
+. 
+. * ---- fig16: following the 2019 cohort (line 16) ----
+. import excel using "$B20_XLSX", sheet("t16_index") firstrow clear
+(16 vars, 26 obs)
+
+. generate key = ""
+(26 missing values generated)
+
+. replace key = "all"    if traj == "All 2019 cohort"
+variable key was str1 now str3
+(6 real changes made)
+
+. replace key = "shrink" if traj == "Survive but shrink"
+variable key was str3 now str6
+(6 real changes made)
+
+. replace key = "grow"   if traj == "Survive and grow"
+(6 real changes made)
+
+. keep if key != ""
+(8 observations deleted)
+
+. keep year key idx_med_workers idx_med_va
+
+. reshape wide idx_med_workers idx_med_va, i(year) j(key) string
+(j = all grow shrink)
+
+Data                               Long   ->   Wide
+-----------------------------------------------------------------------------
+Number of observations               18   ->   6           
+Number of variables                   4   ->   7           
+j variable (3 values)               key   ->   (dropped)
+xij variables:
+                        idx_med_workers   ->   idx_med_workersall idx_med_worke
+> rsgrow idx_med_workersshrink
+                             idx_med_va   ->   idx_med_vaall idx_med_vagrow idx
+> _med_vashrink
+-----------------------------------------------------------------------------
+
+. order year idx_med_workers* idx_med_va*
+
+. export excel using "$B20_XLSX", sheet("fig16_data", replace) firstrow(variabl
+> es)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-20-covid/outp
+> ut/b1_20_tables.xlsx saved
+
+. twoway (connected idx_med_workersall year) (connected idx_med_workersshrink y
+> ear, lpattern(dash)) ///
+>        (connected idx_med_workersgrow year, lpattern(shortdash)), ///
+>     xline(2019.5, lcolor(cranberry)) yline(100, lcolor(gs12)) xlabel(2017(1)2
+> 022) xtitle("") ///
+>     ytitle("Median, 2019 = 100") legend(order(1 "All 2019 firms" 2 "Survive b
+> ut shrink" 3 "Survive and grow") rows(1) size(small)) ///
+>     title("Workers") graphregion(color(white)) name(g1, replace)
+
+. twoway (connected idx_med_vaall year) (connected idx_med_vashrink year, lpatt
+> ern(dash)) ///
+>        (connected idx_med_vagrow year, lpattern(shortdash)), ///
+>     xline(2019.5, lcolor(cranberry)) yline(100, lcolor(gs12)) xlabel(2017(1)2
+> 022) xtitle("") ///
+>     ytitle("Median, 2019 = 100") legend(order(1 "All 2019 firms" 2 "Survive b
+> ut shrink" 3 "Survive and grow") rows(1) size(small)) ///
+>     title("Value added (nominal)") graphregion(color(white)) name(g2, replace
+> )
+
+. graph combine g1 g2, cols(2) title("Following the 2019 firms to 2022") ///
+>     note("FICTIONAL firm links in the development data: only meaningful on th
+> e real data.") ///
+>     graphregion(color(white)) xsize(10) ysize(4.5)
+
+. graph export "$B20_OUT/fig16_recovery.png", replace width(2400)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-20-covid/outp
+> ut/fig16_recovery.png written in PNG format
+
+. graph drop _all
+
+. 
+end of do-file
+
+. log close b20
+      name:  b20
+       log:  /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b1-20-co
+> vid/output/b1_20_log.log
+  log type:  text
+ closed on:   9 Oct 2026, 12:54:01
+-------------------------------------------------------------------------------

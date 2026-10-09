@@ -1,0 +1,2609 @@
+-------------------------------------------------------------------------------
+      name:  b208
+       log:  /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-08-rn
+> d-capability/output/b2_08_log.log
+  log type:  text
+ opened on:   9 Oct 2026, 12:54:51
+
+. foreach f of local files {
+  2.     display _newline as result "######## B2-08: `f' ########"
+  3.     do "$B208/`f'.do"
+  4. }
+
+######## B2-08: 01a_prep_si ########
+
+. /*==========================================================================
+>   Line 1: "R&D, innovation and environmental capability"
+>   Prepare Statistik Industri (SI) 2010-2022 for B2-08
+>   Input : $SI_DATA  (analysis_ready_data.dta from block 0)
+>   Output: data/b208_si.dta  -- 1 row = 1 firm x year
+>           (open with: use "$B208_DATA/b208_si.dta", clear  then browse)
+> 
+>   Capability variables (1 = yes, 0 = no, MISSING = not asked or left blank):
+>     rnd            R&D activity                   2011, 2017-2022
+>     rnd_ext        external funding for R&D       2017-2022
+>     rnd_cost       R&D expense (nominal, masked)  2017-2022 (0 = none or blan
+> k)
+>     rnd_workers    R&D workers                    2017-2022 (part of 2018-202
+> 1)
+>     rnd_cost_pos   1 = a positive R&D expense is reported
+>     rnd_va         R&D expense / value added      2017-2022, VA > 0
+>     innov          any innovation                 2011, 2017-2018, 2020-2022
+>     innov_product innov_process innov_marketing innov_org   2017-2018 only
+>     amdal ukl_upl sppl   environmental documents  2020-2022
+>     env_doc        1 = holds at least one of AMDAL / UKL-UPL / SPPL
+>     waste_treat    waste installation / treatment 2020-2022
+>     waste_solid waste_liquid waste_haz            2022 only
+>     waste_any      1 = reports at least one of the three waste types
+>   A blank answer is NOT a "no". It stays missing, so every % below is
+>   "% yes among firms that answered". File 02 shows how many answered.
+> 
+>   Other variables: exporter, importer, fdi, large, kbli2, kbli5, prov, java,
+>     va, output, workers, co2_s1 co2_s2 co2_total gj_s1 gj_s2 gj_total,
+>     co2_per_va, gj_per_va, va_per_co2 (carbon productivity),
+>     va_per_gj (energy productivity), q_cprod q_eprod (within-year quintiles),
+>     clean (1 = not an extreme energy outlier), ln_*
+> ==========================================================================*/
+. if "$B208" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$SI_DATA", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+. * ---- identifiers ------------------------------------------------------
+. * year = survey year (there is no 2016 file)
+. generate kbli2 = real(substr(industry_code, 1, 2))
+
+. generate kbli5 = industry_code
+
+. generate prov  = real(province_code)
+
+. generate java  = inlist(prov, 31, 32, 33, 34, 35, 36) if !missing(prov)
+
+. label define java 0 "Outside Java" 1 "Java"
+
+. label values java java
+
+. 
+. * ---- firm size: medium vs large (100-worker threshold) ----------------
+. generate large = (workers > 100) if !missing(workers)
+
+. label define large 0 "Medium (<=100)" 1 "Large (>100)"
+
+. label values large large
+
+. 
+. * ---- imports, exports & FDI ---------------------------------------------
+. * importer is only defined where the import question can be evaluated
+. generate importer = import_flag if import_observed == 1
+
+. label define importer 0 "Non-importer" 1 "Importer"
+
+. label values importer importer
+
+. 
+. generate exporter = export_flag
+(15,321 missing values generated)
+
+. generate fdi      = fdi_10_flag                     // foreign ownership >= 1
+> 0%
+(311 missing values generated)
+
+. * 2022: the form only asks about DIRECT exports, a "no" is never recorded -> 
+> missing
+. replace exporter = . if year == 2022
+(344 real changes made, 344 to missing)
+
+. * 2020: foreign ownership is inconsistent (47% FDI vs 8-11% other years) -> m
+> issing
+. replace fdi = . if year == 2020
+(2,936 real changes made, 2,936 to missing)
+
+. label define exporter 0 "Non-exporter" 1 "Exporter"
+
+. label values exporter exporter
+
+. label define fdi 0 "Domestic" 1 "FDI"
+
+. label values fdi fdi
+
+. 
+. * ---- firm characteristics (nominal) -----------------------------------
+. generate va      = value_added_nominal
+
+. generate output  = gross_output_nominal
+
+. generate va_pw   = va / workers      if workers > 0
+(28 missing values generated)
+
+. 
+. * ---- capability flags (block 0 codes them 1 = yes, 0 = no) -------------
+. generate rnd          = rd_activity_flag          if inlist(rd_activity_flag,
+>  0, 1)
+(20,591 missing values generated)
+
+. generate rnd_ext      = rd_external_funding_flag  if inlist(rd_external_fundi
+> ng_flag, 0, 1)
+(23,190 missing values generated)
+
+. generate innov        = innovation_flag           if inlist(innovation_flag, 
+> 0, 1)
+(22,075 missing values generated)
+
+. generate innov_product   = innovation_product_flag        if inlist(innovatio
+> n_product_flag, 0, 1)
+(29,916 missing values generated)
+
+. generate innov_process   = innovation_process_flag        if inlist(innovatio
+> n_process_flag, 0, 1)
+(29,918 missing values generated)
+
+. generate innov_marketing = innovation_marketing_flag      if inlist(innovatio
+> n_marketing_flag, 0, 1)
+(29,920 missing values generated)
+
+. generate innov_org       = innovation_org_flag            if inlist(innovatio
+> n_org_flag, 0, 1)
+(29,920 missing values generated)
+
+. generate amdal        = env_amdal_flag            if inlist(env_amdal_flag, 0
+> , 1)
+(27,708 missing values generated)
+
+. generate ukl_upl      = env_ukl_upl_flag          if inlist(env_ukl_upl_flag,
+>  0, 1)
+(27,676 missing values generated)
+
+. generate sppl         = env_sppl_flag             if inlist(env_sppl_flag, 0,
+>  1)
+(27,712 missing values generated)
+
+. generate waste_treat  = env_waste_treatment_flag  if inlist(env_waste_treatme
+> nt_flag, 0, 1)
+(27,689 missing values generated)
+
+. generate waste_solid  = waste_solid_flag          if inlist(waste_solid_flag,
+>  0, 1)
+(32,240 missing values generated)
+
+. generate waste_liquid = waste_liquid_flag         if inlist(waste_liquid_flag
+> , 0, 1)
+(32,248 missing values generated)
+
+. generate waste_haz    = waste_hazardous_flag      if inlist(waste_hazardous_f
+> lag, 0, 1)
+(32,251 missing values generated)
+
+. 
+. * "holds any environmental document": 1 if any of the three is yes,
+. * 0 if at least one was answered and none is yes, missing if all three blank
+. egen env_doc = rowmax(amdal ukl_upl sppl)
+(27,666 missing values generated)
+
+. egen waste_any = rowmax(waste_solid waste_liquid waste_haz)
+(32,225 missing values generated)
+
+. 
+. * ---- R&D expense ------------------------------------------------------
+. * block 0 records the amount 2017-2022 and writes 0 when nothing is reported,
+. * so a 0 can be "no R&D" or "left blank". Only a positive amount is informati
+> ve.
+. generate rnd_cost     = rd_cost_nominal
+(14,483 missing values generated)
+
+. generate rnd_workers  = rd_workers
+(20,109 missing values generated)
+
+. generate rnd_cost_pos = (rnd_cost > 0) if !missing(rnd_cost)
+(14,483 missing values generated)
+
+. generate rnd_va       = rnd_cost / va if va > 0 & !missing(rnd_cost)
+(14,483 missing values generated)
+
+. 
+. label define yesno 0 "No" 1 "Yes"
+
+. foreach v in rnd rnd_ext innov innov_product innov_process innov_marketing in
+> nov_org ///
+>              amdal ukl_upl sppl env_doc waste_treat waste_solid waste_liquid 
+> waste_haz ///
+>              waste_any rnd_cost_pos {
+  2.     label values `v' yesno
+  3. }
+
+. 
+. * ---- energy & emissions -----------------------------------------------
+. * COAL 2017 CORRECTION: block 0 multiplies by 1000 (treats it as tonnes),
+. * but the price per unit shows the data are already in kg. Divide back.
+. generate co2_coal = co2_coal_s1
+
+. generate gj_coal2 = gj_coal
+
+. replace  co2_coal = co2_coal_s1 / 1000 if year == 2017
+(1,181 real changes made)
+
+. replace  gj_coal2 = gj_coal / 1000     if year == 2017
+(1,181 real changes made)
+
+. 
+. * scope 1 = the 4 fuels asked in every year: diesel, petrol, coal, LPG
+. egen co2_s1 = rowtotal(co2_diesel_s1 co2_petrol_s1 co2_coal co2_lpg_s1), miss
+> ing
+
+. egen gj_s1  = rowtotal(gj_diesel gj_petrol gj_coal2 gj_lpg), missing
+
+. * scope 2 = purchased electricity
+. generate co2_s2 = co2_scope2_s1
+
+. generate gj_s2  = gj_electricity
+
+. egen co2_total = rowtotal(co2_s1 co2_s2), missing
+
+. egen gj_total  = rowtotal(gj_s1 gj_s2), missing
+
+. 
+. generate co2_per_va  = co2_total / va      if va > 0
+
+. generate gj_per_va   = gj_total / va       if va > 0
+
+. * carbon and energy productivity (va_per_co2, va_per_gj)
+. generate va_per_co2  = va / co2_total      if co2_total > 0
+(547 missing values generated)
+
+. generate va_per_gj   = va / gj_total       if gj_total > 0
+(547 missing values generated)
+
+. 
+. * ---- energy outlier flag (clean) --------------------------------------
+. * a record is left out of the analysis (clean = 0) if any of its energy
+. * quantities is above 100x that year's 99th percentile. Nothing is deleted.
+. generate coal_kg_fix = fuel_coal_kg
+
+. replace  coal_kg_fix = fuel_coal_kg / 1000 if year == 2017
+(1,181 real changes made)
+
+. generate clean = 1
+
+. levelsof year, local(years)
+2010 2011 2012 2013 2014 2015 2017 2018 2019 2020 2021 2022
+
+. foreach q in fuel_diesel_ltr fuel_petrol_ltr fuel_kerosene_ltr coal_kg_fix fu
+> el_lpg_kg ///
+>              fuel_citygas_m3 fuel_othergas_m3 fuel_coalbriq_kg fuel_coke_kg /
+> //
+>              elec_pln_kwh elec_nonpln_kwh elec_owngen_kwh fuel_dieseloil_ltr 
+> ///
+>              fuel_fueloil_ltr fuel_natgas_mmbtu fuel_biodiesel_ltr fuel_bioma
+> ss_kg {
+  2.     foreach y of local years {
+  3.         quietly count if year == `y' & `q' > 0 & !missing(`q')
+  4.         if r(N) > 2 {
+  5.             quietly summarize `q' if year == `y' & `q' > 0, detail
+  6.             quietly replace clean = 0 if year == `y' & `q' > 100 * r(p99) 
+> & !missing(`q')
+  7.         }
+  8.     }
+  9. }
+
+. replace clean = 0 if workers == 0 & co2_s1 > 0 & !missing(co2_s1)
+(20 real changes made)
+
+. count if clean == 0
+  30
+
+. display as result "Outlier records (clean = 0): " r(N)
+Outlier records (clean = 0): 30
+
+. 
+. * ---- carbon / energy productivity quintiles, within each year ------------
+. * within-year because values are nominal and the sample changes by year;
+. * computed on clean records only. 1 = lowest VA per tCO2 (or per GJ).
+. generate q_cprod = .
+(33,049 missing values generated)
+
+. generate q_eprod = .
+(33,049 missing values generated)
+
+. foreach y of local years {
+  2.     xtile tmp_c = va_per_co2 if year == `y' & clean == 1, nquantiles(5)
+  3.     xtile tmp_e = va_per_gj  if year == `y' & clean == 1, nquantiles(5)
+  4.     replace q_cprod = tmp_c if year == `y'
+  5.     replace q_eprod = tmp_e if year == `y'
+  6.     drop tmp_c tmp_e
+  7. }
+(2,269 real changes made)
+(2,269 real changes made)
+(2,301 real changes made)
+(2,301 real changes made)
+(2,314 real changes made)
+(2,314 real changes made)
+(2,329 real changes made)
+(2,329 real changes made)
+(2,400 real changes made)
+(2,400 real changes made)
+(2,581 real changes made)
+(2,581 real changes made)
+(3,303 real changes made)
+(3,303 real changes made)
+(2,965 real changes made)
+(2,965 real changes made)
+(2,992 real changes made)
+(2,992 real changes made)
+(2,886 real changes made)
+(2,886 real changes made)
+(3,039 real changes made)
+(3,039 real changes made)
+(3,093 real changes made)
+(3,093 real changes made)
+
+. label define quint 1 "Q1 lowest" 2 "Q2" 3 "Q3" 4 "Q4" 5 "Q5 highest"
+
+. label values q_cprod quint
+
+. label values q_eprod quint
+
+. 
+. * ---- ln versions ------------------------------------------------------
+. foreach v in va output workers va_pw co2_total gj_total co2_per_va gj_per_va 
+> ///
+>              va_per_co2 va_per_gj rnd_cost rnd_va {
+  2.     generate ln_`v' = ln(`v') if `v' > 0
+  3. }
+(28 missing values generated)
+(28 missing values generated)
+(547 missing values generated)
+(547 missing values generated)
+(547 missing values generated)
+(547 missing values generated)
+(547 missing values generated)
+(547 missing values generated)
+(29,618 missing values generated)
+(29,618 missing values generated)
+
+. 
+. * ---- save -------------------------------------------------------------
+. keep  firm_id year source_row kbli2 kbli5 prov java large importer exporter f
+> di ///
+>       va output workers va_pw rnd rnd_ext innov innov_* amdal ukl_upl sppl en
+> v_doc ///
+>       waste_treat waste_solid waste_liquid waste_haz waste_any rnd_cost rnd_w
+> orkers ///
+>       rnd_cost_pos rnd_va co2_s1 co2_s2 co2_total gj_s1 gj_s2 gj_total ///
+>       co2_per_va gj_per_va va_per_co2 va_per_gj q_cprod q_eprod clean ln_*
+
+. order firm_id year source_row kbli2 kbli5 prov java large importer exporter f
+> di
+
+. label variable rnd          "R&D activity (2011, 2017-2022)"
+
+. label variable rnd_ext      "External funding for R&D (2017-2022)"
+
+. label variable innov        "Any innovation (2011, 2017-2018, 2020-2022)"
+
+. label variable innov_product   "Product innovation (2017-2018)"
+
+. label variable innov_process   "Process innovation (2017-2018)"
+
+. label variable innov_marketing "Marketing innovation (2017-2018)"
+
+. label variable innov_org       "Organisational innovation (2017-2018)"
+
+. label variable amdal        "AMDAL document (2020-2022)"
+
+. label variable ukl_upl      "UKL/UPL document (2020-2022)"
+
+. label variable sppl         "SPPL document (2020-2022)"
+
+. label variable env_doc      "Holds AMDAL, UKL/UPL or SPPL (2020-2022)"
+
+. label variable waste_treat  "Waste installation / treatment (2020-2022)"
+
+. label variable waste_solid  "Solid waste reported (2022)"
+
+. label variable waste_liquid "Liquid waste reported (2022)"
+
+. label variable waste_haz    "Hazardous (B3) waste reported (2022)"
+
+. label variable waste_any    "Reports solid, liquid or hazardous waste (2022)"
+
+. label variable rnd_cost     "R&D expense, nominal, masked (2017-2022)"
+
+. label variable rnd_cost_pos "1 = positive R&D expense reported"
+
+. label variable rnd_workers  "R&D workers (persons, masked)"
+
+. label variable rnd_va       "R&D expense / value added"
+
+. label variable va_per_co2   "Carbon productivity: VA / tCO2"
+
+. label variable va_per_gj    "Energy productivity: VA / GJ"
+
+. label variable q_cprod      "Quintile of VA/tCO2 within year (clean only)"
+
+. label variable q_eprod      "Quintile of VA/GJ within year (clean only)"
+
+. label variable clean        "1 = not an energy outlier"
+
+. compress
+  variable kbli2 was double now byte
+  variable prov was double now byte
+  variable java was double now byte
+  variable large was double now byte
+  variable importer was double now byte
+  variable exporter was double now byte
+  variable fdi was double now byte
+  variable rnd was double now byte
+  variable rnd_ext was double now byte
+  variable innov was double now byte
+  variable innov_product was double now byte
+  variable innov_process was double now byte
+  variable innov_marketing was double now byte
+  variable innov_org was double now byte
+  variable amdal was double now byte
+  variable ukl_upl was double now byte
+  variable sppl was double now byte
+  variable waste_treat was double now byte
+  variable waste_solid was double now byte
+  variable waste_liquid was double now byte
+  variable waste_haz was double now byte
+  variable env_doc was double now byte
+  variable waste_any was double now byte
+  variable rnd_workers was double now int
+  variable rnd_cost_pos was double now byte
+  variable clean was double now byte
+  variable q_cprod was double now byte
+  variable q_eprod was double now byte
+  (6,444,555 bytes saved)
+
+. save "$B208_DATA/b208_si.dta", replace
+(file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-08-rnd-capab
+    > ility/data/b208_si.dta not found)
+file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-08-rnd-capab
+    > ility/data/b208_si.dta saved
+
+. display as result "01a done: $B208_DATA/b208_si.dta (" _N " rows)"
+01a done: /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-08-rnd-c
+> apability/data/b208_si.dta (33049 rows)
+
+. 
+end of do-file
+
+######## B2-08: 02_availability ########
+
+. /*==========================================================================
+>   Line 2: "Untuk tahun Ketika tersedia:"
+>   Data  : SI 2010-2022 (data/b208_si.dta), clean == 1
+>   Which capability question is asked in which year, and how many firms answer
+> .
+>   Output sheets:
+>     t02_availability  every capability variable x year: records, answered,
+>                       blank, % answered, % yes among answered (pool = asked y
+> ears)
+>     t02_matrix        % answered, 1 row per variable, 1 column per year
+>                       (0 = question not in that year's form)
+> 
+>   NOTE: a blank is "not asked or not answered", never "no". Even in the years
+>   a question is asked, 25-55% of firms leave it blank (R&D: about 45%).
+>   rnd_cost and rnd_workers are amounts: block 0 writes 0 when nothing is
+>   reported, so for them "answered" = present and "yes" = a positive amount.
+> ==========================================================================*/
+. if "$B208" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B208_DATA/b208_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1
+(30 observations deleted)
+
+. 
+. local ALL "rnd rnd_ext rnd_cost rnd_workers innov innov_product innov_process
+>  innov_marketing innov_org amdal ukl_upl sppl env_doc waste_treat waste_solid
+>  waste_liquid waste_haz waste_any"
+
+. do "$B208/_incidence.do" "`ALL'" "t02_availability"
+
+. /*==========================================================================
+>   _incidence.do -- helper: yes / no / blank table, BY YEAR + POOLED
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B208/_incidence.do" "rnd rnd_ext" "t03_rnd_by_year"
+> 
+>       argument 1 = list of variables (0/1 flags, or amounts: "yes" = > 0)
+>       argument 2 = sheet name in output/b2_08_tables.xlsx (max 31 characters)
+> 
+>   Result: 1 row = variable x period (pool, 2010, 2011, ...)
+>     n_records     firm-years in that period
+>     n_answered    firm-years with an answer (yes or no)
+>     n_blank       not asked or left blank  -- NOT counted as "no"
+>     pct_answered  n_answered / n_records
+>     n_yes         answered yes (amounts: > 0)
+>     pct_yes       n_yes / n_answered       <- the incidence to read
+>     pct_yes_all   n_yes / n_records        (lower bound: treats blanks as no)
+>   The pooled row only adds up the years in which the question was asked.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars sheet
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+
+. local first 1
+
+. foreach v of local vars {
+  2.     local lab : variable label `v'
+  3.     preserve
+  4.     keep year `v'
+  5.     generate n_records  = 1
+  6.     generate n_answered = !missing(`v')
+  7.     generate n_yes      = (`v' > 0 & !missing(`v'))
+  8.     collapse (sum) n_records n_answered n_yes, by(year)
+  9.     * pooled row (year = 0): only the years in which the question was aske
+> d
+.     expand 2 if n_answered > 0, generate(copy)
+ 10.     replace year = 0 if copy == 1
+ 11.     collapse (sum) n_records n_answered n_yes, by(year)
+ 12.     generate str20 variable = "`v'"
+ 13.     generate str80 question = "`lab'"
+ 14.     if `first' == 0 append using `result'
+ 15.     save `result', replace
+ 16.     local first 0
+ 17.     restore
+ 18. }
+(7 observations created)
+(7 real changes made)
+(file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 not
+    found)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(6 observations created)
+(6 real changes made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(6 observations created)
+(6 real changes made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(6 observations created)
+(6 real changes made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(6 observations created)
+(6 real changes made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(2 observations created)
+(2 real changes made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(2 observations created)
+(2 real changes made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(2 observations created)
+(2 real changes made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(2 observations created)
+(2 real changes made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(3 observations created)
+(3 real changes made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(3 observations created)
+(3 real changes made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(3 observations created)
+(3 real changes made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(3 observations created)
+(3 real changes made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(3 observations created)
+(3 real changes made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(1 observation created)
+(1 real change made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(1 observation created)
+(1 real change made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(1 observation created)
+(1 real change made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(1 observation created)
+(1 real change made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. 
+. use `result', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. generate n_blank      = n_records - n_answered
+
+. generate pct_answered = 100 * n_answered / n_records
+
+. generate pct_yes      = 100 * n_yes / n_answered      if n_answered > 0
+(158 missing values generated)
+
+. generate pct_yes_all  = 100 * n_yes / n_records       if n_answered > 0
+(158 missing values generated)
+
+. generate str6 period  = cond(year == 0, "pool", string(year))
+
+. * keep the variables in the order they were listed
+. generate variable_order = .
+(234 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+
+. sort variable_order year
+
+. keep  variable question period n_records n_answered n_blank pct_answered n_ye
+> s pct_yes pct_yes_all
+
+. order variable question period n_records n_answered n_blank pct_answered n_ye
+> s pct_yes pct_yes_all
+
+. export excel using "$B208_XLSX", sheet("`sheet'", replace) firstrow(variables
+> )
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-08-rnd-capabi
+> lity/output/b2_08_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t02_availability (234 rows)
+
+. use `original', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+end of do-file
+
+. 
+. * ---- matrix: % answered by year ----
+. import excel using "$B208_XLSX", sheet("t02_availability") firstrow clear
+(10 vars, 234 obs)
+
+. drop if period == "pool"
+(18 observations deleted)
+
+. keep variable period pct_answered
+
+. generate variable_order = _n          // keeps the order of the list above
+
+. bysort variable (variable_order): replace variable_order = variable_order[1]
+(198 real changes made)
+
+. replace pct_answered = round(pct_answered, 0.1)
+(50 real changes made)
+
+. reshape wide pct_answered, i(variable variable_order) j(period) string
+(j = 2010 2011 2012 2013 2014 2015 2017 2018 2019 2020 2021 2022)
+
+Data                               Long   ->   Wide
+-----------------------------------------------------------------------------
+Number of observations              216   ->   18          
+Number of variables                   4   ->   14          
+j variable (12 values)           period   ->   (dropped)
+xij variables:
+                           pct_answered   ->   pct_answered2010 pct_answered201
+> 1 ... pct_answered2022
+-----------------------------------------------------------------------------
+
+. rename pct_answered* y*
+
+. sort variable_order
+
+. drop variable_order
+
+. list, clean noobs
+
+           variable   y2010   y2011   y2012   y2013   y2014   y2015   y2017   y
+> 2018   y2019   y2020   y2021   y2022  
+                rnd       0     100       0       0       0       0    45.7    
+> 53.2    48.8    57.8    53.1    68.6  
+            rnd_ext       0       0       0       0       0       0    37.9    
+> 53.2    48.8    57.8    53.1    68.6  
+           rnd_cost       0       0       0       0       0       0     100    
+>  100     100     100     100     100  
+        rnd_workers       0       0       0       0       0       0     100    
+> 53.2    48.8    57.8    53.1     100  
+              innov       0     100       0       0       0       0    45.6    
+> 53.2       0    57.8    53.1    68.3  
+      innov_product       0       0       0       0       0       0    45.6    
+> 53.2       0       0       0       0  
+      innov_process       0       0       0       0       0       0    45.5    
+> 53.2       0       0       0       0  
+    innov_marketing       0       0       0       0       0       0    45.5    
+> 53.2       0       0       0       0  
+          innov_org       0       0       0       0       0       0    45.5    
+> 53.2       0       0       0       0  
+              amdal       0       0       0       0       0       0       0    
+>    0       0    55.7    51.5    66.7  
+            ukl_upl       0       0       0       0       0       0       0    
+>    0       0    56.1    51.8      67  
+               sppl       0       0       0       0       0       0       0    
+>    0       0    55.6    51.5    66.6  
+            env_doc       0       0       0       0       0       0       0    
+>    0       0    56.1    51.9    67.2  
+        waste_treat       0       0       0       0       0       0       0    
+>    0       0    55.8    51.6      67  
+        waste_solid       0       0       0       0       0       0       0    
+>    0       0       0       0    25.4  
+       waste_liquid       0       0       0       0       0       0       0    
+>    0       0       0       0    25.1  
+          waste_haz       0       0       0       0       0       0       0    
+>    0       0       0       0    25.1  
+          waste_any       0       0       0       0       0       0       0    
+>    0       0       0       0    25.8  
+
+. export excel using "$B208_XLSX", sheet("t02_matrix", replace) firstrow(variab
+> les)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-08-rnd-capabi
+> lity/output/b2_08_tables.xlsx saved
+
+. 
+end of do-file
+
+######## B2-08: 03_rnd_incidence ########
+
+. /*==========================================================================
+>   Line 3: "Incidence R&D"
+>   Data  : SI 2011, 2017-2022 (data/b208_si.dta), clean == 1
+>   Output sheets:
+>     t03_rnd_by_year    % firms doing R&D and % with external R&D funding,
+>                        among firms that answered; with the number left blank.
+>                        Pool + by year (pool = 2011 + 2017-2022)
+>     t03_rnd_workers    R&D workers, R&D firms vs others, 2017-2022,
+>                        pool + by year
+> 
+>   NOTE: the R&D question is in the 2011 and 2017-2022 forms only. About 45%
+>   of firms leave it blank in 2017-2022; those are not counted as "no".
+>   pct_yes_all (yes / all firms) is the lower bound if every blank were a no.
+>   2011 is a different questionnaire; compare it with 2017+ with care.
+> ==========================================================================*/
+. if "$B208" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B208_DATA/b208_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1
+(30 observations deleted)
+
+. do "$B208/_incidence.do" "rnd rnd_ext" "t03_rnd_by_year"
+
+. /*==========================================================================
+>   _incidence.do -- helper: yes / no / blank table, BY YEAR + POOLED
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B208/_incidence.do" "rnd rnd_ext" "t03_rnd_by_year"
+> 
+>       argument 1 = list of variables (0/1 flags, or amounts: "yes" = > 0)
+>       argument 2 = sheet name in output/b2_08_tables.xlsx (max 31 characters)
+> 
+>   Result: 1 row = variable x period (pool, 2010, 2011, ...)
+>     n_records     firm-years in that period
+>     n_answered    firm-years with an answer (yes or no)
+>     n_blank       not asked or left blank  -- NOT counted as "no"
+>     pct_answered  n_answered / n_records
+>     n_yes         answered yes (amounts: > 0)
+>     pct_yes       n_yes / n_answered       <- the incidence to read
+>     pct_yes_all   n_yes / n_records        (lower bound: treats blanks as no)
+>   The pooled row only adds up the years in which the question was asked.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars sheet
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+
+. local first 1
+
+. foreach v of local vars {
+  2.     local lab : variable label `v'
+  3.     preserve
+  4.     keep year `v'
+  5.     generate n_records  = 1
+  6.     generate n_answered = !missing(`v')
+  7.     generate n_yes      = (`v' > 0 & !missing(`v'))
+  8.     collapse (sum) n_records n_answered n_yes, by(year)
+  9.     * pooled row (year = 0): only the years in which the question was aske
+> d
+.     expand 2 if n_answered > 0, generate(copy)
+ 10.     replace year = 0 if copy == 1
+ 11.     collapse (sum) n_records n_answered n_yes, by(year)
+ 12.     generate str20 variable = "`v'"
+ 13.     generate str80 question = "`lab'"
+ 14.     if `first' == 0 append using `result'
+ 15.     save `result', replace
+ 16.     local first 0
+ 17.     restore
+ 18. }
+(7 observations created)
+(7 real changes made)
+(file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 not
+    found)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(6 observations created)
+(6 real changes made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. 
+. use `result', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. generate n_blank      = n_records - n_answered
+
+. generate pct_answered = 100 * n_answered / n_records
+
+. generate pct_yes      = 100 * n_yes / n_answered      if n_answered > 0
+(11 missing values generated)
+
+. generate pct_yes_all  = 100 * n_yes / n_records       if n_answered > 0
+(11 missing values generated)
+
+. generate str6 period  = cond(year == 0, "pool", string(year))
+
+. * keep the variables in the order they were listed
+. generate variable_order = .
+(26 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(13 real changes made)
+(13 real changes made)
+
+. sort variable_order year
+
+. keep  variable question period n_records n_answered n_blank pct_answered n_ye
+> s pct_yes pct_yes_all
+
+. order variable question period n_records n_answered n_blank pct_answered n_ye
+> s pct_yes pct_yes_all
+
+. export excel using "$B208_XLSX", sheet("`sheet'", replace) firstrow(variables
+> )
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-08-rnd-capabi
+> lity/output/b2_08_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t03_rnd_by_year (26 rows)
+
+. use `original', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+end of do-file
+
+. 
+. * ---- R&D workers, by R&D answer ----
+. use "$B208_DATA/b208_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1 & year >= 2017 & !missing(rnd)
+(22,949 observations deleted)
+
+. do "$B208/_sumstats.do" "rnd_workers" "rnd" "t03_rnd_workers"
+
+. /*==========================================================================
+>   _sumstats.do -- helper: descriptive statistics table, POOLED + BY YEAR
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B208/_sumstats.do" "va workers ln_va" "importer" "t10_char_importe
+> r"
+> 
+>       argument 1 = list of variables
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b2_08_tables.xlsx (max 31 characters)
+> 
+>   Result: 1 row = variable x group x period (pool, 2010, 2011, ...)
+>           columns n mean sd p10 p25 p50 p75 p90 min max
+>   Rows with a missing group are not counted.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars grp sheet
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+
+. local first 1
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     local grp all
+. }
+
+. foreach v of local vars {
+  2.     foreach period in pool year {
+  3.         preserve
+  4.         keep `v' `grp' year
+  5.         keep if !missing(`v') & !missing(`grp')
+  6.         if _N > 0 {
+  7.             if "`period'" == "pool" replace year = 0
+  8.             collapse (count) n = `v' (mean) mean = `v' (sd) sd = `v' ///
+>                      (p10) p10 = `v' (p25) p25 = `v' (p50) p50 = `v' ///
+>                      (p75) p75 = `v' (p90) p90 = `v' (min) min = `v' (max) ma
+> x = `v', ///
+>                      by(`grp' year)
+  9.             generate str32 variable = "`v'"
+ 10.             if `first' == 0 append using `result'
+ 11.             save `result', replace
+ 12.             local first 0
+ 13.         }
+ 14.         restore
+ 15.     }
+ 16. }
+(0 observations deleted)
+(10,100 real changes made)
+(file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 not
+    found)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+(label yesno already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. 
+. use `result', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * the group is written as text using its value label (if it has one)
+. capture decode `grp', generate(group)
+
+. if _rc generate group = string(`grp')
+
+. * keep the variables in the order they were listed
+. generate variable_order = .
+(14 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(14 real changes made)
+
+. sort variable_order `grp' year
+
+. keep variable group period n mean sd p10 p25 p50 p75 p90 min max
+
+. export excel using "$B208_XLSX", sheet("`sheet'", replace) firstrow(variables
+> )
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-08-rnd-capabi
+> lity/output/b2_08_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t03_rnd_workers (14 rows)
+
+. use `original', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+end of do-file
+
+. 
+end of do-file
+
+######## B2-08: 04_rnd_intensity ########
+
+. /*==========================================================================
+>   Line 4: "R&D expenditure/VA"
+>   Data  : SI 2017-2022 (data/b208_si.dta), clean == 1, VA > 0
+>   Output sheets:
+>     t04_coverage        by year: firms, % with a positive R&D expense,
+>                         % R&D (flag, among answered), aggregate ratio
+>                         = total R&D expense / total VA
+>     t04_ratio_spenders  R&D expense / VA (level and ln) among firms with a
+>                         positive R&D expense: n mean sd p10-p90, pool + by ye
+> ar
+>     t04_cost_vs_flag    R&D answer (yes / no / blank) x positive expense,
+>                         by year: do the two questions agree?
+> 
+>   NOTE:
+>   - Denominator: only firms with VA > 0. The ratio is shown for spenders only
+> ;
+>     with every firm included the median is 0.
+>   - Block 0 writes 0 when no expense is reported, so 0 = "none or blank".
+>   - 2018 and 2019 report a positive expense for ~47% of firms against 3-5%
+>     in the other years, and many of them answer "no R&D". This looks like a
+>     change in what the field records, not in behaviour: compare those two
+>     years with care (see t04_cost_vs_flag).
+>   - Both amounts are nominal and masked, and block 0 calls the expense unit
+>     a "Rp000 candidate": read the comparison across groups/years, not the lev
+> el.
+> ==========================================================================*/
+. if "$B208" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. 
+. * ---- coverage and aggregate ratio by year ----
+. use "$B208_DATA/b208_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1 & !missing(rnd_cost) & va > 0
+(14,509 observations deleted)
+
+. generate n_firms = 1
+
+. generate cost_for_sum = rnd_cost
+
+. expand 2, generate(copy)              // copy of every row with year = 0 for 
+> "pool"
+(18,540 observations created)
+
+. replace year = 0 if copy == 1
+(18,540 real changes made)
+
+. collapse (sum) n_firms n_cost_pos = rnd_cost_pos sum_cost = cost_for_sum sum_
+> va = va ///
+>          (mean) pct_cost_pos = rnd_cost_pos pct_rnd_flag = rnd (count) n_rnd_
+> answered = rnd, by(year)
+
+. replace pct_cost_pos = 100 * pct_cost_pos
+(7 real changes made)
+
+. replace pct_rnd_flag = 100 * pct_rnd_flag
+(7 real changes made)
+
+. generate agg_ratio = sum_cost / sum_va
+
+. generate period = cond(year == 0, "pool", string(year))
+
+. order period n_firms n_cost_pos pct_cost_pos n_rnd_answered pct_rnd_flag agg_
+> ratio sum_cost sum_va
+
+. drop year
+
+. list period n_firms pct_cost_pos pct_rnd_flag agg_ratio, clean noobs
+
+    period   n_firms   pct_cos~s   pct_rnd~g   agg_ratio  
+      pool     18540   18.478964   10.356436   .00122723  
+      2017      3357   2.8894847   17.263844   .00007758  
+      2018      3010   48.438538   6.3710181   .00153344  
+      2019      3007    46.72431   5.1089918   .00359515  
+      2020      2935   5.3833049   8.7802004   .00012844  
+      2021      3075   5.1382114   8.9351285   .00030466  
+      2022      3156   4.7528517   14.272517   .00123031  
+
+. export excel using "$B208_XLSX", sheet("t04_coverage", replace) firstrow(vari
+> ables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-08-rnd-capabi
+> lity/output/b2_08_tables.xlsx saved
+
+. 
+. * ---- distribution of the ratio among spenders ----
+. use "$B208_DATA/b208_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1 & rnd_cost_pos == 1 & va > 0
+(29,623 observations deleted)
+
+. do "$B208/_sumstats.do" "rnd_va ln_rnd_va" "" "t04_ratio_spenders"
+
+. /*==========================================================================
+>   _sumstats.do -- helper: descriptive statistics table, POOLED + BY YEAR
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B208/_sumstats.do" "va workers ln_va" "importer" "t10_char_importe
+> r"
+> 
+>       argument 1 = list of variables
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b2_08_tables.xlsx (max 31 characters)
+> 
+>   Result: 1 row = variable x group x period (pool, 2010, 2011, ...)
+>           columns n mean sd p10 p25 p50 p75 p90 min max
+>   Rows with a missing group are not counted.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars grp sheet
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+
+. local first 1
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     local grp all
+. }
+
+. foreach v of local vars {
+  2.     foreach period in pool year {
+  3.         preserve
+  4.         keep `v' `grp' year
+  5.         keep if !missing(`v') & !missing(`grp')
+  6.         if _N > 0 {
+  7.             if "`period'" == "pool" replace year = 0
+  8.             collapse (count) n = `v' (mean) mean = `v' (sd) sd = `v' ///
+>                      (p10) p10 = `v' (p25) p25 = `v' (p50) p50 = `v' ///
+>                      (p75) p75 = `v' (p90) p90 = `v' (min) min = `v' (max) ma
+> x = `v', ///
+>                      by(`grp' year)
+  9.             generate str32 variable = "`v'"
+ 10.             if `first' == 0 append using `result'
+ 11.             save `result', replace
+ 12.             local first 0
+ 13.         }
+ 14.         restore
+ 15.     }
+ 16. }
+(0 observations deleted)
+(3,426 real changes made)
+(file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 not
+    found)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+(3,426 real changes made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. 
+. use `result', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * the group is written as text using its value label (if it has one)
+. capture decode `grp', generate(group)
+
+. if _rc generate group = string(`grp')
+
+. * keep the variables in the order they were listed
+. generate variable_order = .
+(14 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(7 real changes made)
+(7 real changes made)
+
+. sort variable_order `grp' year
+
+. keep variable group period n mean sd p10 p25 p50 p75 p90 min max
+
+. export excel using "$B208_XLSX", sheet("`sheet'", replace) firstrow(variables
+> )
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-08-rnd-capabi
+> lity/output/b2_08_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t04_ratio_spenders (14 rows)
+
+. use `original', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+end of do-file
+
+. 
+. * ---- does the expense agree with the R&D answer? ----
+. use "$B208_DATA/b208_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1 & !missing(rnd_cost)
+(14,509 observations deleted)
+
+. generate rnd_answer = rnd
+(8,440 missing values generated)
+
+. replace  rnd_answer = 2 if missing(rnd)
+(8,440 real changes made)
+
+. label define rnd_answer 0 "No R&D" 1 "R&D" 2 "Blank"
+
+. label values rnd_answer rnd_answer
+
+. generate n_firms = 1
+
+. expand 2, generate(copy)
+(18,540 observations created)
+
+. replace year = 0 if copy == 1
+(18,540 real changes made)
+
+. collapse (sum) n_firms n_cost_pos = rnd_cost_pos, by(rnd_answer year)
+
+. generate pct_cost_pos = 100 * n_cost_pos / n_firms
+
+. generate period = cond(year == 0, "pool", string(year))
+
+. sort year rnd_answer
+
+. order period rnd_answer n_firms n_cost_pos pct_cost_pos
+
+. drop year
+
+. export excel using "$B208_XLSX", sheet("t04_cost_vs_flag", replace) firstrow(
+> variables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-08-rnd-capabi
+> lity/output/b2_08_tables.xlsx saved
+
+. 
+end of do-file
+
+######## B2-08: 05_innovation ########
+
+. /*==========================================================================
+>   Line 5: "Innovation"
+>   Data  : SI (data/b208_si.dta), clean == 1
+>   Output sheets:
+>     t05_innov_by_year   % firms with any innovation, and with product /
+>                         process / marketing / organisational innovation,
+>                         among firms that answered; pool + by year
+>     t05_innov_types     among innovating firms (2017-2018): % with each type
+> 
+>   NOTE: "any innovation" is asked in 2011, 2017, 2018 and 2020-2022 (not 2019
+> );
+>   the four types only in 2017-2018. About 45% of firms leave it blank.
+>   2017-2018 show ~50% innovating against ~20% in 2020-2022: the question
+>   changed with the form (2017-18 lists the four types), so read the
+>   levels within each form, not as a trend.
+> ==========================================================================*/
+. if "$B208" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B208_DATA/b208_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1
+(30 observations deleted)
+
+. do "$B208/_incidence.do" "innov innov_product innov_process innov_marketing i
+> nnov_org" "t05_innov_by_year"
+
+. /*==========================================================================
+>   _incidence.do -- helper: yes / no / blank table, BY YEAR + POOLED
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B208/_incidence.do" "rnd rnd_ext" "t03_rnd_by_year"
+> 
+>       argument 1 = list of variables (0/1 flags, or amounts: "yes" = > 0)
+>       argument 2 = sheet name in output/b2_08_tables.xlsx (max 31 characters)
+> 
+>   Result: 1 row = variable x period (pool, 2010, 2011, ...)
+>     n_records     firm-years in that period
+>     n_answered    firm-years with an answer (yes or no)
+>     n_blank       not asked or left blank  -- NOT counted as "no"
+>     pct_answered  n_answered / n_records
+>     n_yes         answered yes (amounts: > 0)
+>     pct_yes       n_yes / n_answered       <- the incidence to read
+>     pct_yes_all   n_yes / n_records        (lower bound: treats blanks as no)
+>   The pooled row only adds up the years in which the question was asked.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars sheet
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+
+. local first 1
+
+. foreach v of local vars {
+  2.     local lab : variable label `v'
+  3.     preserve
+  4.     keep year `v'
+  5.     generate n_records  = 1
+  6.     generate n_answered = !missing(`v')
+  7.     generate n_yes      = (`v' > 0 & !missing(`v'))
+  8.     collapse (sum) n_records n_answered n_yes, by(year)
+  9.     * pooled row (year = 0): only the years in which the question was aske
+> d
+.     expand 2 if n_answered > 0, generate(copy)
+ 10.     replace year = 0 if copy == 1
+ 11.     collapse (sum) n_records n_answered n_yes, by(year)
+ 12.     generate str20 variable = "`v'"
+ 13.     generate str80 question = "`lab'"
+ 14.     if `first' == 0 append using `result'
+ 15.     save `result', replace
+ 16.     local first 0
+ 17.     restore
+ 18. }
+(6 observations created)
+(6 real changes made)
+(file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 not
+    found)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(2 observations created)
+(2 real changes made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(2 observations created)
+(2 real changes made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(2 observations created)
+(2 real changes made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(2 observations created)
+(2 real changes made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. 
+. use `result', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. generate n_blank      = n_records - n_answered
+
+. generate pct_answered = 100 * n_answered / n_records
+
+. generate pct_yes      = 100 * n_yes / n_answered      if n_answered > 0
+(46 missing values generated)
+
+. generate pct_yes_all  = 100 * n_yes / n_records       if n_answered > 0
+(46 missing values generated)
+
+. generate str6 period  = cond(year == 0, "pool", string(year))
+
+. * keep the variables in the order they were listed
+. generate variable_order = .
+(65 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+
+. sort variable_order year
+
+. keep  variable question period n_records n_answered n_blank pct_answered n_ye
+> s pct_yes pct_yes_all
+
+. order variable question period n_records n_answered n_blank pct_answered n_ye
+> s pct_yes pct_yes_all
+
+. export excel using "$B208_XLSX", sheet("`sheet'", replace) firstrow(variables
+> )
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-08-rnd-capabi
+> lity/output/b2_08_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t05_innov_by_year (65 rows)
+
+. use `original', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+end of do-file
+
+. 
+. * ---- which types do innovators report? ----
+. use "$B208_DATA/b208_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1 & innov == 1 & inlist(year, 2017, 2018)
+(31,441 observations deleted)
+
+. generate n_innovators = 1
+
+. expand 2, generate(copy)              // copy of every row with year = 0 for 
+> "pool"
+(1,608 observations created)
+
+. replace year = 0 if copy == 1
+(1,608 real changes made)
+
+. collapse (sum) n_innovators (mean) pct_product = innov_product pct_process = 
+> innov_process ///
+>          pct_marketing = innov_marketing pct_org = innov_org, by(year)
+
+. foreach v in pct_product pct_process pct_marketing pct_org {
+  2.     replace `v' = 100 * `v'
+  3. }
+(3 real changes made)
+(3 real changes made)
+(3 real changes made)
+(3 real changes made)
+
+. generate period = cond(year == 0, "pool", string(year))
+
+. order period
+
+. drop year
+
+. list, clean noobs
+
+    period   n_inno~s   pct_pro~t   pct_pro~s   pct_mar~g     pct_org  
+      pool       1608   74.844334   61.619938   60.012477   42.295696  
+      2017        804   75.187032   60.549313   58.948686   41.802253  
+      2018        804   74.502488   62.686567   61.069652    42.78607  
+
+. export excel using "$B208_XLSX", sheet("t05_innov_types", replace) firstrow(v
+> ariables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-08-rnd-capabi
+> lity/output/b2_08_tables.xlsx saved
+
+. 
+end of do-file
+
+######## B2-08: 06_amdal ########
+
+. /*==========================================================================
+>   Line 6: "AMDAL/environmental management"
+>   Data  : SI 2020-2022 (data/b208_si.dta), clean == 1
+>   Output sheets:
+>     t06_env_by_year   % firms holding AMDAL, UKL/UPL, SPPL, and any of the
+>                       three (env_doc), among firms that answered;
+>                       pool (2020-2022) + by year
+>     t06_env_combo     which combination of the three documents firms hold,
+>                       firms that answered all three, pool + by year
+> 
+>   NOTE: the environmental documents are in the 2020-2022 forms only, and
+>   about 45% of firms leave them blank. AMDAL alone understates environmental
+>   management: UKL/UPL and SPPL are the documents for smaller-impact plants.
+>   The waste-treatment installation question (also 2020-2022) is in file 07.
+> ==========================================================================*/
+. if "$B208" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B208_DATA/b208_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1
+(30 observations deleted)
+
+. do "$B208/_incidence.do" "amdal ukl_upl sppl env_doc" "t06_env_by_year"
+
+. /*==========================================================================
+>   _incidence.do -- helper: yes / no / blank table, BY YEAR + POOLED
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B208/_incidence.do" "rnd rnd_ext" "t03_rnd_by_year"
+> 
+>       argument 1 = list of variables (0/1 flags, or amounts: "yes" = > 0)
+>       argument 2 = sheet name in output/b2_08_tables.xlsx (max 31 characters)
+> 
+>   Result: 1 row = variable x period (pool, 2010, 2011, ...)
+>     n_records     firm-years in that period
+>     n_answered    firm-years with an answer (yes or no)
+>     n_blank       not asked or left blank  -- NOT counted as "no"
+>     pct_answered  n_answered / n_records
+>     n_yes         answered yes (amounts: > 0)
+>     pct_yes       n_yes / n_answered       <- the incidence to read
+>     pct_yes_all   n_yes / n_records        (lower bound: treats blanks as no)
+>   The pooled row only adds up the years in which the question was asked.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars sheet
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+
+. local first 1
+
+. foreach v of local vars {
+  2.     local lab : variable label `v'
+  3.     preserve
+  4.     keep year `v'
+  5.     generate n_records  = 1
+  6.     generate n_answered = !missing(`v')
+  7.     generate n_yes      = (`v' > 0 & !missing(`v'))
+  8.     collapse (sum) n_records n_answered n_yes, by(year)
+  9.     * pooled row (year = 0): only the years in which the question was aske
+> d
+.     expand 2 if n_answered > 0, generate(copy)
+ 10.     replace year = 0 if copy == 1
+ 11.     collapse (sum) n_records n_answered n_yes, by(year)
+ 12.     generate str20 variable = "`v'"
+ 13.     generate str80 question = "`lab'"
+ 14.     if `first' == 0 append using `result'
+ 15.     save `result', replace
+ 16.     local first 0
+ 17.     restore
+ 18. }
+(3 observations created)
+(3 real changes made)
+(file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 not
+    found)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(3 observations created)
+(3 real changes made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(3 observations created)
+(3 real changes made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(3 observations created)
+(3 real changes made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. 
+. use `result', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. generate n_blank      = n_records - n_answered
+
+. generate pct_answered = 100 * n_answered / n_records
+
+. generate pct_yes      = 100 * n_yes / n_answered      if n_answered > 0
+(36 missing values generated)
+
+. generate pct_yes_all  = 100 * n_yes / n_records       if n_answered > 0
+(36 missing values generated)
+
+. generate str6 period  = cond(year == 0, "pool", string(year))
+
+. * keep the variables in the order they were listed
+. generate variable_order = .
+(52 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+
+. sort variable_order year
+
+. keep  variable question period n_records n_answered n_blank pct_answered n_ye
+> s pct_yes pct_yes_all
+
+. order variable question period n_records n_answered n_blank pct_answered n_ye
+> s pct_yes pct_yes_all
+
+. export excel using "$B208_XLSX", sheet("`sheet'", replace) firstrow(variables
+> )
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-08-rnd-capabi
+> lity/output/b2_08_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t06_env_by_year (52 rows)
+
+. use `original', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+end of do-file
+
+. 
+. * ---- combinations of documents ----
+. use "$B208_DATA/b208_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1 & !missing(amdal) & !missing(ukl_upl) & !missing(sppl)
+(27,743 observations deleted)
+
+. generate str40 combo = ""
+(5,306 missing values generated)
+
+. replace combo = combo + "AMDAL "   if amdal == 1
+(2,070 real changes made)
+
+. replace combo = combo + "UKL/UPL " if ukl_upl == 1
+(2,502 real changes made)
+
+. replace combo = combo + "SPPL"     if sppl == 1
+(2,033 real changes made)
+
+. replace combo = strtrim(combo)
+(890 real changes made)
+
+. replace combo = "No document" if combo == ""
+(2,383 real changes made)
+
+. generate n_firms = 1
+
+. expand 2, generate(copy)
+(5,306 observations created)
+
+. replace year = 0 if copy == 1
+(5,306 real changes made)
+
+. collapse (sum) n_firms, by(year combo)
+
+. bysort year: egen total = total(n_firms)
+
+. generate pct_firms = 100 * n_firms / total
+
+. generate period = cond(year == 0, "pool", string(year))
+
+. gsort year -n_firms
+
+. order period combo n_firms pct_firms
+
+. drop year total
+
+. list if period == "pool", clean noobs
+
+    period                combo   n_firms   pct_firms  
+      pool          No document      2383   44.911421  
+      pool   AMDAL UKL/UPL SPPL      1529   28.816434  
+      pool              UKL/UPL       425   8.0098002  
+      pool        AMDAL UKL/UPL       285   5.3712778  
+      pool         UKL/UPL SPPL       263   4.9566528  
+      pool                AMDAL       180    3.392386  
+      pool                 SPPL       165   3.1096871  
+      pool           AMDAL SPPL        76   1.4323407  
+
+. export excel using "$B208_XLSX", sheet("t06_env_combo", replace) firstrow(var
+> iables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-08-rnd-capabi
+> lity/output/b2_08_tables.xlsx saved
+
+. 
+end of do-file
+
+######## B2-08: 07_waste ########
+
+. /*==========================================================================
+>   Line 7: "Waste management."
+>   Data  : SI 2020-2022 (data/b208_si.dta), clean == 1
+>   Output sheet:
+>     t07_waste_by_year  % firms, among firms that answered:
+>                          waste_treat   has a waste installation / treatment (
+> 2020-2022)
+>                          waste_solid   reports solid waste (2022)
+>                          waste_liquid  reports liquid waste (2022)
+>                          waste_haz     reports hazardous (B3) waste (2022)
+>                          waste_any     reports at least one of the three (202
+> 2)
+>                        pool + by year
+> 
+>   NOTE: the waste-type questions are in the 2022 form only, and only ~26% of
+>   2022 firms answer them. They record whether a firm REPORTS that kind of
+>   waste, which says more about what it produces than how it manages it. The
+>   closest measure of waste MANAGEMENT is waste_treat (2020-2022).
+> ==========================================================================*/
+. if "$B208" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B208_DATA/b208_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1
+(30 observations deleted)
+
+. do "$B208/_incidence.do" "waste_treat waste_solid waste_liquid waste_haz wast
+> e_any" "t07_waste_by_year"
+
+. /*==========================================================================
+>   _incidence.do -- helper: yes / no / blank table, BY YEAR + POOLED
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B208/_incidence.do" "rnd rnd_ext" "t03_rnd_by_year"
+> 
+>       argument 1 = list of variables (0/1 flags, or amounts: "yes" = > 0)
+>       argument 2 = sheet name in output/b2_08_tables.xlsx (max 31 characters)
+> 
+>   Result: 1 row = variable x period (pool, 2010, 2011, ...)
+>     n_records     firm-years in that period
+>     n_answered    firm-years with an answer (yes or no)
+>     n_blank       not asked or left blank  -- NOT counted as "no"
+>     pct_answered  n_answered / n_records
+>     n_yes         answered yes (amounts: > 0)
+>     pct_yes       n_yes / n_answered       <- the incidence to read
+>     pct_yes_all   n_yes / n_records        (lower bound: treats blanks as no)
+>   The pooled row only adds up the years in which the question was asked.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars sheet
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+
+. local first 1
+
+. foreach v of local vars {
+  2.     local lab : variable label `v'
+  3.     preserve
+  4.     keep year `v'
+  5.     generate n_records  = 1
+  6.     generate n_answered = !missing(`v')
+  7.     generate n_yes      = (`v' > 0 & !missing(`v'))
+  8.     collapse (sum) n_records n_answered n_yes, by(year)
+  9.     * pooled row (year = 0): only the years in which the question was aske
+> d
+.     expand 2 if n_answered > 0, generate(copy)
+ 10.     replace year = 0 if copy == 1
+ 11.     collapse (sum) n_records n_answered n_yes, by(year)
+ 12.     generate str20 variable = "`v'"
+ 13.     generate str80 question = "`lab'"
+ 14.     if `first' == 0 append using `result'
+ 15.     save `result', replace
+ 16.     local first 0
+ 17.     restore
+ 18. }
+(3 observations created)
+(3 real changes made)
+(file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 not
+    found)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(1 observation created)
+(1 real change made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(1 observation created)
+(1 real change made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(1 observation created)
+(1 real change made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(1 observation created)
+(1 real change made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. 
+. use `result', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. generate n_blank      = n_records - n_answered
+
+. generate pct_answered = 100 * n_answered / n_records
+
+. generate pct_yes      = 100 * n_yes / n_answered      if n_answered > 0
+(53 missing values generated)
+
+. generate pct_yes_all  = 100 * n_yes / n_records       if n_answered > 0
+(53 missing values generated)
+
+. generate str6 period  = cond(year == 0, "pool", string(year))
+
+. * keep the variables in the order they were listed
+. generate variable_order = .
+(65 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+
+. sort variable_order year
+
+. keep  variable question period n_records n_answered n_blank pct_answered n_ye
+> s pct_yes pct_yes_all
+
+. order variable question period n_records n_answered n_blank pct_answered n_ye
+> s pct_yes pct_yes_all
+
+. export excel using "$B208_XLSX", sheet("`sheet'", replace) firstrow(variables
+> )
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-08-rnd-capabi
+> lity/output/b2_08_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t07_waste_by_year (65 rows)
+
+. use `original', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+end of do-file
+
+. 
+end of do-file
+
+######## B2-08: 08_crosstabs ########
+
+. /*==========================================================================
+>   Line 8: "Cross tab dengan export/import/FDI, size, sector dan
+>            carbon/energy productivity"
+>   Data  : SI (data/b208_si.dta), clean == 1
+>   A. Lines 3-7 by each split, pool + by year. One sheet per split:
+>        t08_by_exporter  t08_by_importer  t08_by_fdi  t08_by_large (size)
+>        t08_by_kbli2     t08_by_q_cprod   (quintile of VA / tCO2)
+>                         t08_by_q_eprod   (quintile of VA / GJ)
+>      Columns: pct_* = % yes among firms that answered, n_* = firms that
+>      answered; med_rnd_va = median R&D expense / VA among spenders.
+>      pct_* covers only the years the question is asked (see file 02), so
+>      the pooled row of each measure is a different set of years.
+>   B. The other way round: carbon / energy productivity by capability.
+>        t08_prod_by_cap  median VA/tCO2, VA/GJ, tCO2/VA and mean ln VA/tCO2,
+>                         ln VA/GJ for firms with vs without each capability,
+>                         pool + by year
+> 
+>   NOTE: 2022 exporter and 2020 FDI are missing (see 01a), so waste (2022
+>   only) has no exporter split and 2020 drops out of the FDI split.
+>   Productivity quintiles are within each year (values are nominal).
+>   These are associations: an R&D firm may also be larger, an exporter, etc.
+> ==========================================================================*/
+. if "$B208" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. 
+. * ---- A. capability rates by every split ----
+. * one sheet per split: t08_by_<split>
+. foreach s in exporter importer fdi large kbli2 q_cprod q_eprod {
+  2.     use "$B208_DATA/b208_si.dta", clear
+  3.     keep if clean == 1 & !missing(`s')
+  4.     generate rnd_va_spenders = rnd_va if rnd_cost_pos == 1
+  5.     generate n_firms = 1
+  6.     expand 2, generate(copy)              // copy of every row with year =
+>  0 for "pool"
+  7.     replace year = 0 if copy == 1
+  8.     collapse (sum) n_firms ///
+>              (mean) pct_rnd = rnd pct_rnd_ext = rnd_ext pct_rnd_cost_pos = rn
+> d_cost_pos ///
+>                     pct_innov = innov pct_amdal = amdal pct_env_doc = env_doc
+>  ///
+>                     pct_waste_treat = waste_treat pct_waste_any = waste_any /
+> //
+>              (count) n_rnd = rnd n_innov = innov n_env_doc = env_doc n_waste_
+> any = waste_any ///
+>              (p50) med_rnd_va = rnd_va_spenders, by(`s' year)
+  9.     foreach v in pct_rnd pct_rnd_ext pct_rnd_cost_pos pct_innov pct_amdal 
+> pct_env_doc ///
+>                  pct_waste_treat pct_waste_any {
+ 10.         replace `v' = 100 * `v'
+ 11.     }
+ 12.     generate period = cond(year == 0, "pool", string(year))
+ 13.     sort `s' year
+ 14.     order `s' period n_firms
+ 15.     drop year
+ 16.     export excel using "$B208_XLSX", sheet("t08_by_`s'", replace) firstrow
+> (variables)
+ 17.     display as result "  -> sheet t08_by_`s'"
+ 18. }
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(15,672 observations deleted)
+(16,517 missing values generated)
+(17,377 observations created)
+(17,377 real changes made)
+(14 real changes made)
+(12 real changes made)
+(12 real changes made)
+(12 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(0 real changes made)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-08-rnd-capabi
+> lity/output/b2_08_tables.xlsx saved
+  -> sheet t08_by_exporter
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(30 observations deleted)
+(29,593 missing values generated)
+(33,019 observations created)
+(33,019 real changes made)
+(16 real changes made)
+(14 real changes made)
+(14 real changes made)
+(14 real changes made)
+(8 real changes made)
+(8 real changes made)
+(8 real changes made)
+(4 real changes made)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-08-rnd-capabi
+> lity/output/b2_08_tables.xlsx saved
+  -> sheet t08_by_importer
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(3,276 observations deleted)
+(26,505 missing values generated)
+(29,773 observations created)
+(29,773 real changes made)
+(14 real changes made)
+(12 real changes made)
+(12 real changes made)
+(12 real changes made)
+(6 real changes made)
+(6 real changes made)
+(6 real changes made)
+(4 real changes made)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-08-rnd-capabi
+> lity/output/b2_08_tables.xlsx saved
+  -> sheet t08_by_fdi
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(30 observations deleted)
+(29,593 missing values generated)
+(33,019 observations created)
+(33,019 real changes made)
+(16 real changes made)
+(14 real changes made)
+(14 real changes made)
+(14 real changes made)
+(8 real changes made)
+(8 real changes made)
+(8 real changes made)
+(4 real changes made)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-08-rnd-capabi
+> lity/output/b2_08_tables.xlsx saved
+  -> sheet t08_by_large
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(30 observations deleted)
+(29,593 missing values generated)
+(33,019 observations created)
+(33,019 real changes made)
+(180 real changes made)
+(123 real changes made)
+(159 real changes made)
+(167 real changes made)
+(96 real changes made)
+(96 real changes made)
+(96 real changes made)
+(48 real changes made)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-08-rnd-capabi
+> lity/output/b2_08_tables.xlsx saved
+  -> sheet t08_by_kbli2
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(577 observations deleted)
+(29,058 missing values generated)
+(32,472 observations created)
+(32,472 real changes made)
+(40 real changes made)
+(34 real changes made)
+(35 real changes made)
+(35 real changes made)
+(20 real changes made)
+(20 real changes made)
+(20 real changes made)
+(10 real changes made)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-08-rnd-capabi
+> lity/output/b2_08_tables.xlsx saved
+  -> sheet t08_by_q_cprod
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(577 observations deleted)
+(29,058 missing values generated)
+(32,472 observations created)
+(32,472 real changes made)
+(40 real changes made)
+(35 real changes made)
+(35 real changes made)
+(35 real changes made)
+(20 real changes made)
+(20 real changes made)
+(20 real changes made)
+(10 real changes made)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-08-rnd-capabi
+> lity/output/b2_08_tables.xlsx saved
+  -> sheet t08_by_q_eprod
+
+. 
+. * ---- B. carbon / energy productivity by capability ----
+. tempfile stack
+
+. local first 1
+
+. foreach c in rnd rnd_cost_pos innov amdal env_doc waste_treat waste_any {
+  2.     use "$B208_DATA/b208_si.dta", clear
+  3.     keep if clean == 1 & !missing(`c')
+  4.     generate n_firms = 1
+  5.     expand 2, generate(copy)
+  6.     replace year = 0 if copy == 1
+  7.     collapse (sum) n_firms (p50) med_va_per_co2 = va_per_co2 med_va_per_gj
+>  = va_per_gj ///
+>              med_co2_per_va = co2_per_va (mean) mean_ln_va_per_co2 = ln_va_pe
+> r_co2 ///
+>              mean_ln_va_per_gj = ln_va_per_gj, by(`c' year)
+  8.     generate str14 capability = "`c'"
+  9.     rename `c' has_capability
+ 10.     if `first' == 0 append using `stack'
+ 11.     save `stack', replace
+ 12.     local first 0
+ 13. }
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(20,613 observations deleted)
+(12,436 observations created)
+(12,436 real changes made)
+(file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 not
+    found)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(14,509 observations deleted)
+(18,540 observations created)
+(18,540 real changes made)
+(label yesno already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(22,095 observations deleted)
+(10,954 observations created)
+(10,954 real changes made)
+(label yesno already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(27,725 observations deleted)
+(5,324 observations created)
+(5,324 real changes made)
+(label yesno already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(27,684 observations deleted)
+(5,365 observations created)
+(5,365 real changes made)
+(label yesno already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(27,708 observations deleted)
+(5,341 observations created)
+(5,341 real changes made)
+(label yesno already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(32,234 observations deleted)
+(815 observations created)
+(815 real changes made)
+(label yesno already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. label values has_capability yesno
+
+. generate period = cond(year == 0, "pool", string(year))
+
+. generate cap_order = 0
+
+. local i 0
+
+. foreach c in rnd rnd_cost_pos innov amdal env_doc waste_treat waste_any {
+  2.     local ++i
+  3.     replace cap_order = `i' if capability == "`c'"
+  4. }
+(16 real changes made)
+(14 real changes made)
+(14 real changes made)
+(8 real changes made)
+(8 real changes made)
+(8 real changes made)
+(4 real changes made)
+
+. sort cap_order year has_capability
+
+. order capability has_capability period n_firms
+
+. drop year cap_order
+
+. list if period == "pool", clean noobs
+
+      capability   has_ca~y   period   n_firms   med_va_~2   med_va_~j   med_co
+> 2~a   mean_ln~2   mean_ln~j  
+             rnd         No     pool     11220   46339.607   6621.0594   .00002
+> 077   10.829859   8.8939446  
+             rnd        Yes     pool      1216   40959.957   6432.1082   .00002
+> 259   10.739401   8.9198949  
+    rnd_cost_pos         No     pool     15114    82226.12   12536.716   .00001
+> 174   11.400085   9.5439258  
+    rnd_cost_pos        Yes     pool      3426   156606.93   22774.555   6.347e
+> -06   11.936665   10.037038  
+           innov         No     pool      7920   46354.411   6444.2494   .00002
+> 067   10.825286   8.8733605  
+           innov        Yes     pool      3034   43723.136   6683.6872   .00002
+> 199    10.80776   8.9407282  
+           amdal         No     pool      3239   46808.206   7153.8835    .0000
+> 206   10.828558   8.9717224  
+           amdal        Yes     pool      2085   39222.905   6659.1144   .00002
+> 423   10.683006   8.9168037  
+         env_doc         No     pool      2386   51087.744   7507.7437   .00001
+> 895   10.899396   9.0040318  
+         env_doc        Yes     pool      2979    38286.54   6551.4292   .00002
+> 479   10.670118   8.9093891  
+     waste_treat         No     pool      3364   46073.053    7105.227   .00002
+> 099   10.834895   8.9861595  
+     waste_treat        Yes     pool      1977   39484.918      6760.7   .00002
+> 362    10.66845   8.8950827  
+       waste_any         No     pool        45   57982.552   8591.1722   .00001
+> 618   10.633411   8.9423967  
+       waste_any        Yes     pool       770   47752.799   8024.5932   .00002
+> 051   10.876738   9.1135474  
+
+. export excel using "$B208_XLSX", sheet("t08_prod_by_cap", replace) firstrow(v
+> ariables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-08-rnd-capabi
+> lity/output/b2_08_tables.xlsx saved
+
+. 
+end of do-file
+
+######## B2-08: 09_figures ########
+
+. /*==========================================================================
+>   (no figures line in the to-do list; added as line 9)
+>   Every other file writes its tables to output/b2_08_tables.xlsx. This file
+>   draws the charts FROM those tables, so a chart always matches its table.
+>   The exact points of every chart are also written to a sheet figNN_data
+>   (graph-ready, e.g. to redraw the chart in Excel or PowerPoint).
+>   Runs LAST in 00_run.do.
+> 
+>   Charts (output/):
+>     fig02_availability.png    % of firms answering each question, by year
+>     fig03_rnd.png             % R&D and % external R&D funding, by year
+>     fig04_rnd_intensity.png   % with positive R&D expense; median R&D/VA
+>     fig05_innovation.png      % innovating, by year
+>     fig06_env_docs.png        % holding AMDAL / UKL-UPL / SPPL, by year
+>     fig07_waste.png           waste treatment and waste types (pooled)
+>     fig08a_by_group.png       R&D, innovation, env. document by exporter /
+>                               importer / FDI / size (pooled)
+>     fig08b_by_carbon_prod.png same by quintile of carbon productivity
+> ==========================================================================*/
+. if "$B208" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. 
+. * ---- fig02: which question is answered in which year (line 2) ----
+. import excel using "$B208_XLSX", sheet("t02_availability") firstrow clear
+(10 vars, 234 obs)
+
+. keep if inlist(variable, "rnd", "innov", "amdal", "waste_any") & period != "p
+> ool"
+(186 observations deleted)
+
+. generate year = real(period)
+
+. keep year variable pct_answered
+
+. reshape wide pct_answered, i(year) j(variable) string
+(j = amdal innov rnd waste_any)
+
+Data                               Long   ->   Wide
+-----------------------------------------------------------------------------
+Number of observations               48   ->   12          
+Number of variables                   3   ->   5           
+j variable (4 values)          variable   ->   (dropped)
+xij variables:
+                           pct_answered   ->   pct_answeredamdal pct_answeredin
+> nov ... pct_answeredwaste_any
+-----------------------------------------------------------------------------
+
+. rename pct_answered* pct_answered_*
+
+. order year pct_answered_rnd pct_answered_innov pct_answered_amdal pct_answere
+> d_waste_any
+
+. export excel using "$B208_XLSX", sheet("fig02_data", replace) firstrow(variab
+> les)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-08-rnd-capabi
+> lity/output/b2_08_tables.xlsx saved
+
+. graph bar (asis) pct_answered_rnd pct_answered_innov pct_answered_amdal pct_a
+> nswered_waste_any, ///
+>     over(year, label(labsize(small))) ytitle("% of firms answering") ylabel(0
+> (20)100, angle(horizontal)) ///
+>     legend(order(1 "R&D" 2 "Innovation" 3 "AMDAL" 4 "Waste types") rows(1)) /
+> //
+>     title("When is each capability question answered?") ///
+>     note("No bar = question not in that year's form (there is no 2016 survey)
+> ." ///
+>          "Blanks are not counted as 'no'.") ///
+>     graphregion(color(white)) xsize(9) ysize(5)
+
+. graph export "$B208_OUT/fig02_availability.png", replace width(2000)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-08-rnd-capabi
+> lity/output/fig02_availability.png written in PNG format
+
+. 
+. * ---- fig03: R&D incidence (line 3) ----
+. import excel using "$B208_XLSX", sheet("t03_rnd_by_year") firstrow clear
+(10 vars, 26 obs)
+
+. keep if n_answered > 0 & period != "pool"
+(13 observations deleted)
+
+. keep period variable pct_yes
+
+. reshape wide pct_yes, i(period) j(variable) string
+(j = rnd rnd_ext)
+
+Data                               Long   ->   Wide
+-----------------------------------------------------------------------------
+Number of observations               13   ->   7           
+Number of variables                   3   ->   3           
+j variable (2 values)          variable   ->   (dropped)
+xij variables:
+                                pct_yes   ->   pct_yesrnd pct_yesrnd_ext
+-----------------------------------------------------------------------------
+
+. rename pct_yes* pct_*
+
+. export excel using "$B208_XLSX", sheet("fig03_data", replace) firstrow(variab
+> les)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-08-rnd-capabi
+> lity/output/b2_08_tables.xlsx saved
+
+. graph bar (asis) pct_rnd pct_rnd_ext, over(period) ///
+>     ytitle("% of firms that answered") ///
+>     legend(order(1 "R&D activity" 2 "External R&D funding") rows(1)) ///
+>     title("Incidence of R&D") ///
+>     note("Asked in 2011 and 2017-2022 only; about 45% of firms leave it blank
+> .") ///
+>     graphregion(color(white))
+
+. graph export "$B208_OUT/fig03_rnd.png", replace width(2000)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-08-rnd-capabi
+> lity/output/fig03_rnd.png written in PNG format
+
+. 
+. * ---- fig04: R&D expense / VA (line 4) ----
+. import excel using "$B208_XLSX", sheet("t04_ratio_spenders") firstrow clear
+(13 vars, 14 obs)
+
+. keep if variable == "rnd_va" & period != "pool"
+(8 observations deleted)
+
+. keep period p25 p50 p75
+
+. tempfile ratio
+
+. save `ratio'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. import excel using "$B208_XLSX", sheet("t04_coverage") firstrow clear
+(9 vars, 7 obs)
+
+. keep if period != "pool"
+(1 observation deleted)
+
+. keep period pct_cost_pos
+
+. merge 1:1 period using `ratio', nogenerate
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                                 6  
+    -----------------------------------------
+
+. generate year = real(period)
+
+. rename (p25 p50 p75) (p25_rnd_va p50_rnd_va p75_rnd_va)
+
+. order year pct_cost_pos p25_rnd_va p50_rnd_va p75_rnd_va
+
+. drop period
+
+. export excel using "$B208_XLSX", sheet("fig04_data", replace) firstrow(variab
+> les)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-08-rnd-capabi
+> lity/output/b2_08_tables.xlsx saved
+
+. twoway (bar pct_cost_pos year, barwidth(0.7)), xlabel(2017(1)2022) xtitle("")
+>  ///
+>     ytitle("% of firms") title("Positive R&D expense reported") ///
+>     graphregion(color(white)) name(g1, replace)
+
+. twoway (rcap p25_rnd_va p75_rnd_va year, lcolor(gs10)) (connected p50_rnd_va 
+> year), ///
+>     xlabel(2017(1)2022) xtitle("") ytitle("R&D expense / VA") ///
+>     legend(order(2 "Median" 1 "25th-75th pct") rows(1)) ///
+>     title("R&D / VA among spenders") graphregion(color(white)) name(g2, repla
+> ce)
+
+. graph combine g1 g2, cols(2) title("R&D expenditure / value added") ///
+>     note("2018-2019: ~47% report a positive expense vs 3-5% in other years (l
+> ikely a field change, not behaviour).") ///
+>     graphregion(color(white)) xsize(10) ysize(4.5)
+
+. graph export "$B208_OUT/fig04_rnd_intensity.png", replace width(2400)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-08-rnd-capabi
+> lity/output/fig04_rnd_intensity.png written in PNG format
+
+. graph drop _all
+
+. 
+. * ---- fig05: innovation (line 5) ----
+. import excel using "$B208_XLSX", sheet("t05_innov_by_year") firstrow clear
+(10 vars, 65 obs)
+
+. keep if variable == "innov" & n_answered > 0 & period != "pool"
+(59 observations deleted)
+
+. keep period pct_yes n_answered
+
+. rename pct_yes pct_innov
+
+. export excel using "$B208_XLSX", sheet("fig05_data", replace) firstrow(variab
+> les)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-08-rnd-capabi
+> lity/output/b2_08_tables.xlsx saved
+
+. graph bar (asis) pct_innov, over(period) ///
+>     ytitle("% of firms that answered") title("Any innovation") ///
+>     note("Not asked in 2012-2016 or 2019. The 2017-2018 form lists four innov
+> ation types;" ///
+>          "the drop after 2018 is a questionnaire change, not a trend.") ///
+>     graphregion(color(white))
+
+. graph export "$B208_OUT/fig05_innovation.png", replace width(2000)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-08-rnd-capabi
+> lity/output/fig05_innovation.png written in PNG format
+
+. 
+. * ---- fig06: environmental documents (line 6) ----
+. import excel using "$B208_XLSX", sheet("t06_env_by_year") firstrow clear
+(10 vars, 52 obs)
+
+. keep if n_answered > 0 & period != "pool"
+(40 observations deleted)
+
+. keep period variable pct_yes
+
+. reshape wide pct_yes, i(period) j(variable) string
+(j = amdal env_doc sppl ukl_upl)
+
+Data                               Long   ->   Wide
+-----------------------------------------------------------------------------
+Number of observations               12   ->   3           
+Number of variables                   3   ->   5           
+j variable (4 values)          variable   ->   (dropped)
+xij variables:
+                                pct_yes   ->   pct_yesamdal pct_yesenv_doc ... 
+> pct_yesukl_upl
+-----------------------------------------------------------------------------
+
+. rename pct_yes* pct_*
+
+. order period pct_amdal pct_ukl_upl pct_sppl pct_env_doc
+
+. export excel using "$B208_XLSX", sheet("fig06_data", replace) firstrow(variab
+> les)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-08-rnd-capabi
+> lity/output/b2_08_tables.xlsx saved
+
+. graph bar (asis) pct_amdal pct_ukl_upl pct_sppl pct_env_doc, over(period) ///
+>     ytitle("% of firms that answered") ///
+>     ylabel(, angle(horizontal)) ///
+>     legend(order(1 "AMDAL" 2 "UKL/UPL" 3 "SPPL" 4 "Any") rows(1)) ///
+>     title("Environmental management documents") ///
+>     note("Asked in 2020-2022 only; about 45% of firms leave it blank.") ///
+>     graphregion(color(white))
+
+. graph export "$B208_OUT/fig06_env_docs.png", replace width(2000)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-08-rnd-capabi
+> lity/output/fig06_env_docs.png written in PNG format
+
+. 
+. * ---- fig07: waste (line 7) ----
+. import excel using "$B208_XLSX", sheet("t07_waste_by_year") firstrow clear
+(10 vars, 65 obs)
+
+. keep if period == "pool"
+(60 observations deleted)
+
+. generate str30 item = ""
+(5 missing values generated)
+
+. replace item = "Waste treatment (2020-22)"  if variable == "waste_treat"
+(1 real change made)
+
+. replace item = "Solid waste (2022)"         if variable == "waste_solid"
+(1 real change made)
+
+. replace item = "Liquid waste (2022)"        if variable == "waste_liquid"
+(1 real change made)
+
+. replace item = "Hazardous B3 waste (2022)"  if variable == "waste_haz"
+(1 real change made)
+
+. replace item = "Any waste type (2022)"      if variable == "waste_any"
+(1 real change made)
+
+. keep item variable pct_yes n_answered
+
+. export excel using "$B208_XLSX", sheet("fig07_data", replace) firstrow(variab
+> les)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-08-rnd-capabi
+> lity/output/b2_08_tables.xlsx saved
+
+. graph hbar (asis) pct_yes, over(item, sort(1) descending) ///
+>     ytitle("% of firms that answered") title("Waste management (pooled)") ///
+>     note("Waste types: 2022 only, answered by ~26% of firms." ///
+>          "They show the kind of waste reported, not how it is managed.") ///
+>     graphregion(color(white))
+
+. graph export "$B208_OUT/fig07_waste.png", replace width(2000)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-08-rnd-capabi
+> lity/output/fig07_waste.png written in PNG format
+
+. 
+. * ---- fig08a: capability by exporter / importer / FDI / size (line 8) ----
+. tempfile stack
+
+. clear
+
+. save `stack', emptyok
+(dataset contains 0 observations)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+
+. foreach s in exporter importer fdi large {
+  2.     import excel using "$B208_XLSX", sheet("t08_by_`s'") firstrow clear
+  3.     keep if period == "pool"
+  4.     rename `s' group
+  5.     keep group pct_rnd pct_innov pct_env_doc
+  6.     append using `stack'
+  7.     save `stack', replace
+  8. }
+(16 vars, 24 obs)
+(22 observations deleted)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(16 vars, 26 obs)
+(24 observations deleted)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(16 vars, 24 obs)
+(22 observations deleted)
+(variable group was str8, now str12 to accommodate using data's values)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(16 vars, 26 obs)
+(24 observations deleted)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+
+. export excel using "$B208_XLSX", sheet("fig08a_data", replace) firstrow(varia
+> bles)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-08-rnd-capabi
+> lity/output/b2_08_tables.xlsx saved
+
+. graph hbar (asis) pct_rnd pct_innov pct_env_doc, over(group, sort(1) descendi
+> ng) ///
+>     ytitle("% of firms that answered") ///
+>     legend(order(1 "R&D" 2 "Innovation" 3 "Env. document") rows(1)) ///
+>     title("Capability by firm type (pooled)") graphregion(color(white))
+
+. graph export "$B208_OUT/fig08a_by_group.png", replace width(2000)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-08-rnd-capabi
+> lity/output/fig08a_by_group.png written in PNG format
+
+. 
+. * ---- fig08b: capability by carbon productivity quintile (line 8) ----
+. import excel using "$B208_XLSX", sheet("t08_by_q_cprod") firstrow clear
+(16 vars, 65 obs)
+
+. keep if period == "pool"
+(60 observations deleted)
+
+. keep q_cprod pct_rnd pct_innov pct_env_doc
+
+. export excel using "$B208_XLSX", sheet("fig08b_data", replace) firstrow(varia
+> bles)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-08-rnd-capabi
+> lity/output/b2_08_tables.xlsx saved
+
+. graph bar (asis) pct_rnd pct_innov pct_env_doc, over(q_cprod) ///
+>     ytitle("% of firms that answered") ///
+>     legend(order(1 "R&D" 2 "Innovation" 3 "Env. document") rows(1)) ///
+>     title("Capability by carbon productivity (VA / tCO2)") ///
+>     subtitle("Quintiles within each year, pooled") graphregion(color(white))
+
+. graph export "$B208_OUT/fig08b_by_carbon_prod.png", replace width(2000)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-08-rnd-capabi
+> lity/output/fig08b_by_carbon_prod.png written in PNG format
+
+. 
+end of do-file
+
+. log close b208
+      name:  b208
+       log:  /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-08-rn
+> d-capability/output/b2_08_log.log
+  log type:  text
+ closed on:   9 Oct 2026, 12:54:57
+-------------------------------------------------------------------------------

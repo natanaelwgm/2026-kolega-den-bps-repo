@@ -1,0 +1,162 @@
+/*==========================================================================
+  Line 1: "Regional aspects of manufacturing decarbonisation"
+  Prepare Statistik Industri (SI) 2010-2022 for B2-10
+  Input : $SI_DATA  (analysis_ready_data.dta from block 0)
+  Output: data/b210_si.dta  -- 1 row = 1 firm x year
+          (open with: use "$B210_DATA/b210_si.dta", clear  then browse)
+
+  Region variables (the three levels of line 2):
+    prov     province, BPS 2-digit code, labelled "32 Jawa Barat" etc.
+    java     1 = Java (provinces 31-36), 0 = outside Java
+    kabkot   district (kabupaten/kota) = province code + district code.
+             BLANK in block 0 (district_code is empty on every record), so
+             the kabkot tables are skipped until the real data have it.
+
+  Main variables created:
+    va, output, workers, exporter, fdi
+    co2_s1 co2_s2 co2_total gj_s1 gj_s2 gj_total, co2_per_va, gj_per_va, ...
+    mix_coal mix_oil mix_gas mix_pln mix_nonpln mix_total   energy mix (GJ)
+    gj_owngen, gj_biodiesel, biomass_user                    memo items
+    clean          1 = not an extreme energy outlier
+==========================================================================*/
+if "$B210" == "" {
+    display as error "Run 00_run.do first (it sets the paths)."
+    exit 198
+}
+use "$SI_DATA", clear
+
+* ---- identifiers & regions -------------------------------------------
+* year = survey year (there is no 2016 file)
+generate kbli2 = real(substr(industry_code, 1, 2))
+generate prov  = real(province_code)
+generate java  = inlist(prov, 31, 32, 33, 34, 35, 36) if !missing(prov)
+label define java 0 "Outside Java" 1 "Java"
+label values java java
+
+* district: only defined when block 0 carries a district code
+generate kabkot = province_code + district_code if district_code != ""
+count if district_code != ""
+display as result "Records with a district (kabkot) code: " r(N)
+
+* province names (BPS 2-digit codes, 2010-2022 boundaries)
+label define prov 11 "11 Aceh" 12 "12 Sumatera Utara" 13 "13 Sumatera Barat" ///
+    14 "14 Riau" 15 "15 Jambi" 16 "16 Sumatera Selatan" 17 "17 Bengkulu" ///
+    18 "18 Lampung" 19 "19 Kep. Bangka Belitung" 21 "21 Kepulauan Riau"
+label define prov 31 "31 DKI Jakarta" 32 "32 Jawa Barat" 33 "33 Jawa Tengah" ///
+    34 "34 DI Yogyakarta" 35 "35 Jawa Timur" 36 "36 Banten", add
+label define prov 51 "51 Bali" 52 "52 Nusa Tenggara Barat" 53 "53 Nusa Tenggara Timur" ///
+    61 "61 Kalimantan Barat" 62 "62 Kalimantan Tengah" 63 "63 Kalimantan Selatan" ///
+    64 "64 Kalimantan Timur" 65 "65 Kalimantan Utara", add
+label define prov 71 "71 Sulawesi Utara" 72 "72 Sulawesi Tengah" 73 "73 Sulawesi Selatan" ///
+    74 "74 Sulawesi Tenggara" 75 "75 Gorontalo" 76 "76 Sulawesi Barat" ///
+    81 "81 Maluku" 82 "82 Maluku Utara" 91 "91 Papua Barat" 94 "94 Papua", add
+label values prov prov
+
+* ---- exports & FDI ----------------------------------------------------
+generate exporter = export_flag                     // missing = question not asked
+generate fdi      = fdi_10_flag                     // foreign ownership >= 10%
+* 2022: the form only asks about DIRECT exports, a "no" is never recorded -> missing
+replace exporter = . if year == 2022
+* 2020: foreign ownership is inconsistent (47% FDI vs 8-11% other years) -> missing
+replace fdi = . if year == 2020
+label define exporter 0 "Non-exporter" 1 "Exporter"
+label values exporter exporter
+label define fdi 0 "Domestic" 1 "FDI"
+label values fdi fdi
+
+* ---- firm characteristics (nominal) -----------------------------------
+generate va      = value_added_nominal
+generate output  = gross_output_nominal
+generate va_pw   = va / workers      if workers > 0
+
+* ---- energy & emissions -----------------------------------------------
+* COAL 2017 CORRECTION: block 0 multiplies by 1000 (treats it as tonnes),
+* but the price per unit shows the data are already in kg. Divide back.
+generate co2_coal = co2_coal_s1
+generate gj_coal2 = gj_coal
+replace  co2_coal = co2_coal_s1 / 1000 if year == 2017
+replace  gj_coal2 = gj_coal / 1000     if year == 2017
+
+* scope 1 = the 4 fuels asked in every year: diesel, petrol, coal, LPG
+egen co2_s1 = rowtotal(co2_diesel_s1 co2_petrol_s1 co2_coal co2_lpg_s1), missing
+egen gj_s1  = rowtotal(gj_diesel gj_petrol gj_coal2 gj_lpg), missing
+* scope 2 = purchased electricity
+generate co2_s2 = co2_scope2_s1
+generate gj_s2  = gj_electricity
+egen co2_total = rowtotal(co2_s1 co2_s2), missing
+egen gj_total  = rowtotal(gj_s1 gj_s2), missing
+
+generate co2_per_va  = co2_total / va      if va > 0
+generate gj_per_va   = gj_total / va       if va > 0
+generate co2_per_gj  = co2_total / gj_total if gj_total > 0
+
+* ---- energy mix (line 9) ----------------------------------------------
+* Same source groups as B2-05. Electricity: kWh x 0.0036 = GJ.
+generate gj_pln     = elec_pln_kwh * 0.0036          // purchased from PLN
+generate gj_nonpln  = elec_nonpln_kwh * 0.0036       // purchased from others
+generate gj_owngen  = elec_owngen_kwh * 0.0036       // generated by the firm itself
+* the 2020 form adds diesel oil, fuel oil and natural gas (MMBTU); block 0 has
+* the quantities but no GJ column. GJ per unit: IPCC 2006 default net
+* calorific values (Vol 2 Ch 1, Table 1.2)
+generate gj_dieseloil = fuel_dieseloil_ltr * 0.03655 if fuel_dieseloil_ltr >= 0
+generate gj_fueloil   = fuel_fueloil_ltr   * 0.03838 if fuel_fueloil_ltr >= 0
+generate gj_natgas    = fuel_natgas_mmbtu  * 1.05506 if fuel_natgas_mmbtu >= 0
+generate gj_biodiesel = fuel_biodiesel_ltr * 0.02376 if fuel_biodiesel_ltr >= 0
+
+egen mix_coal   = rowtotal(gj_coal2 gj_coalbriq gj_coke), missing
+egen mix_oil    = rowtotal(gj_diesel gj_petrol gj_kerosene gj_dieseloil gj_fueloil), missing
+egen mix_gas    = rowtotal(gj_lpg gj_citygas gj_othergas gj_natgas), missing
+generate mix_pln    = gj_pln
+generate mix_nonpln = gj_nonpln
+egen mix_total  = rowtotal(mix_coal mix_oil mix_gas mix_pln mix_nonpln), missing
+* biomass: the unit (kg or tonne) is not settled, so it is kept out of the mix.
+* Only whether the firm reports any biomass is kept.
+generate biomass_user = (fuel_biomass_kg > 0) if !missing(fuel_biomass_kg)
+label variable mix_coal   "GJ: coal + coal briquettes + coke (2017 coal corrected)"
+label variable mix_oil    "GJ: diesel + petrol + kerosene + diesel oil + fuel oil"
+label variable mix_gas    "GJ: LPG + city gas + other gas + natural gas"
+label variable mix_pln    "GJ: electricity bought from PLN"
+label variable mix_nonpln "GJ: electricity bought from non-PLN suppliers"
+label variable mix_total  "GJ: sum of the 5 groups above (own generation not added)"
+label variable gj_owngen  "GJ: own-generated electricity (memo; its fuel is already in the mix)"
+label variable gj_biodiesel "GJ: biodiesel (memo, 2021-2022)"
+label variable biomass_user "1 = reports biomass use (2020-2022; unit unsettled)"
+
+* ---- energy outlier flag (clean) --------------------------------------
+* a record is left out of the analysis (clean = 0) if any of its energy
+* quantities is above 100x that year's 99th percentile. Nothing is deleted.
+generate coal_kg_fix = fuel_coal_kg
+replace  coal_kg_fix = fuel_coal_kg / 1000 if year == 2017
+generate clean = 1
+levelsof year, local(years)
+foreach q in fuel_diesel_ltr fuel_petrol_ltr fuel_kerosene_ltr coal_kg_fix fuel_lpg_kg ///
+             fuel_citygas_m3 fuel_othergas_m3 fuel_coalbriq_kg fuel_coke_kg ///
+             elec_pln_kwh elec_nonpln_kwh elec_owngen_kwh fuel_dieseloil_ltr ///
+             fuel_fueloil_ltr fuel_natgas_mmbtu fuel_biodiesel_ltr fuel_biomass_kg {
+    foreach y of local years {
+        quietly count if year == `y' & `q' > 0 & !missing(`q')
+        if r(N) > 2 {
+            quietly summarize `q' if year == `y' & `q' > 0, detail
+            quietly replace clean = 0 if year == `y' & `q' > 100 * r(p99) & !missing(`q')
+        }
+    }
+}
+replace clean = 0 if workers == 0 & co2_s1 > 0 & !missing(co2_s1)
+count if clean == 0
+display as result "Outlier records (clean = 0): " r(N)
+
+* ---- ln versions ------------------------------------------------------
+foreach v in va output workers va_pw co2_total gj_total co2_per_va gj_per_va {
+    generate ln_`v' = ln(`v') if `v' > 0
+}
+
+* ---- save -------------------------------------------------------------
+keep  firm_id year source_row kbli2 prov java kabkot exporter fdi va output workers va_pw ///
+      co2_s1 co2_s2 co2_total gj_s1 gj_s2 gj_total co2_per_va gj_per_va co2_per_gj ///
+      mix_* gj_owngen gj_biodiesel biomass_user clean ln_*
+order firm_id year source_row prov java kabkot kbli2 exporter fdi
+label variable kabkot "District code (province + district); blank in block 0"
+label variable clean "1 = not an energy outlier"
+compress
+save "$B210_DATA/b210_si.dta", replace
+display as result "01a done: $B210_DATA/b210_si.dta (" _N " rows)"

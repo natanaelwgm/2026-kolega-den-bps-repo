@@ -1,0 +1,2324 @@
+-------------------------------------------------------------------------------
+      name:  b206
+       log:  /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-06-ca
+> ptive-power/output/b2_06_log.log
+  log type:  text
+ opened on:   9 Oct 2026, 12:54:43
+
+. foreach f of local files {
+  2.     display _newline as result "######## B2-06: `f' ########"
+  3.     do "$B206/`f'.do"
+  4. }
+
+######## B2-06: 01a_prep_si ########
+
+. /*==========================================================================
+>   Line 1: "Captive power/self generation in Indonesian manufacturing"
+>   Prepare Statistik Industri (SI) 2010-2022 for B2-06
+>   Input : $SI_DATA  (analysis_ready_data.dta from block 0)
+>   Output: data/b206_si.dta  -- 1 row = 1 firm x year
+>           (open with: use "$B206_DATA/b206_si.dta", clear  then browse)
+> 
+>   Main variables created:
+>     has_owngen     1 = own-generated electricity > 0, 0 = reported none,
+>                    missing = not asked (2014-2015: about 1,060 firms per year
+> )
+>     own_kwh        own-generated electricity (kWh)
+>     purch_kwh      purchased electricity, PLN + non-PLN (kWh)
+>     elec_all_kwh   own + purchased (kWh)
+>     owngen_share   own / (own + purchased), 0-1
+>     has_nonpln     1 = buys electricity from a non-PLN supplier
+>     exporter, importer, fdi, large, kbli2, kbli5, prov, java
+>     va, output, workers, co2_s1 co2_s2 co2_total, co2_s1_pw (per worker)
+>     clean          1 = not an extreme energy outlier
+>   Copied from block-b1-18-bahan-baku/01a_prep_si.do (same corrections).
+> ==========================================================================*/
+. if "$B206" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$SI_DATA", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+. * ---- identifiers ------------------------------------------------------
+. * year = survey year (there is no 2016 file)
+. generate kbli2 = real(substr(industry_code, 1, 2))
+
+. generate kbli5 = industry_code
+
+. generate prov  = real(province_code)
+
+. generate java  = inlist(prov, 31, 32, 33, 34, 35, 36) if !missing(prov)
+
+. label define java 0 "Outside Java" 1 "Java"
+
+. label values java java
+
+. 
+. * ---- firm size: medium vs large (100-worker threshold) ----------------
+. generate large = (workers > 100) if !missing(workers)
+
+. label define large 0 "Medium (<=100)" 1 "Large (>100)"
+
+. label values large large
+
+. 
+. * ---- imports, exports & FDI -------------------------------------------
+. * importer is only defined where the import question can be evaluated
+. generate importer = import_flag if import_observed == 1
+
+. label define importer 0 "Non-importer" 1 "Importer"
+
+. label values importer importer
+
+. 
+. generate exporter = export_flag
+(15,321 missing values generated)
+
+. generate fdi      = fdi_10_flag                     // foreign ownership >= 1
+> 0%
+(311 missing values generated)
+
+. * 2022: the form only asks about DIRECT exports, a "no" is never recorded -> 
+> missing
+. replace exporter = . if year == 2022
+(344 real changes made, 344 to missing)
+
+. * 2020: foreign ownership is inconsistent (47% FDI vs 8-11% other years) -> m
+> issing
+. replace fdi = . if year == 2020
+(2,936 real changes made, 2,936 to missing)
+
+. label define exporter 0 "Non-exporter" 1 "Exporter"
+
+. label values exporter exporter
+
+. label define fdi 0 "Domestic" 1 "FDI"
+
+. label values fdi fdi
+
+. 
+. * ---- firm characteristics (nominal) -----------------------------------
+. generate va      = value_added_nominal
+
+. generate output  = gross_output_nominal
+
+. generate capital = capital_stock_nominal
+(1,125 missing values generated)
+
+. 
+. * ---- own generation ---------------------------------------------------
+. * 2014-2015: own generation was not asked for ~1,060 firms per year; block 0
+. * leaves elec_owngen_kwh missing for them, so has_owngen is missing, not 0.
+. * double: kWh values are large; float storage would round them
+. generate double own_kwh   = elec_owngen_kwh
+(2,125 missing values generated)
+
+. generate double purch_kwh = elec_purchased_kwh      // = elec_pln_kwh + elec_
+> nonpln_kwh
+
+. egen double elec_all_kwh  = rowtotal(own_kwh purch_kwh), missing
+
+. generate has_owngen          = (own_kwh > 0) if !missing(own_kwh)
+(2,125 missing values generated)
+
+. generate double owngen_share = own_kwh / (own_kwh + purch_kwh) if (own_kwh + 
+> purch_kwh) > 0
+(3,362 missing values generated)
+
+. generate has_nonpln   = (elec_nonpln_kwh > 0) if !missing(elec_nonpln_kwh)
+
+. label define has_owngen 0 "No own generation" 1 "Own generation"
+
+. label values has_owngen has_owngen
+
+. label define has_nonpln 0 "PLN only" 1 "Buys non-PLN power"
+
+. label values has_nonpln has_nonpln
+
+. 
+. * ---- generator hardware and fuel: NOT in block 0 -----------------------
+. * The raw SI asks generator capacity (kW) and number of generators every year
+. * (the raw survey files carry generator capacity, mgekwu, and the count) and
+. * the fuel used for electricity generation
+. * (raw_esolie*, raw_esdlie*, raw_eclkge*, raw_elpkge*, raw_engkge*). Block 0
+. * does not carry them. When it does, they are picked up here under these name
+> s.
+. local genvars ""
+
+. foreach v in genset_kw genset_n gen_diesel_ltr gen_petrol_ltr gen_coal_kg gen
+> _lpg_kg gen_natgas_m3 {
+  2.     capture confirm variable `v'
+  3.     if _rc display as text "  not in block 0 (lines 4 and 7 cannot be answ
+> ered): `v'"
+  4.     else local genvars "`genvars' `v'"
+  5. }
+  not in block 0 (lines 4 and 7 cannot be answered): genset_kw
+  not in block 0 (lines 4 and 7 cannot be answered): genset_n
+  not in block 0 (lines 4 and 7 cannot be answered): gen_diesel_ltr
+  not in block 0 (lines 4 and 7 cannot be answered): gen_petrol_ltr
+  not in block 0 (lines 4 and 7 cannot be answered): gen_coal_kg
+  not in block 0 (lines 4 and 7 cannot be answered): gen_lpg_kg
+  not in block 0 (lines 4 and 7 cannot be answered): gen_natgas_m3
+
+. 
+. * ---- energy & emissions -----------------------------------------------
+. * COAL 2017 CORRECTION: block 0 multiplies by 1000 (treats it as tonnes),
+. * but the price per unit shows the data are already in kg. Divide back.
+. generate co2_coal = co2_coal_s1
+
+. generate gj_coal2 = gj_coal
+
+. replace  co2_coal = co2_coal_s1 / 1000 if year == 2017
+(1,181 real changes made)
+
+. replace  gj_coal2 = gj_coal / 1000     if year == 2017
+(1,181 real changes made)
+
+. 
+. * scope 1 = the 4 fuels asked in every year: diesel, petrol, coal, LPG
+. * (fuel burnt in a generator is inside these quantities and cannot be split o
+> ut)
+. egen co2_s1 = rowtotal(co2_diesel_s1 co2_petrol_s1 co2_coal co2_lpg_s1), miss
+> ing
+
+. egen gj_s1  = rowtotal(gj_diesel gj_petrol gj_coal2 gj_lpg), missing
+
+. * scope 2 = purchased electricity (own generation has no scope 2)
+. generate co2_s2 = co2_scope2_s1
+
+. generate gj_s2  = gj_electricity
+
+. egen co2_total = rowtotal(co2_s1 co2_s2), missing
+
+. egen gj_total  = rowtotal(gj_s1 gj_s2), missing
+
+. 
+. generate co2_s1_pw = co2_s1 / workers if workers > 0
+(28 missing values generated)
+
+. generate co2_s1_va = co2_s1 / va      if va > 0
+
+. 
+. * ---- energy outlier flag (clean) --------------------------------------
+. * a record is left out of the analysis (clean = 0) if any of its energy
+. * quantities is above 100x that year's 99th percentile. Nothing is deleted.
+. generate coal_kg_fix = fuel_coal_kg
+
+. replace  coal_kg_fix = fuel_coal_kg / 1000 if year == 2017
+(1,181 real changes made)
+
+. generate clean = 1
+
+. levelsof year, local(years)
+2010 2011 2012 2013 2014 2015 2017 2018 2019 2020 2021 2022
+
+. foreach q in fuel_diesel_ltr fuel_petrol_ltr fuel_kerosene_ltr coal_kg_fix fu
+> el_lpg_kg ///
+>              fuel_citygas_m3 fuel_othergas_m3 fuel_coalbriq_kg fuel_coke_kg /
+> //
+>              elec_pln_kwh elec_nonpln_kwh elec_owngen_kwh fuel_dieseloil_ltr 
+> ///
+>              fuel_fueloil_ltr fuel_natgas_mmbtu fuel_biodiesel_ltr fuel_bioma
+> ss_kg {
+  2.     foreach y of local years {
+  3.         quietly count if year == `y' & `q' > 0 & !missing(`q')
+  4.         if r(N) > 2 {
+  5.             quietly summarize `q' if year == `y' & `q' > 0, detail
+  6.             quietly replace clean = 0 if year == `y' & `q' > 100 * r(p99) 
+> & !missing(`q')
+  7.         }
+  8.     }
+  9. }
+
+. replace clean = 0 if workers == 0 & co2_s1 > 0 & !missing(co2_s1)
+(20 real changes made)
+
+. count if clean == 0
+  30
+
+. display as result "Outlier records (clean = 0): " r(N)
+Outlier records (clean = 0): 30
+
+. 
+. * ---- ln versions ------------------------------------------------------
+. foreach v in own_kwh purch_kwh elec_all_kwh output va workers co2_s1 co2_s1_p
+> w co2_s1_va co2_total {
+  2.     generate ln_`v' = ln(`v') if `v' > 0
+  3. }
+(23,251 missing values generated)
+(1,933 missing values generated)
+(1,397 missing values generated)
+(28 missing values generated)
+(3,826 missing values generated)
+(3,846 missing values generated)
+(3,826 missing values generated)
+(547 missing values generated)
+
+. 
+. * ---- save -------------------------------------------------------------
+. keep  firm_id year source_row kbli2 kbli5 prov java large importer exporter f
+> di ///
+>       va output capital workers own_kwh purch_kwh elec_all_kwh has_owngen ///
+>       owngen_share has_nonpln co2_s1 co2_s2 co2_total gj_s1 gj_s2 gj_total //
+> /
+>       co2_s1_pw co2_s1_va clean ln_* elec_pln_kwh elec_nonpln_kwh `genvars'
+
+. order firm_id year source_row kbli2 kbli5 prov java large importer exporter f
+> di ///
+>       has_owngen own_kwh purch_kwh elec_all_kwh owngen_share has_nonpln
+
+. label variable has_owngen   "1 = own-generated electricity > 0; missing = not
+>  asked"
+
+. label variable own_kwh      "Own-generated electricity (kWh), masked"
+
+. label variable purch_kwh    "Purchased electricity PLN + non-PLN (kWh), maske
+> d"
+
+. label variable elec_all_kwh "Own + purchased electricity (kWh)"
+
+. label variable owngen_share "Own / (own + purchased) electricity, 0-1"
+
+. label variable has_nonpln   "1 = buys electricity from a non-PLN supplier"
+
+. label variable co2_s1       "Scope 1 CO2 (t), diesel + petrol + coal + LPG"
+
+. label variable co2_s1_pw    "Scope 1 CO2 per worker (t)"
+
+. label variable clean        "1 = not an energy outlier"
+
+. compress
+  variable kbli2 was double now byte
+  variable prov was double now byte
+  variable java was double now byte
+  variable large was double now byte
+  variable importer was double now byte
+  variable exporter was double now byte
+  variable fdi was double now byte
+  variable has_owngen was double now byte
+  variable has_nonpln was double now byte
+  variable clean was double now byte
+  (2,313,430 bytes saved)
+
+. save "$B206_DATA/b206_si.dta", replace
+(file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-06-captive-p
+    > ower/data/b206_si.dta not found)
+file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-06-captive-p
+    > ower/data/b206_si.dta saved
+
+. display as result "01a done: $B206_DATA/b206_si.dta (" _N " rows)"
+01a done: /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-06-capti
+> ve-power/data/b206_si.dta (33049 rows)
+
+. 
+end of do-file
+
+######## B2-06: 02_overview ########
+
+. /*==========================================================================
+>   Line 2: "Elaborate berapa % firms punya:"
+>   Data  : SI 2010-2022 (data/b206_si.dta), clean == 1
+>   Output sheets:
+>     t02_overview   by year + pool: % of firms with each item of lines 3-7
+>       pct_owngen      line 3/5: reports own-generated electricity (kWh > 0)
+>       pct_genset      line 4:   reports generator capacity > 0     (empty: no
+> t in block 0)
+>       pct_mostly_own  line 6:   own generation is >= 50% of its electricity
+>       med_share_gen   line 6:   median own share, own-generators only
+>       pct_genfuel     line 7:   reports fuel used in a generator   (empty: no
+> t in block 0)
+>       pct_nonpln      context:  buys electricity from a non-PLN supplier
+>   Denominator: firms that were ASKED about own generation (n_asked). In 2014
+>   and 2015 about 1,060 firms per year were not asked; they are left out, not
+>   counted as "no". n_firms is every clean record.
+> ==========================================================================*/
+. if "$B206" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B206_DATA/b206_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1
+(30 observations deleted)
+
+. 
+. * line 4 and 7 items exist only when block 0 carries the generator variables
+. generate has_genset = .
+(33,019 missing values generated)
+
+. capture confirm variable genset_kw
+
+. if !_rc replace has_genset = (genset_kw > 0) if !missing(genset_kw)
+
+. else display as text "  genset_kw not in block 0 -> pct_genset left empty"
+  genset_kw not in block 0 -> pct_genset left empty
+
+. 
+. generate has_genfuel = .
+(33,019 missing values generated)
+
+. capture confirm variable gen_diesel_ltr
+
+. if !_rc {
+.     egen genfuel_any = rowtotal(gen_*), missing
+.     replace has_genfuel = (genfuel_any > 0) if !missing(genfuel_any)
+. }
+
+. else display as text "  generator fuel not in block 0 -> pct_genfuel left emp
+> ty"
+  generator fuel not in block 0 -> pct_genfuel left empty
+
+. 
+. * firms with no own generation (share 0 or no electricity at all) count as 0
+. generate mostly_own = (owngen_share >= 0.5 & !missing(owngen_share)) if !miss
+> ing(has_owngen)
+(2,123 missing values generated)
+
+. generate share_gen  = owngen_share if has_owngen == 1
+(23,229 missing values generated)
+
+. generate n_firms = 1
+
+. generate asked   = !missing(has_owngen)
+
+. 
+. expand 2, generate(copy)              // copy of every row with year = 0 for 
+> "pool"
+(33,019 observations created)
+
+. replace year = 0 if copy == 1
+(33,019 real changes made)
+
+. collapse (sum) n_firms n_asked = asked n_owngen = has_owngen ///
+>          (mean) pct_owngen = has_owngen pct_genset = has_genset ///
+>                 pct_mostly_own = mostly_own pct_genfuel = has_genfuel pct_non
+> pln = has_nonpln ///
+>          (p50) med_share_gen = share_gen, by(year)
+
+. foreach v in pct_owngen pct_genset pct_mostly_own pct_genfuel pct_nonpln {
+  2.     replace `v' = 100 * `v'
+  3. }
+(13 real changes made)
+(0 real changes made)
+(13 real changes made)
+(0 real changes made)
+(13 real changes made)
+
+. generate period = cond(year == 0, "pool", string(year))
+
+. order period n_firms n_asked n_owngen pct_owngen pct_genset pct_mostly_own me
+> d_share_gen pct_genfuel pct_nonpln
+
+. drop year
+
+. list, clean noobs
+
+    period   n_firms   n_asked   n_owngen         pct_owngen   pct_ge~t   pct_m
+> os~n   med_sha~n   pct_ge~l          pct_nonpln  
+      pool     33019     30896       9790   31.6869497669601          .   5.502
+> 3304   .06636587          .   18.62261122384082  
+      2010      2334      2334        384    16.452442159383          .   5.998
+> 2862   .21165024          .   5.741216795201371  
+      2011      2337      2337        408   17.4582798459564          .   6.247
+> 3256    .2456365          .   5.605477107402653  
+      2012      2359      2359        458   19.4150063586265          .   6.485
+> 7991   .24192886          .   6.867316659601526  
+      2013      2368      2368        531   22.4239864864865          .   6.798
+> 9865   .19435466          .   8.572635135135135  
+      2014      2451      1383        544   39.3347794649313          .    13.7
+> 3825    .2715091          .   9.179926560587514  
+      2015      2630      1575        650   41.2698412698413          .   12.44
+> 4444   .18600818          .   11.14068441064639  
+      2017      3357      3357       1678   49.9851057491808          .   5.868
+> 3348   .06922799          .   37.14626154304438  
+      2018      3010      3010       1423   47.2757475083056          .   4.352
+> 1595   .04540244          .   33.22259136212624  
+      2019      3007      3007       1408   46.8240771533089          .    5.68
+> 6731   .06884317          .    23.7778516794147  
+      2020      2935      2935        857   29.1993185689949          .    2.04
+> 4293   .02412442          .   25.31516183986372  
+      2021      3075      3075        815   26.5040650406504          .   2.341
+> 4634   .01488649          .   25.13821138211382  
+      2022      3156      3156        634   20.0887198986058          .   2.629
+> 9113   .01351977          .   16.57160963244614  
+
+. export excel using "$B206_XLSX", sheet("t02_overview", replace) firstrow(vari
+> ables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-06-captive-po
+> wer/output/b2_06_tables.xlsx saved
+
+. 
+end of do-file
+
+######## B2-06: 03_own_generation ########
+
+. /*==========================================================================
+>   Line 3: "own generation"
+>   Data  : SI 2010-2022 (data/b206_si.dta), clean == 1
+>   Output sheets:
+>     t03_by_year   by year + pool: firms asked, own-generators, % own-generato
+> rs,
+>                   % buying non-PLN power (the other way around PLN)
+>   Own generation = own-generated electricity > 0 (elec_owngen_kwh).
+>   Block 0 has no "owns a generator" variable.
+>   Denominator: firms ASKED (n_asked). 2014-2015: ~1,060 firms per year were
+>   not asked and are left out; pct_owngen_allfirms shows what happens if they
+>   are wrongly counted as "no".
+>   NOTE: the rate jumps between 2015 and 2017 (questionnaire change, like the
+>   importer and energy reporting rates) and falls after 2019.
+> ==========================================================================*/
+. if "$B206" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B206_DATA/b206_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1
+(30 observations deleted)
+
+. generate n_firms   = 1
+
+. generate asked     = !missing(has_owngen)
+
+. generate none      = (has_owngen == 0)
+
+. generate owngen_all = (has_owngen == 1)      // not asked counted as 0, for c
+> omparison only
+
+. 
+. expand 2, generate(copy)              // copy of every row with year = 0 for 
+> "pool"
+(33,019 observations created)
+
+. replace year = 0 if copy == 1
+(33,019 real changes made)
+
+. collapse (sum) n_firms n_asked = asked n_owngen = has_owngen n_none = none //
+> /
+>          (mean) pct_owngen = has_owngen pct_owngen_allfirms = owngen_all pct_
+> nonpln = has_nonpln, by(year)
+
+. foreach v in pct_owngen pct_owngen_allfirms pct_nonpln {
+  2.     replace `v' = 100 * `v'
+  3. }
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+
+. generate period = cond(year == 0, "pool", string(year))
+
+. order period n_firms n_asked n_owngen n_none pct_owngen pct_owngen_allfirms p
+> ct_nonpln
+
+. drop year
+
+. list, clean noobs
+
+    period   n_firms   n_asked   n_owngen   n_none         pct_owngen   pct_own
+> ~s          pct_nonpln  
+      pool     33019     30896       9790    21106   31.6869497669601   29.6495
+> 96   18.62261122384082  
+      2010      2334      2334        384     1950    16.452442159383   16.4524
+> 42   5.741216795201371  
+      2011      2337      2337        408     1929   17.4582798459564    17.458
+> 28   5.605477107402653  
+      2012      2359      2359        458     1901   19.4150063586265   19.4150
+> 06   6.867316659601526  
+      2013      2368      2368        531     1837   22.4239864864865   22.4239
+> 86   8.572635135135135  
+      2014      2451      1383        544      839   39.3347794649313   22.1950
+> 22   9.179926560587514  
+      2015      2630      1575        650      925   41.2698412698413   24.7148
+> 29   11.14068441064639  
+      2017      3357      3357       1678     1679   49.9851057491808   49.9851
+> 06   37.14626154304438  
+      2018      3010      3010       1423     1587   47.2757475083056   47.2757
+> 48   33.22259136212624  
+      2019      3007      3007       1408     1599   46.8240771533089   46.8240
+> 77    23.7778516794147  
+      2020      2935      2935        857     2078   29.1993185689949   29.1993
+> 19   25.31516183986372  
+      2021      3075      3075        815     2260   26.5040650406504   26.5040
+> 65   25.13821138211382  
+      2022      3156      3156        634     2522   20.0887198986058    20.088
+> 72   16.57160963244614  
+
+. export excel using "$B206_XLSX", sheet("t03_by_year", replace) firstrow(varia
+> bles)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-06-captive-po
+> wer/output/b2_06_tables.xlsx saved
+
+. 
+end of do-file
+
+######## B2-06: 04_generation_capacity ########
+
+. /*==========================================================================
+>   Line 4: "besarnya generation capacity"
+>   Data  : SI 2010-2022 (data/b206_si.dta), clean == 1
+>   Output sheets (only when the variables exist):
+>     t04_capacity_stats  genset_kw, ln_genset_kw, genset_n among firms with a
+>                         generator (genset_kw > 0), pool + by year
+>     t04_capacity_owngen same, by own-generation status
+>   STATUS: NOT ANSWERABLE YET. Block 0 does not carry generator capacity.
+>   The raw SI asks it in every year (generator kW and number of generators,
+>   raw variable mgekwu).
+>   Add genset_kw / genset_n to block 0 and this file runs as written.
+>   NOTE: capacity is blank for ~half the firms in
+>   2018-2021; rates must use firms with a non-missing value as denominator.
+> ==========================================================================*/
+. if "$B206" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B206_DATA/b206_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1
+(30 observations deleted)
+
+. 
+. capture confirm variable genset_kw genset_n
+
+. if _rc {
+.     display as error "Line 4 not answered: genset_kw and/or genset_n are not 
+> in block 0."
+Line 4 not answered: genset_kw and/or genset_n are not in block 0.
+.     display as error "  Needed: generator capacity (kW) and number of generat
+> ors per firm-year."
+  Needed: generator capacity (kW) and number of generators per firm-year.
+.     display as error "  Source: raw SI generator block (mgekwu), asked 2010-2
+> 022. No table written."
+  Source: raw SI generator block (mgekwu), asked 2010-2022. No table written.
+.     exit
+
+end of do-file
+
+######## B2-06: 05_own_generated_kwh ########
+
+. /*==========================================================================
+>   Line 5: "own generated electricity"
+>   Data  : SI 2010-2022 (data/b206_si.dta), clean == 1
+>   Output sheets:
+>     t05_kwh_stats   own-generated kWh, level and ln, OWN-GENERATORS ONLY
+>                     (n mean sd p10-p90 min max), pool + by year
+>     t05_totals      by year + pool: total own-generated kWh, total purchased
+>                     kWh (firms asked), and own kWh as % of all electricity
+>   NOTE: kWh are masked in the development data: read the pattern, not levels.
+>   The mean is driven by a few very large self-generators; use the median.
+> ==========================================================================*/
+. if "$B206" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. * ---- distribution among own-generators ----
+. use "$B206_DATA/b206_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1 & has_owngen == 1
+(23,259 observations deleted)
+
+. do "$B206/_sumstats.do" "own_kwh ln_own_kwh" "" "t05_kwh_stats"
+
+. /*==========================================================================
+>   _sumstats.do -- helper: descriptive statistics table, POOLED + BY YEAR
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B206/_sumstats.do" "own_kwh ln_own_kwh" "fdi" "t05_kwh_by_fdi"
+> 
+>       argument 1 = list of variables
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b2_06_tables.xlsx (max 31 characters)
+> 
+>   Result: 1 row = variable x group x period (pool, 2010, 2011, ...)
+>           columns n mean sd p10 p25 p50 p75 p90 min max
+>   Rows with a missing group are not counted.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars grp sheet
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+
+. local first 1
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     local grp all
+. }
+
+. foreach v of local vars {
+  2.     foreach period in pool year {
+  3.         preserve
+  4.         keep `v' `grp' year
+  5.         keep if !missing(`v') & !missing(`grp')
+  6.         if _N > 0 {
+  7.             if "`period'" == "pool" replace year = 0
+  8.             collapse (count) n = `v' (mean) mean = `v' (sd) sd = `v' ///
+>                      (p10) p10 = `v' (p25) p25 = `v' (p50) p50 = `v' ///
+>                      (p75) p75 = `v' (p90) p90 = `v' (min) min = `v' (max) ma
+> x = `v', ///
+>                      by(`grp' year)
+  9.             generate str32 variable = "`v'"
+ 10.             if `first' == 0 append using `result'
+ 11.             save `result', replace
+ 12.             local first 0
+ 13.         }
+ 14.         restore
+ 15.     }
+ 16. }
+(0 observations deleted)
+(9,790 real changes made)
+(file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 not
+    found)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+(9,790 real changes made)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. 
+. use `result', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * the group is written as text using its value label (if it has one)
+. capture decode `grp', generate(group)
+
+. if _rc generate group = string(`grp')
+
+. * keep the variables in the order they were listed
+. generate variable_order = .
+(26 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(13 real changes made)
+(13 real changes made)
+
+. sort variable_order `grp' year
+
+. keep variable group period n mean sd p10 p25 p50 p75 p90 min max
+
+. export excel using "$B206_XLSX", sheet("`sheet'", replace) firstrow(variables
+> )
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-06-captive-po
+> wer/output/b2_06_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t05_kwh_stats (26 rows)
+
+. use `original', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+end of do-file
+
+. 
+. * ---- totals ----
+. use "$B206_DATA/b206_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1 & !missing(has_owngen)
+(2,153 observations deleted)
+
+. generate n_firms = 1
+
+. expand 2, generate(copy)              // copy of every row with year = 0 for 
+> "pool"
+(30,896 observations created)
+
+. replace year = 0 if copy == 1
+(30,896 real changes made)
+
+. collapse (sum) n_firms n_owngen = has_owngen own_kwh purch_kwh, by(year)
+
+. generate pct_own_of_all = 100 * own_kwh / (own_kwh + purch_kwh)
+
+. generate period = cond(year == 0, "pool", string(year))
+
+. order period n_firms n_owngen own_kwh purch_kwh pct_own_of_all
+
+. drop year
+
+. list, clean noobs
+
+    period   n_firms   n_owngen     own_kwh   purch_kwh   pct_own~l  
+      pool     30896       9790   8.776e+09   3.531e+10   19.904801  
+      2010      2334        384   4.300e+08   1.787e+09   19.396862  
+      2011      2337        408   3.471e+08   2.021e+09   14.659341  
+      2012      2359        458   1.566e+09   1.419e+09   52.469265  
+      2013      2368        531   3.583e+08   1.575e+09   18.536043  
+      2014      1383        544   5.825e+08   2.581e+09   18.413345  
+      2015      1575        650   1.539e+09   3.384e+09   31.259685  
+      2017      3357       1678   2.455e+08   2.912e+09   7.7734738  
+      2018      3010       1423   4.862e+08   4.587e+09   9.5835655  
+      2019      3007       1408   3.433e+08   2.436e+09    12.35386  
+      2020      2935        857   3.443e+08   4.848e+09   6.6300447  
+      2021      3075        815   2.729e+08   3.988e+09   6.4062431  
+      2022      3156        634   2.261e+09   3.776e+09   37.452309  
+
+. export excel using "$B206_XLSX", sheet("t05_totals", replace) firstrow(variab
+> les)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-06-captive-po
+> wer/output/b2_06_tables.xlsx saved
+
+. 
+end of do-file
+
+######## B2-06: 06_own_share ########
+
+. /*==========================================================================
+>   Line 6: "share own electricity thd total electricity"
+>   Data  : SI 2010-2022 (data/b206_si.dta), clean == 1
+>   Share = own-generated kWh / (own-generated + purchased kWh), 0-1.
+>   Output sheets:
+>     t06_share_stats   share, OWN-GENERATORS ONLY (with non-generators the
+>                       median is 0), pool + by year
+>     t06_share_bands   own-generators by share band: <10% (standby-like),
+>                       10-50%, 50-90%, >=90% (nearly off-grid), pool + by year
+>   The aggregate share (all own kWh / all kWh) is in t05_totals.
+> ==========================================================================*/
+. if "$B206" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B206_DATA/b206_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1 & has_owngen == 1 & !missing(owngen_share)
+(23,259 observations deleted)
+
+. do "$B206/_sumstats.do" "owngen_share" "" "t06_share_stats"
+
+. /*==========================================================================
+>   _sumstats.do -- helper: descriptive statistics table, POOLED + BY YEAR
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B206/_sumstats.do" "own_kwh ln_own_kwh" "fdi" "t05_kwh_by_fdi"
+> 
+>       argument 1 = list of variables
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b2_06_tables.xlsx (max 31 characters)
+> 
+>   Result: 1 row = variable x group x period (pool, 2010, 2011, ...)
+>           columns n mean sd p10 p25 p50 p75 p90 min max
+>   Rows with a missing group are not counted.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars grp sheet
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+
+. local first 1
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     local grp all
+. }
+
+. foreach v of local vars {
+  2.     foreach period in pool year {
+  3.         preserve
+  4.         keep `v' `grp' year
+  5.         keep if !missing(`v') & !missing(`grp')
+  6.         if _N > 0 {
+  7.             if "`period'" == "pool" replace year = 0
+  8.             collapse (count) n = `v' (mean) mean = `v' (sd) sd = `v' ///
+>                      (p10) p10 = `v' (p25) p25 = `v' (p50) p50 = `v' ///
+>                      (p75) p75 = `v' (p90) p90 = `v' (min) min = `v' (max) ma
+> x = `v', ///
+>                      by(`grp' year)
+  9.             generate str32 variable = "`v'"
+ 10.             if `first' == 0 append using `result'
+ 11.             save `result', replace
+ 12.             local first 0
+ 13.         }
+ 14.         restore
+ 15.     }
+ 16. }
+(0 observations deleted)
+(9,790 real changes made)
+(file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 not
+    found)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. 
+. use `result', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * the group is written as text using its value label (if it has one)
+. capture decode `grp', generate(group)
+
+. if _rc generate group = string(`grp')
+
+. * keep the variables in the order they were listed
+. generate variable_order = .
+(13 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(13 real changes made)
+
+. sort variable_order `grp' year
+
+. keep variable group period n mean sd p10 p25 p50 p75 p90 min max
+
+. export excel using "$B206_XLSX", sheet("`sheet'", replace) firstrow(variables
+> )
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-06-captive-po
+> wer/output/b2_06_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t06_share_stats (13 rows)
+
+. use `original', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+end of do-file
+
+. 
+. * ---- share bands ----
+. generate band = 1 if owngen_share < 0.10
+(4,225 missing values generated)
+
+. replace  band = 2 if owngen_share >= 0.10 & owngen_share < 0.50
+(2,525 real changes made)
+
+. replace  band = 3 if owngen_share >= 0.50 & owngen_share < 0.90
+(900 real changes made)
+
+. replace  band = 4 if owngen_share >= 0.90
+(800 real changes made)
+
+. generate b1 = (band == 1)
+
+. generate b2 = (band == 2)
+
+. generate b3 = (band == 3)
+
+. generate b4 = (band == 4)
+
+. generate n_owngen = 1
+
+. expand 2, generate(copy)
+(9,790 observations created)
+
+. replace year = 0 if copy == 1
+(9,790 real changes made)
+
+. collapse (sum) n_owngen (mean) pct_lt10 = b1 pct_10_50 = b2 pct_50_90 = b3 pc
+> t_ge90 = b4, by(year)
+
+. foreach v in pct_lt10 pct_10_50 pct_50_90 pct_ge90 {
+  2.     replace `v' = 100 * `v'
+  3. }
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+(13 real changes made)
+
+. generate period = cond(year == 0, "pool", string(year))
+
+. order period n_owngen pct_lt10 pct_10_50 pct_50_90 pct_ge90
+
+. drop year
+
+. list, clean noobs
+
+    period   n_owngen    pct_lt10   pct_10_50   pct_50_90    pct_ge90  
+      pool       9790   56.843718   25.791624   9.1930541   8.1716037  
+      2010        384   36.458333   27.083333   15.885417   20.572917  
+      2011        408   32.107843   32.107843   16.176471   19.607843  
+      2012        458   34.061135   32.532751   16.375546   17.030568  
+      2013        531   39.736347   29.943503   15.065913   15.254237  
+      2014        544   31.066176   34.007353   15.992647   18.933824  
+      2015        650   39.692308   30.153846   15.692308   14.461538  
+      2017       1678   55.780691   32.479142   8.4624553   3.2777116  
+      2018       1423   70.203795   20.590302   4.4975404   4.7083626  
+      2019       1408   55.397727   32.457386   8.6647727   3.4801136  
+      2020        857   79.113186   13.885648   3.7339557   3.2672112  
+      2021        815   78.527607   12.638037   5.2760736   3.5582822  
+      2022        634   73.659306   13.249211   4.1009464   8.9905363  
+
+. export excel using "$B206_XLSX", sheet("t06_share_bands", replace) firstrow(v
+> ariables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-06-captive-po
+> wer/output/b2_06_tables.xlsx saved
+
+. 
+end of do-file
+
+######## B2-06: 07_generator_fuel ########
+
+. /*==========================================================================
+>   Line 7: "fuel yg digunakan untuk generator"
+>   Data  : SI 2010-2022 (data/b206_si.dta), clean == 1
+>   Output sheets (only when the variables exist):
+>     t07_genfuel_use   by year + pool, OWN-GENERATORS ONLY: % using each fuel
+>                       in their generator
+>   STATUS: NOT ANSWERABLE YET. Block 0 has no generator-fuel quantities.
+>   The raw SI records fuel used for electricity generation in every wave
+>   (raw_esolie* / raw_esdlie* diesel litres, raw_eclkge* coal kg,
+>   raw_elpkge* LPG kg, raw_engkge* natural gas 2022). Expected names in
+>   block 0:
+>      gen_diesel_ltr gen_petrol_ltr gen_coal_kg gen_lpg_kg gen_natgas_m3
+>   Today the generator's fuel is inside the firm's total fuel (scope 1) and
+>   cannot be split out.
+> ==========================================================================*/
+. if "$B206" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B206_DATA/b206_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1
+(30 observations deleted)
+
+. 
+. capture confirm variable gen_diesel_ltr gen_petrol_ltr gen_coal_kg gen_lpg_kg
+>  gen_natgas_m3
+
+. if _rc {
+.     display as error "Line 7 not answered: generator-fuel variables are not i
+> n block 0."
+Line 7 not answered: generator-fuel variables are not in block 0.
+.     display as error "  Needed: gen_diesel_ltr gen_petrol_ltr gen_coal_kg gen
+> _lpg_kg gen_natgas_m3"
+  Needed: gen_diesel_ltr gen_petrol_ltr gen_coal_kg gen_lpg_kg gen_natgas_m3
+.     display as error "  Source: raw SI fuel-for-electricity columns (raw_e*li
+> e*, raw_e*kge*). No table written."
+  Source: raw SI fuel-for-electricity columns (raw_e*lie*, raw_e*kge*). No tabl
+> e written.
+.     exit
+
+end of do-file
+
+######## B2-06: 08_by_group ########
+
+. /*==========================================================================
+>   Line 8: "by sector, sixe, fdi, exporter, importer, province"
+>   Data  : SI 2010-2022 (data/b206_si.dta), clean == 1
+>   Lines 3, 5 and 6 repeated for each split, pool + by year:
+>     pct_owngen     % own-generators among firms asked          (line 3)
+>     med_own_kwh    median own-generated kWh, own-generators    (line 5)
+>     med_share      median own share of electricity, own-gen.   (line 6)
+>   Output sheets:
+>     t08_by_kbli2     sector, KBLI 2-digit
+>     t08_by_size      medium (<=100 workers) vs large (>100)
+>     t08_by_fdi       domestic vs FDI (>= 10% foreign); 2020 missing
+>     t08_by_exporter  non-exporter vs exporter; 2022 missing
+>     t08_by_importer  non-importer vs importer
+>     t08_by_province  province code (Java vs outside Java: see t09a_by_java)
+>   NOTE: lines 4 (capacity) and 7 (generator fuel) are not in block 0, so they
+>   have no split here. Small provinces have few firms per year: use the pool.
+> ==========================================================================*/
+. if "$B206" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. foreach g in kbli2 large fdi exporter importer prov {
+  2.     use "$B206_DATA/b206_si.dta", clear
+  3.     keep if clean == 1 & !missing(`g') & !missing(has_owngen)
+  4.     generate n_firms   = 1
+  5.     generate kwh_gen   = own_kwh      if has_owngen == 1
+  6.     generate share_gen = owngen_share if has_owngen == 1
+  7.     expand 2, generate(copy)              // copy of every row with year =
+>  0 for "pool"
+  8.     replace year = 0 if copy == 1
+  9.     collapse (sum) n_firms n_owngen = has_owngen (mean) pct_owngen = has_o
+> wngen ///
+>              (p50) med_own_kwh = kwh_gen med_share = share_gen, by(`g' year)
+ 10.     replace pct_owngen = 100 * pct_owngen
+ 11.     generate period = cond(year == 0, "pool", string(year))
+ 12.     sort `g' year
+ 13.     order `g' period n_firms n_owngen pct_owngen med_own_kwh med_share
+ 14.     drop year
+ 15.     list if period == "pool", clean noobs
+ 16.     local sheet "t08_by_`g'"
+ 17.     if "`g'" == "large" local sheet "t08_by_size"
+ 18.     if "`g'" == "prov"  local sheet "t08_by_province"
+ 19.     export excel using "$B206_XLSX", sheet("`sheet'", replace) firstrow(va
+> riables)
+ 20. }
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(2,153 observations deleted)
+(21,106 missing values generated)
+(21,106 missing values generated)
+(30,896 observations created)
+(30,896 real changes made)
+(307 real changes made)
+
+    kbli2   period   n_firms   n_owngen         pct_owngen   med_own~h   med_sh
+> are  
+       10     pool      7158       2395   33.4590667784297   6948.8338   .18412
+> 455  
+       11     pool       573        240   41.8848167539267   9922.6597   .07246
+> 371  
+       12     pool       916        152   16.5938864628821   3161.2714   .24073
+> 252  
+       13     pool      2692        481   17.8677563150074   1203.8795   .00703
+> 964  
+       14     pool      2564        804   31.3572542901716   3713.9051   .06144
+> 376  
+       15     pool       855        260   30.4093567251462   1600.8051   .02160
+> 037  
+       16     pool      1304        439   33.6656441717791   11050.049    .2323
+> 795  
+       17     pool       707        195   27.5813295615276    5034.642   .07018
+> 928  
+       18     pool       834        291   34.8920863309352    1811.977   .03982
+> 805  
+       19     pool       130         39                 30   4185.3776   .05140
+> 232  
+       20     pool      1527        584   38.2449246889325   6822.0384   .06276
+> 644  
+       21     pool       335        128   38.2089552238806   9688.4924   .07356
+> 435  
+       22     pool      2460        995   40.4471544715447   4079.5833   .02631
+> 873  
+       23     pool      1804        433   24.0022172949002   10896.106   .06558
+> 442  
+       24     pool       465        175   37.6344086021505    20128.64   .04310
+> 406  
+       25     pool      1386        465   33.5497835497836   3549.0541   .03067
+> 138  
+       26     pool       411        149   36.2530413625304   2657.7454   .01418
+> 257  
+       27     pool       514        157   30.5447470817121   4731.4864   .03901
+> 459  
+       28     pool       587        182   31.0051107325383   3686.8447   .02859
+> 865  
+       29     pool       585        235   40.1709401709402   4324.2367   .01878
+> 363  
+       30     pool       468        146   31.1965811965812   5251.9939   .05685
+> 835  
+       31     pool      1580        537   33.9873417721519   2383.8337   .06012
+> 346  
+       32     pool       813        208   25.5842558425584   1168.5773   .04884
+> 527  
+       33     pool       228        100    43.859649122807   19513.921   .26120
+> 509  
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-06-captive-po
+> wer/output/b2_06_tables.xlsx saved
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(2,153 observations deleted)
+(21,106 missing values generated)
+(21,106 missing values generated)
+(30,896 observations created)
+(30,896 real changes made)
+(26 real changes made)
+
+             large   period   n_firms   n_owngen         pct_owngen   med_own~h
+>    med_share  
+    Medium (<=100)     pool     21106       5702   27.0160144034872   2522.7334
+>    .07585901  
+      Large (>100)     pool      9790       4088   41.7568947906027   12085.569
+>    .04775409  
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-06-captive-po
+> wer/output/b2_06_tables.xlsx saved
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(5,399 observations deleted)
+(18,902 missing values generated)
+(18,902 missing values generated)
+(27,650 observations created)
+(27,650 real changes made)
+(24 real changes made)
+
+         fdi   period   n_firms   n_owngen         pct_owngen   med_own~h   med
+> _share  
+    Domestic     pool     25019       7929   31.6919141452496   4778.6703   .07
+> 830104  
+         FDI     pool      2631        819   31.1288483466363   12560.503   .05
+> 039294  
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-06-captive-po
+> wer/output/b2_06_tables.xlsx saved
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(17,787 observations deleted)
+(12,540 missing values generated)
+(12,540 missing values generated)
+(15,262 observations created)
+(15,262 real changes made)
+(24 real changes made)
+
+        exporter   period   n_firms   n_owngen         pct_owngen   med_own~h  
+>  med_share  
+    Non-exporter     pool     12086       1820   15.0587456561311   4935.0794  
+>  .11313186  
+        Exporter     pool      3176        902   28.4005037783375   11337.724  
+>  .07708877  
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-06-captive-po
+> wer/output/b2_06_tables.xlsx saved
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(2,153 observations deleted)
+(21,106 missing values generated)
+(21,106 missing values generated)
+(30,896 observations created)
+(30,896 real changes made)
+(26 real changes made)
+
+        importer   period   n_firms   n_owngen         pct_owngen   med_own~h  
+>  med_share  
+    Non-importer     pool     18922       2753    14.549201987105    6698.223  
+>  .18707917  
+        Importer     pool     11974       7037   58.7689994989143   4043.5331  
+>   .0497133  
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-06-captive-po
+> wer/output/b2_06_tables.xlsx saved
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(2,153 observations deleted)
+(21,106 missing values generated)
+(21,106 missing values generated)
+(30,896 observations created)
+(30,896 real changes made)
+(401 real changes made)
+
+    prov   period   n_firms   n_owngen         pct_owngen   med_own~h   med_sha
+> re  
+      11     pool        77         36   46.7532467532467   4209.6826   .373445
+> 32  
+      12     pool      1124        526    46.797153024911   10007.527   .129677
+> 87  
+      13     pool       172         44   25.5813953488372   11278.535    .28252
+> 84  
+      14     pool       338        234   69.2307692307692   87121.289   .855588
+> 43  
+      15     pool       198         97    48.989898989899     31689.8   .901498
+> 45  
+      16     pool       262         97   37.0229007633588   26671.511   .516326
+> 87  
+      17     pool        60         35   58.3333333333333   8088.1057   .912337
+> 07  
+      18     pool       388        171   44.0721649484536   9501.8397   .166831
+> 78  
+      19     pool       126         70   55.5555555555556   11432.284   .809370
+> 29  
+      21     pool       532        170   31.9548872180451   5790.3509   .068935
+> 11  
+      31     pool      1892        736   38.9006342494715    2560.577   .041668
+> 89  
+      32     pool      8803       3036    34.488242644553   4077.3454   .035398
+> 22  
+      33     pool      4468        913   20.4341987466428   3211.5925   .068491
+> 89  
+      34     pool       504        146    28.968253968254   2346.9284    .08286
+> 55  
+      35     pool      6778       1359    20.050162289761   3874.5582   .096635
+> 57  
+      36     pool      2859       1209   42.2875131164743   2810.9023   .029586
+> 24  
+      51     pool       434         71   16.3594470046083   1783.6544   .051377
+> 33  
+      52     pool       166         26   15.6626506024096   861.60899    .05354
+> 51  
+      53     pool        47         17   36.1702127659575   517.13464    .01585
+> 05  
+      61     pool       160        106              66.25   16572.714   .864065
+> 45  
+      62     pool       110         74   67.2727272727273   105416.78   .869220
+> 49  
+      63     pool       162         85   52.4691358024691   28931.998   .347492
+> 79  
+      64     pool       222        119   53.6036036036036   36058.412   .468715
+> 65  
+      65     pool        31         14   45.1612903225806   162843.71    .41591
+> 37  
+      71     pool       125         52               41.6   10302.529   .212515
+> 08  
+      72     pool        49         25   51.0204081632653   2812.7802   .212567
+> 23  
+      73     pool       491        154   31.3645621181263   5297.5844   .150095
+> 48  
+      74     pool        94         39   41.4893617021277   1933.1538    .19555
+> 58  
+      75     pool        12          4   33.3333333333333   791.11909   .059692
+> 14  
+      76     pool        16          5              31.25   916.71227          
+>  1  
+      81     pool        54         27                 50   8740.0591   .316894
+> 18  
+      82     pool        15         10   66.6666666666667   1897.0148   .098789
+> 37  
+      91     pool        71         47   66.1971830985916   36345.012   .777335
+> 65  
+      94     pool        56         36   64.2857142857143   6468.7584   .476153
+> 94  
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-06-captive-po
+> wer/output/b2_06_tables.xlsx saved
+
+. 
+end of do-file
+
+######## B2-06: 09_resilience ########
+
+. /*==========================================================================
+>   Line 9: "pertanyaan: aapakah self generation terutama merupakan resilience
+>            strategy?"
+>   Data  : SI 2010-2022 (data/b206_si.dta), clean == 1
+>   Two simple, DESCRIPTIVE tests (not causal; nothing in the data records why 
+> a
+>   firm generates, and there is no outage or tariff variable):
+>   (a) Grid reliability. The grid is weaker outside Java. If self generation i
+> s
+>       mainly insurance against a bad grid, the own-generation rate (and the
+>       own share of electricity) should be much higher outside Java.
+>         t09a_by_java      Java vs outside Java, pool + by year
+>         t09a_by_province  per province (with java flag), pool + by year
+>   (b) Shock performance. If own power protects production, own-generators
+>       should lose less output in the 2020 shock. Firms present in both years,
+>       own-generation status in the BASE year, change = ln(output t+1) -
+>       ln(output t). 2018->2019 is shown as a normal-year benchmark.
+>         t09b_output_change  by own-generation status and period
+>   Read together with t06_share_bands: most own-generators make <10% of their
+>   power (standby-like) -> consistent with back-up / resilience use.
+>   NOTE (b): firm links are FICTIONAL in the development data, so (b) only
+>   means something on the real BPS data. Output is nominal and masked.
+> ==========================================================================*/
+. if "$B206" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. 
+. * ---- (a) Java vs outside Java, and by province ----
+. foreach loc in java prov {
+  2.     use "$B206_DATA/b206_si.dta", clear
+  3.     keep if clean == 1 & !missing(`loc') & !missing(has_owngen)
+  4.     generate n_firms   = 1
+  5.     generate share_gen = owngen_share if has_owngen == 1
+  6.     generate java_flag = java             // copy, so the province table k
+> eeps the Java flag
+  7.     expand 2, generate(copy)              // copy of every row with year =
+>  0 for "pool"
+  8.     replace year = 0 if copy == 1
+  9.     collapse (sum) n_firms n_owngen = has_owngen (mean) pct_owngen = has_o
+> wngen ///
+>              pct_nonpln = has_nonpln java_flag (p50) med_share = share_gen, b
+> y(`loc' year)
+ 10.     replace pct_owngen = 100 * pct_owngen
+ 11.     replace pct_nonpln = 100 * pct_nonpln
+ 12.     generate period = cond(year == 0, "pool", string(year))
+ 13.     sort `loc' year
+ 14.     order `loc' period n_firms n_owngen pct_owngen med_share pct_nonpln
+ 15.     drop year
+ 16.     if "`loc'" == "java" {
+ 17.         drop java_flag
+ 18.         list, clean noobs
+ 19.         export excel using "$B206_XLSX", sheet("t09a_by_java", replace) fi
+> rstrow(variables)
+ 20.     }
+ 21.     else {
+ 22.         rename java_flag java
+ 23.         label values java java
+ 24.         order prov java
+ 25.         export excel using "$B206_XLSX", sheet("t09a_by_province", replace
+> ) firstrow(variables)
+ 26.     }
+ 27. }
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(2,153 observations deleted)
+(21,106 missing values generated)
+(30,896 observations created)
+(30,896 real changes made)
+(26 real changes made)
+(26 real changes made)
+
+            java   period   n_firms   n_owngen         pct_owngen   med_share  
+>         pct_nonpln  
+    Outside Java     pool      5592       2391   42.7575107296137   .26891077  
+>  17.27467811158798  
+    Outside Java     2010       367        130   35.4223433242507   .46207032  
+>  7.084468664850137  
+    Outside Java     2011       376        138   36.7021276595745   .54772389  
+>  6.117021276595745  
+    Outside Java     2012       392        166   42.3469387755102   .41563407  
+>  8.163265306122449  
+    Outside Java     2013       400        176                 44   .42495412  
+>               9.25  
+    Outside Java     2014       242        178   73.5537190082645   .63538367  
+>  15.70247933884298  
+    Outside Java     2015       283        208   73.4982332155477    .3321055  
+>  19.08127208480565  
+    Outside Java     2017       629        312   49.6025437201908   .17131748  
+>  31.95548489666137  
+    Outside Java     2018       549        248   45.1730418943534   .12994698  
+>   21.4936247723133  
+    Outside Java     2019       570        307    53.859649122807   .23608701  
+>  23.50877192982456  
+    Outside Java     2020       558        174   31.1827956989247    .1101105  
+>  17.20430107526882  
+    Outside Java     2021       598        195   32.6086956521739   .13077471  
+>  21.73913043478261  
+    Outside Java     2022       628        159   25.3184713375796   .34749279  
+>  12.26114649681529  
+            Java     pool     25304       7399    29.240436294657   .04706537  
+>  20.33670565918432  
+            Java     2010      1967        254   12.9130655821047   .16817091  
+>   5.49059481443823  
+            Java     2011      1961        270   13.7684854665987   .18680269  
+>   5.50739418663947  
+            Java     2012      1967        292    14.844941535333   .21313683  
+>  6.609049313675648  
+            Java     2013      1968        355   18.0386178861789   .13670507  
+>  8.434959349593496  
+            Java     2014      1141        366   32.0771253286591   .20004652  
+>  14.46099912357581  
+            Java     2015      1292        442   34.2105263157895   .13921636  
+>   17.3374613003096  
+            Java     2017      2728       1366   50.0733137829912   .05505679  
+>  38.34310850439883  
+            Java     2018      2461       1175   47.7448191791954   .03836901  
+>  35.83908980089394  
+            Java     2019      2437       1101   45.1784981534674     .053057  
+>  23.84078785391875  
+            Java     2020      2377        683    28.733697938578   .01747795  
+>    27.219183845183  
+            Java     2021      2477        620   25.0302785627776   .01128852  
+>  25.95882115462252  
+            Java     2022      2528        475   18.7895569620253    .0089179  
+>  17.64240506329114  
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-06-captive-po
+> wer/output/b2_06_tables.xlsx saved
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(2,153 observations deleted)
+(21,106 missing values generated)
+(30,896 observations created)
+(30,896 real changes made)
+(401 real changes made)
+(304 real changes made)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-06-captive-po
+> wer/output/b2_06_tables.xlsx saved
+
+. 
+. * ---- (b) output change around the 2020 shock ----
+. * loop: base year 2018 (normal year) and 2019 (shock year follows)
+. tempfile next result
+
+. local first 1
+
+. foreach b in 2018 2019 {
+  2.     * output in the following year
+.     use "$B206_DATA/b206_si.dta", clear
+  3.     keep if year == `b' + 1 & clean == 1 & output > 0 & !missing(output)
+  4.     keep firm_id output
+  5.     rename output output_next
+  6.     save `next', replace
+  7. 
+.     * base year: own-generation status and output
+.     use "$B206_DATA/b206_si.dta", clear
+  8.     keep if year == `b' & clean == 1 & !missing(has_owngen) & output > 0 &
+>  !missing(output)
+  9.     keep firm_id has_owngen output
+ 10.     merge 1:1 firm_id using `next', keep(master match)
+ 11.     generate linked   = (_merge == 3)
+ 12.     generate dln_out  = ln(output_next) - ln(output) if linked == 1
+ 13.     generate out_fell = (output_next < output) if linked == 1
+ 14.     generate n_firms  = 1
+ 15.     collapse (sum) n_firms n_linked = linked ///
+>              (p50) med_dln_output = dln_out (mean) mean_dln_output = dln_out 
+> pct_output_fell = out_fell, ///
+>              by(has_owngen)
+ 16.     replace pct_output_fell = 100 * pct_output_fell
+ 17.     generate change = "`b'-" + string(`b' + 1)
+ 18.     if `first' == 0 append using `result'
+ 19.     save `result', replace
+ 20.     local first 0
+ 21. }
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(30,042 observations deleted)
+(file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 not
+    found)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(30,039 observations deleted)
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                           745
+        from master                       745  (_merge==1)
+        from using                          0  (_merge==2)
+
+    Matched                             2,265  (_merge==3)
+    -----------------------------------------
+(745 missing values generated)
+(745 missing values generated)
+(2 real changes made)
+(file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 not
+    found)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(30,114 observations deleted)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(30,042 observations deleted)
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                           809
+        from master                       809  (_merge==1)
+        from using                          0  (_merge==2)
+
+    Matched                             2,198  (_merge==3)
+    -----------------------------------------
+(809 missing values generated)
+(809 missing values generated)
+(2 real changes made)
+(label has_owngen already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+
+. use `result', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. sort change has_owngen
+
+. order change has_owngen n_firms n_linked med_dln_output mean_dln_output pct_o
+> utput_fell
+
+. list, clean noobs
+
+       change          has_owngen   n_firms   n_linked   med_dln_~t   mean_dln~
+> t   pct_out~l  
+    2018-2019   No own generation      1587       1154    .09752458    .1149137
+> 1   44.367418  
+    2018-2019      Own generation      1423       1111    .17997802     .150499
+> 7   38.883888  
+    2019-2020   No own generation      1599       1177   -.24231202   -.2639747
+> 6   63.126593  
+    2019-2020      Own generation      1408       1021   -.29508253   -.3320442
+> 8   66.895201  
+
+. export excel using "$B206_XLSX", sheet("t09b_output_change", replace) firstro
+> w(variables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-06-captive-po
+> wer/output/b2_06_tables.xlsx saved
+
+. 
+end of do-file
+
+######## B2-06: 10_owngen_vs_scope1 ########
+
+. /*==========================================================================
+>   Line 10: "Apakah firms yg selef generate mempunyai scope 1 emissions yg
+>             lebih tinggi?"
+>   Data  : SI 2010-2022 (data/b206_si.dta), clean == 1, firms asked about own
+>           generation (2014-2015: ~1,060 not asked per year are left out)
+>   Scope 1 = CO2 from the 4 fuels asked every year (diesel, petrol, coal, LPG)
+> .
+>   Output sheets:
+>     t10_s1_by_owngen  scope 1 level, ln, per worker (level and ln), per VA,
+>                       own-generators vs not, pool + by year
+>     t10_regression    ln scope 1 (and ln scope 1 per worker) on has_owngen:
+>                       ln scope 1: (1) year FE; (2) + ln workers + KBLI2 FE.
+>                       ln scope 1 per worker: (3) year FE; (4) + KBLI2 FE.
+>                       pct_diff = 100*(exp(b)-1) = % higher scope 1
+>   NOTE: the generator's own fuel cannot be separated (line 7), so the gap is
+>   the WHOLE difference in on-site fuel use, not just the generator. The ln
+>   versions drop firms with zero scope 1. Descriptive, not causal.
+> ==========================================================================*/
+. if "$B206" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B206_DATA/b206_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1 & !missing(has_owngen)
+(2,153 observations deleted)
+
+. 
+. * ---- descriptive comparison ----
+. do "$B206/_sumstats.do" "co2_s1 ln_co2_s1 co2_s1_pw ln_co2_s1_pw co2_s1_va" "
+> has_owngen" "t10_s1_by_owngen"
+
+. /*==========================================================================
+>   _sumstats.do -- helper: descriptive statistics table, POOLED + BY YEAR
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B206/_sumstats.do" "own_kwh ln_own_kwh" "fdi" "t05_kwh_by_fdi"
+> 
+>       argument 1 = list of variables
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b2_06_tables.xlsx (max 31 characters)
+> 
+>   Result: 1 row = variable x group x period (pool, 2010, 2011, ...)
+>           columns n mean sd p10 p25 p50 p75 p90 min max
+>   Rows with a missing group are not counted.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars grp sheet
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+
+. local first 1
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     local grp all
+. }
+
+. foreach v of local vars {
+  2.     foreach period in pool year {
+  3.         preserve
+  4.         keep `v' `grp' year
+  5.         keep if !missing(`v') & !missing(`grp')
+  6.         if _N > 0 {
+  7.             if "`period'" == "pool" replace year = 0
+  8.             collapse (count) n = `v' (mean) mean = `v' (sd) sd = `v' ///
+>                      (p10) p10 = `v' (p25) p25 = `v' (p50) p50 = `v' ///
+>                      (p75) p75 = `v' (p90) p90 = `v' (min) min = `v' (max) ma
+> x = `v', ///
+>                      by(`grp' year)
+  9.             generate str32 variable = "`v'"
+ 10.             if `first' == 0 append using `result'
+ 11.             save `result', replace
+ 12.             local first 0
+ 13.         }
+ 14.         restore
+ 15.     }
+ 16. }
+(0 observations deleted)
+(30,896 real changes made)
+(file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 not
+    found)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+(label has_owngen already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(3,479 observations deleted)
+(27,417 real changes made)
+(label has_owngen already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(3,479 observations deleted)
+(label has_owngen already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(8 observations deleted)
+(30,888 real changes made)
+(label has_owngen already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(8 observations deleted)
+(label has_owngen already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(3,479 observations deleted)
+(27,417 real changes made)
+(label has_owngen already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(3,479 observations deleted)
+(label has_owngen already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+(30,896 real changes made)
+(label has_owngen already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+(label has_owngen already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. 
+. use `result', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * the group is written as text using its value label (if it has one)
+. capture decode `grp', generate(group)
+
+. if _rc generate group = string(`grp')
+
+. * keep the variables in the order they were listed
+. generate variable_order = .
+(130 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(26 real changes made)
+(26 real changes made)
+(26 real changes made)
+(26 real changes made)
+(26 real changes made)
+
+. sort variable_order `grp' year
+
+. keep variable group period n mean sd p10 p25 p50 p75 p90 min max
+
+. export excel using "$B206_XLSX", sheet("`sheet'", replace) firstrow(variables
+> )
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-06-captive-po
+> wer/output/b2_06_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t10_s1_by_owngen (130 rows)
+
+. use `original', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+end of do-file
+
+. 
+. * ---- simple regressions (robust SE) ----
+. * each row of matrix R: coefficient on has_owngen, SE, N, R2
+. regress ln_co2_s1 has_owngen i.year, vce(robust)
+
+Linear regression                               Number of obs     =     27,417
+                                                F(12, 27404)      =     199.04
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.0769
+                                                Root MSE          =     2.2982
+
+------------------------------------------------------------------------------
+             |               Robust
+   ln_co2_s1 | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+  has_owngen |   1.067633   .0296756    35.98   0.000     1.009468    1.125799
+             |
+        year |
+       2011  |   .0494607    .075457     0.66   0.512    -.0984387    .1973602
+       2012  |   .0406136   .0754733     0.54   0.590    -.1073179    .1885451
+       2013  |   .0003953    .074773     0.01   0.996    -.1461635    .1469541
+       2014  |    .725223   .0864968     8.38   0.000     .5556849    .8947612
+       2015  |   .6901647   .0842569     8.19   0.000     .5250169    .8553126
+       2017  |  -.2377322   .0659808    -3.60   0.000    -.3670579   -.1084064
+       2018  |   .0705786   .0675969     1.04   0.296    -.0619147    .2030719
+       2019  |  -.6746746   .0672563   -10.03   0.000    -.8065004   -.5428488
+       2020  |   -.490553    .072385    -6.78   0.000    -.6324312   -.3486747
+       2021  |  -.7958845   .0706241   -11.27   0.000    -.9343112   -.6574577
+       2022  |  -.4109643   .0710233    -5.79   0.000    -.5501736    -.271755
+             |
+       _cons |   2.902405   .0540626    53.69   0.000      2.79644    3.008371
+------------------------------------------------------------------------------
+
+. matrix R = (_b[has_owngen], _se[has_owngen], e(N), e(r2))
+
+. regress ln_co2_s1 has_owngen ln_workers i.kbli2 i.year, vce(robust)
+
+Linear regression                               Number of obs     =     27,417
+                                                F(36, 27380)      =     440.23
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.3774
+                                                Root MSE          =     1.8883
+
+------------------------------------------------------------------------------
+             |               Robust
+   ln_co2_s1 | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+  has_owngen |   .6302766   .0249623    25.25   0.000     .5813493    .6792039
+  ln_workers |   .9538804   .0102032    93.49   0.000     .9338817    .9738791
+             |
+       kbli2 |
+         11  |   .2480823   .0729041     3.40   0.001     .1051867     .390978
+         12  |  -2.176967   .0797372   -27.30   0.000    -2.333256   -2.020678
+         13  |  -.1139089   .0539899    -2.11   0.035    -.2197319   -.0080859
+         14  |  -1.328609   .0407265   -32.62   0.000    -1.408435   -1.248783
+         15  |  -1.454573   .0704357   -20.65   0.000    -1.592631   -1.316516
+         16  |  -.5828092   .0546805   -10.66   0.000    -.6899858   -.4756327
+         17  |   .4823444   .0803176     6.01   0.000     .3249179    .6397709
+         18  |  -.9282939   .0595196   -15.60   0.000    -1.044955   -.8116325
+         19  |   -.162294   .2251333    -0.72   0.471    -.6035666    .2789786
+         20  |   .2342697   .0654437     3.58   0.000     .1059968    .3625426
+         21  |  -.4284046   .1027331    -4.17   0.000    -.6297667   -.2270424
+         22  |  -.6799396   .0433327   -15.69   0.000    -.7648739   -.5950054
+         23  |   .4912315   .0575275     8.54   0.000     .3784747    .6039882
+         24  |   .3235045   .1183449     2.73   0.006     .0915425    .5554665
+         25  |  -.5439224   .0551218    -9.87   0.000    -.6519639   -.4358809
+         26  |  -1.394918   .1061774   -13.14   0.000    -1.603031   -1.186805
+         27  |  -1.248984   .0981515   -12.73   0.000    -1.441366   -1.056602
+         28  |  -.5761993   .0830181    -6.94   0.000     -.738919   -.4134795
+         29  |  -.9479334   .0944641   -10.03   0.000    -1.133088   -.7627791
+         30  |   -.529058   .0889934    -5.94   0.000    -.7034895   -.3546265
+         31  |  -1.359345   .0469091   -28.98   0.000     -1.45129   -1.267401
+         32  |  -1.886071   .0702219   -26.86   0.000     -2.02371   -1.748433
+         33  |  -.1011022   .1249207    -0.81   0.418    -.3459532    .1437488
+             |
+        year |
+       2011  |   .0534099   .0624779     0.85   0.393      -.06905    .1758698
+       2012  |   .0578419   .0615447     0.94   0.347    -.0627889    .1784727
+       2013  |   .0173603   .0614931     0.28   0.778    -.1031693    .1378899
+       2014  |   .5967701   .0710242     8.40   0.000     .4575591    .7359812
+       2015  |   .6740924   .0708608     9.51   0.000     .5352016    .8129831
+       2017  |  -.1726883   .0547114    -3.16   0.002    -.2799254   -.0654511
+       2018  |    .123099   .0556785     2.21   0.027     .0139663    .2322317
+       2019  |  -.6841388   .0561662   -12.18   0.000    -.7942274   -.5740503
+       2020  |  -.5484543   .0597531    -9.18   0.000    -.6655734   -.4313351
+       2021  |  -.8309402   .0590063   -14.08   0.000    -.9465955    -.715285
+       2022  |   -.429555   .0593103    -7.24   0.000    -.5458063   -.3133038
+             |
+       _cons |  -.4921121   .0621552    -7.92   0.000    -.6139395   -.3702847
+------------------------------------------------------------------------------
+
+. matrix R = R \ (_b[has_owngen], _se[has_owngen], e(N), e(r2))
+
+. regress ln_co2_s1_pw has_owngen i.year, vce(robust)
+
+Linear regression                               Number of obs     =     27,417
+                                                F(12, 27404)      =     151.09
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.0596
+                                                Root MSE          =     2.0112
+
+------------------------------------------------------------------------------
+             |               Robust
+ln_co2_s1_pw | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+  has_owngen |   .6081159   .0259662    23.42   0.000     .5572208    .6590111
+             |
+        year |
+       2011  |   .0532685   .0653864     0.81   0.415     -.074892    .1814291
+       2012  |   .0832803   .0650786     1.28   0.201    -.0442771    .2108378
+       2013  |   .0170126   .0645105     0.26   0.792    -.1094312    .1434564
+       2014  |   .5789594   .0747878     7.74   0.000     .4323714    .7255473
+       2015  |    .715838   .0733148     9.76   0.000     .5721372    .8595388
+       2017  |  -.1490592    .057475    -2.59   0.010     -.261713   -.0364053
+       2018  |   .1618732   .0589985     2.74   0.006     .0462332    .2775133
+       2019  |  -.6809938   .0589673   -11.55   0.000    -.7965728   -.5654149
+       2020  |   -.507119   .0638507    -7.94   0.000    -.6322697   -.3819684
+       2021  |  -.7667706    .062661   -12.24   0.000    -.8895893   -.6439518
+       2022  |  -.3563679   .0626594    -5.69   0.000    -.4791834   -.2335524
+             |
+       _cons |  -1.188874   .0471853   -25.20   0.000    -1.281359   -1.096388
+------------------------------------------------------------------------------
+
+. matrix R = R \ (_b[has_owngen], _se[has_owngen], e(N), e(r2))
+
+. * (adding ln workers here would give exactly row 2 again, so KBLI2 FE only)
+. regress ln_co2_s1_pw has_owngen i.kbli2 i.year, vce(robust)
+
+Linear regression                               Number of obs     =     27,417
+                                                F(35, 27381)      =     168.61
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.1710
+                                                Root MSE          =     1.8891
+
+------------------------------------------------------------------------------
+             |               Robust
+ln_co2_s1_pw | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+  has_owngen |   .6090728   .0246272    24.73   0.000     .5608023    .6573433
+             |
+       kbli2 |
+         11  |    .239164   .0731053     3.27   0.001     .0958738    .3824542
+         12  |  -2.196274   .0801081   -27.42   0.000     -2.35329   -2.039258
+         13  |  -.1304322   .0538184    -2.42   0.015     -.235919   -.0249454
+         14  |  -1.341244   .0406783   -32.97   0.000    -1.420976   -1.261513
+         15  |  -1.474362   .0708938   -20.80   0.000    -1.613317   -1.335407
+         16  |  -.5917728   .0546306   -10.83   0.000    -.6988514   -.4846941
+         17  |   .4642398    .080135     5.79   0.000     .3071711    .6213084
+         18  |  -.9189963   .0595972   -15.42   0.000     -1.03581   -.8021827
+         19  |  -.1721775   .2249916    -0.77   0.444    -.6131724    .2688173
+         20  |   .2226414   .0654578     3.40   0.001     .0943408    .3509421
+         21  |  -.4522044   .1025457    -4.41   0.000    -.6531992   -.2512095
+         22  |  -.6976897   .0432334   -16.14   0.000    -.7824293     -.61295
+         23  |   .4932137   .0574184     8.59   0.000     .3806707    .6057568
+         24  |    .296613   .1182671     2.51   0.012     .0648035    .5284224
+         25  |  -.5504252   .0551249    -9.99   0.000    -.6584729   -.4423775
+         26  |  -1.433632   .1063406   -13.48   0.000    -1.642065     -1.2252
+         27  |  -1.281642   .0980504   -13.07   0.000    -1.473826   -1.089459
+         28  |  -.5809858   .0832192    -6.98   0.000    -.7440996   -.4178719
+         29  |  -.9811713   .0946035   -10.37   0.000    -1.166599   -.7957436
+         30  |  -.5547904    .089167    -6.22   0.000    -.7295623   -.3800185
+         31  |  -1.363631   .0470038   -29.01   0.000    -1.455761   -1.271501
+         32  |  -1.902942   .0704775   -27.00   0.000    -2.041081   -1.764802
+         33  |  -.1022589   .1241881    -0.82   0.410    -.3456738     .141156
+             |
+        year |
+       2011  |   .0531696   .0624689     0.85   0.395    -.0692727    .1756118
+       2012  |    .059571   .0615074     0.97   0.333    -.0609867    .1801286
+       2013  |   .0182165    .061464     0.30   0.767     -.102256     .138689
+       2014  |   .5906429   .0710257     8.32   0.000      .451429    .7298568
+       2015  |   .6756759   .0708657     9.53   0.000     .5367756    .8145762
+       2017  |  -.1681081   .0547613    -3.07   0.002    -.2754431   -.0607732
+       2018  |   .1277221   .0557234     2.29   0.022     .0185014    .2369429
+       2019  |  -.6839315   .0561931   -12.17   0.000    -.7940728   -.5737902
+       2020  |  -.5485053   .0597465    -9.18   0.000    -.6656115   -.4313991
+       2021  |  -.8293582   .0590384   -14.05   0.000    -.9450764     -.71364
+       2022  |  -.4268497   .0593432    -7.19   0.000    -.5431655    -.310534
+             |
+       _cons |  -.6712158   .0490576   -13.68   0.000    -.7673711   -.5750605
+------------------------------------------------------------------------------
+
+. matrix R = R \ (_b[has_owngen], _se[has_owngen], e(N), e(r2))
+
+. 
+. clear
+
+. svmat R
+number of observations will be reset to 4
+Press any key to continue, or Break to abort
+Number of observations (_N) was 0, now 4.
+
+. rename (R1 R2 R3 R4) (b_owngen se_owngen n_obs r2)
+
+. generate str14 outcome  = cond(_n <= 2, "ln_co2_s1", "ln_co2_s1_pw")
+
+. generate str40 controls = "year FE" in 1
+(3 missing values generated)
+
+. replace controls = "year FE + ln workers + KBLI2 FE" in 2
+(1 real change made)
+
+. replace controls = "year FE" in 3
+(1 real change made)
+
+. replace controls = "year FE + KBLI2 FE" in 4
+(1 real change made)
+
+. generate t_stat   = b_owngen / se_owngen
+
+. generate pct_diff = 100 * (exp(b_owngen) - 1)
+
+. order outcome controls b_owngen se_owngen t_stat pct_diff n_obs r2
+
+. list, clean noobs
+
+         outcome                          controls   b_owngen   se_own~n      t
+> _stat    pct_diff   n_obs         r2  
+       ln_co2_s1                           year FE   1.067633   .0296756   35.9
+> 76821   190.84881   27417   .0769134  
+       ln_co2_s1   year FE + ln workers + KBLI2 FE   .6302766   .0249623   25.2
+> 49187   87.812992   27417   .3773623  
+    ln_co2_s1_pw                           year FE   .6081159   .0259662   23.4
+> 19483   83.696713   27417   .0596105  
+    ln_co2_s1_pw                year FE + KBLI2 FE   .6090728   .0246272   24.7
+> 31736   83.872575   27417    .171002  
+
+. export excel using "$B206_XLSX", sheet("t10_regression", replace) firstrow(va
+> riables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-06-captive-po
+> wer/output/b2_06_tables.xlsx saved
+
+. 
+end of do-file
+
+######## B2-06: 11_figures ########
+
+. /*==========================================================================
+>   Line 11 (added; the row has no figures line): charts for B2-06
+>   Every other file writes its tables to output/b2_06_tables.xlsx. This file
+>   draws the charts FROM those tables, so a chart always matches its table.
+>   The exact points of every chart are also written to a sheet figNN_data
+>   (graph-ready, e.g. to redraw the chart in Excel or PowerPoint).
+>   Runs LAST in 00_run.do.
+> 
+>   Charts (output/):
+>     fig03_own_generation.png     % own-generators and % buying non-PLN power,
+>  by year
+>     fig06_share_bands.png        own-generators by own share of electricity, 
+> by year
+>     fig08a_owngen_by_group.png   % own-generators by size / FDI / exporter / 
+> importer / Java
+>     fig08b_owngen_by_sector.png  % own-generators per KBLI 2-digit
+>     fig09a_java.png              % own-generators, Java vs outside Java, by y
+> ear
+>     fig09b_province.png          % own-generators per province (pooled)
+>     fig09c_output_change.png     median output change 2018-19 vs 2019-20, own
+> -gen vs not
+>     fig10_scope1.png             median scope 1 CO2 per worker, own-gen vs no
+> t, by year
+> ==========================================================================*/
+. if "$B206" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. 
+. * ---- fig03: own generation by year (line 3) ----
+. import excel using "$B206_XLSX", sheet("t03_by_year") firstrow clear
+(8 vars, 13 obs)
+
+. drop if period == "pool"
+(1 observation deleted)
+
+. generate year = real(period)
+
+. keep year pct_owngen pct_nonpln
+
+. order year
+
+. export excel using "$B206_XLSX", sheet("fig03_data", replace) firstrow(variab
+> les)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-06-captive-po
+> wer/output/b2_06_tables.xlsx saved
+
+. twoway (connected pct_owngen year) (connected pct_nonpln year, lpattern(dash)
+> ), ///
+>     xline(2016, lpattern(dash) lcolor(gs10)) xlabel(2010(2)2022) xtitle("") /
+> //
+>     ytitle("% of firms asked") ///
+>     legend(order(1 "Generates own electricity" 2 "Buys non-PLN electricity") 
+> rows(1)) ///
+>     title("Captive power in Indonesian manufacturing") ///
+>     note("Dashed line at 2016: reporting change, not a trend. 2014-2015: firm
+> s not asked are left out.") ///
+>     graphregion(color(white))
+
+. graph export "$B206_OUT/fig03_own_generation.png", replace width(2000)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-06-captive-po
+> wer/output/fig03_own_generation.png written in PNG format
+
+. 
+. * ---- fig06: share bands by year (line 6) ----
+. import excel using "$B206_XLSX", sheet("t06_share_bands") firstrow clear
+(6 vars, 13 obs)
+
+. drop if period == "pool"
+(1 observation deleted)
+
+. keep period n_owngen pct_lt10 pct_10_50 pct_50_90 pct_ge90
+
+. export excel using "$B206_XLSX", sheet("fig06_data", replace) firstrow(variab
+> les)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-06-captive-po
+> wer/output/b2_06_tables.xlsx saved
+
+. graph bar (asis) pct_lt10 pct_10_50 pct_50_90 pct_ge90, over(period, label(la
+> bsize(small))) stack ///
+>     ytitle("% of own-generators") ylabel(0(20)100, angle(horizontal)) ///
+>     legend(order(1 "<10% own" 2 "10-50%" 3 "50-90%" 4 ">=90% own") rows(1) si
+> ze(small)) ///
+>     title("How much of their electricity do own-generators make?") ///
+>     note("Own-generated kWh / (own-generated + purchased kWh), own-generators
+>  only.") ///
+>     graphregion(color(white))
+
+. graph export "$B206_OUT/fig06_share_bands.png", replace width(2000)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-06-captive-po
+> wer/output/fig06_share_bands.png written in PNG format
+
+. 
+. * ---- fig08a: own-generation rate by group (line 8 + Java from line 9) ----
+. * take the pooled row of each group table and stack them
+. tempfile stack
+
+. clear
+
+. save `stack', emptyok
+(dataset contains 0 observations)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. foreach s in t08_by_size t08_by_fdi t08_by_exporter t08_by_importer t09a_by_j
+> ava {
+  2.     import excel using "$B206_XLSX", sheet("`s'") firstrow clear
+  3.     keep if period == "pool"
+  4.     unab allvars : _all
+  5.     local cat : word 1 of `allvars'         // first column = the group (l
+> arge, fdi, ...)
+  6.     rename `cat' group
+  7.     keep group pct_owngen n_firms
+  8.     append using `stack'
+  9.     save `stack', replace
+ 10. }
+(7 vars, 26 obs)
+(24 observations deleted)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(7 vars, 24 obs)
+(22 observations deleted)
+(variable group was str8, now str14 to accommodate using data's values)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(7 vars, 24 obs)
+(22 observations deleted)
+(variable group was str12, now str14 to accommodate using data's values)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(7 vars, 26 obs)
+(24 observations deleted)
+(variable group was str12, now str14 to accommodate using data's values)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(7 vars, 26 obs)
+(24 observations deleted)
+(variable group was str12, now str14 to accommodate using data's values)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. export excel using "$B206_XLSX", sheet("fig08a_data", replace) firstrow(varia
+> bles)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-06-captive-po
+> wer/output/b2_06_tables.xlsx saved
+
+. graph hbar (asis) pct_owngen, over(group, sort(1) descending) ///
+>     ytitle("% of firms generating own electricity") ///
+>     title("Who generates its own electricity?") subtitle("Pooled 2010-2022") 
+> ///
+>     note("FDI excludes 2020; exporter excludes 2022.") graphregion(color(whit
+> e))
+
+. graph export "$B206_OUT/fig08a_owngen_by_group.png", replace width(2000)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-06-captive-po
+> wer/output/fig08a_owngen_by_group.png written in PNG format
+
+. 
+. * ---- fig08b: own-generation rate by sector (line 8) ----
+. import excel using "$B206_XLSX", sheet("t08_by_kbli2") firstrow clear
+(7 vars, 312 obs)
+
+. keep if period == "pool"
+(288 observations deleted)
+
+. keep kbli2 pct_owngen n_firms med_share
+
+. export excel using "$B206_XLSX", sheet("fig08b_data", replace) firstrow(varia
+> bles)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-06-captive-po
+> wer/output/b2_06_tables.xlsx saved
+
+. graph hbar (asis) pct_owngen, over(kbli2, sort(1) descending label(labsize(sm
+> all))) ///
+>     ytitle("% of firms generating own electricity") ///
+>     title("Own generation by sector") subtitle("KBLI 2-digit, pooled 2010-202
+> 2") ///
+>     graphregion(color(white)) ysize(6)
+
+. graph export "$B206_OUT/fig08b_owngen_by_sector.png", replace width(2000)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-06-captive-po
+> wer/output/fig08b_owngen_by_sector.png written in PNG format
+
+. 
+. * ---- fig09a: Java vs outside Java by year (line 9a) ----
+. import excel using "$B206_XLSX", sheet("t09a_by_java") firstrow clear
+(7 vars, 26 obs)
+
+. drop if period == "pool"
+(2 observations deleted)
+
+. generate year = real(period)
+
+. generate col = cond(java == "Java", "java", "outside")
+
+. keep year col pct_owngen med_share
+
+. reshape wide pct_owngen med_share, i(year) j(col) string
+(j = java outside)
+
+Data                               Long   ->   Wide
+-----------------------------------------------------------------------------
+Number of observations               24   ->   12          
+Number of variables                   4   ->   5           
+j variable (2 values)               col   ->   (dropped)
+xij variables:
+                             pct_owngen   ->   pct_owngenjava pct_owngenoutside
+                              med_share   ->   med_sharejava med_shareoutside
+-----------------------------------------------------------------------------
+
+. export excel using "$B206_XLSX", sheet("fig09a_data", replace) firstrow(varia
+> bles)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-06-captive-po
+> wer/output/b2_06_tables.xlsx saved
+
+. twoway (connected pct_owngenoutside year) (connected pct_owngenjava year, lpa
+> ttern(dash)), ///
+>     xline(2016, lpattern(dash) lcolor(gs10)) xlabel(2010(2)2022) xtitle("") /
+> //
+>     ytitle("% of firms asked") ///
+>     legend(order(1 "Outside Java" 2 "Java") rows(1)) ///
+>     title("Own generation: Java vs outside Java") ///
+>     note("Outside Java has the weaker grid. Dashed line at 2016: reporting ch
+> ange.") ///
+>     graphregion(color(white))
+
+. graph export "$B206_OUT/fig09a_java.png", replace width(2000)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-06-captive-po
+> wer/output/fig09a_java.png written in PNG format
+
+. 
+. * ---- fig09b: by province, pooled (line 9a) ----
+. import excel using "$B206_XLSX", sheet("t09a_by_province") firstrow clear
+(8 vars, 429 obs)
+
+. keep if period == "pool"
+(395 observations deleted)
+
+. generate province = string(prov) + cond(java == "Java", " (Java)", "")
+
+. keep province prov java pct_owngen n_firms
+
+. export excel using "$B206_XLSX", sheet("fig09b_data", replace) firstrow(varia
+> bles)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-06-captive-po
+> wer/output/b2_06_tables.xlsx saved
+
+. graph hbar (asis) pct_owngen, over(province, sort(1) descending label(labsize
+> (vsmall))) ///
+>     ytitle("% of firms generating own electricity") ///
+>     title("Own generation by province") subtitle("Pooled 2010-2022") ///
+>     note("Province code (BPS). Small provinces have few firms.") ///
+>     graphregion(color(white)) ysize(7)
+
+. graph export "$B206_OUT/fig09b_province.png", replace width(2000)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-06-captive-po
+> wer/output/fig09b_province.png written in PNG format
+
+. 
+. * ---- fig09c: output change around 2020 (line 9b) ----
+. import excel using "$B206_XLSX", sheet("t09b_output_change") firstrow clear
+(7 vars, 4 obs)
+
+. generate col = cond(has_owngen == "Own generation", "owngen", "none")
+
+. keep change col med_dln_output
+
+. reshape wide med_dln_output, i(change) j(col) string
+(j = none owngen)
+
+Data                               Long   ->   Wide
+-----------------------------------------------------------------------------
+Number of observations                4   ->   2           
+Number of variables                   3   ->   3           
+j variable (2 values)               col   ->   (dropped)
+xij variables:
+                         med_dln_output   ->   med_dln_outputnone med_dln_outpu
+> towngen
+-----------------------------------------------------------------------------
+
+. export excel using "$B206_XLSX", sheet("fig09c_data", replace) firstrow(varia
+> bles)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-06-captive-po
+> wer/output/b2_06_tables.xlsx saved
+
+. graph bar (asis) med_dln_outputnone med_dln_outputowngen, over(change) ///
+>     ytitle("Median change in ln output") yline(0, lcolor(gs8)) ///
+>     legend(order(1 "No own generation" 2 "Own generation") rows(1)) ///
+>     title("Did own generators lose less output in 2020?") ///
+>     note("Own-generation status in the base year. Firm links are fictional in
+>  the development data.") ///
+>     graphregion(color(white))
+
+. graph export "$B206_OUT/fig09c_output_change.png", replace width(2000)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-06-captive-po
+> wer/output/fig09c_output_change.png written in PNG format
+
+. 
+. * ---- fig10: scope 1 per worker, own-gen vs not (line 10) ----
+. import excel using "$B206_XLSX", sheet("t10_s1_by_owngen") firstrow clear
+(13 vars, 130 obs)
+
+. keep if variable == "co2_s1_pw"
+(104 observations deleted)
+
+. drop if period == "pool"
+(2 observations deleted)
+
+. generate year = real(period)
+
+. generate col = cond(group == "Own generation", "owngen", "none")
+
+. keep year col p50
+
+. reshape wide p50, i(year) j(col) string
+(j = none owngen)
+
+Data                               Long   ->   Wide
+-----------------------------------------------------------------------------
+Number of observations               24   ->   12          
+Number of variables                   3   ->   3           
+j variable (2 values)               col   ->   (dropped)
+xij variables:
+                                    p50   ->   p50none p50owngen
+-----------------------------------------------------------------------------
+
+. rename (p50none p50owngen) (median_co2_s1_pw_none median_co2_s1_pw_owngen)
+
+. export excel using "$B206_XLSX", sheet("fig10_data", replace) firstrow(variab
+> les)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-06-captive-po
+> wer/output/b2_06_tables.xlsx saved
+
+. twoway (connected median_co2_s1_pw_owngen year) (connected median_co2_s1_pw_n
+> one year, lpattern(dash)), ///
+>     xline(2016, lpattern(dash) lcolor(gs10)) xlabel(2010(2)2022) xtitle("") /
+> //
+>     ytitle("Median scope 1 CO2 per worker (t)") ///
+>     legend(order(1 "Own generation" 2 "No own generation") rows(1)) ///
+>     title("Do own-generators emit more scope 1?") ///
+>     note("Scope 1 = diesel, petrol, coal, LPG. Generator fuel cannot be separ
+> ated from other fuel use.") ///
+>     graphregion(color(white))
+
+. graph export "$B206_OUT/fig10_scope1.png", replace width(2000)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-06-captive-po
+> wer/output/fig10_scope1.png written in PNG format
+
+. graph drop _all
+
+. 
+end of do-file
+
+. log close b206
+      name:  b206
+       log:  /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-06-ca
+> ptive-power/output/b2_06_log.log
+  log type:  text
+ closed on:   9 Oct 2026, 12:54:48
+-------------------------------------------------------------------------------

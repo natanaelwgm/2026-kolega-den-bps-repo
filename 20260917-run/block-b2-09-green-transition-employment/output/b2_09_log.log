@@ -1,0 +1,2592 @@
+-------------------------------------------------------------------------------
+      name:  b209
+       log:  /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-09-gr
+> een-transition-employment/output/b2_09_log.log
+  log type:  text
+ opened on:   9 Oct 2026, 12:54:57
+
+. foreach f of local files {
+  2.     display _newline as result "######## B2-09: `f' ########"
+  3.     do "$B209/`f'.do"
+  4. }
+
+######## B2-09: 01a_prep_si ########
+
+. /*==========================================================================
+>   Line 1: "Green transition and employment"
+>   Prepare Statistik Industri (SI) 2010-2022 for B2-09
+>   Input : $SI_DATA  (analysis_ready_data.dta from block 0)
+>   Output: data/b209_si.dta  -- 1 row = 1 firm x year
+>           (open with: use "$B209_DATA/b209_si.dta", clear  then browse)
+> 
+>   Main variables created:
+>     co2_s1 co2_s2 co2_total gj_total, co2_per_va  (carbon intensity)
+>     workers, production_workers, nonprod_workers, nonprod_share
+>     va, capital, va_pw, cap_pw (per worker), ln_*
+>     exporter, fdi, large, kbli2, prov, java
+>     clean          1 = not an extreme energy outlier
+>   Male/female and wage columns are carried only if they exist (they are not
+>   in block 0; see files 07 and 08).
+> ==========================================================================*/
+. if "$B209" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$SI_DATA", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+. * ---- identifiers ------------------------------------------------------
+. * year = survey year (there is no 2016 file)
+. generate kbli2 = real(substr(industry_code, 1, 2))
+
+. generate kbli5 = industry_code
+
+. generate prov  = real(province_code)
+
+. generate java  = inlist(prov, 31, 32, 33, 34, 35, 36) if !missing(prov)
+
+. label define java 0 "Outside Java" 1 "Java"
+
+. label values java java
+
+. 
+. * ---- firm size: medium vs large (100-worker threshold) ----------------
+. generate large = (workers > 100) if !missing(workers)
+
+. label define large 0 "Medium (<=100)" 1 "Large (>100)"
+
+. label values large large
+
+. 
+. * ---- exports & FDI ----------------------------------------------------
+. generate exporter = export_flag
+(15,321 missing values generated)
+
+. generate fdi      = fdi_10_flag                     // foreign ownership >= 1
+> 0%
+(311 missing values generated)
+
+. * 2022: the form only asks about DIRECT exports, a "no" is never recorded -> 
+> missing
+. replace exporter = . if year == 2022
+(344 real changes made, 344 to missing)
+
+. * 2020: foreign ownership is inconsistent (47% FDI vs 8-11% other years) -> m
+> issing
+. replace fdi = . if year == 2020
+(2,936 real changes made, 2,936 to missing)
+
+. label define exporter 0 "Non-exporter" 1 "Exporter"
+
+. label values exporter exporter
+
+. label define fdi 0 "Domestic" 1 "FDI"
+
+. label values fdi fdi
+
+. 
+. * ---- firm characteristics (nominal) -----------------------------------
+. generate va      = value_added_nominal
+
+. generate output  = gross_output_nominal
+
+. generate capital = capital_stock_nominal
+(1,125 missing values generated)
+
+. generate va_pw   = va / workers      if workers > 0
+(28 missing values generated)
+
+. generate out_pw  = output / workers  if workers > 0
+(28 missing values generated)
+
+. generate cap_pw  = capital / workers if workers > 0
+(1,153 missing values generated)
+
+. 
+. * ---- workers: production / non-production -----------------------------
+. * block 0 has total workers and production workers; non-production = the rest
+> .
+. * 2020 and 2021: production workers are missing for ~40-47% of firms.
+. * 1 record reports more production workers than total workers -> split missin
+> g.
+. generate prod_workers    = production_workers if production_workers <= worker
+> s
+(2,682 missing values generated)
+
+. generate nonprod_workers = workers - prod_workers
+(2,682 missing values generated)
+
+. generate nonprod_share   = 100 * nonprod_workers / workers if workers > 0
+(2,710 missing values generated)
+
+. label variable prod_workers    "Production workers (missing if > total worker
+> s)"
+
+. label variable nonprod_workers "Non-production workers = total - production"
+
+. label variable nonprod_share   "Non-production workers, % of all workers"
+
+. 
+. * ---- energy & emissions -----------------------------------------------
+. * COAL 2017 CORRECTION: block 0 multiplies by 1000 (treats it as tonnes),
+. * but the price per unit shows the data are already in kg. Divide back.
+. generate co2_coal = co2_coal_s1
+
+. generate gj_coal2 = gj_coal
+
+. replace  co2_coal = co2_coal_s1 / 1000 if year == 2017
+(1,181 real changes made)
+
+. replace  gj_coal2 = gj_coal / 1000     if year == 2017
+(1,181 real changes made)
+
+. 
+. * scope 1 = the 4 fuels asked in every year: diesel, petrol, coal, LPG
+. egen co2_s1 = rowtotal(co2_diesel_s1 co2_petrol_s1 co2_coal co2_lpg_s1), miss
+> ing
+
+. egen gj_s1  = rowtotal(gj_diesel gj_petrol gj_coal2 gj_lpg), missing
+
+. * scope 2 = purchased electricity
+. generate co2_s2 = co2_scope2_s1
+
+. generate gj_s2  = gj_electricity
+
+. egen co2_total = rowtotal(co2_s1 co2_s2), missing
+
+. egen gj_total  = rowtotal(gj_s1 gj_s2), missing
+
+. 
+. * carbon intensity = tonnes CO2 per (nominal) value added
+. generate co2_per_va  = co2_total / va      if va > 0
+
+. generate co2_pw      = co2_total / workers if workers > 0
+(28 missing values generated)
+
+. 
+. * ---- energy outlier flag (clean) --------------------------------------
+. * a record is left out of the analysis (clean = 0) if any of its energy
+. * quantities is above 100x that year's 99th percentile. Nothing is deleted.
+. generate coal_kg_fix = fuel_coal_kg
+
+. replace  coal_kg_fix = fuel_coal_kg / 1000 if year == 2017
+(1,181 real changes made)
+
+. generate clean = 1
+
+. levelsof year, local(years)
+2010 2011 2012 2013 2014 2015 2017 2018 2019 2020 2021 2022
+
+. foreach q in fuel_diesel_ltr fuel_petrol_ltr fuel_kerosene_ltr coal_kg_fix fu
+> el_lpg_kg ///
+>              fuel_citygas_m3 fuel_othergas_m3 fuel_coalbriq_kg fuel_coke_kg /
+> //
+>              elec_pln_kwh elec_nonpln_kwh elec_owngen_kwh fuel_dieseloil_ltr 
+> ///
+>              fuel_fueloil_ltr fuel_natgas_mmbtu fuel_biodiesel_ltr fuel_bioma
+> ss_kg {
+  2.     foreach y of local years {
+  3.         quietly count if year == `y' & `q' > 0 & !missing(`q')
+  4.         if r(N) > 2 {
+  5.             quietly summarize `q' if year == `y' & `q' > 0, detail
+  6.             quietly replace clean = 0 if year == `y' & `q' > 100 * r(p99) 
+> & !missing(`q')
+  7.         }
+  8.     }
+  9. }
+
+. replace clean = 0 if workers == 0 & co2_s1 > 0 & !missing(co2_s1)
+(20 real changes made)
+
+. count if clean == 0
+  30
+
+. display as result "Outlier records (clean = 0): " r(N)
+Outlier records (clean = 0): 30
+
+. 
+. * ---- ln versions ------------------------------------------------------
+. foreach v in va output capital workers prod_workers nonprod_workers va_pw out
+> _pw cap_pw ///
+>              co2_s1 co2_s2 co2_total gj_total co2_per_va {
+  2.     generate ln_`v' = ln(`v') if `v' > 0
+  3. }
+(14,164 missing values generated)
+(28 missing values generated)
+(2,742 missing values generated)
+(5,031 missing values generated)
+(28 missing values generated)
+(28 missing values generated)
+(14,177 missing values generated)
+(3,826 missing values generated)
+(1,933 missing values generated)
+(547 missing values generated)
+(547 missing values generated)
+(547 missing values generated)
+
+. 
+. * ---- male/female and wages: carried only if the data have them --------
+. local extra ""
+
+. foreach v in workers_male workers_female wage_total wage_prod wage_nonprod {
+  2.     capture confirm variable `v'
+  3.     if !_rc local extra "`extra' `v'"
+  4. }
+
+. display as result "Gender / wage columns found: `extra'"
+Gender / wage columns found: 
+
+. 
+. * ---- save -------------------------------------------------------------
+. keep  firm_id year source_row kbli2 kbli5 prov java large exporter fdi va out
+> put capital ///
+>       workers prod_workers nonprod_workers nonprod_share va_pw out_pw cap_pw 
+> ///
+>       co2_s1 co2_s2 co2_total gj_total co2_per_va co2_pw clean ln_* `extra'
+
+. order firm_id year source_row kbli2 kbli5 prov java large exporter fdi
+
+. label variable co2_per_va "CO2 (t) per nominal value added"
+
+. label variable clean "1 = not an energy outlier"
+
+. compress
+  variable kbli2 was double now byte
+  variable prov was double now byte
+  variable java was double now byte
+  variable large was double now byte
+  variable exporter was double now byte
+  variable fdi was double now byte
+  variable prod_workers was double now long
+  variable nonprod_workers was double now int
+  variable clean was double now byte
+  (1,949,891 bytes saved)
+
+. save "$B209_DATA/b209_si.dta", replace
+(file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-09-green-tra
+    > nsition-employment/data/b209_si.dta not found)
+file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-09-green-tra
+    > nsition-employment/data/b209_si.dta saved
+
+. display as result "01a done: $B209_DATA/b209_si.dta (" _N " rows)"
+01a done: /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-09-green
+> -transition-employment/data/b209_si.dta (33049 rows)
+
+. 
+end of do-file
+
+######## B2-09: 02_classify_carbon_trend ########
+
+. /*==========================================================================
+>   Line 2: "Compare firms dengan rapidly falling vs rising carbon intensity"
+>   Data  : SI 2010-2022 (data/b209_si.dta), clean == 1
+>   Method: carbon intensity = CO2 (scope 1 + 2, t) / nominal value added.
+>           For every firm, take the first and the last year in which its
+>           carbon intensity can be computed (CO2 > 0 and VA > 0), and the
+>           change ln(CO2/VA)_last - ln(CO2/VA)_first.
+>           A firm needs at least 2 such years. Firms are then split into
+>           terciles of that change:
+>             1 Rapidly falling   bottom third (largest fall)
+>             2 Stable            middle third
+>             3 Rapidly rising    top third
+>   Output data:
+>     data/b209_firm.dta   1 row = 1 firm: group, first/last year, and every
+>                          outcome in the first (_f) and last (_l) year, with
+>                          its change d_* (level) and dln_* (ln)
+>     data/b209_panel.dta  1 row = 1 firm x year (all clean years of the
+>                          classified firms), with the firm's group
+>   Output sheets:
+>     t02_coverage     how many firms can be classified
+>     t02_groups       per group: n firms, change in ln CO2/VA, years covered
+>     t02_ci_by_year   CO2/VA by group, pool + by year (level & ln)
+> 
+>   NOTE: firm_id links across years are FICTIONAL in the development data,
+>   so a "firm's change" here is a change between two unrelated records.
+>   The code is right for the real BPS data; the numbers only mean something
+>   there. Values are nominal, and energy reporting changes between 2015 and
+>   2017, so changes that span 2016 partly reflect the questionnaire.
+> ==========================================================================*/
+. if "$B209" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B209_DATA/b209_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1
+(30 observations deleted)
+
+. 
+. * ---- coverage ----------------------------------------------------------
+. generate has_ci = !missing(ln_co2_per_va)
+
+. bysort firm_id: egen n_years_ci = total(has_ci)
+
+. by firm_id: generate first_row = (_n == 1)
+
+. preserve
+
+. keep if first_row == 1
+(22,575 observations deleted)
+
+. generate firms_all     = 1
+
+. generate firms_ci_1plus = (n_years_ci >= 1)
+
+. generate firms_ci_2plus = (n_years_ci >= 2)
+
+. collapse (sum) firms_all firms_ci_1plus firms_ci_2plus
+
+. generate pct_classified = 100 * firms_ci_2plus / firms_all
+
+. list, clean noobs
+
+    firms_~l   fi~1plus   fi~2plus   pct_cla~d  
+       10444      10233       5401   51.713903  
+
+. export excel using "$B209_XLSX", sheet("t02_coverage", replace) firstrow(vari
+> ables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-09-green-tran
+> sition-employment/output/b2_09_tables.xlsx saved
+
+. restore
+
+. 
+. * ---- first and last year with a carbon intensity, per firm -------------
+. keep if has_ci == 1 & n_years_ci >= 2
+(5,379 observations deleted)
+
+. sort firm_id year
+
+. by firm_id: keep if _n == 1 | _n == _N
+(16,838 observations deleted)
+
+. by firm_id: generate pos = cond(_n == 1, "_f", "_l")
+
+. 
+. * outcomes (gender / wage columns join only if the data have them)
+. local outcomes "workers prod_workers nonprod_workers nonprod_share va_pw cap_
+> pw"
+
+. foreach v in workers_male workers_female wage_total wage_prod wage_nonprod {
+  2.     capture confirm variable `v'
+  3.     if !_rc local outcomes "`outcomes' `v'"
+  4. }
+
+. keep firm_id pos year kbli2 co2_per_va ln_co2_per_va `outcomes'
+
+. reshape wide year kbli2 co2_per_va ln_co2_per_va `outcomes', i(firm_id) j(pos
+> ) string
+(j = _f _l)
+
+Data                               Long   ->   Wide
+-----------------------------------------------------------------------------
+Number of observations           10,802   ->   5,401       
+Number of variables                  12   ->   21          
+j variable (2 values)               pos   ->   (dropped)
+xij variables:
+                                   year   ->   year_f year_l
+                                  kbli2   ->   kbli2_f kbli2_l
+                             co2_per_va   ->   co2_per_va_f co2_per_va_l
+                          ln_co2_per_va   ->   ln_co2_per_va_f ln_co2_per_va_l
+                                workers   ->   workers_f workers_l
+                           prod_workers   ->   prod_workers_f prod_workers_l
+                        nonprod_workers   ->   nonprod_workers_f nonprod_worker
+> s_l
+                          nonprod_share   ->   nonprod_share_f nonprod_share_l
+                                  va_pw   ->   va_pw_f va_pw_l
+                                 cap_pw   ->   cap_pw_f cap_pw_l
+-----------------------------------------------------------------------------
+
+. 
+. * ---- change in carbon intensity and the 3 groups -----------------------
+. generate ci_change = ln_co2_per_va_l - ln_co2_per_va_f
+
+. generate years_apart = year_l - year_f
+
+. xtile ci_group = ci_change, nq(3)
+
+. label define ci_group 1 "Rapidly falling" 2 "Stable" 3 "Rapidly rising"
+
+. label values ci_group ci_group
+
+. label variable ci_change "Change in ln(CO2/VA), last minus first year"
+
+. label variable ci_group "Carbon-intensity trend (tercile of ci_change)"
+
+. 
+. * ---- change in every outcome between the same two years ----------------
+. foreach v of local outcomes {
+  2.     generate d_`v' = `v'_l - `v'_f
+  3.     generate dln_`v' = ln(`v'_l) - ln(`v'_f) if `v'_l > 0 & `v'_f > 0
+  4. }
+(1 missing value generated)
+(571 missing values generated)
+(587 missing values generated)
+(571 missing values generated)
+(1,309 missing values generated)
+(572 missing values generated)
+(1,309 missing values generated)
+(1 missing value generated)
+(1 missing value generated)
+(232 missing values generated)
+(3,476 missing values generated)
+
+. drop dln_nonprod_share                 // a share: use the change in % points
+
+. 
+. compress
+  variable workers_f was long now int
+  variable prod_workers_f was long now int
+  variable prod_workers_l was long now int
+  variable years_apart was double now byte
+  variable d_workers was double now int
+  variable d_prod_workers was double now int
+  variable d_nonprod_workers was double now int
+  (167,431 bytes saved)
+
+. save "$B209_DATA/b209_firm.dta", replace
+(file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-09-green-tra
+    > nsition-employment/data/b209_firm.dta not found)
+file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-09-green-tra
+    > nsition-employment/data/b209_firm.dta saved
+
+. display as result "Firms classified: " _N
+Firms classified: 5401
+
+. 
+. * ---- t02_groups --------------------------------------------------------
+. preserve
+
+. generate n_firms = 1
+
+. collapse (sum) n_firms (min) min_change = ci_change (max) max_change = ci_cha
+> nge ///
+>          (mean) mean_change = ci_change (p50) med_change = ci_change ///
+>          med_years_apart = years_apart med_first_year = year_f med_last_year 
+> = year_l ///
+>          med_ci_first = co2_per_va_f med_ci_last = co2_per_va_l, by(ci_group)
+
+. list, clean noobs
+
+           ci_group   n_firms   min_change   max_change   mean_cha~e   med_chan
+> ge   med_ye~t   med_fi~r   med_la~r   med_c~rst   med_c~ast  
+    Rapidly falling      1801   -9.5111111   -1.0165327   -2.5205077   -2.14877
+> 91          4       2013       2021   .00004288   3.822e-06  
+             Stable      1800   -1.0158765     .6461357   -.18462153   -.172941
+> 27          3       2014       2020   .00001707   .00001423  
+     Rapidly rising      1800    .64711515    10.101354    2.0600117    1.71106
+> 02          3       2014       2021   5.352e-06   .00003891  
+
+. export excel using "$B209_XLSX", sheet("t02_groups", replace) firstrow(variab
+> les)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-09-green-tran
+> sition-employment/output/b2_09_tables.xlsx saved
+
+. restore
+
+. 
+. * ---- panel: all clean years of the classified firms, with their group ---
+. keep firm_id ci_group ci_change
+
+. tempfile groups
+
+. save `groups'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000003 saved
+    as .dta format
+
+. use "$B209_DATA/b209_si.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. keep if clean == 1
+(30 observations deleted)
+
+. merge m:1 firm_id using `groups', keep(match) nogenerate
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                             0
+    Matched                            27,897  
+    -----------------------------------------
+
+. compress
+  variable prod_workers was long now int
+  (55,794 bytes saved)
+
+. save "$B209_DATA/b209_panel.dta", replace
+(file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-09-green-tra
+    > nsition-employment/data/b209_panel.dta not found)
+file
+    /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-09-green-tra
+    > nsition-employment/data/b209_panel.dta saved
+
+. display as result "Panel of classified firms: " _N " firm-years"
+Panel of classified firms: 27897 firm-years
+
+. 
+. * ---- carbon intensity by group, pool + by year --------------------------
+. do "$B209/_sumstats.do" "co2_per_va ln_co2_per_va" "ci_group" "t02_ci_by_year
+> "
+
+. /*==========================================================================
+>   _sumstats.do -- helper: descriptive statistics table, POOLED + BY YEAR
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B209/_sumstats.do" "workers ln_workers" "ci_group" "t04_levels"
+> 
+>       argument 1 = list of variables
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b2_09_tables.xlsx (max 31 characters)
+> 
+>   Result: 1 row = variable x group x period (pool, 2010, 2011, ...)
+>           columns n mean sd p10 p25 p50 p75 p90 min max
+>   Rows with a missing group are not counted.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars grp sheet
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000005 saved
+    as .dta format
+
+. local first 1
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     local grp all
+. }
+
+. foreach v of local vars {
+  2.     foreach period in pool year {
+  3.         preserve
+  4.         keep `v' `grp' year
+  5.         keep if !missing(`v') & !missing(`grp')
+  6.         if _N > 0 {
+  7.             if "`period'" == "pool" replace year = 0
+  8.             collapse (count) n = `v' (mean) mean = `v' (sd) sd = `v' ///
+>                      (p10) p10 = `v' (p25) p25 = `v' (p50) p50 = `v' ///
+>                      (p75) p75 = `v' (p90) p90 = `v' (min) min = `v' (max) ma
+> x = `v', ///
+>                      by(`grp' year)
+  9.             generate str32 variable = "`v'"
+ 10.             if `first' == 0 append using `result'
+ 11.             save `result', replace
+ 12.             local first 0
+ 13.         }
+ 14.         restore
+ 15.     }
+ 16. }
+(0 observations deleted)
+(27,897 real changes made)
+(file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000004 not
+    found)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000004 saved
+    as .dta format
+(0 observations deleted)
+(label ci_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000004 saved
+    as .dta format
+(257 observations deleted)
+(27,640 real changes made)
+(label ci_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000004 saved
+    as .dta format
+(257 observations deleted)
+(label ci_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000004 saved
+    as .dta format
+
+. 
+. use `result', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * the group is written as text using its value label (if it has one)
+. capture decode `grp', generate(group)
+
+. if _rc generate group = string(`grp')
+
+. * keep the variables in the order they were listed
+. generate variable_order = .
+(78 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(39 real changes made)
+(39 real changes made)
+
+. sort variable_order `grp' year
+
+. keep variable group period n mean sd p10 p25 p50 p75 p90 min max
+
+. export excel using "$B209_XLSX", sheet("`sheet'", replace) firstrow(variables
+> )
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-09-green-tran
+> sition-employment/output/b2_09_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t02_ci_by_year (78 rows)
+
+. use `original', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+end of do-file
+
+. 
+end of do-file
+
+######## B2-09: 03_overview ########
+
+. /*==========================================================================
+>   Line 3: "Lihat perubahan:"
+>   This line is the heading for lines 4-10, which each have their own file.
+>   This file gives the one-table overview: how every outcome changed between
+>   a firm's first and last year, in each carbon-intensity group.
+> 
+>   Data  : data/b209_firm.dta (1 row = 1 firm classified in 02)
+>   Output sheet:
+>     t03_overview   1 row = outcome x group:
+>                    n firms, median in the first and the last year,
+>                    median level change, median and mean ln change
+>                    (x100 = roughly % change), % of firms where it rose
+>   NOTE: nonprod_share is a % of workers, so its change is in % points
+>         and has no ln change. Production / non-production workers are
+>         missing for ~40-47% of firms in 2020 and 2021 (block 0), so their
+>         n is smaller. Male/female and wages appear only if the data have them
+> .
+>         Firm links are fictional in the development data (see 02).
+> ==========================================================================*/
+. if "$B209" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B209_DATA/b209_firm.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+. local outcomes "workers prod_workers nonprod_workers nonprod_share va_pw cap_
+> pw"
+
+. foreach v in workers_male workers_female wage_total wage_prod wage_nonprod {
+  2.     capture confirm variable d_`v'
+  3.     if !_rc local outcomes "`outcomes' `v'"
+  4. }
+
+. 
+. tempfile result
+
+. local first 1
+
+. foreach v of local outcomes {
+  2.     use "$B209_DATA/b209_firm.dta", clear
+  3.     keep if !missing(d_`v')
+  4.     capture confirm variable dln_`v'
+  5.     if _rc generate dln_`v' = .
+  6.     generate rose = 100 * (d_`v' > 0)
+  7.     generate n_firms = 1
+  8.     collapse (sum) n_firms (p50) med_first = `v'_f med_last = `v'_l med_ch
+> ange = d_`v' ///
+>              med_dln = dln_`v' (mean) mean_dln = dln_`v' pct_rose = rose, by(
+> ci_group)
+  9.     generate str20 outcome = "`v'"
+ 10.     if `first' == 0 append using `result'
+ 11.     save `result', replace
+ 12.     local first 0
+ 13. }
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(0 observations deleted)
+(file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 not
+    found)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(571 observations deleted)
+(label ci_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(571 observations deleted)
+(label ci_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(572 observations deleted)
+(4,829 missing values generated)
+(label ci_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(1 observation deleted)
+(label ci_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+(232 observations deleted)
+(label ci_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. 
+. use `result', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. generate order = .
+(18 missing values generated)
+
+. local i 0
+
+. foreach v of local outcomes {
+  2.     local ++i
+  3.     replace order = `i' if outcome == "`v'"
+  4. }
+(3 real changes made)
+(3 real changes made)
+(3 real changes made)
+(3 real changes made)
+(3 real changes made)
+(3 real changes made)
+
+. sort order ci_group
+
+. decode ci_group, generate(group)
+
+. order outcome group n_firms med_first med_last med_change med_dln mean_dln pc
+> t_rose
+
+. drop order ci_group
+
+. list, clean noobs
+
+            outcome             group   n_firms   med_first    med_last   med_c
+> hange      med_dln     mean_dln    pct_rose  
+            workers   Rapidly falling      1801          52          57        
+>     0            0    .01545466   48.750694  
+            workers            Stable      1800          49          51        
+>     0            0   -.01909152   47.333333  
+            workers    Rapidly rising      1800          53          52        
+>    -3    -.0719735   -.09974649   43.833333  
+       prod_workers   Rapidly falling      1601          34          38        
+>     0            0    .05277202   49.843848  
+       prod_workers            Stable      1600          33          34        
+>     1    .02732105    .05065024     50.5625  
+       prod_workers    Rapidly rising      1629          36          37        
+>    -1   -.04879016   -.07459712   46.101903  
+    nonprod_workers   Rapidly falling      1601          12          12        
+>     0            0   -.00178261   46.158651  
+    nonprod_workers            Stable      1600        11.5          11        
+>    -1            0   -.04320803      43.375  
+    nonprod_workers    Rapidly rising      1629          13          11        
+>    -1   -.09097178   -.10144262   43.400859  
+      nonprod_share   Rapidly falling      1601   20.833333          20   -.775
+> 86207            .            .   46.658339  
+      nonprod_share            Stable      1600   21.212121   17.886905   -1.51
+> 51515            .            .        44.5  
+      nonprod_share    Rapidly rising      1628   21.052632    20.21578   -.162
+> 97968            .            .   47.174447  
+              va_pw   Rapidly falling      1801   52297.886   168584.31    8080
+> 3.928    1.0603299    1.0918375   79.566907  
+              va_pw            Stable      1800   64810.202   96117.799    1424
+> 2.994     .3426162    .41499985   62.722222  
+              va_pw    Rapidly rising      1799   97247.756   75328.773   -1113
+> 0.153   -.23746471   -.23005142   42.912729  
+             cap_pw   Rapidly falling      1725   8425.8122           0        
+>     0    .41376131    .41117173   35.072464  
+             cap_pw            Stable      1723   7074.0577   8323.5872        
+>     0    .42458382    .51497466   41.555427  
+             cap_pw    Rapidly rising      1721   3102.1768   13837.985        
+>     0    .52610609    .75801647   46.891342  
+
+. export excel using "$B209_XLSX", sheet("t03_overview", replace) firstrow(vari
+> ables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-09-green-tran
+> sition-employment/output/b2_09_tables.xlsx saved
+
+. 
+end of do-file
+
+######## B2-09: 04_employment ########
+
+. /*==========================================================================
+>   Line 4: "Employment"
+>   Data  : data/b209_firm.dta (change per firm) and data/b209_panel.dta
+>           (firm-years of the classified firms), clean == 1
+>   Output sheets:
+>     t04_change   change in total workers between the firm's first and last
+>                  year, by group: level (d_) and ln (dln_, x100 ~ % change)
+>     t04_levels   total workers by group, pool + by year (level & ln)
+>   NOTE: firm links are fictional in the development data (see 02).
+> ==========================================================================*/
+. if "$B209" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B209_DATA/b209_firm.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. do "$B209/_changestats.do" "d_workers dln_workers" "t04_change"
+
+. /*==========================================================================
+>   _changestats.do -- helper: statistics of a firm-level CHANGE, by group
+> 
+>   Usage (data/b209_firm.dta loaded: 1 row = 1 firm):
+>       do "$B209/_changestats.do" "d_workers dln_workers" "t04_change"
+> 
+>       argument 1 = list of change variables (d_* level, dln_* ln)
+>       argument 2 = sheet name in output/b2_09_tables.xlsx (max 31 characters)
+> 
+>   Result: 1 row = variable x group (Rapidly falling / Stable / Rapidly rising
+> )
+>           columns n mean sd p10 p25 p50 p75 p90 pct_rose
+>           pct_rose = % of firms whose value went up (change > 0)
+>   There is no "by year" here: the change runs from each firm's first to its
+>   last year (see 02). The yearly view is in the *_levels sheets.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars sheet
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+
+. local first 1
+
+. foreach v of local vars {
+  2.     preserve
+  3.     keep `v' ci_group
+  4.     keep if !missing(`v') & !missing(ci_group)
+  5.     generate rose = 100 * (`v' > 0)
+  6.     collapse (count) n = `v' (mean) mean = `v' (sd) sd = `v' ///
+>              (p10) p10 = `v' (p25) p25 = `v' (p50) p50 = `v' ///
+>              (p75) p75 = `v' (p90) p90 = `v' (mean) pct_rose = rose, by(ci_gr
+> oup)
+  7.     generate str32 variable = "`v'"
+  8.     if `first' == 0 append using `result'
+  9.     save `result', replace
+ 10.     local first 0
+ 11.     restore
+ 12. }
+(0 observations deleted)
+(file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 not
+    found)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(1 observation deleted)
+(label ci_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. 
+. use `result', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. decode ci_group, generate(group)
+
+. generate variable_order = .
+(6 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(3 real changes made)
+(3 real changes made)
+
+. sort variable_order ci_group
+
+. drop ci_group
+
+. keep variable group n mean sd p10 p25 p50 p75 p90 pct_rose
+
+. order variable group n mean sd p10 p25 p50 p75 p90 pct_rose
+
+. export excel using "$B209_XLSX", sheet("`sheet'", replace) firstrow(variables
+> )
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-09-green-tran
+> sition-employment/output/b2_09_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t04_change (6 rows)
+
+. use `original', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+end of do-file
+
+. 
+. use "$B209_DATA/b209_panel.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. do "$B209/_sumstats.do" "workers ln_workers" "ci_group" "t04_levels"
+
+. /*==========================================================================
+>   _sumstats.do -- helper: descriptive statistics table, POOLED + BY YEAR
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B209/_sumstats.do" "workers ln_workers" "ci_group" "t04_levels"
+> 
+>       argument 1 = list of variables
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b2_09_tables.xlsx (max 31 characters)
+> 
+>   Result: 1 row = variable x group x period (pool, 2010, 2011, ...)
+>           columns n mean sd p10 p25 p50 p75 p90 min max
+>   Rows with a missing group are not counted.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars grp sheet
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+
+. local first 1
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     local grp all
+. }
+
+. foreach v of local vars {
+  2.     foreach period in pool year {
+  3.         preserve
+  4.         keep `v' `grp' year
+  5.         keep if !missing(`v') & !missing(`grp')
+  6.         if _N > 0 {
+  7.             if "`period'" == "pool" replace year = 0
+  8.             collapse (count) n = `v' (mean) mean = `v' (sd) sd = `v' ///
+>                      (p10) p10 = `v' (p25) p25 = `v' (p50) p50 = `v' ///
+>                      (p75) p75 = `v' (p90) p90 = `v' (min) min = `v' (max) ma
+> x = `v', ///
+>                      by(`grp' year)
+  9.             generate str32 variable = "`v'"
+ 10.             if `first' == 0 append using `result'
+ 11.             save `result', replace
+ 12.             local first 0
+ 13.         }
+ 14.         restore
+ 15.     }
+ 16. }
+(0 observations deleted)
+(27,897 real changes made)
+(file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 not
+    found)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(0 observations deleted)
+(label ci_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(1 observation deleted)
+(27,896 real changes made)
+(label ci_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(1 observation deleted)
+(label ci_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. 
+. use `result', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * the group is written as text using its value label (if it has one)
+. capture decode `grp', generate(group)
+
+. if _rc generate group = string(`grp')
+
+. * keep the variables in the order they were listed
+. generate variable_order = .
+(78 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(39 real changes made)
+(39 real changes made)
+
+. sort variable_order `grp' year
+
+. keep variable group period n mean sd p10 p25 p50 p75 p90 min max
+
+. export excel using "$B209_XLSX", sheet("`sheet'", replace) firstrow(variables
+> )
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-09-green-tran
+> sition-employment/output/b2_09_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t04_levels (78 rows)
+
+. use `original', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+end of do-file
+
+. 
+end of do-file
+
+######## B2-09: 05_production_workers ########
+
+. /*==========================================================================
+>   Line 5: "Production workers"
+>   Data  : data/b209_firm.dta and data/b209_panel.dta, clean == 1
+>           block 0 column production_workers (prod_workers in 01a)
+>   Output sheets:
+>     t05_change   change in production workers between the firm's first and
+>                  last year, by group: level (d_) and ln (dln_)
+>     t05_levels   production workers by group, pool + by year (level & ln)
+>   NOTE: production workers are missing for 1,240 firms in 2020 and 1,441 in
+>         2021 (about 40-47% of those years). A firm whose first or last year i
+> s
+>         2020/2021 and lacks the split drops out of t05_change.
+>         1 record with more production than total workers is set missing (01a)
+> .
+>         Firm links are fictional in the development data (see 02).
+> ==========================================================================*/
+. if "$B209" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B209_DATA/b209_firm.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. do "$B209/_changestats.do" "d_prod_workers dln_prod_workers" "t05_change"
+
+. /*==========================================================================
+>   _changestats.do -- helper: statistics of a firm-level CHANGE, by group
+> 
+>   Usage (data/b209_firm.dta loaded: 1 row = 1 firm):
+>       do "$B209/_changestats.do" "d_workers dln_workers" "t04_change"
+> 
+>       argument 1 = list of change variables (d_* level, dln_* ln)
+>       argument 2 = sheet name in output/b2_09_tables.xlsx (max 31 characters)
+> 
+>   Result: 1 row = variable x group (Rapidly falling / Stable / Rapidly rising
+> )
+>           columns n mean sd p10 p25 p50 p75 p90 pct_rose
+>           pct_rose = % of firms whose value went up (change > 0)
+>   There is no "by year" here: the change runs from each firm's first to its
+>   last year (see 02). The yearly view is in the *_levels sheets.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars sheet
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+
+. local first 1
+
+. foreach v of local vars {
+  2.     preserve
+  3.     keep `v' ci_group
+  4.     keep if !missing(`v') & !missing(ci_group)
+  5.     generate rose = 100 * (`v' > 0)
+  6.     collapse (count) n = `v' (mean) mean = `v' (sd) sd = `v' ///
+>              (p10) p10 = `v' (p25) p25 = `v' (p50) p50 = `v' ///
+>              (p75) p75 = `v' (p90) p90 = `v' (mean) pct_rose = rose, by(ci_gr
+> oup)
+  7.     generate str32 variable = "`v'"
+  8.     if `first' == 0 append using `result'
+  9.     save `result', replace
+ 10.     local first 0
+ 11.     restore
+ 12. }
+(571 observations deleted)
+(file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 not
+    found)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(587 observations deleted)
+(label ci_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. 
+. use `result', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. decode ci_group, generate(group)
+
+. generate variable_order = .
+(6 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(3 real changes made)
+(3 real changes made)
+
+. sort variable_order ci_group
+
+. drop ci_group
+
+. keep variable group n mean sd p10 p25 p50 p75 p90 pct_rose
+
+. order variable group n mean sd p10 p25 p50 p75 p90 pct_rose
+
+. export excel using "$B209_XLSX", sheet("`sheet'", replace) firstrow(variables
+> )
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-09-green-tran
+> sition-employment/output/b2_09_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t05_change (6 rows)
+
+. use `original', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+end of do-file
+
+. 
+. use "$B209_DATA/b209_panel.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. do "$B209/_sumstats.do" "prod_workers ln_prod_workers" "ci_group" "t05_levels
+> "
+
+. /*==========================================================================
+>   _sumstats.do -- helper: descriptive statistics table, POOLED + BY YEAR
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B209/_sumstats.do" "workers ln_workers" "ci_group" "t04_levels"
+> 
+>       argument 1 = list of variables
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b2_09_tables.xlsx (max 31 characters)
+> 
+>   Result: 1 row = variable x group x period (pool, 2010, 2011, ...)
+>           columns n mean sd p10 p25 p50 p75 p90 min max
+>   Rows with a missing group are not counted.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars grp sheet
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+
+. local first 1
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     local grp all
+. }
+
+. foreach v of local vars {
+  2.     foreach period in pool year {
+  3.         preserve
+  4.         keep `v' `grp' year
+  5.         keep if !missing(`v') & !missing(`grp')
+  6.         if _N > 0 {
+  7.             if "`period'" == "pool" replace year = 0
+  8.             collapse (count) n = `v' (mean) mean = `v' (sd) sd = `v' ///
+>                      (p10) p10 = `v' (p25) p25 = `v' (p50) p50 = `v' ///
+>                      (p75) p75 = `v' (p90) p90 = `v' (min) min = `v' (max) ma
+> x = `v', ///
+>                      by(`grp' year)
+  9.             generate str32 variable = "`v'"
+ 10.             if `first' == 0 append using `result'
+ 11.             save `result', replace
+ 12.             local first 0
+ 13.         }
+ 14.         restore
+ 15.     }
+ 16. }
+(2,463 observations deleted)
+(25,434 real changes made)
+(file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 not
+    found)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(2,463 observations deleted)
+(label ci_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(2,482 observations deleted)
+(25,415 real changes made)
+(label ci_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(2,482 observations deleted)
+(label ci_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. 
+. use `result', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * the group is written as text using its value label (if it has one)
+. capture decode `grp', generate(group)
+
+. if _rc generate group = string(`grp')
+
+. * keep the variables in the order they were listed
+. generate variable_order = .
+(78 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(39 real changes made)
+(39 real changes made)
+
+. sort variable_order `grp' year
+
+. keep variable group period n mean sd p10 p25 p50 p75 p90 min max
+
+. export excel using "$B209_XLSX", sheet("`sheet'", replace) firstrow(variables
+> )
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-09-green-tran
+> sition-employment/output/b2_09_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t05_levels (78 rows)
+
+. use `original', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+end of do-file
+
+. 
+end of do-file
+
+######## B2-09: 06_nonproduction_workers ########
+
+. /*==========================================================================
+>   Line 6: "Non production workers"
+>   Data  : data/b209_firm.dta and data/b209_panel.dta, clean == 1
+>           non-production workers = total workers - production workers
+>           (block 0 has no column of its own; built in 01a)
+>   Output sheets:
+>     t06_change   change between the firm's first and last year, by group:
+>                  non-production workers (level d_, ln dln_) and
+>                  non-production share of workers (change in % points)
+>     t06_levels   non-production workers and share, by group,
+>                  pool + by year (level & ln)
+>   NOTE: same 2020/2021 gap as line 5 (production workers missing for
+>         ~40-47% of firms). Firm links are fictional in the development data.
+> ==========================================================================*/
+. if "$B209" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B209_DATA/b209_firm.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. do "$B209/_changestats.do" "d_nonprod_workers dln_nonprod_workers d_nonprod_s
+> hare" "t06_change"
+
+. /*==========================================================================
+>   _changestats.do -- helper: statistics of a firm-level CHANGE, by group
+> 
+>   Usage (data/b209_firm.dta loaded: 1 row = 1 firm):
+>       do "$B209/_changestats.do" "d_workers dln_workers" "t04_change"
+> 
+>       argument 1 = list of change variables (d_* level, dln_* ln)
+>       argument 2 = sheet name in output/b2_09_tables.xlsx (max 31 characters)
+> 
+>   Result: 1 row = variable x group (Rapidly falling / Stable / Rapidly rising
+> )
+>           columns n mean sd p10 p25 p50 p75 p90 pct_rose
+>           pct_rose = % of firms whose value went up (change > 0)
+>   There is no "by year" here: the change runs from each firm's first to its
+>   last year (see 02). The yearly view is in the *_levels sheets.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars sheet
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+
+. local first 1
+
+. foreach v of local vars {
+  2.     preserve
+  3.     keep `v' ci_group
+  4.     keep if !missing(`v') & !missing(ci_group)
+  5.     generate rose = 100 * (`v' > 0)
+  6.     collapse (count) n = `v' (mean) mean = `v' (sd) sd = `v' ///
+>              (p10) p10 = `v' (p25) p25 = `v' (p50) p50 = `v' ///
+>              (p75) p75 = `v' (p90) p90 = `v' (mean) pct_rose = rose, by(ci_gr
+> oup)
+  7.     generate str32 variable = "`v'"
+  8.     if `first' == 0 append using `result'
+  9.     save `result', replace
+ 10.     local first 0
+ 11.     restore
+ 12. }
+(571 observations deleted)
+(file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 not
+    found)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(1,309 observations deleted)
+(label ci_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(572 observations deleted)
+(label ci_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. 
+. use `result', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. decode ci_group, generate(group)
+
+. generate variable_order = .
+(9 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(3 real changes made)
+(3 real changes made)
+(3 real changes made)
+
+. sort variable_order ci_group
+
+. drop ci_group
+
+. keep variable group n mean sd p10 p25 p50 p75 p90 pct_rose
+
+. order variable group n mean sd p10 p25 p50 p75 p90 pct_rose
+
+. export excel using "$B209_XLSX", sheet("`sheet'", replace) firstrow(variables
+> )
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-09-green-tran
+> sition-employment/output/b2_09_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t06_change (9 rows)
+
+. use `original', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+end of do-file
+
+. 
+. use "$B209_DATA/b209_panel.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. do "$B209/_sumstats.do" "nonprod_workers ln_nonprod_workers nonprod_share" "c
+> i_group" "t06_levels"
+
+. /*==========================================================================
+>   _sumstats.do -- helper: descriptive statistics table, POOLED + BY YEAR
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B209/_sumstats.do" "workers ln_workers" "ci_group" "t04_levels"
+> 
+>       argument 1 = list of variables
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b2_09_tables.xlsx (max 31 characters)
+> 
+>   Result: 1 row = variable x group x period (pool, 2010, 2011, ...)
+>           columns n mean sd p10 p25 p50 p75 p90 min max
+>   Rows with a missing group are not counted.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars grp sheet
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+
+. local first 1
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     local grp all
+. }
+
+. foreach v of local vars {
+  2.     foreach period in pool year {
+  3.         preserve
+  4.         keep `v' `grp' year
+  5.         keep if !missing(`v') & !missing(`grp')
+  6.         if _N > 0 {
+  7.             if "`period'" == "pool" replace year = 0
+  8.             collapse (count) n = `v' (mean) mean = `v' (sd) sd = `v' ///
+>                      (p10) p10 = `v' (p25) p25 = `v' (p50) p50 = `v' ///
+>                      (p75) p75 = `v' (p90) p90 = `v' (min) min = `v' (max) ma
+> x = `v', ///
+>                      by(`grp' year)
+  9.             generate str32 variable = "`v'"
+ 10.             if `first' == 0 append using `result'
+ 11.             save `result', replace
+ 12.             local first 0
+ 13.         }
+ 14.         restore
+ 15.     }
+ 16. }
+(2,463 observations deleted)
+(25,434 real changes made)
+(file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 not
+    found)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(2,463 observations deleted)
+(label ci_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(4,394 observations deleted)
+(23,503 real changes made)
+(label ci_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(4,394 observations deleted)
+(label ci_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(2,464 observations deleted)
+(25,433 real changes made)
+(label ci_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(2,464 observations deleted)
+(label ci_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. 
+. use `result', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * the group is written as text using its value label (if it has one)
+. capture decode `grp', generate(group)
+
+. if _rc generate group = string(`grp')
+
+. * keep the variables in the order they were listed
+. generate variable_order = .
+(117 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(39 real changes made)
+(39 real changes made)
+(39 real changes made)
+
+. sort variable_order `grp' year
+
+. keep variable group period n mean sd p10 p25 p50 p75 p90 min max
+
+. export excel using "$B209_XLSX", sheet("`sheet'", replace) firstrow(variables
+> )
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-09-green-tran
+> sition-employment/output/b2_09_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t06_levels (117 rows)
+
+. use `original', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+end of do-file
+
+. 
+end of do-file
+
+######## B2-09: 07_male_female ########
+
+. /*==========================================================================
+>   Line 7: "Male/female"
+>   Data  : NOT IN BLOCK 0. This file is written against the expected column
+>           names workers_male and workers_female (persons). If they are
+>           missing it prints what is missing and writes no table.
+>   Output sheets (only when the columns exist):
+>     t07_change   change in male and female workers and in the female share
+>                  of workers between the firm's first and last year, by group
+>     t07_levels   male, female workers and female share, by group,
+>                  pool + by year (level & ln)
+>   NOTE: 01a carries these columns and 02 builds their change only if they
+>         exist in analysis_ready_data.dta.
+> ==========================================================================*/
+. if "$B209" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B209_DATA/b209_panel.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. local missing ""
+
+. foreach v in workers_male workers_female {
+  2.     capture confirm variable `v'
+  3.     if _rc local missing "`missing' `v'"
+  4. }
+
+. if "`missing'" != "" {
+.     display as error "Line 7 (male/female) not answered: not in the data:`mis
+> sing'"
+Line 7 (male/female) not answered: not in the data: workers_male workers_female
+.     display as error "No table written. Needs a male/female worker count from
+>  BPS."
+No table written. Needs a male/female worker count from BPS.
+.     exit
+
+end of do-file
+
+######## B2-09: 08_wages ########
+
+. /*==========================================================================
+>   Line 8: "Wages"
+>   Data  : NOT IN BLOCK 0. This file is written against the expected column
+>           names wage_total, wage_prod, wage_nonprod (nominal wage bill). If
+>           wage_total is missing it prints what is missing and writes no table
+> .
+>           (deflator_wages in block 0 is a price index, not a wage.)
+>   Output sheets (only when the columns exist):
+>     t08_change   change in the wage bill and the wage per worker between the
+>                  firm's first and last year, by group (level & ln)
+>     t08_levels   wage bill and wage per worker by group, pool + by year
+>   NOTE: 01a carries these columns and 02 builds their change only if they
+>         exist in analysis_ready_data.dta. wage_prod / wage_nonprod are used
+>         when present.
+> ==========================================================================*/
+. if "$B209" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B209_DATA/b209_panel.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. local missing ""
+
+. foreach v in wage_total wage_prod wage_nonprod {
+  2.     capture confirm variable `v'
+  3.     if _rc local missing "`missing' `v'"
+  4. }
+
+. capture confirm variable wage_total
+
+. if _rc {
+.     display as error "Line 8 (wages) not answered: not in the data:`missing'"
+Line 8 (wages) not answered: not in the data: wage_total wage_prod wage_nonprod
+.     display as error "No table written. Needs a wage bill (total, and ideally
+>  production / non-production) from BPS."
+No table written. Needs a wage bill (total, and ideally production / non-produc
+> tion) from BPS.
+.     exit
+
+end of do-file
+
+######## B2-09: 09_va_per_worker ########
+
+. /*==========================================================================
+>   Line 9: "VA/workers"
+>   Data  : data/b209_firm.dta and data/b209_panel.dta, clean == 1
+>           va_pw = nominal value added / total workers
+>   Output sheets:
+>     t09_change   change in VA per worker between the firm's first and last
+>                  year, by group: level (d_) and ln (dln_, x100 ~ % change)
+>     t09_levels   VA per worker by group, pool + by year (level & ln)
+>   NOTE: nominal (no deflator) and masked in the development data: read the
+>         differences between groups, not the levels. Firm links are
+>         fictional in the development data (see 02).
+>         CO2/VA defines the groups and VA is also in VA/worker, so a VA
+>         rise by itself pushes a firm towards "Rapidly falling".
+> ==========================================================================*/
+. if "$B209" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B209_DATA/b209_firm.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. do "$B209/_changestats.do" "d_va_pw dln_va_pw" "t09_change"
+
+. /*==========================================================================
+>   _changestats.do -- helper: statistics of a firm-level CHANGE, by group
+> 
+>   Usage (data/b209_firm.dta loaded: 1 row = 1 firm):
+>       do "$B209/_changestats.do" "d_workers dln_workers" "t04_change"
+> 
+>       argument 1 = list of change variables (d_* level, dln_* ln)
+>       argument 2 = sheet name in output/b2_09_tables.xlsx (max 31 characters)
+> 
+>   Result: 1 row = variable x group (Rapidly falling / Stable / Rapidly rising
+> )
+>           columns n mean sd p10 p25 p50 p75 p90 pct_rose
+>           pct_rose = % of firms whose value went up (change > 0)
+>   There is no "by year" here: the change runs from each firm's first to its
+>   last year (see 02). The yearly view is in the *_levels sheets.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars sheet
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+
+. local first 1
+
+. foreach v of local vars {
+  2.     preserve
+  3.     keep `v' ci_group
+  4.     keep if !missing(`v') & !missing(ci_group)
+  5.     generate rose = 100 * (`v' > 0)
+  6.     collapse (count) n = `v' (mean) mean = `v' (sd) sd = `v' ///
+>              (p10) p10 = `v' (p25) p25 = `v' (p50) p50 = `v' ///
+>              (p75) p75 = `v' (p90) p90 = `v' (mean) pct_rose = rose, by(ci_gr
+> oup)
+  7.     generate str32 variable = "`v'"
+  8.     if `first' == 0 append using `result'
+  9.     save `result', replace
+ 10.     local first 0
+ 11.     restore
+ 12. }
+(1 observation deleted)
+(file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 not
+    found)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(1 observation deleted)
+(label ci_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. 
+. use `result', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. decode ci_group, generate(group)
+
+. generate variable_order = .
+(6 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(3 real changes made)
+(3 real changes made)
+
+. sort variable_order ci_group
+
+. drop ci_group
+
+. keep variable group n mean sd p10 p25 p50 p75 p90 pct_rose
+
+. order variable group n mean sd p10 p25 p50 p75 p90 pct_rose
+
+. export excel using "$B209_XLSX", sheet("`sheet'", replace) firstrow(variables
+> )
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-09-green-tran
+> sition-employment/output/b2_09_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t09_change (6 rows)
+
+. use `original', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+end of do-file
+
+. 
+. use "$B209_DATA/b209_panel.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. do "$B209/_sumstats.do" "va_pw ln_va_pw" "ci_group" "t09_levels"
+
+. /*==========================================================================
+>   _sumstats.do -- helper: descriptive statistics table, POOLED + BY YEAR
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B209/_sumstats.do" "workers ln_workers" "ci_group" "t04_levels"
+> 
+>       argument 1 = list of variables
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b2_09_tables.xlsx (max 31 characters)
+> 
+>   Result: 1 row = variable x group x period (pool, 2010, 2011, ...)
+>           columns n mean sd p10 p25 p50 p75 p90 min max
+>   Rows with a missing group are not counted.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars grp sheet
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+
+. local first 1
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     local grp all
+. }
+
+. foreach v of local vars {
+  2.     foreach period in pool year {
+  3.         preserve
+  4.         keep `v' `grp' year
+  5.         keep if !missing(`v') & !missing(`grp')
+  6.         if _N > 0 {
+  7.             if "`period'" == "pool" replace year = 0
+  8.             collapse (count) n = `v' (mean) mean = `v' (sd) sd = `v' ///
+>                      (p10) p10 = `v' (p25) p25 = `v' (p50) p50 = `v' ///
+>                      (p75) p75 = `v' (p90) p90 = `v' (min) min = `v' (max) ma
+> x = `v', ///
+>                      by(`grp' year)
+  9.             generate str32 variable = "`v'"
+ 10.             if `first' == 0 append using `result'
+ 11.             save `result', replace
+ 12.             local first 0
+ 13.         }
+ 14.         restore
+ 15.     }
+ 16. }
+(1 observation deleted)
+(27,896 real changes made)
+(file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 not
+    found)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(1 observation deleted)
+(label ci_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(1 observation deleted)
+(27,896 real changes made)
+(label ci_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(1 observation deleted)
+(label ci_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. 
+. use `result', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * the group is written as text using its value label (if it has one)
+. capture decode `grp', generate(group)
+
+. if _rc generate group = string(`grp')
+
+. * keep the variables in the order they were listed
+. generate variable_order = .
+(78 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(39 real changes made)
+(39 real changes made)
+
+. sort variable_order `grp' year
+
+. keep variable group period n mean sd p10 p25 p50 p75 p90 min max
+
+. export excel using "$B209_XLSX", sheet("`sheet'", replace) firstrow(variables
+> )
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-09-green-tran
+> sition-employment/output/b2_09_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t09_levels (78 rows)
+
+. use `original', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+end of do-file
+
+. 
+end of do-file
+
+######## B2-09: 10_capital_per_worker ########
+
+. /*==========================================================================
+>   Line 10: "Capital/workers"
+>   Data  : data/b209_firm.dta and data/b209_panel.dta, clean == 1
+>           cap_pw = nominal capital stock / total workers
+>   Output sheets:
+>     t10_change   change in capital per worker between the firm's first and
+>                  last year, by group: level (d_) and ln (dln_)
+>     t10_levels   capital per worker by group, pool + by year (level & ln)
+>   NOTE: many records report zero capital (the yearly median is 0 in 2017
+>         and 2021), so the ln change only covers firms with capital > 0 in
+>         both years. Nominal and masked. Firm links are fictional (see 02).
+> ==========================================================================*/
+. if "$B209" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. use "$B209_DATA/b209_firm.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. do "$B209/_changestats.do" "d_cap_pw dln_cap_pw" "t10_change"
+
+. /*==========================================================================
+>   _changestats.do -- helper: statistics of a firm-level CHANGE, by group
+> 
+>   Usage (data/b209_firm.dta loaded: 1 row = 1 firm):
+>       do "$B209/_changestats.do" "d_workers dln_workers" "t04_change"
+> 
+>       argument 1 = list of change variables (d_* level, dln_* ln)
+>       argument 2 = sheet name in output/b2_09_tables.xlsx (max 31 characters)
+> 
+>   Result: 1 row = variable x group (Rapidly falling / Stable / Rapidly rising
+> )
+>           columns n mean sd p10 p25 p50 p75 p90 pct_rose
+>           pct_rose = % of firms whose value went up (change > 0)
+>   There is no "by year" here: the change runs from each firm's first to its
+>   last year (see 02). The yearly view is in the *_levels sheets.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars sheet
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+
+. local first 1
+
+. foreach v of local vars {
+  2.     preserve
+  3.     keep `v' ci_group
+  4.     keep if !missing(`v') & !missing(ci_group)
+  5.     generate rose = 100 * (`v' > 0)
+  6.     collapse (count) n = `v' (mean) mean = `v' (sd) sd = `v' ///
+>              (p10) p10 = `v' (p25) p25 = `v' (p50) p50 = `v' ///
+>              (p75) p75 = `v' (p90) p90 = `v' (mean) pct_rose = rose, by(ci_gr
+> oup)
+  7.     generate str32 variable = "`v'"
+  8.     if `first' == 0 append using `result'
+  9.     save `result', replace
+ 10.     local first 0
+ 11.     restore
+ 12. }
+(232 observations deleted)
+(file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 not
+    found)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(3,476 observations deleted)
+(label ci_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. 
+. use `result', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. decode ci_group, generate(group)
+
+. generate variable_order = .
+(6 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(3 real changes made)
+(3 real changes made)
+
+. sort variable_order ci_group
+
+. drop ci_group
+
+. keep variable group n mean sd p10 p25 p50 p75 p90 pct_rose
+
+. order variable group n mean sd p10 p25 p50 p75 p90 pct_rose
+
+. export excel using "$B209_XLSX", sheet("`sheet'", replace) firstrow(variables
+> )
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-09-green-tran
+> sition-employment/output/b2_09_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t10_change (6 rows)
+
+. use `original', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+end of do-file
+
+. 
+. use "$B209_DATA/b209_panel.dta", clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. do "$B209/_sumstats.do" "cap_pw ln_cap_pw" "ci_group" "t10_levels"
+
+. /*==========================================================================
+>   _sumstats.do -- helper: descriptive statistics table, POOLED + BY YEAR
+> 
+>   Usage (data already loaded, must contain variable year):
+>       do "$B209/_sumstats.do" "workers ln_workers" "ci_group" "t04_levels"
+> 
+>       argument 1 = list of variables
+>       argument 2 = grouping variable ("" for no grouping)
+>       argument 3 = sheet name in output/b2_09_tables.xlsx (max 31 characters)
+> 
+>   Result: 1 row = variable x group x period (pool, 2010, 2011, ...)
+>           columns n mean sd p10 p25 p50 p75 p90 min max
+>   Rows with a missing group are not counted.
+>   The data in memory are unchanged after this file runs.
+> ==========================================================================*/
+. args vars grp sheet
+
+. 
+. tempfile result original
+
+. save `original'
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000002 saved
+    as .dta format
+
+. local first 1
+
+. if "`grp'" == "" {
+.     generate byte all = 1
+.     local grp all
+. }
+
+. foreach v of local vars {
+  2.     foreach period in pool year {
+  3.         preserve
+  4.         keep `v' `grp' year
+  5.         keep if !missing(`v') & !missing(`grp')
+  6.         if _N > 0 {
+  7.             if "`period'" == "pool" replace year = 0
+  8.             collapse (count) n = `v' (mean) mean = `v' (sd) sd = `v' ///
+>                      (p10) p10 = `v' (p25) p25 = `v' (p50) p50 = `v' ///
+>                      (p75) p75 = `v' (p90) p90 = `v' (min) min = `v' (max) ma
+> x = `v', ///
+>                      by(`grp' year)
+  9.             generate str32 variable = "`v'"
+ 10.             if `first' == 0 append using `result'
+ 11.             save `result', replace
+ 12.             local first 0
+ 13.         }
+ 14.         restore
+ 15.     }
+ 16. }
+(1,023 observations deleted)
+(26,874 real changes made)
+(file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 not
+    found)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(1,023 observations deleted)
+(label ci_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(11,920 observations deleted)
+(15,977 real changes made)
+(label ci_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(11,920 observations deleted)
+(label ci_group already defined)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. 
+. use `result', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. generate str6 period = cond(year == 0, "pool", string(year))
+
+. * the group is written as text using its value label (if it has one)
+. capture decode `grp', generate(group)
+
+. if _rc generate group = string(`grp')
+
+. * keep the variables in the order they were listed
+. generate variable_order = .
+(78 missing values generated)
+
+. local i 0
+
+. foreach v of local vars {
+  2.     local ++i
+  3.     replace variable_order = `i' if variable == "`v'"
+  4. }
+(39 real changes made)
+(39 real changes made)
+
+. sort variable_order `grp' year
+
+. keep variable group period n mean sd p10 p25 p50 p75 p90 min max
+
+. export excel using "$B209_XLSX", sheet("`sheet'", replace) firstrow(variables
+> )
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-09-green-tran
+> sition-employment/output/b2_09_tables.xlsx saved
+
+. display as result "  -> sheet `sheet' (" _N " rows)"
+  -> sheet t10_levels (78 rows)
+
+. use `original', clear
+(G0 -> G0.25 OBSCURED -> G0.5 DUMMY PANEL -> G1 RE-ESTIMATED)
+
+. 
+end of do-file
+
+. 
+end of do-file
+
+######## B2-09: 11_synthesis ########
+
+. /*==========================================================================
+>   Line 11: "Question: apakah decarbonisasi berasosiasi dengan employment
+>             constraction ayau justru productivity/job expansion"
+>   No new computation: collects the ln changes from lines 4, 9 and 10 into
+>   one sheet, so the question can be read in one place.
+>   Output sheet:
+>     t11_synthesis   1 row = outcome (workers, VA/worker, capital/worker):
+>                     median and mean ln change (x100 ~ % change) and % of
+>                     firms where it rose, for Rapidly falling / Stable / Rapid
+> ly rising,
+>                     and the gap falling - rising
+>   How to read: a positive gap = the outcome grew more (or fell less) among
+>   firms whose carbon intensity fell fastest. Employment contraction would
+>   show as a negative gap for workers; productivity / job expansion as a
+>   positive gap for VA per worker / workers.
+>   The gap and the reading use the median. Workers are whole numbers, so the
+>   median change is often 0; check the mean and pct_rose columns too.
+>   NOTE: VA is in both CO2/VA (the grouping) and VA/worker, so a VA rise by
+>         itself moves a firm towards "Rapidly falling": the VA/worker gap is
+>         partly mechanical. Workers and capital/worker are not in CO2/VA.
+>         An association between groups, not a causal effect. Firm links are
+>         fictional in the development data, values nominal (see 02).
+> ==========================================================================*/
+. if "$B209" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. tempfile stack
+
+. local first 1
+
+. foreach s in t04_change t09_change t10_change {
+  2.     import excel using "$B209_XLSX", sheet("`s'") firstrow clear
+  3.     keep if substr(variable, 1, 4) == "dln_"
+  4.     keep variable group n p50 mean pct_rose
+  5.     if `first' == 0 append using `stack'
+  6.     save `stack', replace
+  7.     local first 0
+  8. }
+(11 vars, 6 obs)
+(3 observations deleted)
+(file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 not
+    found)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(11 vars, 6 obs)
+(3 observations deleted)
+(variable variable was str9, now str11 to accommodate using data's values)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+(11 vars, 6 obs)
+(3 observations deleted)
+(variable variable was str10, now str11 to accommodate using data's values)
+file /var/folders/7l/7f30l8dj7219j21dhg9glmwc0000gn/T//St65806.000001 saved
+    as .dta format
+
+. 
+. * one row per outcome, the 3 groups side by side
+. generate g = "falling" if group == "Rapidly falling"
+(6 missing values generated)
+
+. replace  g = "stable"  if group == "Stable"
+(3 real changes made)
+
+. replace  g = "rising"  if group == "Rapidly rising"
+(3 real changes made)
+
+. drop group
+
+. rename p50 med_dln_
+
+. rename mean mean_dln_
+
+. rename pct_rose pct_rose_
+
+. rename n n_
+
+. reshape wide med_dln_ mean_dln_ pct_rose_ n_, i(variable) j(g) string
+(j = falling rising stable)
+
+Data                               Long   ->   Wide
+-----------------------------------------------------------------------------
+Number of observations                9   ->   3           
+Number of variables                   6   ->   13          
+j variable (3 values)                 g   ->   (dropped)
+xij variables:
+                               med_dln_   ->   med_dln_falling med_dln_rising m
+> ed_dln_stable
+                              mean_dln_   ->   mean_dln_falling mean_dln_rising
+>  mean_dln_stable
+                              pct_rose_   ->   pct_rose_falling pct_rose_rising
+>  pct_rose_stable
+                                     n_   ->   n_falling n_rising n_stable
+-----------------------------------------------------------------------------
+
+. 
+. generate outcome = substr(variable, 5, .)
+
+. generate gap_falling_minus_rising = med_dln_falling - med_dln_rising
+
+. generate str60 reading = "grew more / fell less among rapidly falling" if gap
+> _falling_minus_rising > 0
+(1 missing value generated)
+
+. replace  reading = "grew less / fell more among rapidly falling" if gap_falli
+> ng_minus_rising < 0
+(1 real change made)
+
+. generate order = 1 if outcome == "workers"
+(2 missing values generated)
+
+. replace  order = 2 if outcome == "va_pw"
+(1 real change made)
+
+. replace  order = 3 if outcome == "cap_pw"
+(1 real change made)
+
+. sort order
+
+. order outcome med_dln_falling med_dln_stable med_dln_rising gap_falling_minus
+> _rising reading ///
+>       mean_dln_falling mean_dln_stable mean_dln_rising ///
+>       pct_rose_falling pct_rose_stable pct_rose_rising n_falling n_stable n_r
+> ising
+
+. drop variable order
+
+. list outcome med_dln_falling med_dln_stable med_dln_rising gap_falling_minus_
+> rising, clean noobs
+
+    outcome   med_~ling   med_dln~e   med_d~sing   gap_fall~g  
+    workers           0           0    -.0719735     .0719735  
+      va_pw   1.0603299    .3426162   -.23746471    1.2977946  
+     cap_pw   .41376131   .42458382    .52610609   -.11234478  
+
+. export excel using "$B209_XLSX", sheet("t11_synthesis", replace) firstrow(var
+> iables)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-09-green-tran
+> sition-employment/output/b2_09_tables.xlsx saved
+
+. 
+end of do-file
+
+######## B2-09: 12_figures ########
+
+. /*==========================================================================
+>   (No figures line in the to-do list; added as file 12, runs last.)
+>   Every other file writes its tables to output/b2_09_tables.xlsx. This file
+>   draws the charts FROM those tables, so a chart always matches its table.
+>   The exact points of every chart are also written to a sheet figNN_data
+>   (graph-ready, e.g. to redraw the chart in Excel or PowerPoint).
+> 
+>   Charts (output/):
+>     fig02_ci_by_group.png       median ln(CO2/VA) per year, by group
+>     fig03_change_by_group.png   median ln change of every outcome, by group
+>     fig04_workers_by_year.png   median workers per year, by group
+>     fig09_va_pw_by_year.png     median VA per worker per year, by group
+>     fig10_cap_pw_by_year.png    median capital per worker per year, by group
+> ==========================================================================*/
+. if "$B209" == "" {
+.     display as error "Run 00_run.do first (it sets the paths)."
+.     exit 198
+. }
+
+. 
+. * ---- fig02: carbon intensity of the 3 groups over time (line 2) ----
+. import excel using "$B209_XLSX", sheet("t02_ci_by_year") firstrow clear
+(13 vars, 78 obs)
+
+. keep if variable == "ln_co2_per_va" & period != "pool"
+(42 observations deleted)
+
+. generate year = real(period)
+
+. generate g = "falling" if group == "Rapidly falling"
+(24 missing values generated)
+
+. replace  g = "stable"  if group == "Stable"
+(12 real changes made)
+
+. replace  g = "rising"  if group == "Rapidly rising"
+(12 real changes made)
+
+. keep year g p50
+
+. rename p50 median_ln_ci_
+
+. reshape wide median_ln_ci_, i(year) j(g) string
+(j = falling rising stable)
+
+Data                               Long   ->   Wide
+-----------------------------------------------------------------------------
+Number of observations               36   ->   12          
+Number of variables                   3   ->   4           
+j variable (3 values)                 g   ->   (dropped)
+xij variables:
+                          median_ln_ci_   ->   median_ln_ci_falling median_ln_c
+> i_rising median_ln_ci_stable
+-----------------------------------------------------------------------------
+
+. order year median_ln_ci_falling median_ln_ci_stable median_ln_ci_rising
+
+. export excel using "$B209_XLSX", sheet("fig02_data", replace) firstrow(variab
+> les)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-09-green-tran
+> sition-employment/output/b2_09_tables.xlsx saved
+
+. twoway (connected median_ln_ci_falling year) ///
+>        (connected median_ln_ci_stable year, lpattern(dash)) ///
+>        (connected median_ln_ci_rising year, lpattern(shortdash)), ///
+>     xline(2016, lpattern(dash) lcolor(gs10)) xlabel(2010(2)2022) xtitle("") /
+> //
+>     ytitle("Median ln(CO2 / value added)") ylabel(, angle(0)) ///
+>     legend(order(1 "Rapidly falling" 2 "Stable" 3 "Rapidly rising") rows(1)) 
+> ///
+>     title("Carbon intensity of the three groups") ///
+>     note("Groups = terciles of each firm's change in ln(CO2/VA), first to las
+> t year." ///
+>          "Dashed line at 2016: reporting change, not a trend. Firm links fict
+> ional in the dev data.") ///
+>     graphregion(color(white))
+
+. graph export "$B209_OUT/fig02_ci_by_group.png", replace width(2000)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-09-green-tran
+> sition-employment/output/fig02_ci_by_group.png written in PNG format
+
+. 
+. * ---- fig03: change in every outcome, by group (line 3) ----
+. import excel using "$B209_XLSX", sheet("t03_overview") firstrow clear
+(9 vars, 18 obs)
+
+. keep if !missing(med_dln)
+(3 observations deleted)
+
+. generate pct = 100 * med_dln                      // ln change x100 ~ % chang
+> e
+
+. generate g = "falling" if group == "Rapidly falling"
+(10 missing values generated)
+
+. replace  g = "stable"  if group == "Stable"
+(5 real changes made)
+
+. replace  g = "rising"  if group == "Rapidly rising"
+(5 real changes made)
+
+. generate label = outcome
+
+. replace label = "Workers"                if outcome == "workers"
+(3 real changes made)
+
+. replace label = "Production workers"     if outcome == "prod_workers"
+variable label was str15 now str18
+(3 real changes made)
+
+. replace label = "Non-production workers" if outcome == "nonprod_workers"
+variable label was str18 now str22
+(3 real changes made)
+
+. replace label = "VA per worker"          if outcome == "va_pw"
+(3 real changes made)
+
+. replace label = "Capital per worker"     if outcome == "cap_pw"
+(3 real changes made)
+
+. preserve
+
+. keep outcome label g pct
+
+. rename pct med_pct_change_
+
+. reshape wide med_pct_change_, i(outcome label) j(g) string
+(j = falling rising stable)
+
+Data                               Long   ->   Wide
+-----------------------------------------------------------------------------
+Number of observations               15   ->   5           
+Number of variables                   4   ->   5           
+j variable (3 values)                 g   ->   (dropped)
+xij variables:
+                        med_pct_change_   ->   med_pct_change_falling med_pct_c
+> hange_rising med_pct_change_stable
+-----------------------------------------------------------------------------
+
+. order outcome label med_pct_change_falling med_pct_change_stable med_pct_chan
+> ge_rising
+
+. export excel using "$B209_XLSX", sheet("fig03_data", replace) firstrow(variab
+> les)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-09-green-tran
+> sition-employment/output/b2_09_tables.xlsx saved
+
+. restore
+
+. generate lorder = 1 if outcome == "workers"
+(12 missing values generated)
+
+. replace  lorder = 2 if outcome == "prod_workers"
+(3 real changes made)
+
+. replace  lorder = 3 if outcome == "nonprod_workers"
+(3 real changes made)
+
+. replace  lorder = 4 if outcome == "va_pw"
+(3 real changes made)
+
+. replace  lorder = 5 if outcome == "cap_pw"
+(3 real changes made)
+
+. generate gorder = 1 if g == "falling"
+(10 missing values generated)
+
+. replace  gorder = 2 if g == "stable"
+(5 real changes made)
+
+. replace  gorder = 3 if g == "rising"
+(5 real changes made)
+
+. label define gorder 1 "Rapidly falling" 2 "Stable" 3 "Rapidly rising"
+
+. label values gorder gorder
+
+. graph hbar (asis) pct, over(gorder) over(label, sort(lorder) label(labsize(sm
+> all))) asyvars ///
+>     ytitle("Median change, first to last year (ln x 100, ~%)") ///
+>     legend(rows(1)) title("Change from first to last year") ///
+>     subtitle("Median per group of carbon-intensity trend") ///
+>     note("Workers are whole numbers, so the median firm often shows no change
+>  (0)." ///
+>          "Firm links fictional in the dev data. Values nominal.") graphregion
+> (color(white))
+
+. graph export "$B209_OUT/fig03_change_by_group.png", replace width(2000)
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-09-green-tran
+> sition-employment/output/fig03_change_by_group.png written in PNG format
+
+. 
+. * ---- fig04, fig09, fig10: medians per year, by group (lines 4, 9, 10) ----
+. foreach n in 04 09 10 {
+  2.     if "`n'" == "04" {
+  3.         local v "workers"
+  4.         local name "workers_by_year"
+  5.         local yt "Median number of workers"
+  6.         local tt "Workers"
+  7.         local nt ""
+  8.     }
+  9.     if "`n'" == "09" {
+ 10.         local v "va_pw"
+ 11.         local name "va_pw_by_year"
+ 12.         local yt "Median VA per worker (nominal)"
+ 13.         local tt "Value added per worker"
+ 14.         local nt ""
+ 15.     }
+ 16.     if "`n'" == "10" {
+ 17.         local v "cap_pw"
+ 18.         local name "cap_pw_by_year"
+ 19.         local yt "Median capital per worker (nominal)"
+ 20.         local tt "Capital per worker"
+ 21.         local nt "Many firms report zero capital. "
+ 22.     }
+ 23.     import excel using "$B209_XLSX", sheet("t`n'_levels") firstrow clear
+ 24.     keep if variable == "`v'" & period != "pool"
+ 25.     generate year = real(period)
+ 26.     generate g = "falling" if group == "Rapidly falling"
+ 27.     replace  g = "stable"  if group == "Stable"
+ 28.     replace  g = "rising"  if group == "Rapidly rising"
+ 29.     keep year g p50
+ 30.     rename p50 median_`v'_
+ 31.     reshape wide median_`v'_, i(year) j(g) string
+ 32.     order year median_`v'_falling median_`v'_stable median_`v'_rising
+ 33.     export excel using "$B209_XLSX", sheet("fig`n'_data", replace) firstro
+> w(variables)
+ 34.     twoway (connected median_`v'_falling year) ///
+>            (connected median_`v'_stable year, lpattern(dash)) ///
+>            (connected median_`v'_rising year, lpattern(shortdash)), ///
+>         xline(2016, lpattern(dash) lcolor(gs10)) xlabel(2010(2)2022) xtitle("
+> ") ///
+>         ytitle("`yt'") ylabel(, angle(0) format(%12.0fc)) ///
+>         legend(order(1 "Rapidly falling" 2 "Stable" 3 "Rapidly rising") rows(
+> 1)) ///
+>         title("`tt'") subtitle("Median per year, by carbon-intensity trend") 
+> ///
+>         note("`nt'Dashed line at 2016: reporting change." "Firm links fiction
+> al in the dev data.") ///
+>         graphregion(color(white))
+ 35.     graph export "$B209_OUT/fig`n'_`name'.png", replace width(2000)
+ 36. }
+(13 vars, 78 obs)
+(42 observations deleted)
+(24 missing values generated)
+(12 real changes made)
+(12 real changes made)
+(j = falling rising stable)
+
+Data                               Long   ->   Wide
+-----------------------------------------------------------------------------
+Number of observations               36   ->   12          
+Number of variables                   3   ->   4           
+j variable (3 values)                 g   ->   (dropped)
+xij variables:
+                        median_workers_   ->   median_workers_falling median_wo
+> rkers_rising median_workers_stable
+-----------------------------------------------------------------------------
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-09-green-tran
+> sition-employment/output/b2_09_tables.xlsx saved
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-09-green-tran
+> sition-employment/output/fig04_workers_by_year.png written in PNG format
+(13 vars, 78 obs)
+(42 observations deleted)
+(24 missing values generated)
+(12 real changes made)
+(12 real changes made)
+(j = falling rising stable)
+
+Data                               Long   ->   Wide
+-----------------------------------------------------------------------------
+Number of observations               36   ->   12          
+Number of variables                   3   ->   4           
+j variable (3 values)                 g   ->   (dropped)
+xij variables:
+                          median_va_pw_   ->   median_va_pw_falling median_va_p
+> w_rising median_va_pw_stable
+-----------------------------------------------------------------------------
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-09-green-tran
+> sition-employment/output/b2_09_tables.xlsx saved
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-09-green-tran
+> sition-employment/output/fig09_va_pw_by_year.png written in PNG format
+(13 vars, 78 obs)
+(42 observations deleted)
+(24 missing values generated)
+(12 real changes made)
+(12 real changes made)
+(j = falling rising stable)
+
+Data                               Long   ->   Wide
+-----------------------------------------------------------------------------
+Number of observations               36   ->   12          
+Number of variables                   3   ->   4           
+j variable (3 values)                 g   ->   (dropped)
+xij variables:
+                         median_cap_pw_   ->   median_cap_pw_falling median_cap
+> _pw_rising median_cap_pw_stable
+-----------------------------------------------------------------------------
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-09-green-tran
+> sition-employment/output/b2_09_tables.xlsx saved
+file /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-09-green-tran
+> sition-employment/output/fig10_cap_pw_by_year.png written in PNG format
+
+. graph drop _all
+
+. 
+end of do-file
+
+. log close b209
+      name:  b209
+       log:  /private/tmp/claude-501/sp/pr-worktree/20260917-run/block-b2-09-gr
+> een-transition-employment/output/b2_09_log.log
+  log type:  text
+ closed on:   9 Oct 2026, 12:55:00
+-------------------------------------------------------------------------------
