@@ -30,7 +30,7 @@ version 17
 clear all
 set more off
 
-args repo which
+args repo which roster_dir
 if `"`repo'"' != "" global B12_REPO `"`repo'"'
 
 * ---- paths --------------------------------------------------------------
@@ -50,7 +50,9 @@ else global B21 "$B12_REPO/20260917-run/block-b1-21-product-scope"
 global SI_DATA "$B21/../block-0-data-preparation/analysis_ready_data.dta"
 
 * ---- EDIT THIS LINE: folder with Proman2021/2022 (.xlsx)
-global ROSTER  "/Users/schalkeanindyaputri/Documents/Research & Conferences/DEN BPS IBS/DEN BPS IBS Research/schalke-workstream/data/rosters_raw"
+* Optional third argument overrides the current session setting.
+if `"`roster_dir'"' != "" global ROSTER `"`roster_dir'"'
+if "$ROSTER" == "" global ROSTER "$B21/../../inputs/rosters"
 
 global B21_DATA "$B21/data"
 global B21_OUT  "$B21/output"

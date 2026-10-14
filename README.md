@@ -1,5 +1,13 @@
 # Kolega DEN–BPS research data
 
+## Run all analyses from ready data
+
+Use the [small native Stata ZIP](https://github.com/natanaelwgm/2026-kolega-den-bps-repo/releases/download/ready-stata-20261014/SI-Ready-STATA.zip): extract it, open **00_JALANKAN_SEMUA.do**, set **SI_ROOT** and **READY_DATA**, then **Do** the whole file in Stata SE/MP 17+. The ZIP includes the development ready dataset and pinned Stata add-ons; running it needs no Python. It produces Excel/CSV tables and PNG figures in a new dated `hasil` folder.
+
+To export the same package from this repository, run `python3 scripts/export_ready_stata.py` (Windows: `py scripts/export_ready_stata.py`). See the [short run and export guide](distribution/ready-stata/README.md). The exporter uses the existing analysis sources and does not run any estimation.
+
+## Prepare data
+
 The working entry point is **[20260917-run / block-0-data-preparation](20260917-run/block-0-data-preparation/README.md)**.
 
 - **Analyze:** load [analysis_ready_data.dta](20260917-run/block-0-data-preparation/analysis_ready_data.dta). The single final dataset is included directly in Git.
