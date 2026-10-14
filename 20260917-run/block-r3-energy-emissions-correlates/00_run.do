@@ -7,10 +7,13 @@ version 17
 clear all
 set more off
 set varabbrev off
+args data_arg outdir_arg
 
 * ---- EDIT THESE TWO LINES IF YOUR FOLDERS ARE ELSEWHERE -------------------
-global DATA   "/Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-0-data-preparation/analysis_ready_data.dta"
-global OUTDIR "/Users/natanaelmassie/Downloads/2026-kolega-den-bps-repo/20260917-run/block-r3-energy-emissions-correlates"
+global DATA   "`c(pwd)'/../block-0-data-preparation/analysis_ready_data.dta"
+global OUTDIR "`c(pwd)'"
+if `"`data_arg'"' != "" global DATA `"`data_arg'"'
+if `"`outdir_arg'"' != "" global OUTDIR `"`outdir_arg'"'
 * ---------------------------------------------------------------------------
 * The two paths above are passed to every exhibit file, so you edit them once here.
 
